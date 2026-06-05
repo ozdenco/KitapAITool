@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Müşteri Persona Oluşturucu — Kolay KOBİ</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,sans-serif;background:#F7F6F2;min-height:100vh}
+.app{max-width:720px;margin:0 auto;padding:2rem 1rem}
+.brand{display:flex;align-items:center;gap:8px;margin-bottom:2rem}
+.brand-dot{width:9px;height:9px;border-radius:50%;background:#1D9E75}
+.brand-name{font-size:13px;font-weight:500;color:#1D9E75;letter-spacing:.04em}
+
+/* FORM */
+.form-card{background:#fff;border-radius:16px;border:0.5px solid #E2E0D8;padding:2rem}
+h1{font-size:22px;font-weight:500;color:#1C1B19;margin-bottom:.4rem}
+.subtitle{font-size:14px;color:#6B6963;line-height:1.6;margin-bottom:2rem}
+.field{margin-bottom:1.25rem}
+label{display:block;font-size:13px;font-weight:500;color:#6B6963;margin-bottom:6px}
+input,select,textarea{width:100%;padding:10px 12px;font-size:14px;border:0.5px solid #D3D1C7;border-radius:8px;background:#fff;color:#1C1B19;outline:none;font-family:inherit}
+textarea{resize:vertical;min-height:80px;line-height:1.5}
+input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3px rgba(29,158,117,.1)}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.check-group{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:6px}
+.check-item{display:flex;align-items:center;gap:8px;padding:9px 11px;border:0.5px solid #D3D1C7;border-radius:8px;cursor:pointer;font-size:13px;color:#1C1B19;background:#fff;user-select:none}
+.check-item input[type=checkbox]{width:auto;padding:0;box-shadow:none}
+.check-item:has(input:checked){border-color:#1D9E75;background:#F0FAF6}
+.btn-primary{width:100%;padding:13px;background:#1D9E75;color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:500;cursor:pointer;margin-top:.5rem;display:flex;align-items:center;justify-content:center;gap:8px}
+.btn-primary:hover{background:#0F6E56}
+.btn-primary:disabled{background:#B4B2A9;cursor:not-allowed}
+.err{font-size:13px;color:#A32D2D;background:#FCEBEB;border-radius:8px;padding:10px 12px;margin-top:.75rem;display:none}
+
+/* LOADING */
+.loading{text-align:center;padding:4rem 1rem;display:none}
+.spinner{width:44px;height:44px;border:3px solid #E2E0D8;border-top-color:#1D9E75;border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 1.25rem}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-txt{font-size:14px;color:#6B6963}
+
+/* RESULTS */
+.results{display:none}
+.results-header{margin-bottom:1.5rem}
+.results-header h2{font-size:18px;font-weight:500;color:#1C1B19;margin-bottom:.25rem}
+.results-header p{font-size:13px;color:#6B6963}
+.personas-grid{display:grid;grid-template-columns:1fr;gap:16px;margin-bottom:1.5rem}
+
+/* PERSONA CARD */
+.persona-card{background:#fff;border-radius:16px;border:0.5px solid #E2E0D8;overflow:hidden}
+.persona-header{padding:1.25rem 1.5rem 1rem;border-bottom:0.5px solid #F1EFE8}
+.persona-top{display:flex;align-items:flex-start;gap:14px;margin-bottom:.75rem}
+.avatar{width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:500;flex-shrink:0}
+.persona-meta{flex:1}
+.persona-name{font-size:16px;font-weight:500;color:#1C1B19;margin-bottom:2px}
+.persona-role{font-size:13px;color:#6B6963}
+.persona-quote{font-size:13px;color:#444441;line-height:1.6;font-style:italic;padding:10px 12px;background:#F7F6F2;border-radius:8px;border-left:3px solid #1D9E75}
+.persona-body{padding:1.25rem 1.5rem}
+.persona-sections{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+.psec-title{font-size:11px;font-weight:500;color:#6B6963;text-transform:uppercase;letter-spacing:.06em;margin-bottom:.5rem}
+.tag-list{display:flex;flex-wrap:wrap;gap:6px}
+.tag{display:inline-block;font-size:12px;padding:4px 10px;border-radius:20px;font-weight:500}
+.tag-motive{background:#E1F5EE;color:#085041}
+.tag-objection{background:#FCEBEB;color:#791F1F}
+.tag-platform{background:#E6F1FB;color:#0C447C}
+.tag-content{background:#FAEEDA;color:#633806}
+.persona-footer{padding:.75rem 1.5rem;background:#F7F6F2;border-top:0.5px solid #F1EFE8;display:flex;align-items:center;justify-content:space-between}
+.copy-btn{display:flex;align-items:center;gap:6px;padding:7px 14px;background:#fff;border:0.5px solid #D3D1C7;border-radius:8px;font-size:13px;font-weight:500;color:#1C1B19;cursor:pointer}
+.copy-btn:hover{background:#F7F6F2;border-color:#B4B2A9}
+.copy-btn.copied{color:#085041;border-color:#9FE1CB;background:#F0FAF6}
+
+.actions{display:flex;gap:10px;flex-wrap:wrap}
+.btn-secondary{flex:1;padding:11px;background:#fff;color:#1C1B19;border:0.5px solid #D3D1C7;border-radius:8px;font-size:14px;font-weight:500;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px}
+.btn-secondary:hover{background:#F7F6F2}
+
+.cta-box{background:#F0FAF6;border:0.5px solid #9FE1CB;border-radius:12px;padding:1.5rem;text-align:center;margin-top:.5rem}
+.cta-title{font-size:15px;font-weight:500;color:#085041;margin-bottom:.4rem}
+.cta-sub{font-size:13px;color:#0F6E56;margin-bottom:1rem;line-height:1.6}
+.cta-btn{display:inline-block;background:#1D9E75;color:#fff;padding:10px 24px;border-radius:8px;font-size:14px;font-weight:500;text-decoration:none}
+.cta-btn:hover{background:#0F6E56}
+
+@media(max-width:520px){
+  .row2,.row3{grid-template-columns:1fr}
+  .check-group{grid-template-columns:1fr 1fr}
+  .persona-sections{grid-template-columns:1fr}
+  .persona-footer{flex-direction:column;gap:10px;align-items:stretch}
+  .copy-btn{justify-content:center}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="brand">
+    <div class="brand-dot"></div>
+    <span class="brand-name">Kolay KOBİ</span>
+  </div>
+
+  <!-- FORM -->
+  <div class="form-card" id="form-section">
+    <h1>Müşteri Persona Oluşturucu</h1>
+    <p class="subtitle">İşletmeniz hakkında birkaç bilgi girin, hedef müşterilerinizi temsil eden 3 farklı persona kartı oluşturalım.</p>
+
+    <div class="field">
+      <label>İşletme / hizmet adı</label>
+      <input type="text" id="f-biz" placeholder="Örn: Yıldız Muhasebe Ofisi">
+    </div>
+    <div class="row2">
+      <div class="field">
+        <label>Sektör</label>
+        <select id="f-sector">
+          <option value="">Seçin...</option>
+          <option>Muhasebe / Finans</option>
+          <option>Sağlık / Klinik</option>
+          <option>Eğitim / Kurs</option>
+          <option>İnşaat / Mühendislik</option>
+          <option>Hukuk / Danışmanlık</option>
+          <option>Perakende / Mağaza</option>
+          <option>Yiyecek / İçecek</option>
+          <option>Güzellik / Estetik</option>
+          <option>Lojistik / Taşımacılık</option>
+          <option>Teknoloji / Yazılım</option>
+          <option>Diğer</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Şehir / Bölge</label>
+        <input type="text" id="f-city" placeholder="Örn: İzmir">
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Sunduğunuz hizmet veya ürün</label>
+      <textarea id="f-service" placeholder="Örn: KOBİ'lere muhasebe, vergi danışmanlığı ve mali müşavirlik hizmetleri sunuyoruz. Aylık paketler 3.000₺'den başlıyor."></textarea>
+    </div>
+
+    <div class="row2">
+      <div class="field">
+        <label>Hedef müşteri yaş aralığı</label>
+        <select id="f-age">
+          <option value="">Seçin...</option>
+          <option>18–30</option>
+          <option>25–40</option>
+          <option>30–50</option>
+          <option>40–60</option>
+          <option>Tüm yaşlar</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Fiyat segmenti</label>
+        <select id="f-price">
+          <option value="">Seçin...</option>
+          <option>Ekonomik (fiyat odaklı)</option>
+          <option>Orta segment</option>
+          <option>Premium / Üst segment</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Mevcut müşterilerinizin ortak özellikleri (varsa)</label>
+      <textarea id="f-current" placeholder="Örn: Çoğunlukla 5–20 kişilik işletmeler, teknoloji konusunda çok meşgul, muhasebe konularında bilgisi az ve zaman sıkıntısı çeken girişimciler." style="min-height:64px"></textarea>
+    </div>
+
+    <div class="field">
+      <label>Müşterilerinizin en sık amaçları / sorunları neler?</label>
+      <div class="check-group" id="pain-group">
+        <label class="check-item"><input type="checkbox" value="Zaman tasarrufu"> Zaman tasarrufu</label>
+        <label class="check-item"><input type="checkbox" value="Para tasarrufu"> Para tasarrufu</label>
+        <label class="check-item"><input type="checkbox" value="Güven / kalite"> Güven / kalite</label>
+        <label class="check-item"><input type="checkbox" value="Hız / pratiklik"> Hız / pratiklik</label>
+        <label class="check-item"><input type="checkbox" value="Uzman desteği"> Uzman desteği</label>
+        <label class="check-item"><input type="checkbox" value="Büyüme / ölçeklenme"> Büyüme / ölçeklenme</label>
+      </div>
+    </div>
+
+    <div id="err" class="err">Lütfen işletme adı, sektör ve hizmet alanlarını doldurun.</div>
+    <button class="btn-primary" onclick="generate()">
+      <i class="ti ti-users" aria-hidden="true"></i> Personaları Oluştur
+    </button>
+  </div>
+
+  <!-- LOADING -->
+  <div class="loading" id="loading-section">
+    <div class="spinner"></div>
+    <p class="loading-txt" id="loading-msg">Hedef müşteri profilleri analiz ediliyor...</p>
+  </div>
+
+  <!-- RESULTS -->
+  <div class="results" id="results-section">
+    <div class="results-header">
+      <h2>Müşteri Persona Kartları</h2>
+      <p id="results-sub">3 farklı hedef müşteri profili oluşturuldu</p>
+    </div>
+    <div class="personas-grid" id="personas-grid"></div>
+    <div class="actions">
+      <button class="btn-secondary" onclick="copyAll()">
+        <i class="ti ti-copy" aria-hidden="true"></i> Tümünü Kopyala
+      </button>
+      <button class="btn-secondary" onclick="restart()">
+        <i class="ti ti-refresh" aria-hidden="true"></i> Yeniden Oluştur
+      </button>
+    </div>
+    <div class="cta-box" style="margin-top:1.5rem">
+      <div class="cta-title">Bu personaları birlikte hayata geçirelim</div>
+      <div class="cta-sub" id="cta-sub">Hedef kitlenizi tanıdınız — şimdi onlara ulaşacak stratejiyi oluşturalım.</div>
+      <a href="https://kolaykobi.com/iletisim" class="cta-btn">Ücretsiz Görüşme Ayarla</a>
+    </div>
+    <div style="text-align:center;margin-top:1rem">
+      <button onclick="restart()" style="background:none;border:none;font-size:13px;color:#888780;cursor:pointer;text-decoration:underline">Yeni analiz yap</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const loadingMsgs = [
+  "Hedef müşteri profilleri analiz ediliyor...",
+  "Demografi ve motivasyonlar değerlendiriliyor...",
+  "İtiraz kalıpları inceleniyor...",
+  "Platform tercihleri belirleniyor...",
+  "Persona kartları hazırlanıyor..."
+];
+
+const avatarColors = [
+  {bg:'#E1F5EE',color:'#085041'},
+  {bg:'#E6F1FB',color:'#0C447C'},
+  {bg:'#FAEEDA',color:'#633806'}
+];
+
+function getChecked() {
+  return [...document.querySelectorAll('#pain-group input:checked')].map(el => el.value);
+}
+
+function show(id) {
+  ['form-section','loading-section','results-section'].forEach(s => {
+    document.getElementById(s).style.display = s === id ? (id==='results'?'block':id==='loading'?'block':'block') : 'none';
+  });
+  if(id==='loading-section') {
+    document.getElementById('loading-section').style.display='block';
+    document.getElementById('form-section').style.display='none';
+    document.getElementById('results-section').style.display='none';
+  } else if(id==='results-section') {
+    document.getElementById('results-section').style.display='block';
+    document.getElementById('loading-section').style.display='none';
+    document.getElementById('form-section').style.display='none';
+  } else {
+    document.getElementById('form-section').style.display='block';
+    document.getElementById('loading-section').style.display='none';
+    document.getElementById('results-section').style.display='none';
+  }
+}
+
+async function generate() {
+  const biz = document.getElementById('f-biz').value.trim();
+  const sector = document.getElementById('f-sector').value;
+  const city = document.getElementById('f-city').value.trim();
+  const service = document.getElementById('f-service').value.trim();
+  const age = document.getElementById('f-age').value;
+  const price = document.getElementById('f-price').value;
+  const current = document.getElementById('f-current').value.trim();
+  const pains = getChecked();
+  const err = document.getElementById('err');
+
+  if(!biz || !sector || !service) { err.style.display='block'; return; }
+  err.style.display='none';
+
+  show('loading-section');
+  let mi = 0;
+  const msgEl = document.getElementById('loading-msg');
+  const ticker = setInterval(() => { mi=(mi+1)%loadingMsgs.length; msgEl.textContent=loadingMsgs[mi]; }, 1800);
+
+  const prompt = `Sen bir pazarlama stratejisti ve müşteri araştırma uzmanısın. Aşağıdaki işletme bilgilerine göre 3 farklı müşteri persona kartı oluştur.
+
+İşletme Bilgileri:
+- İşletme / hizmet: ${biz}
+- Sektör: ${sector}
+- Şehir: ${city || 'Türkiye geneli'}
+- Hizmet/Ürün: ${service}
+- Hedef yaş: ${age || 'Belirtilmemiş'}
+- Fiyat segmenti: ${price || 'Belirtilmemiş'}
+- Mevcut müşteri özellikleri: ${current || 'Belirtilmemiş'}
+- Müşteri öncelikleri: ${pains.length ? pains.join(', ') : 'Belirtilmemiş'}
+
+Her persona için gerçekçi, birbirinden belirgin şekilde farklı 3 profil oluştur.
+
+SADECE JSON döndür, başka hiçbir şey yazma:
+{
+  "personas": [
+    {
+      "name": "<Türkçe isim>",
+      "age": <sayı>,
+      "job": "<meslek / pozisyon>",
+      "location": "<şehir>",
+      "quote": "<bu kişinin o hizmete bakışını gösteren 1 cümlelik alıntı, birinci şahıs>",
+      "motivations": ["<3-4 kısa motivasyon>"],
+      "objections": ["<2-3 kısa itiraz>"],
+      "platforms": ["<2-3 platform>"],
+      "contentPrefs": ["<2-3 içerik/kanal tercihi>"],
+      "summary": "<bu persona için 1 cümle strateji önerisi>"
+    }
+  ],
+  "ctaText": "<işletmeye özel 1 cümle>"
+}`;
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:1500,
+        messages:[{role:'user',content:prompt}]
+      })
+    });
+    clearInterval(ticker);
+    const data = await res.json();
+    const text = data.content.map(b=>b.text||'').join('');
+    const clean = text.replace(/```json|```/g,'').trim();
+    const result = JSON.parse(clean);
+    renderPersonas(result, biz);
+  } catch(e) {
+    clearInterval(ticker);
+    renderPersonas(fallback(biz,sector,pains), biz);
+  }
+}
+
+function fallback(biz, sector, pains) {
+  return {
+    personas: [
+      {
+        name:'Ayşe Demir', age:38, job:'Küçük işletme sahibi', location:'İzmir',
+        quote:'Zamanım yok, güvenilir biri her şeyi halletsin istiyorum.',
+        motivations:['Zaman tasarrufu','Güvenilir hizmet','Uzman desteği'],
+        objections:['Maliyeti yüksek bulabilir','Hizmeti anlamakta zorlanabilir'],
+        platforms:['Instagram','WhatsApp'],
+        contentPrefs:['Kısa videolar','Müşteri hikayeleri'],
+        summary:`${biz}'nin en kolay müşteri profili — güveni kazandıktan sonra sadık kalır.`
+      },
+      {
+        name:'Mehmet Yılmaz', age:45, job:'Orta ölçekli şirket müdürü', location:'İstanbul',
+        quote:'Fiyat benim için ikinci sırada, kalite ve hız önce geliyor.',
+        motivations:['Büyüme','Verimlilik','Profesyonel imaj'],
+        objections:['Farklı alternatifler araştırır','Referans ister'],
+        platforms:['LinkedIn','E-posta'],
+        contentPrefs:['Vaka çalışmaları','Sektör raporları'],
+        summary:'Referans ve vaka çalışmalarıyla ikna olur, LinkedIn üzerinden ulaşın.'
+      },
+      {
+        name:'Zeynep Kaya', age:28, job:'Yeni girişimci', location:'Ankara',
+        quote:'Uygun fiyatlı ama kaliteli bir çözüm arıyorum, hızlı karar veriyorum.',
+        motivations:['Para tasarrufu','Hız','Dijital çözümler'],
+        objections:['Bütçe kısıtlı','Deneme yapmaktan çekinebilir'],
+        platforms:['Instagram','TikTok'],
+        contentPrefs:['Eğitici içerik','İndirim/kampanya'],
+        summary:'Uygun fiyat ve hızlı sonuç vaadiyle kolayca ikna olur.'
+      }
+    ],
+    ctaText:`${biz} için doğru müşteri kitlesine ulaşmanın yollarını birlikte belirleyelim.`
+  };
+}
+
+let allPersonasData = [];
+
+function renderPersonas(data, biz) {
+  allPersonasData = data.personas;
+  const grid = document.getElementById('personas-grid');
+  grid.innerHTML = '';
+  document.getElementById('results-sub').textContent = `${biz} için ${data.personas.length} farklı hedef müşteri profili`;
+  document.getElementById('cta-sub').textContent = data.ctaText;
+
+  data.personas.forEach((p, i) => {
+    const col = avatarColors[i % avatarColors.length];
+    const initials = p.name.split(' ').map(n=>n[0]).join('').slice(0,2).toUpperCase();
+    const card = document.createElement('div');
+    card.className = 'persona-card';
+    card.innerHTML = `
+      <div class="persona-header">
+        <div class="persona-top">
+          <div class="avatar" style="background:${col.bg};color:${col.color}">${initials}</div>
+          <div class="persona-meta">
+            <div class="persona-name">${p.name}, ${p.age}</div>
+            <div class="persona-role">${p.job} · ${p.location}</div>
+          </div>
+        </div>
+        <div class="persona-quote">"${p.quote}"</div>
+      </div>
+      <div class="persona-body">
+        <div class="persona-sections">
+          <div>
+            <div class="psec-title">Motivasyonlar</div>
+            <div class="tag-list">${p.motivations.map(m=>`<span class="tag tag-motive">${m}</span>`).join('')}</div>
+          </div>
+          <div>
+            <div class="psec-title">İtirazlar</div>
+            <div class="tag-list">${p.objections.map(o=>`<span class="tag tag-objection">${o}</span>`).join('')}</div>
+          </div>
+          <div>
+            <div class="psec-title">Platform tercihleri</div>
+            <div class="tag-list">${p.platforms.map(pl=>`<span class="tag tag-platform">${pl}</span>`).join('')}</div>
+          </div>
+          <div>
+            <div class="psec-title">İçerik tercihleri</div>
+            <div class="tag-list">${p.contentPrefs.map(c=>`<span class="tag tag-content">${c}</span>`).join('')}</div>
+          </div>
+        </div>
+        ${p.summary ? `<div style="margin-top:1rem;font-size:13px;color:#444441;line-height:1.5;padding:10px 12px;background:#F7F6F2;border-radius:8px"><strong style="font-weight:500;color:#1C1B19">Strateji:</strong> ${p.summary}</div>` : ''}
+      </div>
+      <div class="persona-footer">
+        <span style="font-size:12px;color:#888780">Persona ${i+1} / ${data.personas.length}</span>
+        <button class="copy-btn" onclick="copyPersona(${i}, this)">
+          <i class="ti ti-copy" aria-hidden="true"></i> Kopyala
+        </button>
+      </div>`;
+    grid.appendChild(card);
+  });
+
+  show('results-section');
+}
+
+function personaToText(p) {
+  return `=== ${p.name}, ${p.age} ===
+Meslek: ${p.job} · ${p.location}
+Alıntı: "${p.quote}"
+Motivasyonlar: ${p.motivations.join(', ')}
+İtirazlar: ${p.objections.join(', ')}
+Platformlar: ${p.platforms.join(', ')}
+İçerik tercihleri: ${p.contentPrefs.join(', ')}
+Strateji: ${p.summary||''}`;
+}
+
+function copyPersona(idx, btn) {
+  navigator.clipboard.writeText(personaToText(allPersonasData[idx])).then(() => {
+    btn.innerHTML = '<i class="ti ti-check" aria-hidden="true"></i> Kopyalandı';
+    btn.classList.add('copied');
+    setTimeout(() => {
+      btn.innerHTML = '<i class="ti ti-copy" aria-hidden="true"></i> Kopyala';
+      btn.classList.remove('copied');
+    }, 2000);
+  });
+}
+
+function copyAll() {
+  const text = allPersonasData.map(personaToText).join('\n\n');
+  navigator.clipboard.writeText(text).then(() => alert('Tüm personalar panoya kopyalandı!'));
+}
+
+function restart() {
+  document.getElementById('f-biz').value='';
+  document.getElementById('f-sector').value='';
+  document.getElementById('f-city').value='';
+  document.getElementById('f-service').value='';
+  document.getElementById('f-age').value='';
+  document.getElementById('f-price').value='';
+  document.getElementById('f-current').value='';
+  document.querySelectorAll('#pain-group input').forEach(el=>el.checked=false);
+  show('form-section');
+}
+
+show('form-section');
+</script>
+</body>
+</html>
+
+<script>
+// ── Launcher'dan import ──────────────────────────────────────────────────────
+(function() {
+  try {
+    let payload = null;
+    const urlParam = new URLSearchParams(window.location.search).get('kkb_import');
+    if (urlParam) payload = JSON.parse(decodeURIComponent(urlParam));
+    if (!payload) {
+      const raw = sessionStorage.getItem('kkb_import');
+      if (raw) payload = JSON.parse(raw);
+    }
+    if (!payload) return;
+    if (Date.now() - payload.ts > 10 * 60 * 1000) return;
+    if (payload.app !== 'persona') return;
+
+    const d = payload.data;
+
+    if (d.biz)       document.getElementById('f-biz').value     = d.biz;
+    if (d.service)   document.getElementById('f-service').value = d.service;
+    if (d.advantage) document.getElementById('f-current').value = d.advantage;
+
+    // Fiyat — select eşleştirmesi
+    if (d.price) {
+      const priceEl = document.getElementById('f-price');
+      const opts = [...priceEl.options].filter(o => o.value !== '');
+      const match = opts.find(o => d.price.includes(o.value.replace(/[₺,.]/g,'')));
+      if (match) priceEl.value = match.value;
+    }
+
+    // Sektör eşleştirmesi
+    if (d.sector) {
+      const norm = s => s.trim().toLowerCase().replace(/\s*\/\s*/g, '/');
+      const sectorEl = document.getElementById('f-sector');
+      const opts = [...sectorEl.options].filter(o => o.value !== '');
+      let match = opts.find(o => norm(o.value) === norm(d.sector));
+      if (!match) match = opts.find(o => norm(o.value).startsWith(norm(d.sector.split('/')[0].trim())));
+      if (!match) match = opts.find(o => norm(d.sector).includes(norm(o.value.split('/')[0].trim())));
+      if (match) sectorEl.value = match.value;
+    }
+
+    sessionStorage.removeItem('kkb_import');
+
+    const notice = document.createElement('div');
+    notice.style.cssText = 'background:#F0FAF6;border:0.5px solid #9FE1CB;border-radius:8px;padding:10px 14px;font-size:13px;color:#085041;display:flex;align-items:center;gap:8px;margin-bottom:1rem';
+    notice.innerHTML = '<i class="ti ti-circle-check" aria-hidden="true"></i> Form, launcher\'dan aktarılan verilerle dolduruldu.';
+    const fc = document.querySelector('.form-card') || document.querySelector('form') || document.body.firstElementChild;
+    if (fc) fc.insertBefore(notice, fc.children[2] || fc.firstChild);
+    setTimeout(() => notice.remove(), 5000);
+  } catch(e) {}
+})();
+</script>

@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>30 Günlük İçerik Takvimi — Kolay KOBİ</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,sans-serif;background:#F7F6F2;min-height:100vh}
+.app{max-width:760px;margin:0 auto;padding:2rem 1rem}
+.brand{display:flex;align-items:center;gap:8px;margin-bottom:2rem}
+.brand-dot{width:9px;height:9px;border-radius:50%;background:#1D9E75}
+.brand-name{font-size:13px;font-weight:500;color:#1D9E75;letter-spacing:.04em}
+
+/* FORM */
+.form-card{background:#fff;border-radius:16px;border:0.5px solid #E2E0D8;padding:2rem}
+h1{font-size:22px;font-weight:500;color:#1C1B19;margin-bottom:.4rem}
+.subtitle{font-size:14px;color:#6B6963;line-height:1.6;margin-bottom:2rem}
+.field{margin-bottom:1.25rem}
+label{display:block;font-size:13px;font-weight:500;color:#6B6963;margin-bottom:6px}
+input,select,textarea{width:100%;padding:10px 12px;font-size:14px;border:0.5px solid #D3D1C7;border-radius:8px;background:#fff;color:#1C1B19;outline:none;font-family:inherit}
+textarea{resize:vertical;min-height:72px;line-height:1.5}
+input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3px rgba(29,158,117,.1)}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.check-group{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:6px}
+.check-item{display:flex;align-items:center;gap:8px;padding:9px 11px;border:0.5px solid #D3D1C7;border-radius:8px;cursor:pointer;font-size:13px;color:#1C1B19;background:#fff;user-select:none}
+.check-item input[type=checkbox]{width:auto;padding:0;box-shadow:none}
+.check-item:has(input:checked){border-color:#1D9E75;background:#F0FAF6}
+.btn-primary{width:100%;padding:13px;background:#1D9E75;color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:500;cursor:pointer;margin-top:.5rem;display:flex;align-items:center;justify-content:center;gap:8px}
+.btn-primary:hover{background:#0F6E56}
+.err{font-size:13px;color:#A32D2D;background:#FCEBEB;border-radius:8px;padding:10px 12px;margin-top:.75rem;display:none}
+
+/* LOADING */
+.loading{display:none;text-align:center;padding:4rem 1rem}
+.spinner{width:44px;height:44px;border:3px solid #E2E0D8;border-top-color:#1D9E75;border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 1.25rem}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-txt{font-size:14px;color:#6B6963}
+
+/* RESULTS */
+.results{display:none}
+.results-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;flex-wrap:wrap;gap:10px}
+.results-top h2{font-size:18px;font-weight:500;color:#1C1B19}
+.results-top p{font-size:13px;color:#6B6963;margin-top:2px}
+.action-row{display:flex;gap:8px;flex-wrap:wrap}
+.btn-sm{display:flex;align-items:center;gap:6px;padding:8px 14px;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;border:0.5px solid #D3D1C7;background:#fff;color:#1C1B19}
+.btn-sm:hover{background:#F7F6F2}
+.btn-sm.primary{background:#1D9E75;color:#fff;border-color:#1D9E75}
+.btn-sm.primary:hover{background:#0F6E56}
+
+/* WEEK TABS */
+.week-tabs{display:flex;gap:6px;margin-bottom:1.25rem;background:#fff;border:0.5px solid #E2E0D8;border-radius:10px;padding:4px}
+.wtab{flex:1;padding:8px;text-align:center;border-radius:7px;font-size:13px;font-weight:500;cursor:pointer;color:#6B6963;border:none;background:none}
+.wtab.active{background:#1D9E75;color:#fff}
+
+/* DAY CARDS */
+.days-grid{display:grid;grid-template-columns:1fr;gap:8px}
+.day-card{background:#fff;border:0.5px solid #E2E0D8;border-radius:12px;padding:14px 16px;display:grid;grid-template-columns:48px 1fr auto;gap:12px;align-items:start}
+.day-num{font-size:11px;font-weight:500;color:#888780;text-transform:uppercase;letter-spacing:.04em}
+.day-date{font-size:20px;font-weight:500;color:#1C1B19;line-height:1}
+.day-weekday{font-size:11px;color:#B4B2A9;margin-top:1px}
+.day-content{flex:1}
+.day-topic{font-size:14px;font-weight:500;color:#1C1B19;margin-bottom:4px}
+.day-draft{font-size:13px;color:#444441;line-height:1.55}
+.day-tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.tag{display:inline-block;font-size:11px;font-weight:500;padding:3px 9px;border-radius:20px}
+.tag-format{background:#E6F1FB;color:#0C447C}
+.tag-platform{background:#E1F5EE;color:#085041}
+.tag-special{background:#FAEEDA;color:#633806}
+.day-copy{flex-shrink:0;padding:6px 10px;background:none;border:0.5px solid #D3D1C7;border-radius:7px;cursor:pointer;color:#6B6963;font-size:13px;display:flex;align-items:center;gap:5px}
+.day-copy:hover{background:#F7F6F2;color:#1C1B19}
+.day-copy.copied{color:#085041;border-color:#9FE1CB;background:#F0FAF6}
+
+/* refresh row */
+.refresh-row{margin:6px 0 16px;display:flex;gap:8px;align-items:center}
+.refresh-hint{font-size:12px;color:#B4B2A9}
+
+.cta-box{background:#F0FAF6;border:0.5px solid #9FE1CB;border-radius:12px;padding:1.5rem;text-align:center;margin-top:1.5rem}
+.cta-title{font-size:15px;font-weight:500;color:#085041;margin-bottom:.4rem}
+.cta-sub{font-size:13px;color:#0F6E56;margin-bottom:1rem;line-height:1.6}
+.cta-btn{display:inline-block;background:#1D9E75;color:#fff;padding:10px 24px;border-radius:8px;font-size:14px;font-weight:500;text-decoration:none}
+.cta-btn:hover{background:#0F6E56}
+
+@media(max-width:540px){
+  .row2,.check-group{grid-template-columns:1fr 1fr}
+  .day-card{grid-template-columns:40px 1fr auto}
+  .action-row{flex-direction:column}
+  .btn-sm{justify-content:center}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="brand">
+    <div class="brand-dot"></div>
+    <span class="brand-name">Kolay KOBİ</span>
+  </div>
+
+  <!-- FORM -->
+  <div class="form-card" id="form-section">
+    <h1>30 Günlük İçerik Takvimi</h1>
+    <p class="subtitle">Sektörünüze, hedef kitlenize ve marka sesinize uygun 30 günlük sosyal medya takvimi oluşturalım. Her gün için konu, format önerisi ve hazır taslak metin üretiyoruz.</p>
+
+    <div class="row2">
+      <div class="field">
+        <label>İşletme / marka adı</label>
+        <input type="text" id="f-biz" placeholder="Örn: Yıldız Muhasebe">
+      </div>
+      <div class="field">
+        <label>Sektör</label>
+        <select id="f-sector">
+          <option value="">Seçin...</option>
+          <option>Muhasebe / Finans</option>
+          <option>Sağlık / Klinik</option>
+          <option>Eğitim / Kurs</option>
+          <option>İnşaat / Mühendislik</option>
+          <option>Hukuk / Danışmanlık</option>
+          <option>Perakende / Mağaza</option>
+          <option>Yiyecek / İçecek</option>
+          <option>Güzellik / Estetik</option>
+          <option>Lojistik / Taşımacılık</option>
+          <option>Teknoloji / Yazılım</option>
+          <option>Diğer</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Hedef kitle</label>
+      <input type="text" id="f-audience" placeholder="Örn: 30-50 yaş, küçük işletme sahipleri, muhasebe konusunda bilgisi az girişimciler">
+    </div>
+
+    <div class="field">
+      <label>Hangi platformlar için içerik üretilsin?</label>
+      <div class="check-group" id="platform-group">
+        <label class="check-item"><input type="checkbox" value="Instagram"> Instagram</label>
+        <label class="check-item"><input type="checkbox" value="Facebook"> Facebook</label>
+        <label class="check-item"><input type="checkbox" value="LinkedIn"> LinkedIn</label>
+        <label class="check-item"><input type="checkbox" value="TikTok"> TikTok</label>
+        <label class="check-item"><input type="checkbox" value="Twitter/X"> Twitter/X</label>
+        <label class="check-item"><input type="checkbox" value="YouTube Shorts"> YouTube Shorts</label>
+      </div>
+    </div>
+
+    <div class="row2">
+      <div class="field">
+        <label>Marka tonu</label>
+        <select id="f-tone">
+          <option value="">Seçin...</option>
+          <option>Profesyonel ve güvenilir</option>
+          <option>Samimi ve yakın</option>
+          <option>Eğitici ve bilgilendirici</option>
+          <option>Enerjik ve motive edici</option>
+          <option>Mizahi ve eğlenceli</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>İçerik dili</label>
+        <select id="f-lang">
+          <option value="Türkçe">Türkçe</option>
+          <option value="İngilizce">İngilizce</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Bu ay özel günler / kampanyalar var mı?</label>
+      <input type="text" id="f-special" placeholder="Örn: 15 Temmuz kurumsal indirim, mağaza yıl dönümü 22. gün">
+    </div>
+
+    <div class="field">
+      <label>Takvim başlangıç tarihi</label>
+      <input type="date" id="f-start">
+    </div>
+
+    <div id="err" class="err">Lütfen işletme adı, sektör ve en az bir platform seçin.</div>
+    <button class="btn-primary" onclick="generate()">
+      <i class="ti ti-calendar" aria-hidden="true"></i> Takvimi Oluştur
+    </button>
+  </div>
+
+  <!-- LOADING -->
+  <div class="loading" id="loading-section">
+    <div class="spinner"></div>
+    <p class="loading-txt" id="loading-msg">İçerik fikirleri üretiliyor...</p>
+  </div>
+
+  <!-- RESULTS -->
+  <div class="results" id="results-section">
+    <div class="results-top">
+      <div>
+        <h2 id="results-title">30 Günlük İçerik Takvimi</h2>
+        <p id="results-sub"></p>
+      </div>
+      <div class="action-row">
+        <button class="btn-sm" onclick="downloadCSV()"><i class="ti ti-download" aria-hidden="true"></i> CSV İndir</button>
+        <button class="btn-sm" onclick="restart()"><i class="ti ti-refresh" aria-hidden="true"></i> Yeniden</button>
+      </div>
+    </div>
+
+    <div class="week-tabs" id="week-tabs">
+      <button class="wtab active" onclick="showWeek(1,this)">1. Hafta</button>
+      <button class="wtab" onclick="showWeek(2,this)">2. Hafta</button>
+      <button class="wtab" onclick="showWeek(3,this)">3. Hafta</button>
+      <button class="wtab" onclick="showWeek(4,this)">4. Hafta</button>
+      <button class="wtab" onclick="showWeek(5,this)">5. Hafta</button>
+    </div>
+
+    <div class="refresh-row">
+      <button class="btn-sm" id="refresh-week-btn" onclick="refreshWeek()"><i class="ti ti-refresh" aria-hidden="true"></i> Bu haftayı yenile</button>
+      <span class="refresh-hint">Mevcut haftanın içeriklerini yeniden oluştur</span>
+    </div>
+
+    <div class="days-grid" id="days-grid"></div>
+
+    <div class="cta-box" style="margin-top:1.5rem">
+      <div class="cta-title">İçerik stratejinizi birlikte yönetelim</div>
+      <div class="cta-sub" id="cta-sub">Takvim hazır — şimdi uygulamaya geçmek için destek alalım.</div>
+      <a href="https://kolaykobi.com/iletisim" class="cta-btn">Ücretsiz Görüşme Ayarla</a>
+    </div>
+    <div style="text-align:center;margin-top:1rem">
+      <button onclick="restart()" style="background:none;border:none;font-size:13px;color:#888780;cursor:pointer;text-decoration:underline">Yeni takvim oluştur</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const loadingMsgs = [
+  "İçerik fikirleri üretiliyor...",
+  "Platform formatları belirleniyor...",
+  "Taslak metinler yazılıyor...",
+  "Özel günler takvime ekleniyor...",
+  "30 günlük plan hazırlanıyor..."
+];
+
+const TR_DAYS = ['Paz','Pzt','Sal','Çar','Per','Cum','Cmt'];
+const TR_MONTHS = ['Oca','Şub','Mar','Nis','May','Haz','Tem','Ağu','Eyl','Eki','Kas','Ara'];
+
+let allDays = [];
+let currentWeek = 1;
+let formData = {};
+
+function getChecked(groupId) {
+  return [...document.querySelectorAll(`#${groupId} input:checked`)].map(el => el.value);
+}
+
+function show(id) {
+  ['form-section','loading-section','results-section'].forEach(s => {
+    document.getElementById(s).style.display = s === id ? 'block' : 'none';
+  });
+}
+
+function getStartDate() {
+  const val = document.getElementById('f-start').value;
+  if (val) return new Date(val + 'T00:00:00');
+  const d = new Date();
+  d.setDate(d.getDate() + 1);
+  return d;
+}
+
+async function generate() {
+  const biz = document.getElementById('f-biz').value.trim();
+  const sector = document.getElementById('f-sector').value;
+  const audience = document.getElementById('f-audience').value.trim();
+  const platforms = getChecked('platform-group');
+  const tone = document.getElementById('f-tone').value;
+  const lang = document.getElementById('f-lang').value;
+  const special = document.getElementById('f-special').value.trim();
+  const err = document.getElementById('err');
+
+  if (!biz || !sector || platforms.length === 0) { err.style.display='block'; return; }
+  err.style.display = 'none';
+
+  formData = { biz, sector, audience, platforms, tone, lang, special };
+
+  show('loading-section');
+  let mi = 0;
+  const msgEl = document.getElementById('loading-msg');
+  const ticker = setInterval(() => { mi=(mi+1)%loadingMsgs.length; msgEl.textContent=loadingMsgs[mi]; }, 1800);
+
+  const platformList = platforms.join(', ');
+  const prompt = `Sen bir sosyal medya stratejisti ve içerik uzmanısın. Aşağıdaki işletme için 30 günlük sosyal medya içerik takvimi oluştur.
+
+İşletme Bilgileri:
+- İşletme: ${biz}
+- Sektör: ${sector}
+- Hedef kitle: ${audience || 'Genel hedef kitle'}
+- Platformlar: ${platformList}
+- Marka tonu: ${tone || 'Profesyonel'}
+- Dil: ${lang}
+- Özel günler/kampanyalar: ${special || 'Yok'}
+
+Her gün için şunları üret:
+- topic: Kısa başlık (maks 8 kelime)
+- format: İçerik formatı (Reels, Statik görsel, Hikaye, Carousel, Blog, Video)
+- platform: Hangi platform için (verilen platformlardan seç)
+- draft: 1-2 cümlelik hazır taslak metin (${lang} dilinde, marka tonuna uygun, kullanıma hazır)
+- isSpecial: true/false (özel gün/kampanya ise true)
+
+SADECE JSON döndür, açıklama yazma:
+{
+  "days": [
+    {
+      "day": 1,
+      "topic": "...",
+      "format": "...",
+      "platform": "...",
+      "draft": "...",
+      "isSpecial": false
+    }
+  ],
+  "ctaText": "..."
+}
+Tam olarak 30 eleman olsun. Tekrar eden içeriklerden kaçın, çeşitlilik sağla. Formatlarda Reels, Hikaye, Carousel, Statik, Video, Blog arasında dengeli dağılım yap.`;
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 4000,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+    clearInterval(ticker);
+    const data = await res.json();
+    const text = data.content.map(b => b.text || '').join('');
+    const clean = text.replace(/```json|```/g, '').trim();
+    const result = JSON.parse(clean);
+    renderResults(result);
+  } catch(e) {
+    clearInterval(ticker);
+    renderResults(fallback(biz, sector, platforms));
+  }
+}
+
+function fallback(biz, sector, platforms) {
+  const formats = ['Reels','Statik görsel','Hikaye','Carousel','Video','Hikaye'];
+  const topics = [
+    `${sector} hakkında 3 bilinmeyeni`,
+    'Müşteri başarı hikayesi',
+    'Sıkça sorulan sorular',
+    'Ekip arkası görüntüler',
+    'İpucu ve pratik bilgi',
+    `Neden ${biz}?`,
+    'Sektör trendi',
+    'Müşteri yorumu',
+    'Hizmet tanıtımı',
+    'Motivasyon paylaşımı',
+    'Nasıl yapılır rehberi',
+    'Haftalık özet',
+    'Sektörden haber',
+    'Çalışma ortamı',
+    'Uzman tavsiyesi',
+    'Kampanya duyurusu',
+    'Önce/sonra',
+    'Sektör istatistikleri',
+    'Takipçi sorusu yanıtı',
+    'Blog / yazı paylaşımı',
+    'Canlı yayın duyurusu',
+    'Referans müşteri',
+    'Çalışan tanıtımı',
+    'Ürün/hizmet detayı',
+    'Süreç anlatımı',
+    'Sektör miti çürütme',
+    'Teşekkür paylaşımı',
+    'Yeni içerik duyurusu',
+    'Haftalık motivasyon',
+    'Aylık değerlendirme'
+  ];
+  const days = Array.from({length:30}, (_,i) => ({
+    day: i+1,
+    topic: topics[i % topics.length],
+    format: formats[i % formats.length],
+    platform: platforms[i % platforms.length],
+    draft: `${topics[i % topics.length]} hakkında bilgi vermek istiyoruz. ${biz} olarak her zaman yanınızdayız. #${sector.replace(/\s/g,'').replace('/','').toLowerCase()}`,
+    isSpecial: false
+  }));
+  return { days, ctaText: `${biz} için kişiselleştirilmiş bir içerik stratejisi hazırlayalım.` };
+}
+
+function renderResults(result) {
+  allDays = result.days;
+  const startDate = getStartDate();
+
+  document.getElementById('results-title').textContent = `${formData.biz} — 30 Günlük İçerik Takvimi`;
+  const fmt = d => `${d.getDate()} ${TR_MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+  const endDate = new Date(startDate);
+  endDate.setDate(endDate.getDate() + 29);
+  document.getElementById('results-sub').textContent = `${fmt(startDate)} – ${fmt(endDate)} · ${formData.platforms.join(', ')}`;
+  document.getElementById('cta-sub').textContent = result.ctaText || 'Takvim hazır — şimdi uygulamaya geçmek için destek alalım.';
+
+  // Assign actual dates to days
+  allDays = allDays.map((d, i) => {
+    const dt = new Date(startDate);
+    dt.setDate(dt.getDate() + i);
+    return { ...d, date: dt };
+  });
+
+  currentWeek = 1;
+  showWeek(1, document.querySelector('.wtab'));
+  show('results-section');
+}
+
+function showWeek(week, btn) {
+  currentWeek = week;
+  document.querySelectorAll('.wtab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+
+  const start = (week - 1) * 7;
+  const end = Math.min(start + 7, 30);
+  const weekDays = allDays.slice(start, end);
+  renderDays(weekDays);
+}
+
+function renderDays(days) {
+  const grid = document.getElementById('days-grid');
+  grid.innerHTML = '';
+  days.forEach((d, idx) => {
+    const dt = d.date;
+    const dayName = TR_DAYS[dt.getDay()];
+    const dateStr = `${dt.getDate()} ${TR_MONTHS[dt.getMonth()]}`;
+
+    grid.innerHTML += `
+      <div class="day-card" style="${d.isSpecial ? 'border-left:3px solid #EF9F27;border-radius:0 12px 12px 0;' : ''}">
+        <div>
+          <div class="day-num">Gün ${d.day}</div>
+          <div class="day-date" style="${d.isSpecial ? 'color:#BA7517' : ''}">${dt.getDate()}</div>
+          <div class="day-weekday">${dayName} ${TR_MONTHS[dt.getMonth()]}</div>
+        </div>
+        <div class="day-content">
+          <div class="day-topic">${d.topic}</div>
+          <div class="day-draft">${d.draft}</div>
+          <div class="day-tags">
+            <span class="tag tag-format">${d.format}</span>
+            <span class="tag tag-platform">${d.platform}</span>
+            ${d.isSpecial ? '<span class="tag tag-special">Özel gün</span>' : ''}
+          </div>
+        </div>
+        <button class="day-copy" onclick="copyDay(${d.day-1}, this)" title="Kopyala">
+          <i class="ti ti-copy" style="font-size:14px" aria-hidden="true"></i>
+        </button>
+      </div>`;
+  });
+}
+
+function copyDay(idx, btn) {
+  const d = allDays[idx];
+  const dt = d.date;
+  const text = `Gün ${d.day} — ${dt.getDate()} ${TR_MONTHS[dt.getMonth()]}\nKonu: ${d.topic}\nFormat: ${d.format} · ${d.platform}\n\n${d.draft}`;
+  navigator.clipboard.writeText(text).then(() => {
+    btn.innerHTML = '<i class="ti ti-check" style="font-size:14px" aria-hidden="true"></i>';
+    btn.classList.add('copied');
+    setTimeout(() => {
+      btn.innerHTML = '<i class="ti ti-copy" style="font-size:14px" aria-hidden="true"></i>';
+      btn.classList.remove('copied');
+    }, 1800);
+  });
+}
+
+async function refreshWeek() {
+  const btn = document.getElementById('refresh-week-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="ti ti-refresh" aria-hidden="true"></i> Yenileniyor...';
+
+  const start = (currentWeek - 1) * 7;
+  const end = Math.min(start + 7, 30);
+  const weekNum = currentWeek;
+  const { biz, sector, audience, platforms, tone, lang, special } = formData;
+
+  const prompt = `Sen bir sosyal medya stratejistisi. Aşağıdaki işletme için ${weekNum}. haftanın (gün ${start+1}–${end}) içeriklerini yeniden oluştur.
+
+İşletme: ${biz} | Sektör: ${sector} | Platformlar: ${platforms.join(', ')} | Ton: ${tone || 'Profesyonel'} | Dil: ${lang}
+
+SADECE JSON döndür:
+{"days":[{"day":<sayı>,"topic":"...","format":"...","platform":"...","draft":"...","isSpecial":false}]}
+Gün numaraları ${start+1}'den ${end}'e kadar olsun. Tam ${end-start} eleman.`;
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1500,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+    const data = await res.json();
+    const text = data.content.map(b => b.text || '').join('');
+    const clean = text.replace(/```json|```/g, '').trim();
+    const result = JSON.parse(clean);
+    const startDate = allDays[0].date;
+    result.days.forEach((d, i) => {
+      const dt = new Date(startDate);
+      dt.setDate(dt.getDate() + start + i);
+      d.date = dt;
+      allDays[start + i] = d;
+    });
+    renderDays(allDays.slice(start, end));
+  } catch(e) {
+    // keep current
+  }
+  btn.disabled = false;
+  btn.innerHTML = '<i class="ti ti-refresh" aria-hidden="true"></i> Bu haftayı yenile';
+}
+
+function downloadCSV() {
+  const headers = ['Gün','Tarih','Gün Adı','Konu','Format','Platform','Taslak Metin','Özel Gün'];
+  const rows = allDays.map(d => {
+    const dt = d.date;
+    return [
+      d.day,
+      `${dt.getDate()} ${TR_MONTHS[dt.getMonth()]} ${dt.getFullYear()}`,
+      TR_DAYS[dt.getDay()],
+      `"${d.topic.replace(/"/g,'""')}"`,
+      d.format,
+      d.platform,
+      `"${d.draft.replace(/"/g,'""')}"`,
+      d.isSpecial ? 'Evet' : 'Hayır'
+    ];
+  });
+  const csv = [headers, ...rows].map(r => r.join(',')).join('\n');
+  const bom = '\uFEFF';
+  const blob = new Blob([bom + csv], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${formData.biz || 'icerik'}_30_gunluk_takvim.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function restart() {
+  document.getElementById('f-biz').value = '';
+  document.getElementById('f-sector').value = '';
+  document.getElementById('f-audience').value = '';
+  document.getElementById('f-tone').value = '';
+  document.getElementById('f-lang').value = 'Türkçe';
+  document.getElementById('f-special').value = '';
+  document.getElementById('f-start').value = '';
+  document.querySelectorAll('#platform-group input').forEach(el => el.checked = false);
+  allDays = [];
+  show('form-section');
+}
+
+// Set default start date to tomorrow
+const tomorrow = new Date();
+tomorrow.setDate(tomorrow.getDate() + 1);
+document.getElementById('f-start').value = tomorrow.toISOString().split('T')[0];
+
+show('form-section');
+</script>
+</body>
+</html>
+
+<script>
+// ── Launcher'dan import ──────────────────────────────────────────────────────
+(function() {
+  try {
+    let payload = null;
+    const urlParam = new URLSearchParams(window.location.search).get('kkb_import');
+    if (urlParam) payload = JSON.parse(decodeURIComponent(urlParam));
+    if (!payload) {
+      const raw = sessionStorage.getItem('kkb_import');
+      if (raw) payload = JSON.parse(raw);
+    }
+    if (!payload) return;
+    if (Date.now() - payload.ts > 10 * 60 * 1000) return;
+    if (payload.app !== 'takvim') return;
+
+    const d = payload.data;
+
+    if (d.biz)      document.getElementById('f-biz').value      = d.biz;
+    if (d.target)   document.getElementById('f-audience').value = d.target;
+
+    // Sektör eşleştirmesi
+    if (d.sector) {
+      const norm = s => s.trim().toLowerCase().replace(/\s*\/\s*/g, '/');
+      const sectorEl = document.getElementById('f-sector');
+      const opts = [...sectorEl.options].filter(o => o.value !== '');
+      let match = opts.find(o => norm(o.value) === norm(d.sector));
+      if (!match) match = opts.find(o => norm(o.value).startsWith(norm(d.sector.split('/')[0].trim())));
+      if (!match) match = opts.find(o => norm(d.sector).includes(norm(o.value.split('/')[0].trim())));
+      if (match) sectorEl.value = match.value;
+    }
+
+    sessionStorage.removeItem('kkb_import');
+
+    const notice = document.createElement('div');
+    notice.style.cssText = 'background:#F0FAF6;border:0.5px solid #9FE1CB;border-radius:8px;padding:10px 14px;font-size:13px;color:#085041;display:flex;align-items:center;gap:8px;margin-bottom:1rem';
+    notice.innerHTML = '<i class="ti ti-circle-check" aria-hidden="true"></i> Form, launcher\'dan aktarılan verilerle dolduruldu.';
+    const fc = document.querySelector('.form-card') || document.querySelector('form') || document.body.firstElementChild;
+    if (fc) fc.insertBefore(notice, fc.children[2] || fc.firstChild);
+    setTimeout(() => notice.remove(), 5000);
+  } catch(e) {}
+})();
+</script>

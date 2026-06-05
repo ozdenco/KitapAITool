@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kolay KOBİ — Test Başlatıcı</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,sans-serif;background:#F7F6F2;min-height:100vh;padding:2rem 1rem}
+.app{max-width:640px;margin:0 auto}
+.brand{display:flex;align-items:center;gap:8px;margin-bottom:2rem}
+.brand-dot{width:9px;height:9px;border-radius:50%;background:#1D9E75}
+.brand-name{font-size:13px;font-weight:500;color:#1D9E75;letter-spacing:.04em}
+.card{background:#fff;border-radius:16px;border:0.5px solid #E2E0D8;padding:1.75rem;margin-bottom:1rem}
+h1{font-size:20px;font-weight:500;color:#1C1B19;margin-bottom:.35rem}
+.subtitle{font-size:13px;color:#6B6963;line-height:1.6;margin-bottom:1.5rem}
+label{display:block;font-size:13px;font-weight:500;color:#6B6963;margin-bottom:6px}
+
+/* DROP ZONE */
+.drop-zone{border:1.5px dashed #D3D1C7;border-radius:10px;padding:1.5rem;text-align:center;cursor:pointer;transition:all .2s;margin-bottom:1.25rem}
+.drop-zone:hover,.drop-zone.over{border-color:#1D9E75;background:#F0FAF6}
+.drop-zone .dz-icon{font-size:28px;color:#B4B2A9;display:block;margin-bottom:.5rem;transition:color .2s}
+.drop-zone:hover .dz-icon,.drop-zone.over .dz-icon{color:#1D9E75}
+.drop-zone .dz-label{font-size:13px;color:#6B6963}
+.drop-zone.loaded{border-color:#1D9E75;background:#F0FAF6}
+.drop-zone.loaded .dz-icon{color:#1D9E75}
+.drop-zone.loaded .dz-label{color:#085041;font-weight:500}
+
+/* APP CARDS */
+.app-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:1.25rem}
+.app-btn{display:flex;align-items:flex-start;gap:10px;padding:11px 13px;border:0.5px solid #E2E0D8;border-radius:10px;background:#fff;cursor:pointer;text-align:left;transition:all .15s}
+.app-btn:hover{border-color:#1D9E75;background:#F0FAF6}
+.app-btn.selected{border-color:#1D9E75;background:#F0FAF6;box-shadow:0 0 0 2px rgba(29,158,117,.12)}
+.app-btn .app-icon{font-size:18px;color:#B4B2A9;flex-shrink:0;margin-top:1px;transition:color .15s}
+.app-btn.selected .app-icon,.app-btn:hover .app-icon{color:#1D9E75}
+.app-btn .app-no{font-size:10px;font-weight:600;color:#B4B2A9;letter-spacing:.05em;display:block;margin-bottom:2px}
+.app-btn .app-name{font-size:12.5px;font-weight:500;color:#1C1B19;line-height:1.35}
+
+/* STATUS */
+.status{border-radius:8px;padding:9px 13px;font-size:13px;display:none;align-items:center;gap:7px;margin-bottom:1rem}
+.status.ok{background:#F0FAF6;color:#085041;border:0.5px solid #9FE1CB;display:flex}
+.status.err{background:#FCEBEB;color:#A32D2D;border:0.5px solid #F7C1C1;display:flex}
+
+/* PREVIEW */
+.preview-grid{display:grid;gap:8px;margin-bottom:1.25rem}
+.preview-row{background:#F7F6F2;border-radius:8px;padding:9px 12px}
+.preview-row .pr-label{font-size:10px;font-weight:600;color:#888780;letter-spacing:.06em;text-transform:uppercase;margin-bottom:3px}
+.preview-row .pr-val{font-size:13px;color:#1C1B19;line-height:1.5;word-break:break-word}
+
+/* BUTTONS */
+.btn-row{display:flex;gap:8px}
+.btn-primary{flex:1;padding:11px;background:#1D9E75;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:500;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;transition:background .15s}
+.btn-primary:hover{background:#0F6E56}
+.btn-primary:disabled{background:#B4B2A9;cursor:not-allowed}
+.btn-sec{padding:11px 16px;background:#fff;color:#1C1B19;border:0.5px solid #D3D1C7;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;display:flex;align-items:center;gap:6px;transition:background .15s}
+.btn-sec:hover{background:#F7F6F2}
+
+.note{font-size:12px;color:#888780;margin-top:.75rem;line-height:1.6;display:flex;gap:6px;align-items:flex-start}
+.note i{flex-shrink:0;margin-top:1px}
+
+@media(max-width:480px){.app-grid{grid-template-columns:1fr}.btn-row{flex-direction:column}}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="brand">
+    <div class="brand-dot"></div>
+    <span class="brand-name">Kolay KOBİ — Test Başlatıcı</span>
+  </div>
+
+  <!-- IMPORT KARTI -->
+  <div class="card">
+    <h1>Form İçe Aktar</h1>
+    <p class="subtitle">Daha önce üretilen .txt çıktı dosyasını yükleyin, hedef uygulamayı seçin — form dolu gelsin.</p>
+
+    <!-- DOSYA -->
+    <label>1 · .txt dosyasını seçin veya sürükleyin</label>
+    <div class="drop-zone" id="drop-zone" onclick="document.getElementById('file-input').click()">
+      <i class="ti ti-upload dz-icon" aria-hidden="true"></i>
+      <span class="dz-label" id="dz-label">Dosya seçmek için tıklayın</span>
+    </div>
+    <input type="file" id="file-input" accept=".txt" style="display:none">
+
+    <!-- UYGULAMA SEÇ -->
+    <label style="margin-bottom:8px">2 · Açmak istediğiniz uygulamayı seçin</label>
+    <div class="app-grid" id="app-grid"></div>
+
+    <!-- STATUS -->
+    <div class="status" id="status"></div>
+
+    <!-- PREVIEW -->
+    <div id="preview-wrap" style="display:none">
+      <label style="margin-bottom:8px">Aktarılacak veriler</label>
+      <div class="preview-grid" id="preview-grid"></div>
+    </div>
+
+    <!-- BUTONLAR -->
+    <div class="btn-row">
+      <button class="btn-primary" id="open-btn" disabled onclick="openApp()">
+        <i class="ti ti-external-link" aria-hidden="true"></i> Uygulamayı Aç
+      </button>
+      <button class="btn-sec" id="copy-btn" style="display:none" onclick="copyData()">
+        <i class="ti ti-copy" aria-hidden="true"></i> Kopyala
+      </button>
+    </div>
+    <p class="note">
+      <i class="ti ti-info-circle" aria-hidden="true"></i>
+      Uygulama yeni sekmede açılır. Açılan sayfada formu import edip "Scriptleri Oluştur" / "Oluştur" butonuna basın.
+    </p>
+  </div>
+</div>
+
+<script>
+const APPS = [
+  {
+    id: 'wa',
+    no: 'Uygulama 6',
+    name: 'WhatsApp Script Üretici',
+    icon: 'ti-brand-whatsapp',
+    file: 'whatsapp_satis_script_uretici.html',
+    fields: ['biz','sector','service','price','target','objections','advantage']
+  },
+  {
+    id: 'persona',
+    no: 'Uygulama 2',
+    name: 'Müşteri Persona Oluşturucu',
+    icon: 'ti-users',
+    file: 'musteri_persona_olusturucu.html',
+    fields: ['biz','sector','service','price','target','advantage']
+  },
+  {
+    id: 'takvim',
+    no: 'Uygulama 3',
+    name: '30 Günlük İçerik Takvimi',
+    icon: 'ti-calendar',
+    file: 'icerik_takvimi_uretici.html',
+    fields: ['biz','sector','target','service','advantage']
+  },
+  {
+    id: 'skor',
+    no: 'Uygulama 1',
+    name: 'İşletme Görünürlük Skoru',
+    icon: 'ti-building',
+    file: 'isletme_gorunurluk_skoru.html',
+    fields: ['biz','sector','service','target','advantage']
+  },
+];
+
+const FIELD_MAP = {
+  'İşletme'      : 'biz',
+  'Sektör'       : 'sector',
+  'Hizmet/Ürün'  : 'service',
+  'Fiyat'        : 'price',
+  'Hedef Müşteri': 'target',
+  'İtirazlar'    : 'objections',
+  'Avantajlar'   : 'advantage',
+};
+
+const FIELD_LABELS = {
+  biz:'İşletme adı', sector:'Sektör', service:'Hizmet / Ürün',
+  price:'Fiyat', target:'Hedef müşteri', objections:'İtirazlar', advantage:'Avantajlar',
+};
+
+let parsedData = null;
+let selectedApp = null;
+
+// ── Uygulama butonlarını oluştur ─────────────────────────────────────────────
+function buildAppGrid() {
+  const grid = document.getElementById('app-grid');
+  APPS.forEach(app => {
+    const btn = document.createElement('button');
+    btn.className = 'app-btn';
+    btn.setAttribute('data-id', app.id);
+    btn.innerHTML = `
+      <i class="ti ${app.icon} app-icon" aria-hidden="true"></i>
+      <span>
+        <span class="app-no">${app.no}</span>
+        <span class="app-name">${app.name}</span>
+      </span>`;
+    btn.onclick = () => selectApp(app.id);
+    grid.appendChild(btn);
+  });
+}
+
+function selectApp(id) {
+  selectedApp = id;
+  document.querySelectorAll('.app-btn').forEach(b => {
+    b.classList.toggle('selected', b.getAttribute('data-id') === id);
+  });
+  updatePreview();
+  checkReady();
+}
+
+// ── Dosya okuma ──────────────────────────────────────────────────────────────
+document.getElementById('file-input').addEventListener('change', function() {
+  const file = this.files[0];
+  if (!file) return;
+  readFile(file);
+});
+
+const dz = document.getElementById('drop-zone');
+dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('over'); });
+dz.addEventListener('dragleave', () => dz.classList.remove('over'));
+dz.addEventListener('drop', e => {
+  e.preventDefault();
+  dz.classList.remove('over');
+  const file = e.dataTransfer.files[0];
+  if (file) readFile(file);
+});
+
+function readFile(file) {
+  const reader = new FileReader();
+  reader.onload = e => {
+    parsedData = parseTxt(e.target.result);
+    const dz = document.getElementById('drop-zone');
+    const lbl = document.getElementById('dz-label');
+    if (!parsedData) {
+      dz.classList.remove('loaded');
+      lbl.textContent = 'Dosya seçmek için tıklayın';
+      showStatus('Dosyada "İŞLETME BİLGİLERİ" bloğu bulunamadı. Kolay KOBİ .txt çıktısı olduğundan emin olun.', 'err');
+      parsedData = null;
+    } else {
+      dz.classList.add('loaded');
+      lbl.innerHTML = `<i class="ti ti-circle-check" aria-hidden="true"></i> ${file.name} yüklendi`;
+      showStatus(`${Object.keys(parsedData).length} alan okundu.`, 'ok');
+    }
+    updatePreview();
+    checkReady();
+  };
+  reader.readAsText(file, 'UTF-8');
+}
+
+function parseTxt(text) {
+  const result = {};
+  const block = text.match(/═══ İŞLETME BİLGİLERİ ═══([\s\S]*?)(?:═{5,}|$)/);
+  if (!block) return null;
+  block[1].split('\n').forEach(line => {
+    const m = line.match(/^([^\s:][^:]*?)\s*:\s*(.+)$/);
+    if (!m) return;
+    const rawKey = m[1].trim();
+    const val    = m[2].trim();
+    Object.keys(FIELD_MAP).forEach(mapKey => {
+      if (rawKey.startsWith(mapKey)) result[FIELD_MAP[mapKey]] = val;
+    });
+  });
+  return Object.keys(result).length ? result : null;
+}
+
+// ── Önizleme ─────────────────────────────────────────────────────────────────
+function updatePreview() {
+  const wrap = document.getElementById('preview-wrap');
+  const grid = document.getElementById('preview-grid');
+  grid.innerHTML = '';
+
+  if (!parsedData || !selectedApp) { wrap.style.display = 'none'; return; }
+
+  const app = APPS.find(a => a.id === selectedApp);
+  const relevant = app.fields.filter(f => parsedData[f]);
+  if (!relevant.length) { wrap.style.display = 'none'; return; }
+
+  relevant.forEach(f => {
+    const row = document.createElement('div');
+    row.className = 'preview-row';
+    const val = parsedData[f];
+    row.innerHTML = `
+      <div class="pr-label">${FIELD_LABELS[f] || f}</div>
+      <div class="pr-val">${escHtml(val.length > 180 ? val.slice(0,180) + '…' : val)}</div>`;
+    grid.appendChild(row);
+  });
+
+  wrap.style.display = 'block';
+  document.getElementById('copy-btn').style.display = 'flex';
+}
+
+function escHtml(s) {
+  return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ── Durum mesajı ─────────────────────────────────────────────────────────────
+function showStatus(msg, type) {
+  const s = document.getElementById('status');
+  s.className = 'status ' + type;
+  s.innerHTML = `<i class="ti ${type==='ok'?'ti-circle-check':'ti-alert-circle'}" aria-hidden="true"></i> ${msg}`;
+}
+
+// ── Hazır mı kontrol ─────────────────────────────────────────────────────────
+function checkReady() {
+  const btn = document.getElementById('open-btn');
+  btn.disabled = !(parsedData && selectedApp);
+}
+
+// ── Uygulamayı aç ────────────────────────────────────────────────────────────
+function openApp() {
+  if (!parsedData || !selectedApp) return;
+  const app = APPS.find(a => a.id === selectedApp);
+
+  // Veriyi sessionStorage'a yaz
+  try {
+    sessionStorage.setItem('kkb_import', JSON.stringify({
+      app: selectedApp,
+      data: parsedData,
+      ts: Date.now()
+    }));
+  } catch(e) {}
+
+  // Veriyi URL parametresi olarak da encode et (file:// protokolü için fallback)
+  const relevant = {};
+  app.fields.forEach(f => { if (parsedData[f]) relevant[f] = parsedData[f]; });
+  const encoded = encodeURIComponent(JSON.stringify({ app: selectedApp, data: relevant, ts: Date.now() }));
+  const url = app.file + '?kkb_import=' + encoded;
+
+  window.open(url, '_blank');
+  showStatus(`${app.name} yeni sekmede açıldı — form otomatik dolacak.`, 'ok');
+}
+
+// ── Kopyala ──────────────────────────────────────────────────────────────────
+function copyData() {
+  if (!parsedData || !selectedApp) return;
+  const app = APPS.find(a => a.id === selectedApp);
+  const lines = app.fields
+    .filter(f => parsedData[f])
+    .map(f => `${FIELD_LABELS[f]}: ${parsedData[f]}`);
+  navigator.clipboard.writeText(lines.join('\n')).then(() => {
+    const btn = document.getElementById('copy-btn');
+    btn.innerHTML = '<i class="ti ti-check" aria-hidden="true"></i> Kopyalandı';
+    setTimeout(() => { btn.innerHTML = '<i class="ti ti-copy" aria-hidden="true"></i> Kopyala'; }, 2000);
+  });
+}
+
+buildAppGrid();
+</script>
+</body>
+</html>

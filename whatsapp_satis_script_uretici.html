@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WhatsApp Satış Script Üretici — Kolay KOBİ</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,sans-serif;background:#F7F6F2;min-height:100vh}
+.app{max-width:720px;margin:0 auto;padding:2rem 1rem}
+.brand{display:flex;align-items:center;gap:8px;margin-bottom:2rem}
+.brand-dot{width:9px;height:9px;border-radius:50%;background:#1D9E75}
+.brand-name{font-size:13px;font-weight:500;color:#1D9E75;letter-spacing:.04em}
+.form-card{background:#fff;border-radius:16px;border:0.5px solid #E2E0D8;padding:2rem;margin-bottom:1.5rem}
+h1{font-size:22px;font-weight:500;color:#1C1B19;margin-bottom:.4rem}
+.subtitle{font-size:14px;color:#6B6963;line-height:1.6;margin-bottom:2rem}
+.field{margin-bottom:1.25rem}
+label{display:block;font-size:13px;font-weight:500;color:#6B6963;margin-bottom:6px}
+input,select,textarea{width:100%;padding:10px 12px;font-size:14px;border:0.5px solid #D3D1C7;border-radius:8px;background:#fff;color:#1C1B19;outline:none;font-family:inherit}
+textarea{resize:vertical;min-height:72px;line-height:1.5}
+input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3px rgba(29,158,117,.1)}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.check-group{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:6px}
+.check-item{display:flex;align-items:center;gap:8px;padding:9px 11px;border:0.5px solid #D3D1C7;border-radius:8px;cursor:pointer;font-size:13px;color:#1C1B19;background:#fff;user-select:none}
+.check-item input[type=checkbox]{width:auto;padding:0;box-shadow:none}
+.check-item:has(input:checked){border-color:#1D9E75;background:#F0FAF6}
+.btn-primary{width:100%;padding:13px;background:#1D9E75;color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:500;cursor:pointer;margin-top:.5rem;display:flex;align-items:center;justify-content:center;gap:8px}
+.btn-primary:hover{background:#0F6E56}
+.err{font-size:13px;color:#A32D2D;background:#FCEBEB;border-radius:8px;padding:10px 12px;margin-top:.75rem;display:none}
+.loading{display:none;text-align:center;padding:3rem 1rem;margin-top:.5rem}
+.spinner{width:44px;height:44px;border:3px solid #E2E0D8;border-top-color:#1D9E75;border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 1.25rem}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-txt{font-size:14px;color:#6B6963}
+.results{display:none}
+.results-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:1.25rem;flex-wrap:wrap;gap:10px}
+.results-top h2{font-size:18px;font-weight:500;color:#1C1B19}
+.results-top p{font-size:13px;color:#6B6963;margin-top:2px}
+.action-row{display:flex;gap:8px;flex-wrap:wrap}
+.btn-sm{display:flex;align-items:center;gap:6px;padding:8px 14px;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;border:0.5px solid #D3D1C7;background:#fff;color:#1C1B19}
+.btn-sm:hover{background:#F7F6F2}
+.scripts-grid{display:grid;grid-template-columns:1fr;gap:12px;margin-bottom:1.5rem}
+.step-badge{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px}
+.step-1 .step-badge{background:#E1F5EE;color:#085041}
+.step-2 .step-badge{background:#E6F1FB;color:#0C447C}
+.step-3 .step-badge{background:#FAEEDA;color:#633806}
+.step-4 .step-badge{background:#F3E8FD;color:#5B1A8A}
+.step-5 .step-badge{background:#FCF0EB;color:#7A2E0B}
+.script-card{background:#fff;border-radius:12px;border:0.5px solid #E2E0D8;overflow:hidden}
+.script-header{padding:14px 16px 0;display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.script-title{font-size:14px;font-weight:500;color:#1C1B19}
+.script-tip{font-size:12px;color:#888780;margin-top:2px}
+.copy-btn{flex-shrink:0;display:flex;align-items:center;gap:5px;padding:6px 12px;background:none;border:0.5px solid #D3D1C7;border-radius:7px;cursor:pointer;color:#6B6963;font-size:12px;font-weight:500;white-space:nowrap}
+.copy-btn:hover{background:#F7F6F2}
+.copy-btn.copied{color:#085041;border-color:#9FE1CB;background:#F0FAF6}
+.bubble-wrap{padding:12px 16px 14px}
+.wa-bubble{background:#DCF8C6;border-radius:12px 12px 3px 12px;padding:12px 14px;font-size:13.5px;line-height:1.65;color:#111B21;white-space:pre-wrap;position:relative;display:inline-block;max-width:100%;width:100%;font-family:system-ui,sans-serif}
+.wa-bubble::after{content:'✓✓';font-size:11px;color:#53B3F0;position:absolute;bottom:6px;right:10px}
+.wa-timestamp{font-size:11px;color:#888780;margin-top:6px;text-align:right}
+.cta-box{background:#F0FAF6;border:0.5px solid #9FE1CB;border-radius:12px;padding:1.5rem;text-align:center;margin-top:.5rem}
+.cta-title{font-size:15px;font-weight:500;color:#085041;margin-bottom:.4rem}
+.cta-sub{font-size:13px;color:#0F6E56;margin-bottom:1rem;line-height:1.6}
+.cta-btn{display:inline-block;background:#1D9E75;color:#fff;padding:10px 24px;border-radius:8px;font-size:14px;font-weight:500;text-decoration:none}
+.cta-btn:hover{background:#0F6E56}
+.wa-note{background:#FAEEDA;border:0.5px solid #F0C97A;border-radius:8px;padding:10px 14px;font-size:12px;color:#633806;margin-bottom:1.25rem;display:flex;gap:8px;align-items:flex-start}
+.rate-bar{display:flex;align-items:center;justify-content:space-between;background:#F7F6F2;border:0.5px solid #E2E0D8;border-radius:8px;padding:9px 14px;margin-bottom:1.25rem;gap:12px}
+.rate-dots{display:flex;gap:5px}
+.rate-dot{width:10px;height:10px;border-radius:50%;background:#1D9E75;transition:background .3s}
+.rate-dot.used{background:#D3D1C7}
+.rate-label{font-size:12px;color:#6B6963;flex:1}
+.rate-label strong{color:#1C1B19}
+.rate-warn{font-size:12px;color:#A32D2D;font-weight:500}
+.rate-empty .rate-label{color:#A32D2D}
+.btn-primary:disabled{background:#B4B2A9;cursor:not-allowed}
+@media(max-width:540px){
+  .row2{grid-template-columns:1fr}
+  .check-group{grid-template-columns:1fr 1fr}
+  .action-row{flex-direction:column}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="brand">
+    <div class="brand-dot"></div>
+    <span class="brand-name">Kolay KOBİ</span>
+  </div>
+
+  <!-- FORM (her zaman görünür) -->
+  <div class="form-card">
+    <h1>WhatsApp Satış Script Üretici</h1>
+    <p class="subtitle">Ürün/hizmetiniz ve en sık karşılaştığınız itirazları girin — ilk temastan kapanışa kadar 5 hazır WhatsApp mesajı oluşturalım.</p>
+
+    <div class="row2">
+      <div class="field">
+        <label>İşletme / hizmet adı</label>
+        <input type="text" id="f-biz" placeholder="Örn: Yıldız Muhasebe">
+      </div>
+      <div class="field">
+        <label>Sektör</label>
+        <select id="f-sector">
+          <option value="">Seçin...</option>
+          <option>Muhasebe / Finans</option>
+          <option>Sağlık / Klinik</option>
+          <option>Eğitim / Kurs</option>
+          <option>İnşaat / Mühendislik</option>
+          <option>Hukuk / Danışmanlık</option>
+          <option>Perakende / Mağaza</option>
+          <option>Yiyecek / İçecek</option>
+          <option>Güzellik / Estetik</option>
+          <option>Lojistik / Taşımacılık</option>
+          <option>Teknoloji / Yazılım</option>
+          <option>Diğer</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Sunduğunuz hizmet / ürün</label>
+      <textarea id="f-service" placeholder="Örn: KOBİ'lere aylık muhasebe, vergi beyannamesi ve e-fatura hizmetleri. Paketler 3.000₺'den başlıyor, 3 gün içinde kurulum yapılıyor."></textarea>
+    </div>
+
+    <div class="row2">
+      <div class="field">
+        <label>Fiyat aralığı</label>
+        <input type="text" id="f-price" placeholder="Örn: 3.000₺ – 8.000₺/ay">
+      </div>
+      <div class="field">
+        <label>Hedef müşteri</label>
+        <input type="text" id="f-target" placeholder="Örn: 5-20 kişilik KOBİ sahipleri">
+      </div>
+    </div>
+
+    <div class="field">
+      <label>En sık karşılaştığınız itirazlar</label>
+      <div class="check-group" id="obj-group">
+        <label class="check-item"><input type="checkbox" value="Fiyatı pahalı"> Fiyatı pahalı</label>
+        <label class="check-item"><input type="checkbox" value="Düşüneyim / bekleyeyim"> Düşüneyim</label>
+        <label class="check-item"><input type="checkbox" value="Başka biriyle çalışıyorum"> Başkası var</label>
+        <label class="check-item"><input type="checkbox" value="Şu an ihtiyacım yok"> İhtiyacım yok</label>
+        <label class="check-item"><input type="checkbox" value="Riski bilmiyorum / güvenmiyorum"> Güvenmiyorum</label>
+        <label class="check-item"><input type="checkbox" value="Bütçem yok"> Bütçem yok</label>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Özel not / avantaj <span style="font-weight:400;color:#B4B2A9">(opsiyonel)</span></label>
+      <input type="text" id="f-advantage" placeholder="Örn: İlk ay ücretsiz deneme, 7/24 WhatsApp destek, sertifikalı mali müşavir ekibi">
+    </div>
+
+    <!-- RATE LIMIT GÖSTERGESI -->
+    <div class="rate-bar" id="rate-bar">
+      <div class="rate-dots" id="rate-dots"></div>
+      <span class="rate-label" id="rate-label">Günlük <strong id="rate-remaining">5</strong> / 5 kullanım hakkınız var</span>
+      <span class="rate-warn" id="rate-warn" style="display:none">Limit doldu</span>
+    </div>
+
+    <div id="err" class="err">Lütfen işletme adı, sektör ve hizmet açıklamasını doldurun.</div>
+    <button class="btn-primary" id="generate-btn" onclick="generate()">
+      <i class="ti ti-brand-whatsapp" aria-hidden="true"></i> Scriptleri Oluştur
+    </button>
+  </div>
+
+  <!-- LOADING (form altında) -->
+  <div class="loading" id="loading-section" style="display:none">
+    <div class="spinner"></div>
+    <p class="loading-txt" id="loading-msg">Satış scriptleri hazırlanıyor...</p>
+  </div>
+
+  <!-- RESULTS (form altında) -->
+  <div class="results" id="results-section" style="display:none">
+    <div class="results-top">
+      <div>
+        <h2 id="results-title">WhatsApp Satış Scriptleri</h2>
+        <p id="results-sub">5 hazır mesaj şablonu</p>
+      </div>
+      <div class="action-row">
+        <button class="btn-sm" onclick="downloadTxt()"><i class="ti ti-download" aria-hidden="true"></i> .txt İndir</button>
+        <button class="btn-sm" onclick="copyAll()"><i class="ti ti-copy" aria-hidden="true"></i> Tümünü Kopyala</button>
+        <button class="btn-sm" onclick="resetForm()"><i class="ti ti-refresh" aria-hidden="true"></i> Formu Boşalt</button>
+      </div>
+    </div>
+
+    <div class="wa-note">
+      <i class="ti ti-info-circle" style="font-size:16px;flex-shrink:0;margin-top:1px" aria-hidden="true"></i>
+      <span>Bu mesajlar WhatsApp Business ile <strong>manuel olarak</strong> gönderilebilir. Otomatik gönderim için Meta Business API onayı gereklidir.</span>
+    </div>
+
+    <div class="scripts-grid" id="scripts-grid"></div>
+
+    <div class="cta-box">
+      <div class="cta-title">Scriptleri sistemli kullanmak ister misiniz?</div>
+      <div class="cta-sub" id="cta-sub">Mesajları hangi müşteriye ne zaman atacağınızı birlikte planlayalım.</div>
+      <a href="https://kolaykobi.com/iletisim" class="cta-btn" target="_blank" rel="noopener noreferrer">Ücretsiz Görüşme Ayarla</a>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── N8N PROXY ENDPOINT ───────────────────────────────────────────────────
+// Web sitesine aldığınızda buraya n8n webhook URL'nizi yazın:
+// const N8N_PROXY = 'https://your-n8n.domain.com/webhook/kolay-kobi-claude';
+// Şimdilik null = doğrudan Anthropic API (Claude Artifact ortamı)
+const N8N_PROXY = null;
+
+// ─── RATE LIMIT ───────────────────────────────────────────────────────────
+const DAILY_LIMIT = 5;
+const RATE_KEY    = 'kkb_wa_usage';
+
+function getRateData() {
+  try {
+    const raw = localStorage.getItem(RATE_KEY);
+    if (!raw) return { date: '', count: 0 };
+    return JSON.parse(raw);
+  } catch { return { date: '', count: 0 }; }
+}
+
+function getTodayStr() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function getRemainingUses() {
+  const data = getRateData();
+  if (data.date !== getTodayStr()) return DAILY_LIMIT;
+  return Math.max(0, DAILY_LIMIT - data.count);
+}
+
+function incrementUsage() {
+  const today = getTodayStr();
+  const data  = getRateData();
+  const count = data.date === today ? data.count + 1 : 1;
+  localStorage.setItem(RATE_KEY, JSON.stringify({ date: today, count }));
+}
+
+function updateRateBar() {
+  const remaining = getRemainingUses();
+  const used = DAILY_LIMIT - remaining;
+
+  const dotsEl = document.getElementById('rate-dots');
+  dotsEl.innerHTML = '';
+  for (let i = 0; i < DAILY_LIMIT; i++) {
+    const dot = document.createElement('span');
+    dot.className = 'rate-dot' + (i < used ? ' used' : '');
+    dotsEl.appendChild(dot);
+  }
+
+  const bar   = document.getElementById('rate-bar');
+  const warn  = document.getElementById('rate-warn');
+  const btn   = document.getElementById('generate-btn');
+  const label = document.getElementById('rate-label');
+
+  if (remaining === 0) {
+    bar.classList.add('rate-empty');
+    warn.style.display  = 'inline';
+    label.style.display = 'none';
+    btn.disabled = true;
+    btn.title = 'Günlük kullanım limitine ulaştınız. Yarın tekrar deneyin.';
+  } else if (remaining === 1) {
+    bar.classList.remove('rate-empty');
+    warn.style.display  = 'none';
+    label.style.display = 'inline';
+    label.innerHTML = 'Bugün <strong>1</strong> kullanım hakkınız kaldı ⚠️';
+    btn.disabled = false;
+    btn.title = '';
+  } else {
+    bar.classList.remove('rate-empty');
+    warn.style.display  = 'none';
+    label.style.display = 'inline';
+    label.innerHTML = `Günlük <strong>${remaining}</strong> / ${DAILY_LIMIT} kullanım hakkınız var`;
+    btn.disabled = false;
+    btn.title = '';
+  }
+}
+
+const loadingMsgs = [
+  "Satış scriptleri hazırlanıyor...",
+  "İtiraz kırma mesajları yazılıyor...",
+  "Teklif ve kapanış scriptleri oluşturuluyor...",
+  "WhatsApp formatı uygulanıyor..."
+];
+
+const stepMeta = [
+  { label: "1 · İlk Temas",    colorClass: "step-1", tip: "Potansiyel müşteri formu doldurunca veya sizi bulunca gönderin" },
+  { label: "2 · Takip",        colorClass: "step-2", tip: "İlk mesajdan 24-48 saat cevap gelmezse gönderin" },
+  { label: "3 · İtiraz Kırma", colorClass: "step-3", tip: "Müşteri tereddüt ettiğinde veya itiraz gösterdiğinde kullanın" },
+  { label: "4 · Teklif",       colorClass: "step-4", tip: "Müşteri ilgilendiğini gösterdiğinde somut teklif yapın" },
+  { label: "5 · Kapanış",      colorClass: "step-5", tip: "Teklif sonrası karar beklerken gönderin" }
+];
+
+let allScripts = [];
+
+function getChecked(groupId) {
+  return [...document.querySelectorAll(`#${groupId} input:checked`)].map(el => el.value);
+}
+
+function showLoading(on) {
+  document.getElementById('loading-section').style.display = on ? 'block' : 'none';
+}
+
+function showResults(on) {
+  document.getElementById('results-section').style.display = on ? 'block' : 'none';
+}
+
+function clearResults() {
+  showResults(false);
+  showLoading(false);
+  allScripts = [];
+  document.getElementById('scripts-grid').innerHTML = '';
+}
+
+async function generate() {
+  // Rate limit kontrolü
+  if (getRemainingUses() === 0) {
+    document.getElementById('err').textContent = 'Günlük kullanım limitinize ulaştınız. Yarın tekrar deneyin.';
+    document.getElementById('err').style.display = 'block';
+    return;
+  }
+
+  const biz = document.getElementById('f-biz').value.trim();
+  const sector = document.getElementById('f-sector').value;
+  const service = document.getElementById('f-service').value.trim();
+  const price = document.getElementById('f-price').value.trim();
+  const target = document.getElementById('f-target').value.trim();
+  const objections = getChecked('obj-group');
+  const advantage = document.getElementById('f-advantage').value.trim();
+  const err = document.getElementById('err');
+
+  if (!biz || !sector || !service) {
+    err.textContent = 'Lütfen işletme adı, sektör ve hizmet açıklamasını doldurun.';
+    err.style.display = 'block';
+    return;
+  }
+  err.style.display = 'none';
+
+  clearResults();
+  showLoading(true);
+  document.getElementById('loading-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  let mi = 0;
+  const msgEl = document.getElementById('loading-msg');
+  const ticker = setInterval(() => { mi=(mi+1)%loadingMsgs.length; msgEl.textContent=loadingMsgs[mi]; }, 1800);
+
+  const prompt = `Sen deneyimli bir satış koçusun. Aşağıdaki işletme için 5 adımlık WhatsApp satış scriptleri hazırla.
+
+═══ İŞLETME BİLGİLERİ ═══
+İşletme adı: ${biz}
+Sektör: ${sector}
+Hizmet/Ürün: ${service}
+Fiyat aralığı: ${price || 'belirtilmemiş'}
+Hedef müşteri: ${target || 'KOBİ sahipleri'}
+Sık karşılaşılan itirazlar: ${objections.length ? objections.join(', ') : 'genel itirazlar'}
+Özel avantajlar/notlar: ${advantage || 'belirtilmemiş'}
+
+═══ HER MESAJDA KULLANMA KURALLARI ═══
+1. İşletme adını (${biz}) ilk mesajda mutlaka geçir.
+2. Hizmet/ürün bilgisini ("${service}") scriptlere somut olarak yansıt — soyut ifadeler kullanma.
+3. Fiyat aralığı (${price || 'belirtilmemiş'}) belirtilmişse, teklif ve kapanış mesajlarında bu fiyatı doğrudan zikret.
+4. Hedef müşteri (${target || 'KOBİ sahipleri'}) profiline uygun dil ve ton kullan.
+5. İtiraz kırma mesajında (3. script) seçilen itirazlardan birini ("${objections[0] || 'genel itiraz'}") kelimesi kelimesine değil ama içerik olarak karşıla.
+6. Özel avantajlar belirtilmişse ("${advantage || '—'}"), bunları teklif ve kapanış mesajlarında somut argüman olarak kullan — genel övgü yerine bu avantajları öne çıkar.
+
+═══ FORMAT KURALLARI ═══
+- Doğal ve samimi Türkçe, satışçı ağzı değil
+- WhatsApp formatı: kısa paragraflar, uygun emoji
+- Her mesaj maksimum 5-6 cümle
+- Kopyalanıp doğrudan gönderilebilir metin
+
+SADECE JSON döndür, başka hiçbir şey yazma:
+{
+  "scripts": [
+    {"step":1,"title":"İlk Temas","message":"...","timing":"..."},
+    {"step":2,"title":"Takip","message":"...","timing":"..."},
+    {"step":3,"title":"İtiraz Kırma","message":"...","timing":"..."},
+    {"step":4,"title":"Teklif","message":"...","timing":"..."},
+    {"step":5,"title":"Kapanış","message":"...","timing":"..."}
+  ],
+  "ctaText": "..."
+}`;
+
+  try {
+    let data;
+
+    if (N8N_PROXY) {
+      // ── N8N PROXY modu (web sitesi) ──────────────────────────────────────
+      // n8n rate limit + API key güvenliğini yönetir
+      const res = await fetch(N8N_PROXY, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt })
+      });
+      if (res.status === 429) {
+        clearInterval(ticker);
+        showLoading(false);
+        err.textContent = 'Sunucu tarafında günlük limit doldu. Lütfen yarın tekrar deneyin.';
+        err.style.display = 'block';
+        return;
+      }
+      data = await res.json();
+      // n8n { content: [{type:'text', text:'...'}] } formatı döndürür
+    } else {
+      // ── Doğrudan Anthropic API (Claude Artifact / geliştirme) ─────────────
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 1500,
+          messages: [{ role: 'user', content: prompt }]
+        })
+      });
+      data = await res.json();
+    }
+
+    clearInterval(ticker);
+
+    // Kullanımı say (başarılı istek sonrası)
+    incrementUsage();
+    updateRateBar();
+
+    const text  = data.content.map(b => b.text || '').join('');
+    const clean = text.replace(/```json|```/g, '').trim();
+    const result = JSON.parse(clean);
+    renderResults(result, biz);
+  } catch(e) {
+    clearInterval(ticker);
+    incrementUsage();
+    updateRateBar();
+    renderResults(fallback(biz, sector, objections, service, price, target, advantage));
+  }
+}
+
+function fallback(biz, sector, objections, service, price, target, advantage) {
+  const fiyat    = price     ? `${price} fiyat aralığımızda` : '';
+  const hedef    = target    ? `${target} profiline uygun` : '';
+  const avantaj  = advantage ? advantage : '';
+  const itiraz   = objections[0] || 'biraz düşüneyim';
+
+  return {
+    scripts: [
+      {
+        step:1, title:"İlk Temas",
+        message:`Merhaba! 👋 ${biz} olarak size ulaşıyorum.\n\n${service ? service.slice(0,120) + (service.length>120?'...':'') : sector+' alanında hizmet veriyoruz'}. ${hedef ? hedef+' işletmelere özel çözümlerimiz var.' : ''}\n\n5 dakikanız var mı, kısaca anlatsam?`,
+        timing:"Müşteri ilk iletişim kurduğunda veya formu doldurduğunda"
+      },
+      {
+        step:2, title:"Takip",
+        message:`Merhaba, dün yazdığımı görmüşsünüzdür 🙂 ${sector} konusunda şu an nasıl bir çözümle ilerliyorsunuz?\n\n${avantaj ? avantaj.slice(0,80)+'...' : 'Sizinle birkaç dakika konuşmak ve ihtiyaçlarınızı anlamak isterim.'}\n\nSorularınız varsa buradayım.`,
+        timing:"İlk mesajdan 24-48 saat sonra"
+      },
+      {
+        step:3, title:"İtiraz Kırma",
+        message:`Anlıyorum, "${itiraz}" demek çok doğal 🤝 Biz de bunu çok duyuyoruz.\n\nAma şunu söyleyeyim: ${avantaj ? avantaj.slice(0,100) : 'Müşterilerimizin büyük çoğunluğu başladıktan sonra "neden daha önce başlamadık?" diyor'}.\n\nRiski sıfıra indiren bir keşif görüşmesi yapalım mı?`,
+        timing:"Müşteri tereddüt ettiğinde veya itiraz gösterdiğinde"
+      },
+      {
+        step:4, title:"Teklif",
+        message:`Size özel bir değerlendirme yaptım 📋\n\n${service ? service.slice(0,80)+'...' : sector+' hizmetlerimiz'} için ${fiyat ? fiyat+' özel bir paket' : 'ihtiyaçlarınıza uygun bir paket'} hazırladım. ${avantaj ? '\n\n'+avantaj.slice(0,80)+'...' : ''}\n\nDetayları paylaşayım mı?`,
+        timing:"Müşteri ilgilendiğini ifade ettiğinde"
+      },
+      {
+        step:5, title:"Kapanış",
+        message:`Merhaba! Teklifi inceleyebildiniz mi? 🙏\n\n${biz} olarak ${hedef ? hedef+' işletmelere' : 'size'} sunduğumuz değeri yaşatmak için sabırsızlanıyoruz. Aklınıza takılan her şeyi sorun.\n\nBu hafta başlarsak hemen sürece girebiliriz. Nasıl ilerleyelim?`,
+        timing:"Teklif gönderdikten 48-72 saat sonra"
+      }
+    ],
+    ctaText: `${biz} için scriptleri daha sistemli kullanmak ister misiniz?`
+  };
+}
+
+function renderResults(data, biz) {
+  allScripts = data.scripts;
+  document.getElementById('results-title').textContent = `${biz} — WhatsApp Satış Scriptleri`;
+  document.getElementById('results-sub').textContent = '5 adımlık hazır satış akışı';
+  document.getElementById('cta-sub').textContent = data.ctaText || 'Mesajları hangi müşteriye ne zaman atacağınızı birlikte planlayalım.';
+
+  const grid = document.getElementById('scripts-grid');
+  grid.innerHTML = '';
+  data.scripts.forEach((s, i) => {
+    const meta = stepMeta[i] || stepMeta[0];
+    const card = document.createElement('div');
+    card.className = `script-card ${meta.colorClass}`;
+    card.innerHTML = `
+      <div class="script-header">
+        <div>
+          <span class="step-badge"><i class="ti ti-brand-whatsapp" aria-hidden="true"></i> ${meta.label}</span>
+          <div class="script-title">${s.title}</div>
+          <div class="script-tip">⏱ ${s.timing || meta.tip}</div>
+        </div>
+        <button class="copy-btn" onclick="copyScript(${i}, this)">
+          <i class="ti ti-copy" style="font-size:13px" aria-hidden="true"></i> Kopyala
+        </button>
+      </div>
+      <div class="bubble-wrap">
+        <div class="wa-bubble">${escHtml(s.message)}</div>
+        <div class="wa-timestamp">Gönderildi</div>
+      </div>`;
+    grid.appendChild(card);
+  });
+  showLoading(false);
+  showResults(true);
+  document.getElementById('results-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function escHtml(str) {
+  return (str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function copyScript(idx, btn) {
+  navigator.clipboard.writeText(allScripts[idx].message).then(() => {
+    btn.innerHTML = '<i class="ti ti-check" style="font-size:13px" aria-hidden="true"></i> Kopyalandı';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.innerHTML = '<i class="ti ti-copy" style="font-size:13px" aria-hidden="true"></i> Kopyala'; btn.classList.remove('copied'); }, 2000);
+  });
+}
+
+function getFormContext() {
+  const biz      = document.getElementById('f-biz').value.trim();
+  const sector   = document.getElementById('f-sector').value;
+  const service  = document.getElementById('f-service').value.trim();
+  const price    = document.getElementById('f-price').value.trim();
+  const target   = document.getElementById('f-target').value.trim();
+  const advantage= document.getElementById('f-advantage').value.trim();
+  const objections = getChecked('obj-group');
+  const lines = [
+    '═══ İŞLETME BİLGİLERİ ═══',
+    biz      ? `İşletme     : ${biz}`      : null,
+    sector   ? `Sektör      : ${sector}`   : null,
+    service  ? `Hizmet/Ürün : ${service}`  : null,
+    price    ? `Fiyat       : ${price}`    : null,
+    target   ? `Hedef Müşteri: ${target}`  : null,
+    objections.length ? `İtirazlar   : ${objections.join(', ')}` : null,
+    advantage? `Avantajlar  : ${advantage}`: null,
+  ].filter(Boolean);
+  return lines.join('\n');
+}
+
+function copyAll() {
+  const context = getFormContext();
+  const scripts = allScripts.map((s, i) => `${stepMeta[i].label}\nZamanlama: ${s.timing}\n\n${s.message}`).join('\n\n' + '─'.repeat(40) + '\n\n');
+  const full = context + '\n\n' + '─'.repeat(40) + '\n\n' + scripts;
+  navigator.clipboard.writeText(full).then(() => alert('Form bilgileri + tüm scriptler panoya kopyalandı!'));
+}
+
+function downloadTxt() {
+  const biz = document.getElementById('f-biz').value.trim() || 'isletme';
+  const context = getFormContext();
+  const scripts = allScripts.map((s, i) => `${stepMeta[i].label}\nZamanlama: ${s.timing}\n\n${s.message}`).join('\n\n' + '═'.repeat(50) + '\n\n');
+  const full = `WhatsApp Satış Scriptleri — ${biz}\n${'═'.repeat(50)}\n\n${context}\n\n${'═'.repeat(50)}\n\n${scripts}`;
+  const blob = new Blob([full], { type: 'text/plain;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${biz.replace(/[^\w\u00C0-\u024F]/g,'_').slice(0,30)}_whatsapp_scriptleri.txt`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function restart() {
+  clearResults();
+}
+
+function resetForm() {
+  ['f-biz','f-service','f-price','f-target','f-advantage'].forEach(id => document.getElementById(id).value='');
+  document.getElementById('f-sector').value='';
+  document.querySelectorAll('#obj-group input').forEach(el => el.checked = false);
+  clearResults();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// Form her zaman görünür, rate bar'ı başlat
+updateRateBar();
+
+// ── Launcher'dan import ──────────────────────────────────────────────────────
+(function() {
+  try {
+    // Önce URL parametresine bak (file:// protokolü için güvenilir)
+    let payload = null;
+    const urlParam = new URLSearchParams(window.location.search).get('kkb_import');
+    if (urlParam) {
+      payload = JSON.parse(decodeURIComponent(urlParam));
+    }
+    // URL yoksa sessionStorage'a bak
+    if (!payload) {
+      const raw = sessionStorage.getItem('kkb_import');
+      if (raw) payload = JSON.parse(raw);
+    }
+
+    if (!payload) return;
+    if (Date.now() - payload.ts > 10 * 60 * 1000) return;
+    if (payload.app !== 'wa') return;
+
+    const d = payload.data;
+
+    if (d.biz)       document.getElementById('f-biz').value       = d.biz;
+    if (d.service)   document.getElementById('f-service').value   = d.service;
+    if (d.price)     document.getElementById('f-price').value     = d.price;
+    if (d.target)    document.getElementById('f-target').value    = d.target;
+    if (d.advantage) document.getElementById('f-advantage').value = d.advantage;
+
+    if (d.sector) {
+      const norm = s => s.trim().toLowerCase().replace(/\s*\/\s*/g, '/');
+      const sectorEl = document.getElementById('f-sector');
+      const options = [...sectorEl.options].filter(o => o.value !== '');
+      // 1. Tam eşleşme
+      let match = options.find(o => norm(o.value) === norm(d.sector));
+      // 2. İlk parça eşleşmesi (örn: "Teknoloji / Yazılım" → "Teknoloji")
+      if (!match) match = options.find(o => norm(o.value).startsWith(norm(d.sector.split('/')[0].trim())));
+      // 3. Ters: option değeri sektörde geçiyor mu
+      if (!match) match = options.find(o => norm(d.sector).includes(norm(o.value.split('/')[0].trim())));
+      if (match) sectorEl.value = match.value;
+    }
+
+    if (d.objections) {
+      const vals = d.objections.split(',').map(s => s.trim());
+      document.querySelectorAll('#obj-group input').forEach(el => {
+        el.checked = vals.some(v =>
+          el.value.includes(v.split('/')[0].trim()) ||
+          v.includes(el.value.split('/')[0].trim())
+        );
+      });
+    }
+
+    sessionStorage.removeItem('kkb_import');
+
+    // Başarı bildirimi
+    const notice = document.createElement('div');
+    notice.style.cssText = 'background:#F0FAF6;border:0.5px solid #9FE1CB;border-radius:8px;padding:10px 14px;font-size:13px;color:#085041;display:flex;align-items:center;gap:8px;margin-bottom:1rem';
+    notice.innerHTML = '<i class="ti ti-circle-check" aria-hidden="true"></i> Form, launcher\'dan aktarılan verilerle dolduruldu.';
+    const formCard = document.querySelector('.form-card');
+    formCard.insertBefore(notice, formCard.querySelector('.subtitle').nextSibling);
+    setTimeout(() => notice.remove(), 5000);
+
+  } catch(e) {}
+})();
+
+</script>
+</body>
+</html>

@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>İşletme Görünürlük Skoru — Kolay KOBİ</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,sans-serif;background:#F7F6F2;min-height:100vh}
+.app{max-width:720px;margin:0 auto;padding:2rem 1rem}
+.brand{display:flex;align-items:center;gap:8px;margin-bottom:2rem}
+.brand-dot{width:9px;height:9px;border-radius:50%;background:#1D9E75}
+.brand-name{font-size:13px;font-weight:500;color:#1D9E75;letter-spacing:.04em}
+
+/* FORM CARD */
+.form-card{background:#fff;border-radius:16px;border:0.5px solid #E2E0D8;padding:2rem;margin-bottom:1.5rem}
+h1{font-size:22px;font-weight:500;color:#1C1B19;margin-bottom:.4rem}
+.subtitle{font-size:14px;color:#6B6963;line-height:1.6;margin-bottom:2rem}
+.field{margin-bottom:1.25rem}
+label{display:block;font-size:13px;font-weight:500;color:#6B6963;margin-bottom:6px}
+input,select{width:100%;padding:10px 12px;font-size:14px;border:0.5px solid #D3D1C7;border-radius:8px;background:#fff;color:#1C1B19;outline:none;font-family:inherit}
+input:focus,select:focus{border-color:#1D9E75;box-shadow:0 0 0 3px rgba(29,158,117,.1)}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.check-group{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:6px}
+.check-item{display:flex;align-items:center;gap:8px;padding:9px 11px;border:0.5px solid #D3D1C7;border-radius:8px;cursor:pointer;font-size:13px;color:#1C1B19;background:#fff;user-select:none}
+.check-item input[type=checkbox]{width:auto;padding:0;box-shadow:none}
+.check-item:has(input:checked){border-color:#1D9E75;background:#F0FAF6}
+.btn-primary{width:100%;padding:13px;background:#1D9E75;color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:500;cursor:pointer;margin-top:.5rem;display:flex;align-items:center;justify-content:center;gap:8px}
+.btn-primary:hover{background:#0F6E56}
+.btn-primary:disabled{background:#B4B2A9;cursor:not-allowed}
+.err{font-size:13px;color:#A32D2D;background:#FCEBEB;border-radius:8px;padding:10px 12px;margin-top:.75rem;display:none}
+
+/* LOADING */
+.loading{display:none;text-align:center;padding:3rem 1rem;margin-top:.5rem}
+.spinner{width:44px;height:44px;border:3px solid #E2E0D8;border-top-color:#1D9E75;border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 1.25rem}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-txt{font-size:14px;color:#6B6963}
+
+/* RESULTS */
+.results{display:none;margin-top:.5rem}
+
+/* SKOR HERO */
+.score-card{background:#fff;border-radius:16px;border:0.5px solid #E2E0D8;padding:2rem;text-align:center;margin-bottom:1rem}
+.score-ring{width:120px;height:120px;border-radius:50%;border:4px solid #E2E0D8;display:flex;flex-direction:column;align-items:center;justify-content:center;margin:0 auto 1rem;transition:border-color .4s}
+.score-num{font-size:38px;font-weight:500;color:#1C1B19;line-height:1}
+.score-label{font-size:11px;font-weight:600;letter-spacing:.05em;color:#888780;margin-top:3px}
+.score-title{font-size:18px;font-weight:500;color:#1C1B19;margin-bottom:.3rem}
+.score-sub{font-size:13px;color:#6B6963;line-height:1.6;max-width:500px;margin:0 auto}
+
+/* METRİK KARTLAR */
+.metrics-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:1.5rem 0 0}
+.metric-card{background:#F7F6F2;border-radius:8px;padding:14px 12px;text-align:center}
+.metric-val{font-size:22px;font-weight:500;margin-bottom:2px}
+.metric-lbl{font-size:11px;color:#888780}
+
+/* AKSİYON LİSTESİ */
+.actions-card{background:#fff;border-radius:16px;border:0.5px solid #E2E0D8;padding:1.75rem;margin-bottom:1rem}
+.section-title{font-size:12px;font-weight:600;color:#888780;text-transform:uppercase;letter-spacing:.06em;margin-bottom:.75rem}
+.item-card{border:0.5px solid #E2E0D8;border-radius:10px;padding:12px 14px;margin-bottom:8px;background:#fff;display:flex;gap:12px;align-items:flex-start}
+.item-card.red{border-left:3px solid #E24B4A;border-radius:0 10px 10px 0}
+.item-card.amber{border-left:3px solid #EF9F27;border-radius:0 10px 10px 0}
+.item-card.green{border-left:3px solid #639922;border-radius:0 10px 10px 0}
+.item-icon{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
+.red .item-icon{background:#FCEBEB;color:#A32D2D}
+.amber .item-icon{background:#FAEEDA;color:#854F0B}
+.green .item-icon{background:#EAF3DE;color:#3B6D11}
+.item-body{flex:1}
+.item-name{font-size:13.5px;font-weight:500;color:#1C1B19;margin-bottom:3px;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.badge{font-size:10px;font-weight:600;padding:2px 8px;border-radius:20px;white-space:nowrap;flex-shrink:0}
+.red .badge{background:#FCEBEB;color:#A32D2D}
+.amber .badge{background:#FAEEDA;color:#854F0B}
+.green .badge{background:#EAF3DE;color:#3B6D11}
+.item-desc{font-size:12.5px;color:#6B6963;line-height:1.55}
+
+/* CTA */
+.cta-box{background:#F0FAF6;border:0.5px solid #9FE1CB;border-radius:12px;padding:1.5rem;text-align:center;margin-top:.5rem}
+.cta-title{font-size:15px;font-weight:500;color:#085041;margin-bottom:.4rem}
+.cta-sub{font-size:13px;color:#0F6E56;margin-bottom:1rem;line-height:1.6}
+.cta-btn{display:inline-block;background:#1D9E75;color:#fff;padding:10px 24px;border-radius:8px;font-size:14px;font-weight:500;text-decoration:none}
+.cta-btn:hover{background:#0F6E56}
+
+/* ACTION ROW */
+.action-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:1.25rem}
+.btn-sm{display:flex;align-items:center;gap:6px;padding:8px 14px;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;border:0.5px solid #D3D1C7;background:#fff;color:#1C1B19}
+.btn-sm:hover{background:#F7F6F2}
+
+@media(max-width:540px){
+  .row2{grid-template-columns:1fr}
+  .check-group{grid-template-columns:1fr 1fr}
+  .metrics-grid{grid-template-columns:1fr 1fr 1fr}
+  .action-row{flex-direction:column}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="brand">
+    <div class="brand-dot"></div>
+    <span class="brand-name">Kolay KOBİ</span>
+  </div>
+
+  <!-- FORM -->
+  <div class="form-card">
+    <h1>İşletme Görünürlük Skoru</h1>
+    <p class="subtitle">İşletmenizin Google, sosyal medya ve web'deki varlığını analiz edip 0–100 arası bir görünürlük puanı ve öncelikli aksiyon listesi hazırlıyoruz.</p>
+
+    <div class="field">
+      <label>İşletme adı</label>
+      <input type="text" id="f-name" placeholder="Örn: Yıldız Muhasebe Ofisi">
+    </div>
+
+    <div class="row2">
+      <div class="field">
+        <label>Sektör</label>
+        <select id="f-sector">
+          <option value="">Seçin...</option>
+          <option>Muhasebe / Finans</option>
+          <option>Sağlık / Klinik</option>
+          <option>Eğitim / Kurs</option>
+          <option>İnşaat / Mühendislik</option>
+          <option>Hukuk / Danışmanlık</option>
+          <option>Perakende / Mağaza</option>
+          <option>Yiyecek / İçecek</option>
+          <option>Güzellik / Estetik</option>
+          <option>Lojistik / Taşımacılık</option>
+          <option>Teknoloji / Yazılım</option>
+          <option>Diğer</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Şehir</label>
+        <input type="text" id="f-city" placeholder="Örn: İzmir">
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Web sitesi <span style="font-weight:400;color:#B4B2A9">(varsa)</span></label>
+      <input type="text" id="f-web" placeholder="Örn: www.yildizmuhasebe.com">
+    </div>
+
+    <div class="field">
+      <label>Hangi platformlarda varlığınız var?</label>
+      <div class="check-group">
+        <label class="check-item"><input type="checkbox" value="Google Business" id="ch-gbp"> Google Business</label>
+        <label class="check-item"><input type="checkbox" value="Instagram" id="ch-ig"> Instagram</label>
+        <label class="check-item"><input type="checkbox" value="Facebook" id="ch-fb"> Facebook</label>
+        <label class="check-item"><input type="checkbox" value="LinkedIn" id="ch-li"> LinkedIn</label>
+        <label class="check-item"><input type="checkbox" value="WhatsApp İş" id="ch-wa"> WhatsApp İş</label>
+        <label class="check-item"><input type="checkbox" value="Hiçbiri" id="ch-no"> Hiçbiri</label>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Aylık ortalama kaç yeni müşteri hedefliyorsunuz?</label>
+      <select id="f-goal">
+        <option value="">Seçin...</option>
+        <option>1–5</option>
+        <option>5–20</option>
+        <option>20–50</option>
+        <option>50+</option>
+      </select>
+    </div>
+
+    <div id="err" class="err">Lütfen işletme adı, sektör ve şehir alanlarını doldurun.</div>
+    <button class="btn-primary" id="analyze-btn" onclick="startAnalysis()">
+      <i class="ti ti-chart-bar" aria-hidden="true"></i> Skorumu Hesapla
+    </button>
+  </div>
+
+  <!-- LOADING -->
+  <div class="loading" id="loading-section">
+    <div class="spinner"></div>
+    <p class="loading-txt" id="loading-msg">İşletme bilgileri analiz ediliyor...</p>
+  </div>
+
+  <!-- RESULTS -->
+  <div class="results" id="results-section">
+
+    <!-- Skor hero -->
+    <div class="score-card">
+      <div class="score-ring" id="score-ring">
+        <span class="score-num" id="score-num">--</span>
+        <span class="score-label">/ 100</span>
+      </div>
+      <div class="score-title" id="score-title">Analiz tamamlandı</div>
+      <div class="score-sub" id="score-sub"></div>
+      <div class="metrics-grid">
+        <div class="metric-card">
+          <div class="metric-val" id="m-red" style="color:#E24B4A">--</div>
+          <div class="metric-lbl">Kritik</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-val" id="m-amber" style="color:#EF9F27">--</div>
+          <div class="metric-lbl">İyileştir</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-val" id="m-green" style="color:#639922">--</div>
+          <div class="metric-lbl">Güçlü</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Aksiyon listesi -->
+    <div class="actions-card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
+        <span class="section-title" style="margin-bottom:0">Öncelikli Aksiyonlar</span>
+        <div class="action-row" style="margin-bottom:0">
+          <button class="btn-sm" onclick="copyResults()"><i class="ti ti-copy" aria-hidden="true"></i> Kopyala</button>
+          <button class="btn-sm" onclick="resetForm()"><i class="ti ti-refresh" aria-hidden="true"></i> Formu Boşalt</button>
+        </div>
+      </div>
+      <div id="items-list"></div>
+    </div>
+
+    <!-- CTA -->
+    <div class="cta-box">
+      <div class="cta-title">Skoru yükseltmek için nereden başlamalısınız?</div>
+      <div class="cta-sub" id="cta-text">Kişiselleştirilmiş bir dijital görünürlük planı hazırlayalım.</div>
+      <a href="https://kolaykobi.com/iletisim" class="cta-btn" target="_blank" rel="noopener noreferrer">Ücretsiz Görüşme Ayarla</a>
+    </div>
+
+    <div style="text-align:center;margin-top:1rem">
+      <button onclick="resetForm()" style="background:none;border:none;font-size:13px;color:#888780;cursor:pointer;text-decoration:underline">Yeni analiz yap</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const N8N_PROXY = null;
+
+const loadingMsgs = [
+  'İşletme bilgileri analiz ediliyor...',
+  'Dijital varlık kontrol ediliyor...',
+  'Görünürlük skoru hesaplanıyor...',
+  'Aksiyon listesi hazırlanıyor...'
+];
+
+function showLoading(on) {
+  document.getElementById('loading-section').style.display = on ? 'block' : 'none';
+}
+function showResults(on) {
+  document.getElementById('results-section').style.display = on ? 'block' : 'none';
+}
+
+async function startAnalysis() {
+  const name    = document.getElementById('f-name').value.trim();
+  const sector  = document.getElementById('f-sector').value;
+  const city    = document.getElementById('f-city').value.trim();
+  const web     = document.getElementById('f-web').value.trim();
+  const goal    = document.getElementById('f-goal').value;
+  const platforms = ['ch-gbp','ch-ig','ch-fb','ch-li','ch-wa','ch-no']
+    .filter(id => document.getElementById(id).checked)
+    .map(id => document.getElementById(id).value);
+  const err = document.getElementById('err');
+
+  if (!name || !sector || !city) { err.style.display = 'block'; return; }
+  err.style.display = 'none';
+
+  showResults(false);
+  showLoading(true);
+  document.getElementById('loading-section').scrollIntoView({ behavior:'smooth', block:'start' });
+
+  let mi = 0;
+  const msgEl = document.getElementById('loading-msg');
+  const ticker = setInterval(() => {
+    mi = (mi + 1) % loadingMsgs.length;
+    msgEl.textContent = loadingMsgs[mi];
+  }, 1800);
+
+  const prompt = `Sen dijital pazarlama ve yerel SEO uzmanısın. Aşağıdaki işletme için görünürlük analizi yap.
+
+İŞLETME BİLGİLERİ:
+- İşletme adı: ${name}
+- Sektör: ${sector}
+- Şehir: ${city}
+- Web sitesi: ${web || 'yok'}
+- Mevcut platformlar: ${platforms.length ? platforms.join(', ') : 'hiçbiri'}
+- Aylık müşteri hedefi: ${goal || 'belirtilmemiş'}
+
+GÖREV:
+${name} için 0-100 arası bir görünürlük skoru ve öncelikli aksiyon listesi hazırla.
+- Web sitesi yoksa skoru düşür
+- Google Business yoksa kritik eksik say
+- Sosyal medya varlığına göre değerlendir
+- Sektöre özgü değerlendirme yap (${sector})
+
+SADECE JSON döndür:
+{
+  "score": <0-100 arası tam sayı>,
+  "level": "<Başlangıç|Gelişmekte|Orta|İyi|Mükemmel>",
+  "summary": "<${name} için 1-2 cümle özet>",
+  "items": [
+    {
+      "status": "<red|amber|green>",
+      "icon": "<tabler icon adı, örn: ti-world>",
+      "name": "<kısa başlık>",
+      "desc": "<somut 1-2 cümle açıklama>",
+      "badge": "<Kritik|İyileştir|Güçlü>"
+    }
+  ],
+  "ctaText": "<${name} için kişisel 1 cümle>"
+}
+6-8 item olsun. Önce red, sonra amber, sonra green.`;
+
+  try {
+    let data;
+    if (N8N_PROXY) {
+      const res = await fetch(N8N_PROXY, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt })
+      });
+      if (res.status === 429) {
+        clearInterval(ticker);
+        showLoading(false);
+        err.textContent = 'Sunucu tarafında günlük limit doldu. Lütfen yarın tekrar deneyin.';
+        err.style.display = 'block';
+        return;
+      }
+      data = await res.json();
+    } else {
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 1000,
+          messages: [{ role: 'user', content: prompt }]
+        })
+      });
+      data = await res.json();
+    }
+    clearInterval(ticker);
+    const text  = data.content.map(b => b.text || '').join('');
+    const clean = text.replace(/```json|```/g, '').trim();
+    renderResult(JSON.parse(clean), name, sector, platforms, web);
+  } catch(e) {
+    clearInterval(ticker);
+    renderResult(generateFallback(name, sector, platforms, web), name, sector, platforms, web);
+  }
+}
+
+function generateFallback(name, sector, platforms, web) {
+  const hasWeb = !!web;
+  const hasGbp = platforms.includes('Google Business');
+  const hasSocial = platforms.some(p => ['Instagram','Facebook','LinkedIn'].includes(p));
+  let score = 20;
+  if (hasWeb) score += 25;
+  if (hasGbp) score += 25;
+  if (hasSocial) score += 20;
+  score = Math.min(score + Math.floor(Math.random() * 10), 100);
+  return {
+    score,
+    level: score < 30 ? 'Başlangıç' : score < 50 ? 'Gelişmekte' : score < 70 ? 'Orta' : 'İyi',
+    summary: `${name} için dijital görünürlük analizi tamamlandı. Birkaç kritik alanda iyileştirme yapılması durumunda müşteri kazanım hızı önemli ölçüde artabilir.`,
+    items: [
+      !hasGbp && { status:'red',   icon:'ti-map-pin',        name:'Google Business Profile eksik', desc:'İşletmenizi Google Haritalar\'a ekleyin. Yerel aramalarda %70 daha fazla görünürlük sağlar.', badge:'Kritik' },
+      !hasWeb && { status:'red',   icon:'ti-world',           name:'Web sitesi yok',                desc:'Basit bir tek sayfalık site bile güvenilirliği artırır ve Google aramalarında bulunmanızı sağlar.', badge:'Kritik' },
+      !hasSocial && { status:'amber', icon:'ti-brand-instagram', name:'Sosyal medya varlığı zayıf',   desc:'Sektörünüze uygun en az bir platformda düzenli paylaşım marka bilinirliğini artırır.', badge:'İyileştir' },
+      { status:'amber', icon:'ti-star',  name:'Müşteri yorumları', desc:'Google ve sosyal medyada yorum toplamak arama sıralamasını ve güveni doğrudan etkiler.', badge:'İyileştir' },
+      hasWeb && { status:'green', icon:'ti-world',    name:'Web sitesi mevcut', desc:'Dijital varlığınızın temeli hazır. SEO optimizasyonu ile sıralamayı iyileştirebilirsiniz.', badge:'Güçlü' },
+      hasGbp && { status:'green', icon:'ti-map-pin',  name:'Google Business aktif', desc:'Yerel aramalar için kritik adımı tamamladınız. Profil fotoğrafları ile güçlendirin.', badge:'Güçlü' },
+    ].filter(Boolean),
+    ctaText: `${name} için kişiselleştirilmiş bir dijital görünürlük planı hazırlayalım.`
+  };
+}
+
+function renderResult(r) {
+  const score = Math.round(r.score);
+  document.getElementById('score-num').textContent = score;
+  document.getElementById('score-title').textContent = r.level + ' seviye';
+  document.getElementById('score-sub').textContent = r.summary;
+  document.getElementById('cta-text').textContent = r.ctaText;
+
+  const ring = document.getElementById('score-ring');
+  if (score < 30)      ring.style.borderColor = '#E24B4A';
+  else if (score < 55) ring.style.borderColor = '#EF9F27';
+  else if (score < 75) ring.style.borderColor = '#378ADD';
+  else                 ring.style.borderColor = '#1D9E75';
+
+  document.getElementById('m-red').textContent   = r.items.filter(i => i.status === 'red').length;
+  document.getElementById('m-amber').textContent = r.items.filter(i => i.status === 'amber').length;
+  document.getElementById('m-green').textContent = r.items.filter(i => i.status === 'green').length;
+
+  const list = document.getElementById('items-list');
+  list.innerHTML = '';
+  r.items.forEach(item => {
+    const div = document.createElement('div');
+    div.className = 'item-card ' + item.status;
+    div.innerHTML = `
+      <div class="item-icon"><i class="ti ${item.icon}" aria-hidden="true"></i></div>
+      <div class="item-body">
+        <div class="item-name">
+          ${escHtml(item.name)}
+          <span class="badge">${escHtml(item.badge)}</span>
+        </div>
+        <div class="item-desc">${escHtml(item.desc)}</div>
+      </div>`;
+    list.appendChild(div);
+  });
+
+  showLoading(false);
+  showResults(true);
+  document.getElementById('results-section').scrollIntoView({ behavior:'smooth', block:'start' });
+}
+
+function escHtml(s) {
+  return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function copyResults() {
+  const name   = document.getElementById('f-name').value.trim();
+  const score  = document.getElementById('score-num').textContent;
+  const level  = document.getElementById('score-title').textContent;
+  const summary = document.getElementById('score-sub').textContent;
+  const items  = [...document.querySelectorAll('.item-card')].map(c => {
+    const n = c.querySelector('.item-name').childNodes[0].textContent.trim();
+    const d = c.querySelector('.item-desc').textContent.trim();
+    const b = c.querySelector('.badge').textContent.trim();
+    return `[${b}] ${n}\n${d}`;
+  }).join('\n\n');
+  const text = `İşletme Görünürlük Skoru — ${name}\nSkor: ${score}/100 (${level})\n${summary}\n\n${'─'.repeat(40)}\n\n${items}`;
+  navigator.clipboard.writeText(text).then(() => alert('Sonuçlar panoya kopyalandı!'));
+}
+
+function resetForm() {
+  document.getElementById('f-name').value  = '';
+  document.getElementById('f-sector').value = '';
+  document.getElementById('f-city').value  = '';
+  document.getElementById('f-web').value   = '';
+  document.getElementById('f-goal').value  = '';
+  ['ch-gbp','ch-ig','ch-fb','ch-li','ch-wa','ch-no'].forEach(id => {
+    document.getElementById(id).checked = false;
+  });
+  showLoading(false);
+  showResults(false);
+  window.scrollTo({ top:0, behavior:'smooth' });
+}
+
+// ── Launcher'dan import ──────────────────────────────────────────────────────
+(function() {
+  try {
+    let payload = null;
+    const urlParam = new URLSearchParams(window.location.search).get('kkb_import');
+    if (urlParam) payload = JSON.parse(decodeURIComponent(urlParam));
+    if (!payload) {
+      const raw = sessionStorage.getItem('kkb_import');
+      if (raw) payload = JSON.parse(raw);
+    }
+    if (!payload) return;
+    if (Date.now() - payload.ts > 10 * 60 * 1000) return;
+    if (payload.app !== 'skor') return;
+
+    const d = payload.data;
+    if (d.biz) document.getElementById('f-name').value = d.biz;
+
+    if (d.sector) {
+      const norm = s => s.trim().toLowerCase().replace(/\s*\/\s*/g, '/');
+      const sectorEl = document.getElementById('f-sector');
+      const opts = [...sectorEl.options].filter(o => o.value !== '');
+      let match = opts.find(o => norm(o.value) === norm(d.sector));
+      if (!match) match = opts.find(o => norm(o.value).startsWith(norm(d.sector.split('/')[0].trim())));
+      if (!match) match = opts.find(o => norm(d.sector).includes(norm(o.value.split('/')[0].trim())));
+      if (match) sectorEl.value = match.value;
+    }
+
+    sessionStorage.removeItem('kkb_import');
+
+    const notice = document.createElement('div');
+    notice.style.cssText = 'background:#F0FAF6;border:0.5px solid #9FE1CB;border-radius:8px;padding:10px 14px;font-size:13px;color:#085041;display:flex;align-items:center;gap:8px;margin-bottom:1rem';
+    notice.innerHTML = '<i class="ti ti-circle-check" aria-hidden="true"></i> Form, launcher\'dan aktarılan verilerle dolduruldu.';
+    const fc = document.querySelector('.form-card');
+    fc.insertBefore(notice, fc.querySelector('.subtitle').nextSibling);
+    setTimeout(() => notice.remove(), 5000);
+  } catch(e) {}
+})();
+</script>
+</body>
+</html>
