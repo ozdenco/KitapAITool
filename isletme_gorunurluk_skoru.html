@@ -227,7 +227,10 @@ input:focus,select:focus{border-color:#1D9E75;box-shadow:0 0 0 3px rgba(29,158,1
 </div>
 
 <script>
-const N8N_PROXY = null;
+// Geliştirme/test: null yap (doğrudan Claude API)
+// const N8N_PROXY = null;
+// Production (web sitesi):
+const N8N_PROXY = 'https://n8n.srv1492396.hstgr.cloud/webhook/kolay-kobi-skor';
 
 const loadingMsgs = [
   'İşletme bilgileri analiz ediliyor...',

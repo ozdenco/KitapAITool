@@ -212,6 +212,11 @@ input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3p
 </div>
 
 <script>
+// Geliştirme/test: null yap (doğrudan Claude API)
+// const N8N_PROXY = null;
+// Production (web sitesi):
+const N8N_PROXY = 'https://n8n.srv1492396.hstgr.cloud/webhook/kolay-kobi-persona';
+
 const loadingMsgs = [
   "Hedef müşteri profilleri analiz ediliyor...",
   "Demografi ve motivasyonlar değerlendiriliyor...",
@@ -302,15 +307,27 @@ SADECE JSON döndür, başka hiçbir şey yazma:
 }`;
 
   try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({
-        model:'claude-sonnet-4-20250514',
-        max_tokens:1500,
-        messages:[{role:'user',content:prompt}]
-      })
-    });
+    let res;
+    if (N8N_PROXY) {
+      res = await fetch(N8N_PROXY, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt })
+      });
+      if (res.status === 429) {
+        clearInterval(ticker);
+        show('form-section');
+        document.getElementById('err').textContent = 'Sunucu tarafında günlük limit doldu. Lütfen yarın tekrar deneyin.';
+        document.getElementById('err').style.display = 'block';
+        return;
+      }
+    } else {
+      res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model:'claude-sonnet-4-20250514', max_tokens:1500, messages:[{role:'user',content:prompt}] })
+      });
+    }
     clearInterval(ticker);
     const data = await res.json();
     const text = data.content.map(b=>b.text||'').join('');
