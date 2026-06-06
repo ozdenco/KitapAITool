@@ -322,15 +322,17 @@ SADECE JSON döndür, başka hiçbir şey yazma:
         return;
       }
     } else {
-      res = await fetch('https://api.anthropic.com/v1/messages', {
+      res = await fetch('https://api.minimax.io/v1/chat/completions', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ model:'claude-sonnet-4-20250514', max_tokens:1500, messages:[{role:'user',content:prompt}] })
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer DEV_KEY' },
+        body: JSON.stringify({ model:'MiniMax-M3', max_completion_tokens:1500, messages:[{role:'user',content:prompt}] })
       });
     }
     clearInterval(ticker);
     const data = await res.json();
-    const text = data.content.map(b=>b.text||'').join('');
+    const text = N8N_PROXY
+      ? (data.content || []).map(b=>b.text||'').join('')
+      : (data.choices?.[0]?.message?.content || '');
     const clean = text.replace(/```json|```/g,'').trim();
     const result = JSON.parse(clean);
     renderPersonas(result, biz);

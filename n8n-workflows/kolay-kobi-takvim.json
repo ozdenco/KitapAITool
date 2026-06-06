@@ -54,25 +54,34 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "https://api.anthropic.com/v1/messages",
+        "url": "https://api.minimax.io/v1/chat/completions",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            { "name": "x-api-key", "value": "={{  $env.ANTHROPIC_API_KEY }}" },
-            { "name": "anthropic-version", "value": "2023-06-01" },
-            { "name": "content-type", "value": "application/json" }
+            { "name": "Authorization", "value": "=Bearer {{ $env.MINIMAX_API_KEY }}" },
+            { "name": "Content-Type", "value": "application/json" }
           ]
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\"model\":\"claude-sonnet-4-20250514\",\"max_tokens\":1500,\"messages\":[{\"role\":\"user\",\"content\":{{ JSON.stringify($json.prompt) }}}]}",
+        "jsonBody": "={\"model\":\"MiniMax-M3\",\"max_completion_tokens\":4000,\"messages\":[{\"role\":\"user\",\"content\":{{ JSON.stringify($json.prompt) }}}]}",
         "options": { "timeout": 60000 }
       },
-      "id": "claude-api-node",
-      "name": "Claude API",
+      "id": "minimax-api-node",
+      "name": "MiniMax API",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [900, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "// MiniMax OpenAI-compatible response → Anthropic-style dönüşümü\n// HTML dosyaları data.content[0].text formatını bekliyor\nconst data = $input.first().json;\nconst text = data.choices?.[0]?.message?.content || '';\nreturn [{ json: { content: [{ type: 'text', text }] } }];"
+      },
+      "id": "response-transform",
+      "name": "Response Transform",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1120, 400]
     },
     {
       "parameters": {
@@ -84,7 +93,7 @@
       "name": "Success Response",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1,
-      "position": [1120, 400]
+      "position": [1340, 400]
     }
   ],
   "connections": {
@@ -93,11 +102,12 @@
     "Rate Limited?": {
       "main": [
         [{ "node": "429 Response", "type": "main", "index": 0 }],
-        [{ "node": "Claude API", "type": "main", "index": 0 }]
+        [{ "node": "MiniMax API", "type": "main", "index": 0 }]
       ]
     },
-    "Claude API": { "main": [[{ "node": "Success Response", "type": "main", "index": 0 }]] }
+    "MiniMax API": { "main": [[{ "node": "Response Transform", "type": "main", "index": 0 }]] },
+    "Response Transform": { "main": [[{ "node": "Success Response", "type": "main", "index": 0 }]] }
   },
   "settings": { "executionOrder": "v1" },
-  "tags": ["kolay-kobi"]
+  "tags": ["kolay-kobi", "minimax"]
 }

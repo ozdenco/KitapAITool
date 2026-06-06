@@ -334,15 +334,17 @@ Tam olarak 30 eleman olsun. Tekrar eden içeriklerden kaçın, çeşitlilik sağ
         return;
       }
     } else {
-      res = await fetch('https://api.anthropic.com/v1/messages', {
+      res = await fetch('https://api.minimax.io/v1/chat/completions', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ model:'claude-sonnet-4-20250514', max_tokens:4000, messages:[{role:'user',content:prompt}] })
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer DEV_KEY' },
+        body: JSON.stringify({ model:'MiniMax-M3', max_completion_tokens:4000, messages:[{role:'user',content:prompt}] })
       });
     }
     clearInterval(ticker);
     const data = await res.json();
-    const text = data.content.map(b => b.text || '').join('');
+    const text = N8N_PROXY
+      ? (data.content || []).map(b => b.text || '').join('')
+      : (data.choices?.[0]?.message?.content || '');
     const clean = text.replace(/```json|```/g, '').trim();
     const result = JSON.parse(clean);
     renderResults(result);
@@ -499,10 +501,12 @@ Gün numaraları ${start+1}'den ${end}'e kadar olsun. Tam ${end-start} eleman.`;
     if (N8N_PROXY) {
       res = await fetch(N8N_PROXY, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({prompt}) });
     } else {
-      res = await fetch('https://api.anthropic.com/v1/messages', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1500,messages:[{role:'user',content:prompt}]}) });
+      res = await fetch('https://api.minimax.io/v1/chat/completions', { method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer DEV_KEY'}, body:JSON.stringify({model:'MiniMax-M3',max_completion_tokens:1500,messages:[{role:'user',content:prompt}]}) });
     }
     const data = await res.json();
-    const text = data.content.map(b => b.text || '').join('');
+    const text = N8N_PROXY
+      ? (data.content || []).map(b => b.text || '').join('')
+      : (data.choices?.[0]?.message?.content || '');
     const clean = text.replace(/```json|```/g, '').trim();
     const result = JSON.parse(clean);
     const startDate = allDays[0].date;

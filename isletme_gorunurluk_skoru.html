@@ -323,19 +323,21 @@ SADECE JSON döndür:
       }
       data = await res.json();
     } else {
-      const res = await fetch('https://api.anthropic.com/v1/messages', {
+      const res = await fetch('https://api.minimax.io/v1/chat/completions', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer DEV_KEY' },
         body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
-          max_tokens: 1000,
+          model: 'MiniMax-M3',
+          max_completion_tokens: 1000,
           messages: [{ role: 'user', content: prompt }]
         })
       });
       data = await res.json();
     }
     clearInterval(ticker);
-    const text  = data.content.map(b => b.text || '').join('');
+    const text = N8N_PROXY
+      ? (data.content || []).map(b => b.text || '').join('')
+      : (data.choices?.[0]?.message?.content || '');
     const clean = text.replace(/```json|```/g, '').trim();
     renderResult(JSON.parse(clean), name, sector, platforms, web);
   } catch(e) {
