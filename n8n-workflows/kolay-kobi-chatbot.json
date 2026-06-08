@@ -1,0 +1,113 @@
+{
+  "name": "Kolay KOBİ — Chatbot Senaryosu Hazırlayıcı",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "kolay-kobi-chatbot",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-node",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300],
+      "webhookId": "kolay-kobi-chatbot"
+    },
+    {
+      "parameters": {
+        "jsCode": "const ip = $input.first().json.headers?.['x-forwarded-for']?.split(',')[0]?.trim() || $input.first().json.headers?.['x-real-ip'] || 'unknown';\nconst today = new Date().toISOString().slice(0, 10);\nconst key = 'rl_chatbot_' + ip + '_' + today;\nconst staticData = this.getWorkflowStaticData('global');\nif (!staticData.rateLimits) staticData.rateLimits = {};\nconst current = staticData.rateLimits[key] || 0;\nif (current >= 5) {\n  return [{ json: { rateLimitExceeded: true } }];\n}\nstaticData.rateLimits[key] = current + 1;\nconst body = $input.first().json.body;\nreturn [{ json: { rateLimitExceeded: false, prompt: body.prompt } }];"
+      },
+      "id": "rate-limit-node",
+      "name": "Rate Limit Check",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+          "conditions": [{ "id": "c1", "leftValue": "={{ $json.rateLimitExceeded }}", "rightValue": true, "operator": { "type": "boolean", "operation": "equal" } }],
+          "combinator": "and"
+        }
+      },
+      "id": "if-rate-limited",
+      "name": "Rate Limited?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\"error\":\"rate_limit\"}",
+        "options": { "responseCode": 429 }
+      },
+      "id": "respond-rate-limit",
+      "name": "429 Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [900, 180]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.minimax.io/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "=Bearer YOUR_MINIMAX_API_KEY" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"model\":\"MiniMax-M3\",\"max_completion_tokens\":1500,\"messages\":[{\"role\":\"user\",\"content\":{{ JSON.stringify($json.prompt) }}}]}",
+        "options": { "timeout": 60000 }
+      },
+      "id": "minimax-api-node",
+      "name": "MiniMax API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [900, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\nconst text = data.choices?.[0]?.message?.content || '';\nreturn [{ json: { content: [{ type: 'text', text }] } }];"
+      },
+      "id": "response-transform",
+      "name": "Response Transform",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1120, 400]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": { "responseCode": 200 }
+      },
+      "id": "respond-success",
+      "name": "Success Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1340, 400]
+    }
+  ],
+  "connections": {
+    "Webhook": { "main": [[{ "node": "Rate Limit Check", "type": "main", "index": 0 }]] },
+    "Rate Limit Check": { "main": [[{ "node": "Rate Limited?", "type": "main", "index": 0 }]] },
+    "Rate Limited?": {
+      "main": [
+        [{ "node": "429 Response", "type": "main", "index": 0 }],
+        [{ "node": "MiniMax API", "type": "main", "index": 0 }]
+      ]
+    },
+    "MiniMax API": { "main": [[{ "node": "Response Transform", "type": "main", "index": 0 }]] },
+    "Response Transform": { "main": [[{ "node": "Success Response", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1" },
+  "tags": ["kolay-kobi", "minimax"]
+}

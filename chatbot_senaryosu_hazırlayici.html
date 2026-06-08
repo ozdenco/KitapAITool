@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chatbot Senaryosu Hazırlayıcı — Kolay KOBİ</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,sans-serif;background:#F7F6F2;min-height:100vh}
+.app{max-width:720px;margin:0 auto;padding:2rem 1rem}
+.brand{display:flex;align-items:center;gap:8px;margin-bottom:2rem}
+.brand-dot{width:9px;height:9px;border-radius:50%;background:#1D9E75}
+.brand-name{font-size:13px;font-weight:500;color:#1D9E75;letter-spacing:.04em}
+
+.form-card{background:#fff;border-radius:16px;border:0.5px solid #E2E0D8;padding:2rem}
+h1{font-size:22px;font-weight:500;color:#1C1B19;margin-bottom:.4rem}
+.subtitle{font-size:14px;color:#6B6963;line-height:1.6;margin-bottom:2rem}
+.field{margin-bottom:1.25rem}
+label{display:block;font-size:13px;font-weight:500;color:#6B6963;margin-bottom:6px}
+input,select,textarea{width:100%;padding:10px 12px;font-size:14px;border:0.5px solid #D3D1C7;border-radius:8px;background:#fff;color:#1C1B19;outline:none;font-family:inherit}
+textarea{resize:vertical;min-height:80px;line-height:1.5}
+input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3px rgba(29,158,117,.1)}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+
+.faq-grid{display:grid;grid-template-columns:1fr;gap:8px;margin-top:6px}
+.faq-input-wrap{display:flex;align-items:center;gap:8px}
+.faq-num{font-size:12px;font-weight:500;color:#6B6963;min-width:20px}
+
+.rate-bar-wrap{margin-bottom:1rem}
+.rate-bar-label{display:flex;justify-content:space-between;font-size:12px;color:#6B6963;margin-bottom:5px}
+.rate-bar-track{height:5px;background:#E2E0D8;border-radius:4px;overflow:hidden}
+.rate-bar-fill{height:100%;background:#1D9E75;border-radius:4px;transition:width .3s}
+
+.btn-primary{width:100%;padding:13px;background:#1D9E75;color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:500;cursor:pointer;margin-top:.5rem;display:flex;align-items:center;justify-content:center;gap:8px}
+.btn-primary:hover{background:#0F6E56}
+.btn-primary:disabled{background:#B4B2A9;cursor:not-allowed}
+.err{font-size:13px;color:#A32D2D;background:#FCEBEB;border-radius:8px;padding:10px 12px;margin-top:.75rem;display:none}
+
+.loading{text-align:center;padding:4rem 1rem;display:none}
+.spinner{width:44px;height:44px;border:3px solid #E2E0D8;border-top-color:#1D9E75;border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 1.25rem}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-txt{font-size:14px;color:#6B6963}
+
+.results{display:none;margin-top:1.5rem}
+.results-header{margin-bottom:1.5rem}
+.results-header h2{font-size:18px;font-weight:500;color:#1C1B19;margin-bottom:.25rem}
+.results-header p{font-size:13px;color:#6B6963}
+
+.result-card{background:#fff;border-radius:16px;border:0.5px solid #E2E0D8;overflow:hidden;margin-bottom:1rem}
+.result-card-header{padding:1rem 1.5rem;border-bottom:0.5px solid #F1EFE8;display:flex;align-items:center;gap:10px}
+.result-card-header h3{font-size:15px;font-weight:500;color:#1C1B19}
+.result-card-body{padding:1.25rem 1.5rem}
+
+/* Special message cards */
+.msg-card{border:0.5px solid #E2E0D8;border-radius:12px;padding:1rem 1.25rem;margin-bottom:.75rem;background:#fff}
+.msg-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:#6B6963;margin-bottom:.5rem;display:flex;align-items:center;gap:6px}
+.balloon{background:#DCF8C6;border-radius:0 12px 12px 12px;padding:12px 14px;font-size:13px;color:#1C1B19;line-height:1.6;position:relative;margin-bottom:.5rem;white-space:pre-wrap;word-break:break-word}
+.balloon::before{content:'';position:absolute;left:-8px;top:0;width:0;height:0;border-top:8px solid #DCF8C6;border-left:8px solid transparent}
+.balloon.grey{background:#F1EFE8}
+.balloon.grey::before{border-top-color:#F1EFE8}
+
+/* FAQ flow cards */
+.faq-flow-card{border:0.5px solid #E2E0D8;border-radius:12px;overflow:hidden;margin-bottom:.75rem}
+.faq-flow-head{padding:.75rem 1.25rem;background:#F7F6F2;border-bottom:0.5px solid #E2E0D8;display:flex;align-items:center;gap:8px}
+.faq-flow-head .q-label{font-size:12px;font-weight:500;color:#6B6963}
+.faq-flow-head .q-text{font-size:13px;font-weight:500;color:#1C1B19}
+.faq-flow-body{padding:1rem 1.25rem}
+.flow-arrow{font-size:11px;color:#B4B2A9;margin:.5rem 0;text-align:left;padding-left:4px}
+.keywords-row{display:flex;flex-wrap:wrap;gap:5px;margin-top:.5rem}
+.kw-tag{font-size:11px;padding:2px 8px;border-radius:10px;background:#E6F1FB;color:#0C447C;font-weight:500}
+.followup-note{font-size:12px;color:#6B6963;margin-top:.5rem;font-style:italic}
+
+/* Mini test window */
+.test-window{border:0.5px solid #E2E0D8;border-radius:12px;overflow:hidden;margin-bottom:.75rem}
+.test-window-header{background:#1D9E75;padding:.75rem 1.25rem;display:flex;align-items:center;gap:10px}
+.test-window-header span{color:#fff;font-size:14px;font-weight:500}
+.test-messages{min-height:160px;max-height:300px;overflow-y:auto;padding:1rem;background:#ECE5DD;display:flex;flex-direction:column;gap:8px}
+.test-msg{max-width:80%;padding:8px 12px;border-radius:8px;font-size:13px;line-height:1.5;word-break:break-word}
+.test-msg.user{align-self:flex-end;background:#DCF8C6;border-radius:8px 0 8px 8px}
+.test-msg.bot{align-self:flex-start;background:#fff;border-radius:0 8px 8px 8px}
+.test-input-row{display:flex;gap:8px;padding:.75rem;border-top:0.5px solid #E2E0D8;background:#fff}
+.test-input-row input{flex:1;padding:8px 12px;border:0.5px solid #D3D1C7;border-radius:8px;font-size:13px}
+.test-send-btn{padding:8px 14px;background:#1D9E75;color:#fff;border:none;border-radius:8px;font-size:13px;cursor:pointer;display:flex;align-items:center;gap:5px}
+.test-send-btn:hover{background:#0F6E56}
+
+.actions{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:1rem}
+.btn-secondary{flex:1;padding:11px;background:#fff;color:#1C1B19;border:0.5px solid #D3D1C7;border-radius:8px;font-size:14px;font-weight:500;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;min-width:140px}
+.btn-secondary:hover{background:#F7F6F2}
+
+.cta-box{background:#F0FAF6;border:0.5px solid #9FE1CB;border-radius:12px;padding:1.5rem;text-align:center;margin-top:.5rem}
+.cta-title{font-size:15px;font-weight:500;color:#085041;margin-bottom:.4rem}
+.cta-sub{font-size:13px;color:#0F6E56;margin-bottom:1rem;line-height:1.6}
+.cta-btn{display:inline-block;background:#1D9E75;color:#fff;padding:10px 24px;border-radius:8px;font-size:14px;font-weight:500;text-decoration:none}
+.cta-btn:hover{background:#0F6E56}
+
+.reset-link{text-align:center;margin-top:1rem}
+.reset-link button{background:none;border:none;font-size:13px;color:#888780;cursor:pointer;text-decoration:underline}
+
+@media(max-width:520px){
+  .row2{grid-template-columns:1fr}
+  .test-messages{min-height:120px}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="brand">
+    <div class="brand-dot"></div>
+    <span class="brand-name">Kolay KOBİ</span>
+  </div>
+
+  <!-- FORM -->
+  <div class="form-card" id="form-section">
+    <h1>Chatbot Senaryosu Hazırlayıcı</h1>
+    <p class="subtitle">İşletme bilgilerini ve sıkça sorulan soruları girin; hazır chatbot akış senaryosu ve mesaj metinleri oluşturalım.</p>
+
+    <div class="row2">
+      <div class="field">
+        <label>İşletme adı <span style="color:#A32D2D">*</span></label>
+        <input type="text" id="f-biz" placeholder="Örn: Demir Otomotiv">
+      </div>
+      <div class="field">
+        <label>Sektör <span style="color:#A32D2D">*</span></label>
+        <select id="f-sector">
+          <option value="">Seçin...</option>
+          <option>Muhasebe / Finans</option>
+          <option>Sağlık / Klinik</option>
+          <option>Eğitim / Kurs</option>
+          <option>İnşaat / Mühendislik</option>
+          <option>Hukuk / Danışmanlık</option>
+          <option>Perakende / Mağaza</option>
+          <option>Yiyecek / İçecek</option>
+          <option>Güzellik / Estetik</option>
+          <option>Lojistik / Taşımacılık</option>
+          <option>Teknoloji / Yazılım</option>
+          <option>Diğer</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Sunulan hizmetler <span style="color:#A32D2D">*</span></label>
+      <textarea id="f-services" placeholder="Örn: Araç bakımı, yağ değişimi, lastik servisi, fren bakımı ve kaporta onarım hizmetleri."></textarea>
+    </div>
+
+    <div class="field">
+      <label>Mesai saatleri</label>
+      <input type="text" id="f-hours" placeholder="Örn: Hft 08:00-18:00, Cmt 09:00-14:00">
+    </div>
+
+    <div class="field">
+      <label>Sıkça sorulan sorular <span style="color:#A32D2D">*</span> (ilk 3 zorunlu)</label>
+      <div class="faq-grid">
+        <div class="faq-input-wrap"><span class="faq-num">1.</span><input type="text" class="faq-input" id="faq-1" placeholder="Örn: Fiyatlarınız nedir?"></div>
+        <div class="faq-input-wrap"><span class="faq-num">2.</span><input type="text" class="faq-input" id="faq-2" placeholder="Örn: Randevu nasıl alabilirim?"></div>
+        <div class="faq-input-wrap"><span class="faq-num">3.</span><input type="text" class="faq-input" id="faq-3" placeholder="Örn: Nerede bulunuyorsunuz?"></div>
+        <div class="faq-input-wrap"><span class="faq-num">4.</span><input type="text" class="faq-input" id="faq-4" placeholder="Opsiyonel..."></div>
+        <div class="faq-input-wrap"><span class="faq-num">5.</span><input type="text" class="faq-input" id="faq-5" placeholder="Opsiyonel..."></div>
+      </div>
+    </div>
+
+    <div class="row2">
+      <div class="field">
+        <label>Yönlendirme hedefi <span style="color:#A32D2D">*</span></label>
+        <select id="f-redirect-goal">
+          <option value="">Seçin...</option>
+          <option>Randevu Al</option>
+          <option>Fiyat Teklifi</option>
+          <option>WhatsApp</option>
+          <option>Telefon</option>
+          <option>Web Sitesi</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Yönlendirme linki / numarası</label>
+        <input type="text" id="f-redirect-link" placeholder="Örn: 0532 000 00 00 veya site.com/randevu">
+      </div>
+    </div>
+
+    <div id="err" class="err"></div>
+
+    <div class="rate-bar-wrap">
+      <div class="rate-bar-label">
+        <span>Günlük kullanım</span>
+        <span id="rate-text">0 / 5</span>
+      </div>
+      <div class="rate-bar-track">
+        <div class="rate-bar-fill" id="rate-fill" style="width:0%"></div>
+      </div>
+    </div>
+
+    <button class="btn-primary" id="gen-btn" onclick="generate()">
+      <i class="ti ti-robot" aria-hidden="true"></i> Chatbot Senaryosu Oluştur
+    </button>
+
+    <button class="btn-secondary" onclick="resetForm()" style="margin-top:10px;width:100%">
+      <i class="ti ti-eraser" aria-hidden="true"></i> Formu Boşalt
+    </button>
+  </div>
+
+  <!-- LOADING -->
+  <div class="loading" id="loading-section">
+    <div class="spinner"></div>
+    <p class="loading-txt" id="loading-msg">Chatbot senaryosu hazırlanıyor...</p>
+  </div>
+
+  <!-- RESULTS -->
+  <div class="results" id="results-section">
+    <div class="results-header">
+      <h2>Chatbot Akış Senaryosu</h2>
+      <p id="results-sub">Hazır mesaj metinleri ve akış diyagramı oluşturuldu</p>
+    </div>
+
+    <!-- Welcome & Special Messages -->
+    <div class="result-card">
+      <div class="result-card-header">
+        <i class="ti ti-message-circle" aria-hidden="true" style="font-size:18px;color:#1D9E75"></i>
+        <h3>Özel Mesajlar</h3>
+      </div>
+      <div class="result-card-body" id="special-messages"></div>
+    </div>
+
+    <!-- FAQ Flow -->
+    <div class="result-card">
+      <div class="result-card-header">
+        <i class="ti ti-list-check" aria-hidden="true" style="font-size:18px;color:#1D9E75"></i>
+        <h3>SSS Akış Kartları</h3>
+      </div>
+      <div class="result-card-body" id="faq-flow-cards"></div>
+    </div>
+
+    <!-- Mini Test Window -->
+    <div class="result-card">
+      <div class="result-card-header">
+        <i class="ti ti-device-mobile-message" aria-hidden="true" style="font-size:18px;color:#1D9E75"></i>
+        <h3>Mini Chatbot Testi</h3>
+      </div>
+      <div class="result-card-body" style="padding:0">
+        <div class="test-window">
+          <div class="test-window-header">
+            <i class="ti ti-brand-whatsapp" aria-hidden="true" style="color:#fff;font-size:20px"></i>
+            <span id="test-bot-name">Chatbot</span>
+          </div>
+          <div class="test-messages" id="test-messages"></div>
+          <div class="test-input-row">
+            <input type="text" id="test-input" placeholder="Mesajınızı yazın..." onkeydown="if(event.key==='Enter')sendTestMsg()">
+            <button class="test-send-btn" onclick="sendTestMsg()">
+              <i class="ti ti-send" aria-hidden="true"></i> Gönder
+            </button>
+          </div>
+        </div>
+        <p style="font-size:12px;color:#6B6963;padding:.75rem 1.25rem">Bu test penceresi oluşturulan senaryoya göre statik eşleştirme yapar. Gerçek chatbot entegrasyonu için Kolay KOBİ ile görüşün.</p>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button class="btn-secondary" id="copy-btn" onclick="copyAll()">
+        <i class="ti ti-copy" aria-hidden="true"></i> Tümünü Kopyala
+      </button>
+      <button class="btn-secondary" onclick="downloadTxt()">
+        <i class="ti ti-download" aria-hidden="true"></i> .txt İndir
+      </button>
+      <button class="btn-secondary" onclick="downloadN8nJson()">
+        <i class="ti ti-brand-n8n" aria-hidden="true"></i> n8n Workflow İndir
+      </button>
+    </div>
+
+    <div class="cta-box">
+      <div class="cta-title">Bu chatbotu sizin için kuralım</div>
+      <div class="cta-sub" id="cta-sub">WhatsApp veya web sitenize entegre chatbot ile 7/24 müşteri desteği sağlayın.</div>
+      <a href="https://kolaykobi.com/iletisim" class="cta-btn" target="_blank" rel="noopener noreferrer">Benim İçin Kur</a>
+    </div>
+
+    <div class="reset-link">
+      <button onclick="resetForm()">Formu Boşalt ve Yeniden Başla</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// const N8N_PROXY = null;
+const N8N_PROXY = 'https://n8n.srv1492396.hstgr.cloud/webhook/kolay-kobi-chatbot';
+const DAILY_LIMIT = 5;
+const RATE_KEY = 'kkb_chatbot_usage';
+
+const loadingMsgs = [
+  'Chatbot senaryosu hazırlanıyor...',
+  'SSS yanıtları oluşturuluyor...',
+  'Akış diyagramı çiziliyor...',
+  'Mesaj metinleri optimize ediliyor...',
+  'Son rötuşlar yapılıyor...',
+];
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+function getRateData() {
+  try {
+    const d = JSON.parse(localStorage.getItem(RATE_KEY) || '{}');
+    const today = new Date().toDateString();
+    if (d.date !== today) return { count: 0, date: today };
+    return d;
+  } catch(e) { return { count: 0, date: new Date().toDateString() }; }
+}
+
+function saveRate(d) {
+  localStorage.setItem(RATE_KEY, JSON.stringify(d));
+}
+
+function updateRateBar() {
+  const d = getRateData();
+  const pct = Math.min(100, (d.count / DAILY_LIMIT) * 100);
+  document.getElementById('rate-fill').style.width = pct + '%';
+  document.getElementById('rate-text').textContent = d.count + ' / ' + DAILY_LIMIT;
+  const btn = document.getElementById('gen-btn');
+  if (d.count >= DAILY_LIMIT) {
+    btn.disabled = true;
+    btn.innerHTML = '<i class="ti ti-lock" aria-hidden="true"></i> Günlük limit doldu';
+  }
+}
+
+function getFaqs() {
+  return [1,2,3,4,5].map(i => document.getElementById(`faq-${i}`).value.trim()).filter(Boolean);
+}
+
+function fallback(biz, redirectGoal, redirectLink) {
+  return {
+    welcome: `Merhaba! Ben ${biz} chatbotuyum. Size nasıl yardımcı olabilirim?\n\n📋 Menü:\n1️⃣ Fiyat Bilgisi\n2️⃣ Randevu Al\n3️⃣ İletişim\n4️⃣ Adres`,
+    faqs: [
+      { question: 'Fiyatlarınız nedir?', keywords: ['fiyat', 'ücret', 'ne kadar', 'tutar', 'maliyet'], answer: `${biz} olarak hizmetlerimiz için fiyat teklifimizi almak için lütfen iletişime geçin.`, followup: `${redirectGoal} için: ${redirectLink || 'bize ulaşın'}` },
+      { question: 'Randevu nasıl alabilirim?', keywords: ['randevu', 'appointment', 'ne zaman', 'uygun', 'görüşme'], answer: `${biz} ile randevu almak çok kolay! ${redirectGoal === 'WhatsApp' ? 'WhatsApp üzerinden mesaj gönderin.' : redirectGoal === 'Telefon' ? 'Telefon ile arayın.' : 'Web sitemizi ziyaret edin.'}`, followup: redirectLink || '' },
+      { question: 'Nerede bulunuyorsunuz?', keywords: ['adres', 'nerede', 'konum', 'yer', 'lokasyon'], answer: `${biz} hakkında adres bilgisi için lütfen Google Haritalar'da bizi arayın veya iletişim sayfamızı ziyaret edin.`, followup: '' },
+    ],
+    fallback: `Anladım, ama bu konuda size daha iyi yardımcı olabilmem için ${redirectGoal === 'Telefon' ? 'telefon' : 'WhatsApp'} üzerinden uzmanlarımızla iletişime geçmenizi öneririm.`,
+    closing: `${biz} ile iletişime geçtiğiniz için teşekkürler! En kısa sürede size geri dönüş yapılacaktır. İyi günler! 👋`,
+    offHours: `Merhaba! Şu anda mesai saatlerimiz dışındasınız. Mesajınızı aldık ve mesai saatleri içinde size geri dönüş yapacağız. Acil durumlar için: ${redirectLink || 'iletişim bilgilerimize başvurun'}.`,
+    ctaText: 'Bu chatbotu sizin için kuralım ve 7/24 müşteri hizmeti verelim.',
+  };
+}
+
+let currentScenario = null;
+let lastBiz = '';
+
+function clearResults() {
+  document.getElementById('results-section').style.display = 'none';
+  document.getElementById('special-messages').innerHTML = '';
+  document.getElementById('faq-flow-cards').innerHTML = '';
+  document.getElementById('test-messages').innerHTML = '';
+}
+
+function showLoading(v) {
+  document.getElementById('loading-section').style.display = v ? 'block' : 'none';
+}
+
+function renderResults(result) {
+  clearResults();
+  currentScenario = result;
+  showLoading(false);
+
+  if (result.ctaText) document.getElementById('cta-sub').textContent = result.ctaText;
+  document.getElementById('test-bot-name').textContent = lastBiz + ' Bot';
+
+  // Special messages
+  const specials = document.getElementById('special-messages');
+  const specialItems = [
+    { label: 'Karşılama Mesajı', icon: 'ti-hand-stop', msg: result.welcome, cls: '' },
+    { label: 'Fallback (Bilinmeyen Soru)', icon: 'ti-question-mark', msg: result.fallback, cls: 'grey' },
+    { label: 'Kapanış / Yönlendirme', icon: 'ti-door-exit', msg: result.closing, cls: 'grey' },
+    { label: 'Mesai Dışı Mesajı', icon: 'ti-moon', msg: result.offHours, cls: 'grey' },
+  ];
+  specials.innerHTML = specialItems.map(s => `
+    <div class="msg-card">
+      <div class="msg-label"><i class="ti ${escHtml(s.icon)}" aria-hidden="true"></i> ${escHtml(s.label)}</div>
+      <div class="balloon ${escHtml(s.cls)}">${escHtml(s.msg || '')}</div>
+    </div>
+  `).join('');
+
+  // FAQ flow cards
+  const faqCards = document.getElementById('faq-flow-cards');
+  faqCards.innerHTML = (result.faqs || []).map((faq, i) => `
+    <div class="faq-flow-card">
+      <div class="faq-flow-head">
+        <span class="q-label">Soru ${i + 1}</span>
+        <span style="color:#B4B2A9;margin:0 4px">—</span>
+        <span class="q-text">${escHtml(faq.question)}</span>
+      </div>
+      <div class="faq-flow-body">
+        <div style="font-size:11px;color:#6B6963;margin-bottom:4px">Kullanıcı bunu yazarsa → Bot şunu der:</div>
+        <div class="balloon">${escHtml(faq.answer)}</div>
+        ${faq.followup ? `<div class="flow-arrow">↓ devamında</div><div class="balloon grey">${escHtml(faq.followup)}</div>` : ''}
+        ${(faq.keywords && faq.keywords.length) ? `<div class="keywords-row">${faq.keywords.map(k => `<span class="kw-tag">${escHtml(k)}</span>`).join('')}</div>` : ''}
+      </div>
+    </div>
+  `).join('');
+
+  // Init test chat with welcome
+  addTestMessage(result.welcome, 'bot');
+
+  document.getElementById('results-section').style.display = 'block';
+  document.getElementById('results-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function addTestMessage(text, type) {
+  const container = document.getElementById('test-messages');
+  const div = document.createElement('div');
+  div.className = `test-msg ${type}`;
+  div.textContent = text;
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+}
+
+function findBotResponse(userText) {
+  if (!currentScenario) return 'Senaryo yüklenmedi.';
+  const lower = userText.toLowerCase();
+  if (!currentScenario.faqs) return currentScenario.fallback || 'Anlayamadım, lütfen tekrar deneyin.';
+  let best = null;
+  let bestCount = 0;
+  for (const faq of currentScenario.faqs) {
+    const kws = faq.keywords || [];
+    let count = 0;
+    kws.forEach(kw => { if (lower.includes(kw.toLowerCase())) count++; });
+    if (count > bestCount) { bestCount = count; best = faq; }
+  }
+  if (best && bestCount > 0) {
+    let resp = best.answer;
+    if (best.followup) resp += '\n\n' + best.followup;
+    return resp;
+  }
+  return currentScenario.fallback || 'Anlayamadım, lütfen tekrar deneyin.';
+}
+
+function sendTestMsg() {
+  const input = document.getElementById('test-input');
+  const text = input.value.trim();
+  if (!text) return;
+  addTestMessage(text, 'user');
+  input.value = '';
+  setTimeout(() => {
+    const response = findBotResponse(text);
+    addTestMessage(response, 'bot');
+  }, 600);
+}
+
+async function generate() {
+  const rateData = getRateData();
+  if (rateData.count >= DAILY_LIMIT) {
+    showErr('Günlük kullanım limitiniz (5) doldu. Yarın tekrar deneyin.');
+    return;
+  }
+
+  const biz = document.getElementById('f-biz').value.trim();
+  const sector = document.getElementById('f-sector').value;
+  const services = document.getElementById('f-services').value.trim();
+  const hours = document.getElementById('f-hours').value.trim();
+  const faqs = getFaqs();
+  const redirectGoal = document.getElementById('f-redirect-goal').value;
+  const redirectLink = document.getElementById('f-redirect-link').value.trim();
+
+  if (!biz) { showErr('İşletme adı zorunludur.'); return; }
+  if (!sector) { showErr('Lütfen sektör seçin.'); return; }
+  if (!services) { showErr('Hizmetler alanı zorunludur.'); return; }
+  if (faqs.length < 3) { showErr('En az 3 sıkça sorulan soru girmelisiniz.'); return; }
+  if (!redirectGoal) { showErr('Lütfen yönlendirme hedefi seçin.'); return; }
+
+  hideErr();
+  lastBiz = biz;
+  clearResults();
+  showLoading(true);
+
+  let mi = 0;
+  const msgEl = document.getElementById('loading-msg');
+  const ticker = setInterval(() => { mi = (mi + 1) % loadingMsgs.length; msgEl.textContent = loadingMsgs[mi]; }, 1800);
+
+  const prompt = `Sen chatbot tasarım uzmanısın. Aşağıdaki işletme için WhatsApp/web chatbot senaryosu hazırla.
+
+═══ İŞLETME BİLGİLERİ ═══
+İşletme: ${biz}
+Sektör: ${sector}
+Hizmetler: ${services}
+Mesai: ${hours || 'belirtilmemiş'}
+Yönlendirme: ${redirectGoal} → ${redirectLink || 'belirtilmemiş'}
+
+═══ SIKÇA SORULAN SORULAR ═══
+${faqs.map((q, i) => `${i + 1}. ${q}`).join('\n')}
+
+═══ SENARYO KURALLARI ═══
+1. Her SSS için doğal Türkçe bot yanıtı yaz
+2. Yanıtlar ${biz} için özelleştirilmiş, kısa ve net olsun
+3. Son adımda her zaman yönlendirme yap (${redirectGoal})
+4. Mesai dışı için ayrı mesaj yaz
+5. Bilinmeyen soru için nazik fallback mesajı
+
+SADECE JSON döndür:
+{
+  "welcome": "...",
+  "faqs": [
+    { "question": "...", "keywords": ["...", "..."], "answer": "...", "followup": "..." }
+  ],
+  "fallback": "...",
+  "closing": "...",
+  "offHours": "...",
+  "ctaText": "..."
+}`;
+
+  try {
+    let res;
+    if (N8N_PROXY) {
+      res = await fetch(N8N_PROXY, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt }),
+      });
+      if (res.status === 429) {
+        clearInterval(ticker);
+        showLoading(false);
+        showErr('Çok fazla istek gönderildi. Lütfen biraz bekleyin.');
+        return;
+      }
+    } else {
+      res = await fetch('https://api.minimax.io/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer DEV_KEY' },
+        body: JSON.stringify({ model: 'MiniMax-M3', max_completion_tokens: 1500, messages: [{ role: 'user', content: prompt }] }),
+      });
+    }
+    const data = await res.json();
+    const text = N8N_PROXY
+      ? (data.content || []).map(b => b.text || '').join('')
+      : (data.choices?.[0]?.message?.content || '');
+    const clean = text.replace(/```json|```/g, '').trim();
+    const result = JSON.parse(clean);
+
+    rateData.count++;
+    saveRate(rateData);
+    updateRateBar();
+    clearInterval(ticker);
+    renderResults(result);
+  } catch(e) {
+    rateData.count++;
+    saveRate(rateData);
+    updateRateBar();
+    clearInterval(ticker);
+    renderResults(fallback(lastBiz, document.getElementById('f-redirect-goal').value, document.getElementById('f-redirect-link').value.trim()));
+  }
+}
+
+function showErr(msg) {
+  const el = document.getElementById('err');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+
+function hideErr() {
+  document.getElementById('err').style.display = 'none';
+}
+
+function resetForm() {
+  document.getElementById('f-biz').value = '';
+  document.getElementById('f-sector').value = '';
+  document.getElementById('f-services').value = '';
+  document.getElementById('f-hours').value = '';
+  [1,2,3,4,5].forEach(i => { document.getElementById(`faq-${i}`).value = ''; });
+  document.getElementById('f-redirect-goal').value = '';
+  document.getElementById('f-redirect-link').value = '';
+  hideErr();
+  clearResults();
+  showLoading(false);
+  currentScenario = null;
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function copyAll() {
+  if (!currentScenario) return;
+  const lines = [`=== ${lastBiz} — CHATBOT SENARYOSU ===`, ''];
+  lines.push('KARŞILAMA:'); lines.push(currentScenario.welcome); lines.push('');
+  if (currentScenario.faqs) {
+    lines.push('SSS AKIŞLARI:');
+    currentScenario.faqs.forEach((faq, i) => {
+      lines.push(`${i + 1}. Kullanıcı: "${faq.question}"`);
+      lines.push(`   Bot: ${faq.answer}`);
+      if (faq.followup) lines.push(`   Devam: ${faq.followup}`);
+      lines.push('');
+    });
+  }
+  lines.push('BİLİNMEYEN SORU:'); lines.push(currentScenario.fallback); lines.push('');
+  lines.push('KAPANIS:'); lines.push(currentScenario.closing); lines.push('');
+  lines.push('MESAİ DIŞI:'); lines.push(currentScenario.offHours);
+  navigator.clipboard.writeText(lines.join('\n')).then(() => {
+    const btn = document.getElementById('copy-btn');
+    if (btn) {
+      btn.innerHTML = '<i class="ti ti-check" aria-hidden="true"></i> Kopyalandı!';
+      setTimeout(() => { btn.innerHTML = '<i class="ti ti-copy" aria-hidden="true"></i> Tümünü Kopyala'; }, 2000);
+    }
+  });
+}
+
+function downloadTxt() {
+  if (!currentScenario) return;
+  const lines = [`=== ${lastBiz} — CHATBOT SENARYOSU ===`, ''];
+  lines.push('--- KARŞILAMA MESAJI ---'); lines.push(currentScenario.welcome); lines.push('');
+  if (currentScenario.faqs) {
+    lines.push('--- SSS AKIŞLARI ---');
+    currentScenario.faqs.forEach((faq, i) => {
+      lines.push(`ADIM ${i + 1}: ${faq.question}`);
+      lines.push(`Anahtar kelimeler: ${(faq.keywords || []).join(', ')}`);
+      lines.push(`Bot yanıtı: ${faq.answer}`);
+      if (faq.followup) lines.push(`Takip mesajı: ${faq.followup}`);
+      lines.push('');
+    });
+  }
+  lines.push('--- BİLİNMEYEN SORU (FALLBACK) ---'); lines.push(currentScenario.fallback); lines.push('');
+  lines.push('--- KAPANIS ---'); lines.push(currentScenario.closing); lines.push('');
+  lines.push('--- MESAİ DIŞI ---'); lines.push(currentScenario.offHours);
+  const blob = new Blob([lines.join('\n')], { type: 'text/plain;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'chatbot-senaryosu.txt';
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function downloadN8nJson() {
+  if (!currentScenario) return;
+  const nodes = [];
+  let xPos = 200;
+  const yStep = 180;
+
+  // Start node
+  nodes.push({
+    id: 'node-start',
+    name: 'Mesaj Alındı',
+    type: 'n8n-nodes-base.webhook',
+    position: [xPos, 100],
+    parameters: { httpMethod: 'POST', path: 'chatbot-webhook' },
+  });
+
+  // Welcome node
+  nodes.push({
+    id: 'node-welcome',
+    name: 'Karşılama',
+    type: 'n8n-nodes-base.set',
+    position: [xPos, 100 + yStep],
+    parameters: { values: { string: [{ name: 'response', value: currentScenario.welcome }] } },
+  });
+
+  // FAQ IF nodes
+  (currentScenario.faqs || []).forEach((faq, i) => {
+    nodes.push({
+      id: `node-faq-${i}`,
+      name: `SSS ${i + 1}: ${faq.question.substring(0, 30)}`,
+      type: 'n8n-nodes-base.if',
+      position: [xPos + (i * 220), 100 + yStep * 2],
+      parameters: {
+        conditions: {
+          string: (faq.keywords || []).map(kw => ({
+            value1: '={{$json.message}}',
+            operation: 'contains',
+            value2: kw,
+          })),
+        },
+      },
+    });
+    nodes.push({
+      id: `node-faq-response-${i}`,
+      name: `Yanıt ${i + 1}`,
+      type: 'n8n-nodes-base.set',
+      position: [xPos + (i * 220), 100 + yStep * 3],
+      parameters: { values: { string: [{ name: 'response', value: faq.answer + (faq.followup ? '\n\n' + faq.followup : '') }] } },
+    });
+  });
+
+  // Fallback node
+  nodes.push({
+    id: 'node-fallback',
+    name: 'Bilinmeyen Soru',
+    type: 'n8n-nodes-base.set',
+    position: [xPos, 100 + yStep * 4],
+    parameters: { values: { string: [{ name: 'response', value: currentScenario.fallback }] } },
+  });
+
+  const workflow = {
+    name: `${lastBiz} Chatbot`,
+    nodes,
+    connections: {},
+    active: false,
+    settings: { executionOrder: 'v1' },
+    meta: { generatedBy: 'Kolay KOBİ Chatbot Hazırlayıcı' },
+  };
+
+  const blob = new Blob([JSON.stringify(workflow, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'chatbot-workflow.json';
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+updateRateBar();
+</script>
+</body>
+</html>

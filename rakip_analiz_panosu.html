@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rakip Analiz Panosu — Kolay KOBİ</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,sans-serif;background:#F7F6F2;min-height:100vh}
+.app{max-width:720px;margin:0 auto;padding:2rem 1rem}
+.brand{display:flex;align-items:center;gap:8px;margin-bottom:2rem}
+.brand-dot{width:9px;height:9px;border-radius:50%;background:#1D9E75}
+.brand-name{font-size:13px;font-weight:500;color:#1D9E75;letter-spacing:.04em}
+
+.form-card{background:#fff;border-radius:16px;border:0.5px solid #E2E0D8;padding:2rem}
+h1{font-size:22px;font-weight:500;color:#1C1B19;margin-bottom:.4rem}
+.subtitle{font-size:14px;color:#6B6963;line-height:1.6;margin-bottom:2rem}
+.section-label{font-size:12px;font-weight:600;color:#1D9E75;text-transform:uppercase;letter-spacing:.06em;margin-bottom:1rem;padding-bottom:6px;border-bottom:0.5px solid #E2E0D8}
+.field{margin-bottom:1.25rem}
+label{display:block;font-size:13px;font-weight:500;color:#6B6963;margin-bottom:6px}
+input,select,textarea{width:100%;padding:10px 12px;font-size:14px;border:0.5px solid #D3D1C7;border-radius:8px;background:#fff;color:#1C1B19;outline:none;font-family:inherit}
+textarea{resize:vertical;min-height:80px;line-height:1.5}
+input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3px rgba(29,158,117,.1)}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+
+.check-group{display:flex;flex-wrap:wrap;gap:7px;margin-top:6px}
+.check-item{display:flex;align-items:center;gap:7px;padding:7px 11px;border:0.5px solid #D3D1C7;border-radius:8px;cursor:pointer;font-size:13px;color:#1C1B19;background:#fff;user-select:none}
+.check-item input[type=checkbox]{width:auto;padding:0;box-shadow:none}
+.check-item:has(input:checked){border-color:#1D9E75;background:#F0FAF6}
+
+.competitor-block{background:#F7F6F2;border-radius:12px;padding:1.25rem;margin-bottom:1rem;border:0.5px solid #E2E0D8}
+.competitor-block h3{font-size:14px;font-weight:500;color:#1C1B19;margin-bottom:.75rem;display:flex;align-items:center;gap:8px}
+.competitor-block h3 .badge-opt{font-size:11px;font-weight:400;background:#E2E0D8;color:#6B6963;padding:2px 8px;border-radius:10px}
+
+.rate-bar-wrap{margin-bottom:1rem}
+.rate-bar-label{display:flex;justify-content:space-between;font-size:12px;color:#6B6963;margin-bottom:5px}
+.rate-bar-track{height:5px;background:#E2E0D8;border-radius:4px;overflow:hidden}
+.rate-bar-fill{height:100%;background:#1D9E75;border-radius:4px;transition:width .3s}
+
+.btn-primary{width:100%;padding:13px;background:#1D9E75;color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:500;cursor:pointer;margin-top:.5rem;display:flex;align-items:center;justify-content:center;gap:8px}
+.btn-primary:hover{background:#0F6E56}
+.btn-primary:disabled{background:#B4B2A9;cursor:not-allowed}
+.err{font-size:13px;color:#A32D2D;background:#FCEBEB;border-radius:8px;padding:10px 12px;margin-top:.75rem;display:none}
+
+.loading{text-align:center;padding:4rem 1rem;display:none}
+.spinner{width:44px;height:44px;border:3px solid #E2E0D8;border-top-color:#1D9E75;border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 1.25rem}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-txt{font-size:14px;color:#6B6963}
+
+.results{display:none;margin-top:1.5rem}
+.results-header{margin-bottom:1.5rem}
+.results-header h2{font-size:18px;font-weight:500;color:#1C1B19;margin-bottom:.25rem}
+.results-header p{font-size:13px;color:#6B6963}
+
+.result-card{background:#fff;border-radius:16px;border:0.5px solid #E2E0D8;overflow:hidden;margin-bottom:1rem}
+.result-card-header{padding:1rem 1.5rem;border-bottom:0.5px solid #F1EFE8;display:flex;align-items:center;gap:10px}
+.result-card-header h3{font-size:15px;font-weight:500;color:#1C1B19}
+.result-card-body{padding:1.25rem 1.5rem}
+
+/* Comparison table */
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;padding:8px 10px;font-size:11px;font-weight:500;color:#6B6963;text-transform:uppercase;letter-spacing:.05em;border-bottom:0.5px solid #E2E0D8;white-space:nowrap;background:#F7F6F2}
+td{padding:10px;border-bottom:0.5px solid #F1EFE8;color:#1C1B19;vertical-align:middle}
+tr:last-child td{border-bottom:none}
+td:first-child{font-weight:500;color:#6B6963;font-size:12px}
+.tick{color:#1D9E75;font-size:16px}
+.cross{color:#B4B2A9;font-size:16px}
+.price-badge{display:inline-block;padding:2px 9px;border-radius:12px;font-size:11px;font-weight:500}
+.price-ekonomik{background:#E1F5EE;color:#085041}
+.price-orta{background:#E6F1FB;color:#0C447C}
+.price-premium{background:#FAEEDA;color:#633806}
+
+/* Competitor analysis cards */
+.comp-grid{display:grid;grid-template-columns:1fr;gap:12px}
+.comp-card{border:0.5px solid #E2E0D8;border-radius:12px;overflow:hidden}
+.comp-card-head{padding:.75rem 1.25rem;display:flex;align-items:center;justify-content:space-between;border-bottom:0.5px solid #F1EFE8;background:#F7F6F2}
+.comp-name{font-size:14px;font-weight:500;color:#1C1B19}
+.threat-badge{font-size:11px;font-weight:500;padding:3px 10px;border-radius:10px}
+.threat-high{background:#FCEBEB;color:#A32D2D}
+.threat-medium{background:#FEF9EC;color:#7A5C00}
+.threat-low{background:#E1F5EE;color:#085041}
+.comp-body{padding:1rem 1.25rem;display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.comp-sec-title{font-size:11px;font-weight:500;color:#6B6963;text-transform:uppercase;letter-spacing:.05em;margin-bottom:.5rem}
+.comp-list{list-style:none;display:flex;flex-direction:column;gap:5px}
+.comp-list li{font-size:13px;color:#1C1B19;display:flex;align-items:flex-start;gap:7px;line-height:1.4}
+.comp-list li i{font-size:14px;flex-shrink:0;margin-top:1px}
+.comp-list.str li i{color:#1D9E75}
+.comp-list.weak li i{color:#A32D2D}
+
+/* Opp/Threat lists */
+.ot-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:.5rem}
+.ot-box{border-radius:10px;padding:1rem}
+.ot-box.opp{background:#E1F5EE}
+.ot-box.thr{background:#FCEBEB}
+.ot-box-title{font-size:12px;font-weight:600;margin-bottom:.5rem;display:flex;align-items:center;gap:6px}
+.ot-box.opp .ot-box-title{color:#085041}
+.ot-box.thr .ot-box-title{color:#A32D2D}
+.ot-list{list-style:none;display:flex;flex-direction:column;gap:6px}
+.ot-list li{font-size:13px;line-height:1.4}
+.ot-box.opp .ot-list li{color:#085041}
+.ot-box.thr .ot-list li{color:#791F1F}
+
+/* Actions */
+.action-grid{display:grid;grid-template-columns:1fr;gap:10px}
+.action-card{border:0.5px solid #E2E0D8;border-radius:12px;padding:1rem 1.25rem;display:flex;gap:12px;align-items:flex-start}
+.action-icon{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.action-icon.high{background:#FCEBEB}
+.action-icon.high i{color:#A32D2D}
+.action-icon.medium{background:#FEF9EC}
+.action-icon.medium i{color:#C98F00}
+.action-icon.low{background:#E1F5EE}
+.action-icon.low i{color:#085041}
+.action-title{font-size:14px;font-weight:500;color:#1C1B19;margin-bottom:4px;display:flex;align-items:center;gap:8px}
+.action-desc{font-size:13px;color:#6B6963;line-height:1.55}
+.priority-label{font-size:11px;font-weight:500;padding:2px 8px;border-radius:10px}
+.priority-high{background:#FCEBEB;color:#A32D2D}
+.priority-medium{background:#FEF9EC;color:#7A5C00}
+.priority-low{background:#E1F5EE;color:#085041}
+
+.summary-box{background:#F0FAF6;border:0.5px solid #9FE1CB;border-radius:10px;padding:1rem 1.25rem;font-size:13px;color:#085041;line-height:1.6;margin-bottom:.5rem}
+
+.actions{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:1rem}
+.btn-secondary{flex:1;padding:11px;background:#fff;color:#1C1B19;border:0.5px solid #D3D1C7;border-radius:8px;font-size:14px;font-weight:500;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;min-width:140px}
+.btn-secondary:hover{background:#F7F6F2}
+
+.cta-box{background:#F0FAF6;border:0.5px solid #9FE1CB;border-radius:12px;padding:1.5rem;text-align:center;margin-top:.5rem}
+.cta-title{font-size:15px;font-weight:500;color:#085041;margin-bottom:.4rem}
+.cta-sub{font-size:13px;color:#0F6E56;margin-bottom:1rem;line-height:1.6}
+.cta-btn{display:inline-block;background:#1D9E75;color:#fff;padding:10px 24px;border-radius:8px;font-size:14px;font-weight:500;text-decoration:none}
+.cta-btn:hover{background:#0F6E56}
+
+.reset-link{text-align:center;margin-top:1rem}
+.reset-link button{background:none;border:none;font-size:13px;color:#888780;cursor:pointer;text-decoration:underline}
+
+@media(max-width:520px){
+  .row2{grid-template-columns:1fr}
+  .comp-body{grid-template-columns:1fr}
+  .ot-grid{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="brand">
+    <div class="brand-dot"></div>
+    <span class="brand-name">Kolay KOBİ</span>
+  </div>
+
+  <!-- FORM -->
+  <div class="form-card" id="form-section">
+    <h1>Rakip Analiz Panosu</h1>
+    <p class="subtitle">Kendi işletmenizi ve rakiplerinizi girin; karşılaştırmalı analiz, güçlü/zayıf yönler ve aksiyon önerileri alın.</p>
+
+    <div class="section-label">Kendi İşletmeniz</div>
+
+    <div class="field">
+      <label>İşletme adı <span style="color:#A32D2D">*</span></label>
+      <input type="text" id="f-biz" placeholder="Örn: Kartal Hukuk Bürosu">
+    </div>
+
+    <div class="row2">
+      <div class="field">
+        <label>Sektör <span style="color:#A32D2D">*</span></label>
+        <select id="f-sector">
+          <option value="">Seçin...</option>
+          <option>Muhasebe / Finans</option>
+          <option>Sağlık / Klinik</option>
+          <option>Eğitim / Kurs</option>
+          <option>İnşaat / Mühendislik</option>
+          <option>Hukuk / Danışmanlık</option>
+          <option>Perakende / Mağaza</option>
+          <option>Yiyecek / İçecek</option>
+          <option>Güzellik / Estetik</option>
+          <option>Lojistik / Taşımacılık</option>
+          <option>Teknoloji / Yazılım</option>
+          <option>Diğer</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Web sitesi (opsiyonel)</label>
+        <input type="text" id="f-web" placeholder="Örn: kartalhukuk.com">
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Aktif platformlarınız</label>
+      <div class="check-group" id="my-platforms">
+        <label class="check-item"><input type="checkbox" value="Google Business"> <i class="ti ti-brand-google" aria-hidden="true"></i> Google Business</label>
+        <label class="check-item"><input type="checkbox" value="Instagram"> <i class="ti ti-brand-instagram" aria-hidden="true"></i> Instagram</label>
+        <label class="check-item"><input type="checkbox" value="Facebook"> <i class="ti ti-brand-facebook" aria-hidden="true"></i> Facebook</label>
+        <label class="check-item"><input type="checkbox" value="LinkedIn"> <i class="ti ti-brand-linkedin" aria-hidden="true"></i> LinkedIn</label>
+        <label class="check-item"><input type="checkbox" value="WhatsApp İş"> <i class="ti ti-brand-whatsapp" aria-hidden="true"></i> WhatsApp İş</label>
+      </div>
+    </div>
+
+    <div class="row2">
+      <div class="field">
+        <label>Güçlü yönleriniz</label>
+        <textarea id="f-strengths" placeholder="Örn: 10 yıllık deneyim, geniş müşteri portföyü, uzman ekip" style="min-height:64px"></textarea>
+      </div>
+      <div class="field">
+        <label>Fiyat segmentiniz</label>
+        <select id="f-my-price">
+          <option value="">Seçin...</option>
+          <option>Ekonomik</option>
+          <option>Orta</option>
+          <option>Premium</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="section-label" style="margin-top:.5rem">Rakip 1 <span style="font-size:11px;font-weight:400;color:#A32D2D">(zorunlu)</span></div>
+
+    <div id="competitor-1" class="competitor-block">
+      <div class="row2">
+        <div class="field">
+          <label>Rakip adı <span style="color:#A32D2D">*</span></label>
+          <input type="text" class="c-name" data-idx="1" placeholder="Örn: Aslan Hukuk">
+        </div>
+        <div class="field">
+          <label>Web sitesi (opsiyonel)</label>
+          <input type="text" class="c-web" data-idx="1" placeholder="aslanhukuk.com">
+        </div>
+      </div>
+      <div class="field">
+        <label>Aktif platformları</label>
+        <div class="check-group c-platforms" data-idx="1">
+          <label class="check-item"><input type="checkbox" value="Google Business"> <i class="ti ti-brand-google" aria-hidden="true"></i> Google Business</label>
+          <label class="check-item"><input type="checkbox" value="Instagram"> <i class="ti ti-brand-instagram" aria-hidden="true"></i> Instagram</label>
+          <label class="check-item"><input type="checkbox" value="Facebook"> <i class="ti ti-brand-facebook" aria-hidden="true"></i> Facebook</label>
+          <label class="check-item"><input type="checkbox" value="LinkedIn"> <i class="ti ti-brand-linkedin" aria-hidden="true"></i> LinkedIn</label>
+          <label class="check-item"><input type="checkbox" value="WhatsApp İş"> <i class="ti ti-brand-whatsapp" aria-hidden="true"></i> WhatsApp İş</label>
+        </div>
+      </div>
+      <div class="field">
+        <label>Tahmini fiyat segmenti</label>
+        <select class="c-price" data-idx="1">
+          <option value="">Seçin...</option>
+          <option>Ekonomik</option>
+          <option>Orta</option>
+          <option>Premium</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="section-label">Rakip 2 <span class="badge-opt" style="font-size:11px;font-weight:400;color:#6B6963">(opsiyonel)</span></div>
+
+    <div id="competitor-2" class="competitor-block">
+      <div class="row2">
+        <div class="field">
+          <label>Rakip adı</label>
+          <input type="text" class="c-name" data-idx="2" placeholder="Örn: Demir Danışmanlık">
+        </div>
+        <div class="field">
+          <label>Web sitesi (opsiyonel)</label>
+          <input type="text" class="c-web" data-idx="2" placeholder="demirdanismanlik.com">
+        </div>
+      </div>
+      <div class="field">
+        <label>Aktif platformları</label>
+        <div class="check-group c-platforms" data-idx="2">
+          <label class="check-item"><input type="checkbox" value="Google Business"> <i class="ti ti-brand-google" aria-hidden="true"></i> Google Business</label>
+          <label class="check-item"><input type="checkbox" value="Instagram"> <i class="ti ti-brand-instagram" aria-hidden="true"></i> Instagram</label>
+          <label class="check-item"><input type="checkbox" value="Facebook"> <i class="ti ti-brand-facebook" aria-hidden="true"></i> Facebook</label>
+          <label class="check-item"><input type="checkbox" value="LinkedIn"> <i class="ti ti-brand-linkedin" aria-hidden="true"></i> LinkedIn</label>
+          <label class="check-item"><input type="checkbox" value="WhatsApp İş"> <i class="ti ti-brand-whatsapp" aria-hidden="true"></i> WhatsApp İş</label>
+        </div>
+      </div>
+      <div class="field">
+        <label>Tahmini fiyat segmenti</label>
+        <select class="c-price" data-idx="2">
+          <option value="">Seçin...</option>
+          <option>Ekonomik</option>
+          <option>Orta</option>
+          <option>Premium</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="section-label">Rakip 3 <span class="badge-opt" style="font-size:11px;font-weight:400;color:#6B6963">(opsiyonel)</span></div>
+
+    <div id="competitor-3" class="competitor-block">
+      <div class="row2">
+        <div class="field">
+          <label>Rakip adı</label>
+          <input type="text" class="c-name" data-idx="3" placeholder="Örn: Yıldız Büro">
+        </div>
+        <div class="field">
+          <label>Web sitesi (opsiyonel)</label>
+          <input type="text" class="c-web" data-idx="3" placeholder="yildizburo.com">
+        </div>
+      </div>
+      <div class="field">
+        <label>Aktif platformları</label>
+        <div class="check-group c-platforms" data-idx="3">
+          <label class="check-item"><input type="checkbox" value="Google Business"> <i class="ti ti-brand-google" aria-hidden="true"></i> Google Business</label>
+          <label class="check-item"><input type="checkbox" value="Instagram"> <i class="ti ti-brand-instagram" aria-hidden="true"></i> Instagram</label>
+          <label class="check-item"><input type="checkbox" value="Facebook"> <i class="ti ti-brand-facebook" aria-hidden="true"></i> Facebook</label>
+          <label class="check-item"><input type="checkbox" value="LinkedIn"> <i class="ti ti-brand-linkedin" aria-hidden="true"></i> LinkedIn</label>
+          <label class="check-item"><input type="checkbox" value="WhatsApp İş"> <i class="ti ti-brand-whatsapp" aria-hidden="true"></i> WhatsApp İş</label>
+        </div>
+      </div>
+      <div class="field">
+        <label>Tahmini fiyat segmenti</label>
+        <select class="c-price" data-idx="3">
+          <option value="">Seçin...</option>
+          <option>Ekonomik</option>
+          <option>Orta</option>
+          <option>Premium</option>
+        </select>
+      </div>
+    </div>
+
+    <div id="err" class="err"></div>
+
+    <div class="rate-bar-wrap">
+      <div class="rate-bar-label">
+        <span>Günlük kullanım</span>
+        <span id="rate-text">0 / 5</span>
+      </div>
+      <div class="rate-bar-track">
+        <div class="rate-bar-fill" id="rate-fill" style="width:0%"></div>
+      </div>
+    </div>
+
+    <button class="btn-primary" id="gen-btn" onclick="generate()">
+      <i class="ti ti-telescope" aria-hidden="true"></i> Rakip Analizi Başlat
+    </button>
+
+    <button class="btn-secondary" onclick="resetForm()" style="margin-top:10px;width:100%">
+      <i class="ti ti-eraser" aria-hidden="true"></i> Formu Boşalt
+    </button>
+  </div>
+
+  <!-- LOADING -->
+  <div class="loading" id="loading-section">
+    <div class="spinner"></div>
+    <p class="loading-txt" id="loading-msg">Rakip analizi yapılıyor...</p>
+  </div>
+
+  <!-- RESULTS -->
+  <div class="results" id="results-section">
+    <div class="results-header">
+      <h2>Rakip Analiz Raporu</h2>
+      <p id="results-sub">Karşılaştırmalı analiz ve aksiyon önerileri hazır</p>
+    </div>
+
+    <!-- Comparison Table -->
+    <div class="result-card">
+      <div class="result-card-header">
+        <i class="ti ti-table" aria-hidden="true" style="font-size:18px;color:#1D9E75"></i>
+        <h3>Karşılaştırma Tablosu</h3>
+      </div>
+      <div class="result-card-body">
+        <div class="table-wrap">
+          <table id="comp-table">
+            <thead id="comp-thead"></thead>
+            <tbody id="comp-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Competitor Cards -->
+    <div class="result-card">
+      <div class="result-card-header">
+        <i class="ti ti-users" aria-hidden="true" style="font-size:18px;color:#1D9E75"></i>
+        <h3>Rakip Analizi</h3>
+      </div>
+      <div class="result-card-body">
+        <div class="comp-grid" id="comp-cards"></div>
+      </div>
+    </div>
+
+    <!-- Opportunities & Threats -->
+    <div class="result-card">
+      <div class="result-card-header">
+        <i class="ti ti-chart-arrows" aria-hidden="true" style="font-size:18px;color:#1D9E75"></i>
+        <h3>Fırsat ve Tehditler</h3>
+      </div>
+      <div class="result-card-body">
+        <div class="ot-grid" id="ot-grid"></div>
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="result-card">
+      <div class="result-card-header">
+        <i class="ti ti-rocket" aria-hidden="true" style="font-size:18px;color:#1D9E75"></i>
+        <h3>Aksiyon Önerileri</h3>
+      </div>
+      <div class="result-card-body">
+        <div class="summary-box" id="summary-box"></div>
+        <div class="action-grid" id="action-grid"></div>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button class="btn-secondary" id="copy-btn" onclick="copyAll()">
+        <i class="ti ti-copy" aria-hidden="true"></i> Tümünü Kopyala
+      </button>
+      <button class="btn-secondary" onclick="downloadTxt()">
+        <i class="ti ti-download" aria-hidden="true"></i> .txt İndir
+      </button>
+    </div>
+
+    <div class="cta-box">
+      <div class="cta-title">Rakiplerinizin önüne geçelim</div>
+      <div class="cta-sub" id="cta-sub">Analize dayalı strateji ile rekabet avantajı kazanın.</div>
+      <a href="https://kolaykobi.com/iletisim" class="cta-btn" target="_blank" rel="noopener noreferrer">Ücretsiz Görüşme Ayarla</a>
+    </div>
+
+    <div class="reset-link">
+      <button onclick="resetForm()">Formu Boşalt ve Yeniden Başla</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// const N8N_PROXY = null;
+const N8N_PROXY = 'https://n8n.srv1492396.hstgr.cloud/webhook/kolay-kobi-rakip';
+const DAILY_LIMIT = 5;
+const RATE_KEY = 'kkb_rakip_usage';
+
+const loadingMsgs = [
+  'Rakip analizi yapılıyor...',
+  'Platform varlıkları karşılaştırılıyor...',
+  'Güçlü ve zayıf yönler analiz ediliyor...',
+  'Fırsat ve tehditler belirleniyor...',
+  'Aksiyon önerileri hazırlanıyor...',
+];
+
+const ALL_PLATFORMS = ['Google Business', 'Instagram', 'Facebook', 'LinkedIn', 'WhatsApp İş'];
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+function getRateData() {
+  try {
+    const d = JSON.parse(localStorage.getItem(RATE_KEY) || '{}');
+    const today = new Date().toDateString();
+    if (d.date !== today) return { count: 0, date: today };
+    return d;
+  } catch(e) { return { count: 0, date: new Date().toDateString() }; }
+}
+
+function saveRate(d) {
+  localStorage.setItem(RATE_KEY, JSON.stringify(d));
+}
+
+function updateRateBar() {
+  const d = getRateData();
+  const pct = Math.min(100, (d.count / DAILY_LIMIT) * 100);
+  document.getElementById('rate-fill').style.width = pct + '%';
+  document.getElementById('rate-text').textContent = d.count + ' / ' + DAILY_LIMIT;
+  const btn = document.getElementById('gen-btn');
+  if (d.count >= DAILY_LIMIT) {
+    btn.disabled = true;
+    btn.innerHTML = '<i class="ti ti-lock" aria-hidden="true"></i> Günlük limit doldu';
+  }
+}
+
+function getMyPlatforms() {
+  return [...document.querySelectorAll('#my-platforms input:checked')].map(el => el.value);
+}
+
+function getCompetitorData() {
+  const comps = [];
+  for (let i = 1; i <= 3; i++) {
+    const name = document.querySelector(`.c-name[data-idx="${i}"]`).value.trim();
+    const web = document.querySelector(`.c-web[data-idx="${i}"]`).value.trim();
+    const platforms = [...document.querySelectorAll(`.c-platforms[data-idx="${i}"] input:checked`)].map(el => el.value);
+    const price = document.querySelector(`.c-price[data-idx="${i}"]`).value;
+    if (name) comps.push({ name, web, platforms, price });
+  }
+  return comps;
+}
+
+function buildCompetitorsText(comps) {
+  return comps.map((c, i) => {
+    return `Rakip ${i + 1}: ${c.name}
+  Web: ${c.web || 'yok'}
+  Platformlar: ${c.platforms.join(', ') || 'belirtilmemiş'}
+  Fiyat segmenti: ${c.price || 'belirtilmemiş'}`;
+  }).join('\n\n');
+}
+
+function fallback(biz, comps) {
+  return {
+    competitors: comps.map(c => ({
+      name: c.name,
+      strengths: ['Pazar deneyimi', 'Aktif sosyal medya varlığı'],
+      weaknesses: ['Sınırlı hizmet kapsamı', 'Düşük müşteri geri bildirimi'],
+      threat: 'medium',
+    })),
+    opportunities: ['Dijital varlığı güçlendirme fırsatı', 'Farklılaşan hizmet sunumu'],
+    threats: ['Fiyat rekabeti', 'Marka bilinirliği açığı'],
+    actions: [
+      { title: 'Google İşletme Profilinizi Güncelleyin', desc: 'Fotoğraflar, yorumlar ve güncel bilgilerle yerel SEO\'nuzu güçlendirin.', priority: 'high', icon: 'ti-brand-google' },
+      { title: 'Sosyal Medya İçerik Planı Yapın', desc: 'Rakiplerinizin aktif olduğu platformlarda düzenli içerik paylaşın.', priority: 'medium', icon: 'ti-brand-instagram' },
+      { title: 'Müşteri Yorumu Kampanyası Başlatın', desc: 'Mevcut müşterilerinizden Google ve sosyal medya yorumu isteyin.', priority: 'high', icon: 'ti-star' },
+    ],
+    summary: `${biz} olarak rakiplerinize kıyasla farklılaşma fırsatlarınız mevcut. Dijital varlığınızı güçlendirerek rekabet avantajı kazanabilirsiniz.`,
+    ctaText: 'Rakiplerinizin önüne geçmek için dijital strateji oluşturalım.',
+  };
+}
+
+function clearResults() {
+  document.getElementById('results-section').style.display = 'none';
+  document.getElementById('comp-thead').innerHTML = '';
+  document.getElementById('comp-tbody').innerHTML = '';
+  document.getElementById('comp-cards').innerHTML = '';
+  document.getElementById('ot-grid').innerHTML = '';
+  document.getElementById('action-grid').innerHTML = '';
+  document.getElementById('summary-box').innerHTML = '';
+}
+
+function showLoading(v) {
+  document.getElementById('loading-section').style.display = v ? 'block' : 'none';
+}
+
+let lastResult = null;
+let lastBiz = '';
+let lastComps = [];
+
+function renderResults(result, myData) {
+  clearResults();
+  lastResult = result;
+  showLoading(false);
+
+  const { biz, myPlatforms, myPrice, myWeb } = myData;
+  const comps = result.competitors || [];
+
+  // Comparison table header
+  const allEntities = [{ name: biz + ' (Sen)', platforms: myPlatforms, price: myPrice, web: myWeb }, ...comps.map((c, i) => ({ ...c, platforms: lastComps[i]?.platforms || [], price: lastComps[i]?.price || '', web: lastComps[i]?.web || '' }))];
+
+  const thead = document.getElementById('comp-thead');
+  thead.innerHTML = '<tr><th>Kriter</th>' + allEntities.map(e => `<th>${escHtml(e.name)}</th>`).join('') + '</tr>';
+
+  const tbody = document.getElementById('comp-tbody');
+  const rows = [];
+  rows.push(['Web Sitesi', ...allEntities.map(e => e.web ? `<i class="ti ti-check tick" aria-hidden="true"></i>` : `<i class="ti ti-x cross" aria-hidden="true"></i>`)]);
+  ALL_PLATFORMS.forEach(p => {
+    rows.push([p, ...allEntities.map(e => (e.platforms || []).includes(p) ? `<i class="ti ti-check tick" aria-hidden="true"></i>` : `<i class="ti ti-x cross" aria-hidden="true"></i>`)]);
+  });
+  rows.push(['Fiyat', ...allEntities.map(e => {
+    const p = e.price || '';
+    const cls = p === 'Ekonomik' ? 'price-ekonomik' : p === 'Orta' ? 'price-orta' : p === 'Premium' ? 'price-premium' : '';
+    return p ? `<span class="price-badge ${cls}">${escHtml(p)}</span>` : '<span style="color:#B4B2A9">—</span>';
+  })]);
+  tbody.innerHTML = rows.map(r => `<tr>${r.map((cell, i) => `<td>${i === 0 ? escHtml(cell) : cell}</td>`).join('')}</tr>`).join('');
+
+  // Competitor analysis cards
+  const cards = document.getElementById('comp-cards');
+  cards.innerHTML = comps.map(c => {
+    const threatClass = { high: 'threat-high', medium: 'threat-medium', low: 'threat-low' }[c.threat] || 'threat-medium';
+    const threatLabel = { high: 'Yüksek Tehdit', medium: 'Orta Tehdit', low: 'Düşük Tehdit' }[c.threat] || 'Orta Tehdit';
+    return `
+      <div class="comp-card">
+        <div class="comp-card-head">
+          <span class="comp-name">${escHtml(c.name)}</span>
+          <span class="threat-badge ${threatClass}">${threatLabel}</span>
+        </div>
+        <div class="comp-body">
+          <div>
+            <div class="comp-sec-title">Güçlü Yönler</div>
+            <ul class="comp-list str">
+              ${(c.strengths || []).map(s => `<li><i class="ti ti-circle-check" aria-hidden="true"></i> ${escHtml(s)}</li>`).join('')}
+            </ul>
+          </div>
+          <div>
+            <div class="comp-sec-title">Zayıf Yönler</div>
+            <ul class="comp-list weak">
+              ${(c.weaknesses || []).map(s => `<li><i class="ti ti-circle-x" aria-hidden="true"></i> ${escHtml(s)}</li>`).join('')}
+            </ul>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  // Opportunities & Threats
+  const otGrid = document.getElementById('ot-grid');
+  otGrid.innerHTML = `
+    <div class="ot-box opp">
+      <div class="ot-box-title"><i class="ti ti-arrow-up-right" aria-hidden="true"></i> Fırsatlar</div>
+      <ul class="ot-list">${(result.opportunities || []).map(o => `<li>• ${escHtml(o)}</li>`).join('')}</ul>
+    </div>
+    <div class="ot-box thr">
+      <div class="ot-box-title"><i class="ti ti-alert-triangle" aria-hidden="true"></i> Tehditler</div>
+      <ul class="ot-list">${(result.threats || []).map(t => `<li>• ${escHtml(t)}</li>`).join('')}</ul>
+    </div>
+  `;
+
+  // Summary
+  if (result.summary) {
+    document.getElementById('summary-box').textContent = result.summary;
+  }
+
+  // Action grid
+  const actionGrid = document.getElementById('action-grid');
+  actionGrid.innerHTML = (result.actions || []).map(a => {
+    const p = a.priority || 'medium';
+    const pLabel = { high: 'Öncelikli', medium: 'Orta', low: 'Düşük' }[p] || 'Orta';
+    const pClass = { high: 'priority-high', medium: 'priority-medium', low: 'priority-low' }[p] || 'priority-medium';
+    return `
+      <div class="action-card">
+        <div class="action-icon ${p}"><i class="ti ${escHtml(a.icon || 'ti-bulb')}" aria-hidden="true" style="font-size:18px"></i></div>
+        <div>
+          <div class="action-title">${escHtml(a.title)} <span class="priority-label ${pClass}">${pLabel}</span></div>
+          <div class="action-desc">${escHtml(a.desc)}</div>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  if (result.ctaText) document.getElementById('cta-sub').textContent = result.ctaText;
+
+  document.getElementById('results-section').style.display = 'block';
+  document.getElementById('results-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+async function generate() {
+  const rateData = getRateData();
+  if (rateData.count >= DAILY_LIMIT) {
+    showErr('Günlük kullanım limitiniz (5) doldu. Yarın tekrar deneyin.');
+    return;
+  }
+
+  const biz = document.getElementById('f-biz').value.trim();
+  const sector = document.getElementById('f-sector').value;
+  const myWeb = document.getElementById('f-web').value.trim();
+  const myPlatforms = getMyPlatforms();
+  const myPrice = document.getElementById('f-my-price').value;
+  const strengths = document.getElementById('f-strengths').value.trim();
+  const comps = getCompetitorData();
+
+  if (!biz) { showErr('İşletme adı zorunludur.'); return; }
+  if (!sector) { showErr('Lütfen sektör seçin.'); return; }
+  if (comps.length === 0) { showErr('En az bir rakip bilgisi girmelisiniz.'); return; }
+
+  hideErr();
+  lastBiz = biz;
+  lastComps = comps;
+  clearResults();
+  showLoading(true);
+
+  let mi = 0;
+  const msgEl = document.getElementById('loading-msg');
+  const ticker = setInterval(() => { mi = (mi + 1) % loadingMsgs.length; msgEl.textContent = loadingMsgs[mi]; }, 1800);
+
+  const competitorsText = buildCompetitorsText(comps);
+
+  const prompt = `Sen rekabet analizi uzmanısın. Aşağıdaki bilgilere göre karşılaştırmalı rakip analizi yap.
+
+═══ KENDİ İŞLETMEN ═══
+İşletme: ${biz}
+Sektör: ${sector}
+Web sitesi: ${myWeb || 'yok'}
+Platformlar: ${myPlatforms.join(', ') || 'belirtilmemiş'}
+Güçlü yönler: ${strengths || 'belirtilmemiş'}
+Fiyat segmenti: ${myPrice || 'belirtilmemiş'}
+
+═══ RAKİPLER ═══
+${competitorsText}
+
+═══ ANALİZ KURALLARI ═══
+1. Her rakip için güçlü ve zayıf yön belirt
+2. Kendi işletmeme göre fırsat ve tehdit analizi yap
+3. 3 somut ve uygulanabilir aksiyon önerisi sun
+4. Türkiye KOBİ pazarı gerçeklerine göre değerlendir
+
+SADECE JSON döndür:
+{
+  "competitors": [
+    { "name": "...", "strengths": ["..."], "weaknesses": ["..."], "threat": "low|medium|high" }
+  ],
+  "opportunities": ["..."],
+  "threats": ["..."],
+  "actions": [
+    { "title": "...", "desc": "...", "priority": "high|medium|low", "icon": "ti-[icon]" }
+  ],
+  "summary": "...",
+  "ctaText": "..."
+}`;
+
+  try {
+    let res;
+    if (N8N_PROXY) {
+      res = await fetch(N8N_PROXY, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt }),
+      });
+      if (res.status === 429) {
+        clearInterval(ticker);
+        showLoading(false);
+        showErr('Çok fazla istek gönderildi. Lütfen biraz bekleyin.');
+        return;
+      }
+    } else {
+      res = await fetch('https://api.minimax.io/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer DEV_KEY' },
+        body: JSON.stringify({ model: 'MiniMax-M3', max_completion_tokens: 1500, messages: [{ role: 'user', content: prompt }] }),
+      });
+    }
+    const data = await res.json();
+    const text = N8N_PROXY
+      ? (data.content || []).map(b => b.text || '').join('')
+      : (data.choices?.[0]?.message?.content || '');
+    const clean = text.replace(/```json|```/g, '').trim();
+    const result = JSON.parse(clean);
+
+    rateData.count++;
+    saveRate(rateData);
+    updateRateBar();
+    clearInterval(ticker);
+    renderResults(result, { biz, myPlatforms, myPrice, myWeb });
+  } catch(e) {
+    rateData.count++;
+    saveRate(rateData);
+    updateRateBar();
+    clearInterval(ticker);
+    renderResults(fallback(biz, comps), { biz, myPlatforms, myPrice, myWeb });
+  }
+}
+
+function showErr(msg) {
+  const el = document.getElementById('err');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+
+function hideErr() {
+  document.getElementById('err').style.display = 'none';
+}
+
+function resetForm() {
+  document.getElementById('f-biz').value = '';
+  document.getElementById('f-sector').value = '';
+  document.getElementById('f-web').value = '';
+  document.getElementById('f-strengths').value = '';
+  document.getElementById('f-my-price').value = '';
+  document.querySelectorAll('#my-platforms input').forEach(el => el.checked = false);
+  for (let i = 1; i <= 3; i++) {
+    document.querySelector(`.c-name[data-idx="${i}"]`).value = '';
+    document.querySelector(`.c-web[data-idx="${i}"]`).value = '';
+    document.querySelector(`.c-price[data-idx="${i}"]`).value = '';
+    document.querySelectorAll(`.c-platforms[data-idx="${i}"] input`).forEach(el => el.checked = false);
+  }
+  hideErr();
+  clearResults();
+  showLoading(false);
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function copyAll() {
+  if (!lastResult) return;
+  const lines = [`=== ${lastBiz} — RAKİP ANALİZ RAPORU ===`, ''];
+  if (lastResult.summary) { lines.push('ÖZET:'); lines.push(lastResult.summary); lines.push(''); }
+  if (lastResult.competitors) {
+    lines.push('--- RAKİP ANALİZİ ---');
+    lastResult.competitors.forEach(c => {
+      lines.push(`${c.name} (Tehdit: ${c.threat})`);
+      lines.push(`  Güçlü: ${(c.strengths||[]).join(', ')}`);
+      lines.push(`  Zayıf: ${(c.weaknesses||[]).join(', ')}`);
+    });
+    lines.push('');
+  }
+  if (lastResult.opportunities) { lines.push('FIRSATLAR:'); lastResult.opportunities.forEach(o => lines.push(`• ${o}`)); lines.push(''); }
+  if (lastResult.threats) { lines.push('TEHDİTLER:'); lastResult.threats.forEach(t => lines.push(`• ${t}`)); lines.push(''); }
+  if (lastResult.actions) {
+    lines.push('AKSİYON ÖNERİLERİ:');
+    lastResult.actions.forEach((a, i) => lines.push(`${i + 1}. [${a.priority}] ${a.title}: ${a.desc}`));
+  }
+  navigator.clipboard.writeText(lines.join('\n')).then(() => {
+    const btn = document.getElementById('copy-btn');
+    if (btn) {
+      btn.innerHTML = '<i class="ti ti-check" aria-hidden="true"></i> Kopyalandı!';
+      setTimeout(() => { btn.innerHTML = '<i class="ti ti-copy" aria-hidden="true"></i> Tümünü Kopyala'; }, 2000);
+    }
+  });
+}
+
+function downloadTxt() {
+  if (!lastResult) return;
+  const lines = [`=== ${lastBiz} — RAKİP ANALİZ RAPORU ===`, ''];
+  if (lastResult.summary) { lines.push('ÖZET:'); lines.push(lastResult.summary); lines.push(''); }
+  if (lastResult.competitors) {
+    lines.push('RAKİP ANALİZİ:');
+    lastResult.competitors.forEach(c => {
+      lines.push(`${c.name} (Tehdit Seviyesi: ${c.threat})`);
+      lines.push(`  Güçlü Yönler: ${(c.strengths||[]).join(' | ')}`);
+      lines.push(`  Zayıf Yönler: ${(c.weaknesses||[]).join(' | ')}`);
+      lines.push('');
+    });
+  }
+  if (lastResult.opportunities) { lines.push('FIRSATLAR:'); lastResult.opportunities.forEach(o => lines.push(`• ${o}`)); lines.push(''); }
+  if (lastResult.threats) { lines.push('TEHDİTLER:'); lastResult.threats.forEach(t => lines.push(`• ${t}`)); lines.push(''); }
+  if (lastResult.actions) {
+    lines.push('AKSİYON ÖNERİLERİ:');
+    lastResult.actions.forEach((a, i) => {
+      lines.push(`${i + 1}. ${a.title} [${a.priority}]`);
+      lines.push(`   ${a.desc}`);
+    });
+  }
+  const blob = new Blob([lines.join('\n')], { type: 'text/plain;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'rakip-analiz-raporu.txt';
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+updateRateBar();
+</script>
+</body>
+</html>

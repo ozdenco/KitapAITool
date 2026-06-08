@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reklam Bütçe Dağıtıcı — Kolay KOBİ</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,sans-serif;background:#F7F6F2;min-height:100vh}
+.app{max-width:720px;margin:0 auto;padding:2rem 1rem}
+.brand{display:flex;align-items:center;gap:8px;margin-bottom:2rem}
+.brand-dot{width:9px;height:9px;border-radius:50%;background:#1D9E75}
+.brand-name{font-size:13px;font-weight:500;color:#1D9E75;letter-spacing:.04em}
+
+.form-card{background:#fff;border-radius:16px;border:0.5px solid #E2E0D8;padding:2rem}
+h1{font-size:22px;font-weight:500;color:#1C1B19;margin-bottom:.4rem}
+.subtitle{font-size:14px;color:#6B6963;line-height:1.6;margin-bottom:2rem}
+.field{margin-bottom:1.25rem}
+label{display:block;font-size:13px;font-weight:500;color:#6B6963;margin-bottom:6px}
+input,select,textarea{width:100%;padding:10px 12px;font-size:14px;border:0.5px solid #D3D1C7;border-radius:8px;background:#fff;color:#1C1B19;outline:none;font-family:inherit}
+textarea{resize:vertical;min-height:80px;line-height:1.5}
+input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3px rgba(29,158,117,.1)}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+
+.check-group{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px}
+.check-item{display:flex;align-items:center;gap:8px;padding:9px 11px;border:0.5px solid #D3D1C7;border-radius:8px;cursor:pointer;font-size:13px;color:#1C1B19;background:#fff;user-select:none}
+.check-item input[type=checkbox]{width:auto;padding:0;box-shadow:none}
+.check-item:has(input:checked){border-color:#1D9E75;background:#F0FAF6}
+
+.radio-group{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
+.radio-item{display:flex;align-items:center;gap:8px;padding:9px 14px;border:0.5px solid #D3D1C7;border-radius:8px;cursor:pointer;font-size:13px;color:#1C1B19;background:#fff;user-select:none}
+.radio-item input[type=radio]{width:auto;padding:0;box-shadow:none}
+.radio-item:has(input:checked){border-color:#1D9E75;background:#F0FAF6}
+
+.rate-bar-wrap{margin-bottom:1rem}
+.rate-bar-label{display:flex;justify-content:space-between;font-size:12px;color:#6B6963;margin-bottom:5px}
+.rate-bar-track{height:5px;background:#E2E0D8;border-radius:4px;overflow:hidden}
+.rate-bar-fill{height:100%;background:#1D9E75;border-radius:4px;transition:width .3s}
+
+.btn-primary{width:100%;padding:13px;background:#1D9E75;color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:500;cursor:pointer;margin-top:.5rem;display:flex;align-items:center;justify-content:center;gap:8px}
+.btn-primary:hover{background:#0F6E56}
+.btn-primary:disabled{background:#B4B2A9;cursor:not-allowed}
+.err{font-size:13px;color:#A32D2D;background:#FCEBEB;border-radius:8px;padding:10px 12px;margin-top:.75rem;display:none}
+
+.loading{text-align:center;padding:4rem 1rem;display:none}
+.spinner{width:44px;height:44px;border:3px solid #E2E0D8;border-top-color:#1D9E75;border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 1.25rem}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-txt{font-size:14px;color:#6B6963}
+
+.results{display:none;margin-top:1.5rem}
+.results-header{margin-bottom:1.5rem}
+.results-header h2{font-size:18px;font-weight:500;color:#1C1B19;margin-bottom:.25rem}
+.results-header p{font-size:13px;color:#6B6963}
+
+.result-card{background:#fff;border-radius:16px;border:0.5px solid #E2E0D8;overflow:hidden;margin-bottom:1rem}
+.result-card-header{padding:1rem 1.5rem;border-bottom:0.5px solid #F1EFE8;display:flex;align-items:center;gap:10px}
+.result-card-header h3{font-size:15px;font-weight:500;color:#1C1B19}
+.result-card-body{padding:1.25rem 1.5rem}
+
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;padding:8px 10px;font-size:11px;font-weight:500;color:#6B6963;text-transform:uppercase;letter-spacing:.05em;border-bottom:0.5px solid #E2E0D8;white-space:nowrap}
+td{padding:10px;border-bottom:0.5px solid #F1EFE8;color:#1C1B19;vertical-align:middle}
+tr:last-child td{border-bottom:none}
+.channel-name{font-weight:500;display:flex;align-items:center;gap:8px}
+.pct-badge{display:inline-block;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:500;background:#E1F5EE;color:#085041}
+
+.summary-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:1rem}
+.summary-item{background:#F7F6F2;border-radius:10px;padding:12px;text-align:center}
+.summary-val{font-size:20px;font-weight:600;color:#1D9E75;margin-bottom:2px}
+.summary-lbl{font-size:11px;color:#6B6963;font-weight:500}
+
+.suggestion-grid{display:grid;grid-template-columns:1fr;gap:12px}
+.sug-card{background:#fff;border:0.5px solid #E2E0D8;border-radius:12px;padding:1rem 1.25rem;display:flex;gap:12px;align-items:flex-start}
+.sug-icon{width:38px;height:38px;border-radius:10px;background:#E1F5EE;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.sug-icon i{font-size:18px;color:#1D9E75}
+.sug-title{font-size:14px;font-weight:500;color:#1C1B19;margin-bottom:4px}
+.sug-desc{font-size:13px;color:#6B6963;line-height:1.55}
+
+.actions{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:1rem}
+.btn-secondary{flex:1;padding:11px;background:#fff;color:#1C1B19;border:0.5px solid #D3D1C7;border-radius:8px;font-size:14px;font-weight:500;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;min-width:140px}
+.btn-secondary:hover{background:#F7F6F2}
+
+.cta-box{background:#F0FAF6;border:0.5px solid #9FE1CB;border-radius:12px;padding:1.5rem;text-align:center;margin-top:.5rem}
+.cta-title{font-size:15px;font-weight:500;color:#085041;margin-bottom:.4rem}
+.cta-sub{font-size:13px;color:#0F6E56;margin-bottom:1rem;line-height:1.6}
+.cta-btn{display:inline-block;background:#1D9E75;color:#fff;padding:10px 24px;border-radius:8px;font-size:14px;font-weight:500;text-decoration:none}
+.cta-btn:hover{background:#0F6E56}
+
+.reset-link{text-align:center;margin-top:1rem}
+.reset-link button{background:none;border:none;font-size:13px;color:#888780;cursor:pointer;text-decoration:underline}
+
+@media(max-width:520px){
+  .row2{grid-template-columns:1fr}
+  .check-group{grid-template-columns:1fr}
+  .summary-grid{grid-template-columns:1fr 1fr}
+  th,td{padding:6px 8px}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="brand">
+    <div class="brand-dot"></div>
+    <span class="brand-name">Kolay KOBİ</span>
+  </div>
+
+  <!-- FORM -->
+  <div class="form-card" id="form-section">
+    <h1>Reklam Bütçe Dağıtıcı</h1>
+    <p class="subtitle">Aylık reklam bütçenizi girin; kanal bazlı dağılım, tahmini tıklama ve beklenen lead sayısını hesaplayalım.</p>
+
+    <div class="field">
+      <label>İşletme adı <span style="color:#A32D2D">*</span></label>
+      <input type="text" id="f-biz" placeholder="Örn: Yıldız Dijital Ajans">
+    </div>
+
+    <div class="row2">
+      <div class="field">
+        <label>Sektör <span style="color:#A32D2D">*</span></label>
+        <select id="f-sector">
+          <option value="">Seçin...</option>
+          <option>Muhasebe / Finans</option>
+          <option>Sağlık / Klinik</option>
+          <option>Eğitim / Kurs</option>
+          <option>İnşaat / Mühendislik</option>
+          <option>Hukuk / Danışmanlık</option>
+          <option>Perakende / Mağaza</option>
+          <option>Yiyecek / İçecek</option>
+          <option>Güzellik / Estetik</option>
+          <option>Lojistik / Taşımacılık</option>
+          <option>Teknoloji / Yazılım</option>
+          <option>Diğer</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Aylık toplam bütçe (TL) <span style="color:#A32D2D">*</span></label>
+        <input type="number" id="f-budget" placeholder="Örn: 10000" min="500">
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Reklam hedefi <span style="color:#A32D2D">*</span></label>
+      <div class="radio-group" id="goal-group">
+        <label class="radio-item"><input type="radio" name="goal" value="Marka Bilinirliği"> Marka Bilinirliği</label>
+        <label class="radio-item"><input type="radio" name="goal" value="Lead Toplama"> Lead Toplama</label>
+        <label class="radio-item"><input type="radio" name="goal" value="Satış Artırma"> Satış Artırma</label>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Hedef kitle (yaş, konum, ilgi alanı)</label>
+      <input type="text" id="f-audience" placeholder="Örn: 25-45 yaş, İstanbul, girişimci ve KOBİ sahipleri">
+    </div>
+
+    <div class="field">
+      <label>Tercih edilen kanallar (en az 1 seçin) <span style="color:#A32D2D">*</span></label>
+      <div class="check-group" id="channel-group">
+        <label class="check-item"><input type="checkbox" value="Google Arama"> <i class="ti ti-search" aria-hidden="true"></i> Google Arama</label>
+        <label class="check-item"><input type="checkbox" value="Google Display"> <i class="ti ti-layout-dashboard" aria-hidden="true"></i> Google Display</label>
+        <label class="check-item"><input type="checkbox" value="Meta (FB+IG)"> <i class="ti ti-brand-meta" aria-hidden="true"></i> Meta (FB+IG)</label>
+        <label class="check-item"><input type="checkbox" value="Instagram"> <i class="ti ti-brand-instagram" aria-hidden="true"></i> Instagram</label>
+        <label class="check-item"><input type="checkbox" value="LinkedIn"> <i class="ti ti-brand-linkedin" aria-hidden="true"></i> LinkedIn</label>
+        <label class="check-item"><input type="checkbox" value="TikTok"> <i class="ti ti-brand-tiktok" aria-hidden="true"></i> TikTok</label>
+        <label class="check-item"><input type="checkbox" value="YouTube"> <i class="ti ti-brand-youtube" aria-hidden="true"></i> YouTube</label>
+      </div>
+    </div>
+
+    <div id="err" class="err"></div>
+
+    <div class="rate-bar-wrap">
+      <div class="rate-bar-label">
+        <span>Günlük kullanım</span>
+        <span id="rate-text">0 / 5</span>
+      </div>
+      <div class="rate-bar-track">
+        <div class="rate-bar-fill" id="rate-fill" style="width:0%"></div>
+      </div>
+    </div>
+
+    <button class="btn-primary" id="gen-btn" onclick="generate()">
+      <i class="ti ti-calculator" aria-hidden="true"></i> Bütçe Dağılımını Hesapla
+    </button>
+
+    <button class="btn-secondary" onclick="resetForm()" style="margin-top:10px;width:100%">
+      <i class="ti ti-eraser" aria-hidden="true"></i> Formu Boşalt
+    </button>
+  </div>
+
+  <!-- LOADING -->
+  <div class="loading" id="loading-section">
+    <div class="spinner"></div>
+    <p class="loading-txt" id="loading-msg">Bütçe dağılımı hesaplanıyor...</p>
+  </div>
+
+  <!-- RESULTS -->
+  <div class="results" id="results-section">
+    <div class="results-header">
+      <h2>Reklam Bütçe Dağılımı</h2>
+      <p id="results-sub">Kanal bazlı analiz ve öneriler hazır</p>
+    </div>
+
+    <!-- Summary -->
+    <div class="result-card">
+      <div class="result-card-header">
+        <i class="ti ti-chart-pie" aria-hidden="true" style="font-size:18px;color:#1D9E75"></i>
+        <h3>Genel Özet</h3>
+      </div>
+      <div class="result-card-body">
+        <div class="summary-grid" id="summary-grid"></div>
+      </div>
+    </div>
+
+    <!-- Table -->
+    <div class="result-card">
+      <div class="result-card-header">
+        <i class="ti ti-table" aria-hidden="true" style="font-size:18px;color:#1D9E75"></i>
+        <h3>Kanal Bazlı Dağılım</h3>
+      </div>
+      <div class="result-card-body">
+        <div class="table-wrap">
+          <table id="channel-table">
+            <thead>
+              <tr>
+                <th>Kanal</th>
+                <th>Bütçe (TL)</th>
+                <th>Pay</th>
+                <th>Tahmini Tıklama</th>
+                <th>Tahmini Lead</th>
+              </tr>
+            </thead>
+            <tbody id="channel-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Suggestions -->
+    <div class="result-card">
+      <div class="result-card-header">
+        <i class="ti ti-bulb" aria-hidden="true" style="font-size:18px;color:#1D9E75"></i>
+        <h3>Claude'un Önerileri</h3>
+      </div>
+      <div class="result-card-body">
+        <div class="suggestion-grid" id="suggestion-grid"></div>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button class="btn-secondary" id="copy-btn" onclick="copyAll()">
+        <i class="ti ti-copy" aria-hidden="true"></i> Tümünü Kopyala
+      </button>
+      <button class="btn-secondary" onclick="downloadTxt()">
+        <i class="ti ti-download" aria-hidden="true"></i> .txt İndir
+      </button>
+    </div>
+
+    <div class="cta-box">
+      <div class="cta-title">Reklam stratejinizi birlikte optimize edelim</div>
+      <div class="cta-sub" id="cta-sub">Hesaplanan bütçe dağılımıyla daha fazla müşteri kazanın.</div>
+      <a href="https://kolaykobi.com/iletisim" class="cta-btn" target="_blank" rel="noopener noreferrer">Ücretsiz Görüşme Ayarla</a>
+    </div>
+
+    <div class="reset-link">
+      <button onclick="resetForm()">Formu Boşalt ve Yeniden Başla</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// const N8N_PROXY = null;
+const N8N_PROXY = 'https://n8n.srv1492396.hstgr.cloud/webhook/kolay-kobi-butce';
+const DAILY_LIMIT = 5;
+const RATE_KEY = 'kkb_butce_usage';
+
+const TR_BENCHMARKS = {
+  'Google Arama':  { cpc_tl: 8,  ctr: 0.035, cvr: 0.04 },
+  'Google Display':{ cpc_tl: 2,  ctr: 0.005, cvr: 0.01 },
+  'Meta (FB+IG)':  { cpc_tl: 5,  ctr: 0.015, cvr: 0.025 },
+  'Instagram':     { cpc_tl: 4,  ctr: 0.012, cvr: 0.02 },
+  'LinkedIn':      { cpc_tl: 18, ctr: 0.008, cvr: 0.03 },
+  'TikTok':        { cpc_tl: 3,  ctr: 0.02,  cvr: 0.015 },
+  'YouTube':       { cpc_tl: 2,  ctr: 0.003, cvr: 0.008 },
+};
+
+const GOAL_WEIGHTS = {
+  'Marka Bilinirliği': { 'Google Display': 30, 'YouTube': 25, 'Meta (FB+IG)': 25, 'Instagram': 20 },
+  'Lead Toplama':      { 'Google Arama': 40, 'Meta (FB+IG)': 30, 'LinkedIn': 20, 'Google Display': 10 },
+  'Satış Artırma':     { 'Google Arama': 50, 'Meta (FB+IG)': 30, 'Instagram': 20 },
+};
+
+const CHANNEL_ICONS = {
+  'Google Arama': 'ti-search',
+  'Google Display': 'ti-layout-dashboard',
+  'Meta (FB+IG)': 'ti-brand-meta',
+  'Instagram': 'ti-brand-instagram',
+  'LinkedIn': 'ti-brand-linkedin',
+  'TikTok': 'ti-brand-tiktok',
+  'YouTube': 'ti-brand-youtube',
+};
+
+const loadingMsgs = [
+  'Bütçe dağılımı hesaplanıyor...',
+  'Kanal performansları analiz ediliyor...',
+  'Türkiye benchmark verileri uygulanıyor...',
+  'Öneriler hazırlanıyor...',
+];
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+function getRateData() {
+  try {
+    const d = JSON.parse(localStorage.getItem(RATE_KEY) || '{}');
+    const today = new Date().toDateString();
+    if (d.date !== today) return { count: 0, date: today };
+    return d;
+  } catch(e) { return { count: 0, date: new Date().toDateString() }; }
+}
+
+function saveRate(d) {
+  localStorage.setItem(RATE_KEY, JSON.stringify(d));
+}
+
+function updateRateBar() {
+  const d = getRateData();
+  const pct = Math.min(100, (d.count / DAILY_LIMIT) * 100);
+  document.getElementById('rate-fill').style.width = pct + '%';
+  document.getElementById('rate-text').textContent = d.count + ' / ' + DAILY_LIMIT;
+  const btn = document.getElementById('gen-btn');
+  if (d.count >= DAILY_LIMIT) {
+    btn.disabled = true;
+    btn.innerHTML = '<i class="ti ti-lock" aria-hidden="true"></i> Günlük limit doldu';
+  }
+}
+
+function getCheckedChannels() {
+  return [...document.querySelectorAll('#channel-group input:checked')].map(el => el.value);
+}
+
+function getGoal() {
+  const el = document.querySelector('#goal-group input:checked');
+  return el ? el.value : '';
+}
+
+function calculateDistribution(channels, goal, totalBudget) {
+  const weights = GOAL_WEIGHTS[goal] || {};
+  let filtered = {};
+  channels.forEach(ch => {
+    if (weights[ch] !== undefined) filtered[ch] = weights[ch];
+  });
+  if (Object.keys(filtered).length === 0) {
+    channels.forEach(ch => { filtered[ch] = 1; });
+  }
+  const total = Object.values(filtered).reduce((a, b) => a + b, 0);
+  const result = [];
+  let remaining = totalBudget;
+  const entries = Object.entries(filtered);
+  entries.forEach(([ch, w], i) => {
+    const pct = Math.round((w / total) * 100);
+    const budget = i === entries.length - 1 ? remaining : Math.round(totalBudget * w / total);
+    remaining -= budget;
+    const bm = TR_BENCHMARKS[ch] || { cpc_tl: 5, cvr: 0.02 };
+    const clicks = Math.round(budget / bm.cpc_tl);
+    const leads = Math.round(clicks * bm.cvr);
+    result.push({ channel: ch, budget, pct, clicks, leads });
+  });
+  return result;
+}
+
+function buildCalcSummary(rows) {
+  return rows.map(r =>
+    `${r.channel}: ${r.budget.toLocaleString('tr-TR')} TL (%${r.pct}) — ~${r.clicks.toLocaleString('tr-TR')} tıklama — ~${r.leads} lead`
+  ).join('\n');
+}
+
+function fallback() {
+  return {
+    suggestions: [
+      { title: 'A/B Testi Yapın', desc: 'Her kanalda en az 2 farklı reklam metni deneyin. İlk 2 haftada düşük performanslı reklamları durdurun.', icon: 'ti-ab' },
+      { title: 'Dönüşüm Takibi Kurun', desc: 'Google ve Meta piksellerini sitenize ekleyin; hangi reklamın satışa dönüştüğünü ölçün.', icon: 'ti-chart-line' },
+      { title: 'Yeniden Hedefleme Kullanın', desc: 'Sitenizi ziyaret edip satın almayan kullanıcılara Display veya Meta ile tekrar ulaşın.', icon: 'ti-target' },
+    ],
+    ctaText: 'Reklam stratejinizi birlikte optimize edelim.',
+  };
+}
+
+function showLoading(v) {
+  document.getElementById('loading-section').style.display = v ? 'block' : 'none';
+}
+
+function clearResults() {
+  document.getElementById('results-section').style.display = 'none';
+  document.getElementById('summary-grid').innerHTML = '';
+  document.getElementById('channel-tbody').innerHTML = '';
+  document.getElementById('suggestion-grid').innerHTML = '';
+}
+
+let lastRows = [];
+let lastSuggestions = [];
+let lastBiz = '';
+
+function renderResults(rows, aiData) {
+  clearResults();
+  lastRows = rows;
+  lastSuggestions = aiData.suggestions || [];
+  showLoading(false);
+
+  const totalBudget = rows.reduce((a, b) => a + b.budget, 0);
+  const totalClicks = rows.reduce((a, b) => a + b.clicks, 0);
+  const totalLeads = rows.reduce((a, b) => a + b.leads, 0);
+
+  document.getElementById('summary-grid').innerHTML = `
+    <div class="summary-item">
+      <div class="summary-val">${totalBudget.toLocaleString('tr-TR')} ₺</div>
+      <div class="summary-lbl">Toplam Bütçe</div>
+    </div>
+    <div class="summary-item">
+      <div class="summary-val">${totalClicks.toLocaleString('tr-TR')}</div>
+      <div class="summary-lbl">Tahmini Tıklama</div>
+    </div>
+    <div class="summary-item">
+      <div class="summary-val">${totalLeads.toLocaleString('tr-TR')}</div>
+      <div class="summary-lbl">Tahmini Lead</div>
+    </div>
+  `;
+
+  const tbody = document.getElementById('channel-tbody');
+  tbody.innerHTML = rows.map(r => `
+    <tr>
+      <td><div class="channel-name"><i class="ti ${escHtml(CHANNEL_ICONS[r.channel] || 'ti-device-desktop')}" aria-hidden="true"></i> ${escHtml(r.channel)}</div></td>
+      <td>${r.budget.toLocaleString('tr-TR')} ₺</td>
+      <td><span class="pct-badge">%${r.pct}</span></td>
+      <td>${r.clicks.toLocaleString('tr-TR')}</td>
+      <td>${r.leads.toLocaleString('tr-TR')}</td>
+    </tr>
+  `).join('');
+
+  const sgrid = document.getElementById('suggestion-grid');
+  const suggestions = (aiData.suggestions && aiData.suggestions.length) ? aiData.suggestions : fallback().suggestions;
+  sgrid.innerHTML = suggestions.map(s => `
+    <div class="sug-card">
+      <div class="sug-icon"><i class="ti ${escHtml(s.icon || 'ti-bulb')}" aria-hidden="true"></i></div>
+      <div>
+        <div class="sug-title">${escHtml(s.title)}</div>
+        <div class="sug-desc">${escHtml(s.desc)}</div>
+      </div>
+    </div>
+  `).join('');
+
+  if (aiData.ctaText) {
+    document.getElementById('cta-sub').textContent = aiData.ctaText;
+  }
+
+  document.getElementById('results-section').style.display = 'block';
+  document.getElementById('results-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+async function generate() {
+  const rateData = getRateData();
+  if (rateData.count >= DAILY_LIMIT) {
+    showErr('Günlük kullanım limitiniz (5) doldu. Yarın tekrar deneyin.');
+    return;
+  }
+
+  const biz = document.getElementById('f-biz').value.trim();
+  const sector = document.getElementById('f-sector').value;
+  const budget = parseInt(document.getElementById('f-budget').value);
+  const goal = getGoal();
+  const audience = document.getElementById('f-audience').value.trim();
+  const channels = getCheckedChannels();
+
+  if (!biz) { showErr('İşletme adı zorunludur.'); return; }
+  if (!sector) { showErr('Lütfen sektör seçin.'); return; }
+  if (!budget || budget < 500) { showErr('Aylık bütçe en az 500 TL olmalıdır.'); return; }
+  if (!goal) { showErr('Lütfen bir reklam hedefi seçin.'); return; }
+  if (channels.length === 0) { showErr('En az bir kanal seçin.'); return; }
+
+  hideErr();
+  lastBiz = biz;
+  clearResults();
+  showLoading(true);
+
+  let mi = 0;
+  const msgEl = document.getElementById('loading-msg');
+  const ticker = setInterval(() => { mi = (mi + 1) % loadingMsgs.length; msgEl.textContent = loadingMsgs[mi]; }, 1800);
+
+  const rows = calculateDistribution(channels, goal, budget);
+  const calculatedSummary = buildCalcSummary(rows);
+
+  const prompt = `Sen dijital pazarlama uzmanısın. Aşağıdaki işletme için reklam bütçesi dağılımı analizi yap ve 3 somut öneri sun.
+
+═══ İŞLETME BİLGİLERİ ═══
+İşletme: ${biz}
+Sektör: ${sector}
+Aylık Bütçe: ${budget} TL
+Hedef: ${goal}
+Hedef Kitle: ${audience || 'belirtilmemiş'}
+Seçilen Kanallar: ${channels.join(', ')}
+
+═══ HESAPLANAN DAĞILIM ═══
+${calculatedSummary}
+
+═══ GÖREV ═══
+Bu bütçe dağılımı ve sektöre göre:
+1. Bu bütçeyle ${goal} hedefine ulaşmak için en kritik 3 somut öneri sun
+2. Her öneri işletmeye özel ve uygulanabilir olsun
+3. Türkiye pazarı gerçeklerine göre değerlendir
+
+SADECE JSON döndür:
+{
+  "suggestions": [
+    { "title": "...", "desc": "...", "icon": "ti-[tabler-icon]" },
+    { "title": "...", "desc": "...", "icon": "ti-[tabler-icon]" },
+    { "title": "...", "desc": "...", "icon": "ti-[tabler-icon]" }
+  ],
+  "ctaText": "..."
+}`;
+
+  try {
+    let res;
+    if (N8N_PROXY) {
+      res = await fetch(N8N_PROXY, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt }),
+      });
+      if (res.status === 429) {
+        clearInterval(ticker);
+        showLoading(false);
+        showErr('Çok fazla istek gönderildi. Lütfen biraz bekleyin.');
+        return;
+      }
+    } else {
+      res = await fetch('https://api.minimax.io/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer DEV_KEY' },
+        body: JSON.stringify({ model: 'MiniMax-M3', max_completion_tokens: 1500, messages: [{ role: 'user', content: prompt }] }),
+      });
+    }
+    const data = await res.json();
+    const text = N8N_PROXY
+      ? (data.content || []).map(b => b.text || '').join('')
+      : (data.choices?.[0]?.message?.content || '');
+    const clean = text.replace(/```json|```/g, '').trim();
+    const aiData = JSON.parse(clean);
+
+    rateData.count++;
+    saveRate(rateData);
+    updateRateBar();
+    clearInterval(ticker);
+    renderResults(rows, aiData);
+  } catch(e) {
+    rateData.count++;
+    saveRate(rateData);
+    updateRateBar();
+    clearInterval(ticker);
+    renderResults(rows, fallback());
+  }
+}
+
+function showErr(msg) {
+  const el = document.getElementById('err');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+
+function hideErr() {
+  document.getElementById('err').style.display = 'none';
+}
+
+function resetForm() {
+  document.getElementById('f-biz').value = '';
+  document.getElementById('f-sector').value = '';
+  document.getElementById('f-budget').value = '';
+  document.getElementById('f-audience').value = '';
+  document.querySelectorAll('#goal-group input').forEach(el => el.checked = false);
+  document.querySelectorAll('#channel-group input').forEach(el => el.checked = false);
+  hideErr();
+  clearResults();
+  showLoading(false);
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function copyAll() {
+  if (!lastRows.length) return;
+  const lines = ['=== REKLAM BÜTÇE DAĞILIMI ===', `İşletme: ${lastBiz}`, ''];
+  const totalBudget = lastRows.reduce((a, b) => a + b.budget, 0);
+  const totalClicks = lastRows.reduce((a, b) => a + b.clicks, 0);
+  const totalLeads = lastRows.reduce((a, b) => a + b.leads, 0);
+  lines.push(`Toplam Bütçe: ${totalBudget.toLocaleString('tr-TR')} TL`);
+  lines.push(`Tahmini Tıklama: ${totalClicks.toLocaleString('tr-TR')}`);
+  lines.push(`Tahmini Lead: ${totalLeads.toLocaleString('tr-TR')}`);
+  lines.push('');
+  lines.push('--- KANAL DAĞILIMI ---');
+  lastRows.forEach(r => {
+    lines.push(`${r.channel}: ${r.budget.toLocaleString('tr-TR')} TL (%${r.pct}) | ${r.clicks} tıklama | ${r.leads} lead`);
+  });
+  lines.push('');
+  if (lastSuggestions.length) {
+    lines.push('--- ÖNERİLER ---');
+    lastSuggestions.forEach((s, i) => {
+      lines.push(`${i + 1}. ${s.title}: ${s.desc}`);
+    });
+  }
+  navigator.clipboard.writeText(lines.join('\n')).then(() => {
+    const btn = document.getElementById('copy-btn');
+    if (btn) {
+      btn.innerHTML = '<i class="ti ti-check" aria-hidden="true"></i> Kopyalandı!';
+      setTimeout(() => { btn.innerHTML = '<i class="ti ti-copy" aria-hidden="true"></i> Tümünü Kopyala'; }, 2000);
+    }
+  });
+}
+
+function downloadTxt() {
+  if (!lastRows.length) return;
+  const lines = ['=== REKLAM BÜTÇE DAĞILIMI ===', `İşletme: ${lastBiz}`, ''];
+  const totalBudget = lastRows.reduce((a, b) => a + b.budget, 0);
+  lines.push(`Toplam Bütçe: ${totalBudget.toLocaleString('tr-TR')} TL`);
+  lines.push('');
+  lines.push('KANAL | BÜTÇE | PAY | TIKLAMA | LEAD');
+  lastRows.forEach(r => {
+    lines.push(`${r.channel} | ${r.budget.toLocaleString('tr-TR')} TL | %${r.pct} | ${r.clicks} | ${r.leads}`);
+  });
+  lines.push('');
+  if (lastSuggestions.length) {
+    lines.push('ÖNERİLER:');
+    lastSuggestions.forEach((s, i) => lines.push(`${i + 1}. ${s.title}: ${s.desc}`));
+  }
+  const blob = new Blob([lines.join('\n')], { type: 'text/plain;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'reklam-butce-dagitimi.txt';
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+updateRateBar();
+</script>
+</body>
+</html>

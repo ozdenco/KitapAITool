@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Müşteri Geri Dönüş Senaryosu — Kolay KOBİ</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,sans-serif;background:#F7F6F2;min-height:100vh}
+.app{max-width:720px;margin:0 auto;padding:2rem 1rem}
+.brand{display:flex;align-items:center;gap:8px;margin-bottom:2rem}
+.brand-dot{width:9px;height:9px;border-radius:50%;background:#1D9E75}
+.brand-name{font-size:13px;font-weight:500;color:#1D9E75;letter-spacing:.04em}
+
+.form-card{background:#fff;border-radius:16px;border:0.5px solid #E2E0D8;padding:2rem}
+h1{font-size:22px;font-weight:500;color:#1C1B19;margin-bottom:.4rem}
+.subtitle{font-size:14px;color:#6B6963;line-height:1.6;margin-bottom:2rem}
+.field{margin-bottom:1.25rem}
+label{display:block;font-size:13px;font-weight:500;color:#6B6963;margin-bottom:6px}
+input,select,textarea{width:100%;padding:10px 12px;font-size:14px;border:0.5px solid #D3D1C7;border-radius:8px;background:#fff;color:#1C1B19;outline:none;font-family:inherit}
+textarea{resize:vertical;min-height:80px;line-height:1.5}
+input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3px rgba(29,158,117,.1)}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+
+.check-group{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px}
+.check-item{display:flex;align-items:center;gap:8px;padding:9px 11px;border:0.5px solid #D3D1C7;border-radius:8px;cursor:pointer;font-size:13px;color:#1C1B19;background:#fff;user-select:none}
+.check-item input[type=checkbox]{width:auto;padding:0;box-shadow:none}
+.check-item:has(input:checked){border-color:#1D9E75;background:#F0FAF6}
+
+.rate-bar-wrap{margin-bottom:1rem}
+.rate-bar-label{display:flex;justify-content:space-between;font-size:12px;color:#6B6963;margin-bottom:5px}
+.rate-bar-track{height:5px;background:#E2E0D8;border-radius:4px;overflow:hidden}
+.rate-bar-fill{height:100%;background:#1D9E75;border-radius:4px;transition:width .3s}
+
+.btn-primary{width:100%;padding:13px;background:#1D9E75;color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:500;cursor:pointer;margin-top:.5rem;display:flex;align-items:center;justify-content:center;gap:8px}
+.btn-primary:hover{background:#0F6E56}
+.btn-primary:disabled{background:#B4B2A9;cursor:not-allowed}
+.err{font-size:13px;color:#A32D2D;background:#FCEBEB;border-radius:8px;padding:10px 12px;margin-top:.75rem;display:none}
+
+.loading{text-align:center;padding:4rem 1rem;display:none}
+.spinner{width:44px;height:44px;border:3px solid #E2E0D8;border-top-color:#1D9E75;border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 1.25rem}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-txt{font-size:14px;color:#6B6963}
+
+.results{display:none;margin-top:1.5rem}
+.results-header{margin-bottom:1.5rem}
+.results-header h2{font-size:18px;font-weight:500;color:#1C1B19;margin-bottom:.25rem}
+.results-header p{font-size:13px;color:#6B6963}
+
+/* Step cards */
+.steps-list{display:flex;flex-direction:column;gap:0;margin-bottom:1rem}
+.step-card{background:#fff;border:0.5px solid #E2E0D8;border-radius:16px;overflow:hidden;margin-bottom:12px}
+.step-header{padding:1rem 1.5rem .75rem;display:flex;align-items:center;gap:14px;border-bottom:0.5px solid #F1EFE8}
+.step-num{width:34px;height:34px;border-radius:50%;background:#1D9E75;color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;flex-shrink:0}
+.step-meta{flex:1}
+.step-title{font-size:14px;font-weight:500;color:#1C1B19;margin-bottom:2px}
+.step-day-ch{font-size:12px;color:#6B6963;display:flex;align-items:center;gap:6px}
+.step-body{padding:1rem 1.5rem}
+
+/* WhatsApp balloon */
+.balloon{background:#DCF8C6;border-radius:0 12px 12px 12px;padding:12px 14px;font-size:13px;color:#1C1B19;line-height:1.6;position:relative;margin-bottom:.75rem;max-width:480px;white-space:pre-wrap;word-break:break-word}
+.balloon::before{content:'';position:absolute;left:-8px;top:0;width:0;height:0;border-top:8px solid #DCF8C6;border-left:8px solid transparent}
+.step-tip{font-size:12px;color:#6B6963;background:#F7F6F2;border-radius:8px;padding:8px 10px;display:flex;align-items:flex-start;gap:7px}
+.step-tip i{color:#1D9E75;font-size:14px;flex-shrink:0;margin-top:1px}
+
+/* Warning box */
+.warn-box{background:#FEF9EC;border:0.5px solid #F5D76E;border-radius:10px;padding:12px 14px;font-size:13px;color:#7A5C00;display:flex;gap:10px;align-items:flex-start;margin-bottom:1rem}
+.warn-box i{font-size:16px;color:#C98F00;flex-shrink:0;margin-top:1px}
+
+.actions{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:1rem}
+.btn-secondary{flex:1;padding:11px;background:#fff;color:#1C1B19;border:0.5px solid #D3D1C7;border-radius:8px;font-size:14px;font-weight:500;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;min-width:140px}
+.btn-secondary:hover{background:#F7F6F2}
+
+.cta-box{background:#F0FAF6;border:0.5px solid #9FE1CB;border-radius:12px;padding:1.5rem;text-align:center;margin-top:.5rem}
+.cta-title{font-size:15px;font-weight:500;color:#085041;margin-bottom:.4rem}
+.cta-sub{font-size:13px;color:#0F6E56;margin-bottom:1rem;line-height:1.6}
+.cta-btn{display:inline-block;background:#1D9E75;color:#fff;padding:10px 24px;border-radius:8px;font-size:14px;font-weight:500;text-decoration:none}
+.cta-btn:hover{background:#0F6E56}
+
+.reset-link{text-align:center;margin-top:1rem}
+.reset-link button{background:none;border:none;font-size:13px;color:#888780;cursor:pointer;text-decoration:underline}
+
+@media(max-width:520px){
+  .row2{grid-template-columns:1fr}
+  .check-group{grid-template-columns:1fr}
+  .step-header{flex-direction:column;align-items:flex-start;gap:8px}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="brand">
+    <div class="brand-dot"></div>
+    <span class="brand-name">Kolay KOBİ</span>
+  </div>
+
+  <!-- FORM -->
+  <div class="form-card" id="form-section">
+    <h1>Müşteri Geri Dönüş Senaryosu</h1>
+    <p class="subtitle">Sektörünüzü ve müşteri profilinizi girin; 5 adımlık otomatik müşteri takip senaryosu oluşturalım.</p>
+
+    <div class="field">
+      <label>İşletme / hizmet adı <span style="color:#A32D2D">*</span></label>
+      <input type="text" id="f-biz" placeholder="Örn: Güneş Diş Kliniği">
+    </div>
+
+    <div class="row2">
+      <div class="field">
+        <label>Sektör <span style="color:#A32D2D">*</span></label>
+        <select id="f-sector">
+          <option value="">Seçin...</option>
+          <option>Muhasebe / Finans</option>
+          <option>Sağlık / Klinik</option>
+          <option>Eğitim / Kurs</option>
+          <option>İnşaat / Mühendislik</option>
+          <option>Hukuk / Danışmanlık</option>
+          <option>Perakende / Mağaza</option>
+          <option>Yiyecek / İçecek</option>
+          <option>Güzellik / Estetik</option>
+          <option>Lojistik / Taşımacılık</option>
+          <option>Teknoloji / Yazılım</option>
+          <option>Diğer</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Müşteri satın alma sıklığı <span style="color:#A32D2D">*</span></label>
+        <select id="f-frequency">
+          <option value="">Seçin...</option>
+          <option>Tek seferlik</option>
+          <option>Aylık</option>
+          <option>3 ayda bir</option>
+          <option>6 ayda bir</option>
+          <option>Yıllık</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Hizmet / ürün açıklaması <span style="color:#A32D2D">*</span></label>
+      <textarea id="f-service" placeholder="Örn: Diş muayenesi, kanal tedavisi, implant ve estetik diş hizmetleri sunuyoruz."></textarea>
+    </div>
+
+    <div class="field">
+      <label>Tercih edilen takip kanalları (en az 1) <span style="color:#A32D2D">*</span></label>
+      <div class="check-group" id="channel-group">
+        <label class="check-item"><input type="checkbox" value="WhatsApp"> <i class="ti ti-brand-whatsapp" aria-hidden="true"></i> WhatsApp</label>
+        <label class="check-item"><input type="checkbox" value="E-posta"> <i class="ti ti-mail" aria-hidden="true"></i> E-posta</label>
+        <label class="check-item"><input type="checkbox" value="SMS"> <i class="ti ti-message" aria-hidden="true"></i> SMS</label>
+        <label class="check-item"><input type="checkbox" value="Telefon"> <i class="ti ti-phone" aria-hidden="true"></i> Telefon</label>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Mevcut müşteri takip yöntemi</label>
+      <select id="f-current-method">
+        <option value="">Seçin...</option>
+        <option>Hiç takip yapmıyorum</option>
+        <option>Manuel hatırlatma</option>
+        <option>CRM var</option>
+        <option>Başka bir yöntem</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label>Özel not (opsiyonel)</label>
+      <input type="text" id="f-note" placeholder="Örn: Müşterilerimiz genellikle 30-50 yaş arası, zaman sıkıntısı var">
+    </div>
+
+    <div id="err" class="err"></div>
+
+    <div class="rate-bar-wrap">
+      <div class="rate-bar-label">
+        <span>Günlük kullanım</span>
+        <span id="rate-text">0 / 5</span>
+      </div>
+      <div class="rate-bar-track">
+        <div class="rate-bar-fill" id="rate-fill" style="width:0%"></div>
+      </div>
+    </div>
+
+    <button class="btn-primary" id="gen-btn" onclick="generate()">
+      <i class="ti ti-route" aria-hidden="true"></i> Senaryo Oluştur
+    </button>
+
+    <button class="btn-secondary" onclick="resetForm()" style="margin-top:10px;width:100%">
+      <i class="ti ti-eraser" aria-hidden="true"></i> Formu Boşalt
+    </button>
+  </div>
+
+  <!-- LOADING -->
+  <div class="loading" id="loading-section">
+    <div class="spinner"></div>
+    <p class="loading-txt" id="loading-msg">Takip senaryosu hazırlanıyor...</p>
+  </div>
+
+  <!-- RESULTS -->
+  <div class="results" id="results-section">
+    <div class="results-header">
+      <h2>5 Adımlı Müşteri Takip Senaryosu</h2>
+      <p id="results-sub">Hazır mesaj taslakları ve zamanlama planı oluşturuldu</p>
+    </div>
+
+    <div class="warn-box" id="warn-whatsapp" style="display:none">
+      <i class="ti ti-alert-triangle" aria-hidden="true"></i>
+      <span>WhatsApp toplu mesaj göndermek için Meta Business onayı gereklidir. Bireysel mesajlar için herhangi bir onay gerekmez.</span>
+    </div>
+
+    <div class="steps-list" id="steps-list"></div>
+
+    <div class="actions">
+      <button class="btn-secondary" id="copy-btn" onclick="copyAll()">
+        <i class="ti ti-copy" aria-hidden="true"></i> Tümünü Kopyala
+      </button>
+      <button class="btn-secondary" onclick="downloadTxt()">
+        <i class="ti ti-download" aria-hidden="true"></i> .txt İndir
+      </button>
+    </div>
+
+    <div class="cta-box">
+      <div class="cta-title">Bu senaryoyu otomasyona bağlayalım</div>
+      <div class="cta-sub" id="cta-sub">Müşteri takibini otomatikleştirerek müşteri kaybını azaltın.</div>
+      <a href="https://kolaykobi.com/iletisim" class="cta-btn" target="_blank" rel="noopener noreferrer">Ücretsiz Görüşme Ayarla</a>
+    </div>
+
+    <div class="reset-link">
+      <button onclick="resetForm()">Formu Boşalt ve Yeniden Başla</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// const N8N_PROXY = null;
+const N8N_PROXY = 'https://n8n.srv1492396.hstgr.cloud/webhook/kolay-kobi-geri-donus';
+const DAILY_LIMIT = 5;
+const RATE_KEY = 'kkb_gd_usage';
+
+const loadingMsgs = [
+  'Takip senaryosu hazırlanıyor...',
+  'Mesaj taslakları oluşturuluyor...',
+  'Zamanlama planı hazırlanıyor...',
+  'Kanallar düzenleniyor...',
+  'Son rötuşlar yapılıyor...',
+];
+
+const CHANNEL_ICONS_MAP = {
+  'WhatsApp': 'ti-brand-whatsapp',
+  'E-posta': 'ti-mail',
+  'SMS': 'ti-message',
+  'Telefon': 'ti-phone',
+};
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+function getRateData() {
+  try {
+    const d = JSON.parse(localStorage.getItem(RATE_KEY) || '{}');
+    const today = new Date().toDateString();
+    if (d.date !== today) return { count: 0, date: today };
+    return d;
+  } catch(e) { return { count: 0, date: new Date().toDateString() }; }
+}
+
+function saveRate(d) {
+  localStorage.setItem(RATE_KEY, JSON.stringify(d));
+}
+
+function updateRateBar() {
+  const d = getRateData();
+  const pct = Math.min(100, (d.count / DAILY_LIMIT) * 100);
+  document.getElementById('rate-fill').style.width = pct + '%';
+  document.getElementById('rate-text').textContent = d.count + ' / ' + DAILY_LIMIT;
+  const btn = document.getElementById('gen-btn');
+  if (d.count >= DAILY_LIMIT) {
+    btn.disabled = true;
+    btn.innerHTML = '<i class="ti ti-lock" aria-hidden="true"></i> Günlük limit doldu';
+  }
+}
+
+function getCheckedChannels() {
+  return [...document.querySelectorAll('#channel-group input:checked')].map(el => el.value);
+}
+
+function fallback(biz, channels) {
+  const ch = channels[0] || 'WhatsApp';
+  return {
+    steps: [
+      { step: 1, day: '1. gün', channel: ch, channelIcon: CHANNEL_ICONS_MAP[ch] || 'ti-message', title: 'Teşekkür Mesajı', message: `Merhaba! ${biz} olarak sizi tercih ettiğiniz için teşekkür ederiz. Hizmetimizden memnun kaldıysanız bize yorum bırakabilirsiniz.`, tip: 'Hizmet sonrası gönderilmeli, fazla gecikmeden.' },
+      { step: 2, day: '3. gün', channel: ch, channelIcon: CHANNEL_ICONS_MAP[ch] || 'ti-message', title: 'Memnuniyet Kontrolü', message: `Merhaba, ${biz} olarak ulaşıyoruz. Hizmetimizden memnun kaldınız mı? Herhangi bir sorunuz varsa yardımcı olmaktan mutluluk duyarız.`, tip: 'Kısa ve samimi tutun.' },
+      { step: 3, day: '7. gün', channel: ch, channelIcon: CHANNEL_ICONS_MAP[ch] || 'ti-message', title: 'Yorum İsteği', message: `Merhaba! Google haritalar üzerinden bize yorum bırakırsanız çok seviniriz. Yorumunuz bizim için büyük değer taşıyor!`, tip: 'Google Business bağlantısı ekleyin.' },
+      { step: 4, day: '30. gün', channel: ch, channelIcon: CHANNEL_ICONS_MAP[ch] || 'ti-message', title: 'Yeniden Hatırlatma', message: `Merhaba! Bir süredir görüşemedik. ${biz} olarak size özel bir teklifimiz var. Detaylar için bize ulaşabilirsiniz.`, tip: 'Kişiselleştirilmiş kampanya ekleyebilirsiniz.' },
+      { step: 5, day: '60. gün', channel: ch, channelIcon: CHANNEL_ICONS_MAP[ch] || 'ti-message', title: 'Sadakat Teklifi', message: `Değerli müşterimiz, ${biz} olarak sizi özledik! Tekrar görüşmek ister misiniz? Size özel indirim için hemen iletişime geçin.`, tip: 'Bu adımda teşvik edici bir teklif sunun.' },
+    ],
+    ctaText: 'Bu takip senaryosunu otomasyona bağlayın ve müşteri kaybını azaltın.',
+  };
+}
+
+function clearResults() {
+  document.getElementById('results-section').style.display = 'none';
+  document.getElementById('steps-list').innerHTML = '';
+}
+
+function showLoading(v) {
+  document.getElementById('loading-section').style.display = v ? 'block' : 'none';
+}
+
+let lastSteps = [];
+let lastBiz = '';
+
+function renderResults(result) {
+  clearResults();
+  lastSteps = result.steps || [];
+  showLoading(false);
+
+  const channels = lastSteps.map(s => s.channel);
+  const hasWhatsApp = channels.includes('WhatsApp');
+  document.getElementById('warn-whatsapp').style.display = hasWhatsApp ? 'flex' : 'none';
+
+  const list = document.getElementById('steps-list');
+  list.innerHTML = lastSteps.map(s => {
+    const icon = s.channelIcon || CHANNEL_ICONS_MAP[s.channel] || 'ti-message';
+    return `
+      <div class="step-card">
+        <div class="step-header">
+          <div class="step-num">${s.step}</div>
+          <div class="step-meta">
+            <div class="step-title">${escHtml(s.title)}</div>
+            <div class="step-day-ch">
+              <i class="ti ${escHtml(icon)}" aria-hidden="true"></i>
+              ${escHtml(s.day)} &mdash; ${escHtml(s.channel)}
+            </div>
+          </div>
+        </div>
+        <div class="step-body">
+          <div class="balloon">${escHtml(s.message)}</div>
+          ${s.tip ? `<div class="step-tip"><i class="ti ti-info-circle" aria-hidden="true"></i> <span>${escHtml(s.tip)}</span></div>` : ''}
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  if (result.ctaText) {
+    document.getElementById('cta-sub').textContent = result.ctaText;
+  }
+
+  document.getElementById('results-section').style.display = 'block';
+  document.getElementById('results-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+async function generate() {
+  const rateData = getRateData();
+  if (rateData.count >= DAILY_LIMIT) {
+    showErr('Günlük kullanım limitiniz (5) doldu. Yarın tekrar deneyin.');
+    return;
+  }
+
+  const biz = document.getElementById('f-biz').value.trim();
+  const sector = document.getElementById('f-sector').value;
+  const service = document.getElementById('f-service').value.trim();
+  const frequency = document.getElementById('f-frequency').value;
+  const channels = getCheckedChannels();
+  const currentMethod = document.getElementById('f-current-method').value;
+  const note = document.getElementById('f-note').value.trim();
+
+  if (!biz) { showErr('İşletme adı zorunludur.'); return; }
+  if (!sector) { showErr('Lütfen sektör seçin.'); return; }
+  if (!service) { showErr('Hizmet / ürün açıklaması zorunludur.'); return; }
+  if (!frequency) { showErr('Lütfen satın alma sıklığını seçin.'); return; }
+  if (channels.length === 0) { showErr('En az bir takip kanalı seçin.'); return; }
+
+  hideErr();
+  lastBiz = biz;
+  clearResults();
+  showLoading(true);
+
+  let mi = 0;
+  const msgEl = document.getElementById('loading-msg');
+  const ticker = setInterval(() => { mi = (mi + 1) % loadingMsgs.length; msgEl.textContent = loadingMsgs[mi]; }, 1800);
+
+  const prompt = `Sen müşteri tutma ve CRM uzmanısın. Aşağıdaki işletme için 5 adımlık müşteri geri dönüş senaryosu hazırla.
+
+═══ İŞLETME BİLGİLERİ ═══
+İşletme: ${biz}
+Sektör: ${sector}
+Hizmet/Ürün: ${service}
+Satın alma sıklığı: ${frequency}
+Takip kanalları: ${channels.join(', ')}
+Mevcut takip yöntemi: ${currentMethod || 'belirtilmemiş'}
+Özel not: ${note || 'belirtilmemiş'}
+
+═══ SENARYO KURALLARI ═══
+1. Her adım için gün numarası, kanal ve hazır mesaj taslağı ver
+2. Mesajlar ${biz} işletmesine özgün, doğal Türkçe olsun
+3. İlk adım hizmet/satın alma sonrası 1. gün olsun
+4. Kanallar: ${channels.join(', ')} arasından seç
+5. Mesajlar kısa, samimi, emoji uygun
+
+SADECE JSON döndür:
+{
+  "steps": [
+    { "step": 1, "day": "1. gün", "channel": "WhatsApp", "channelIcon": "ti-brand-whatsapp", "title": "...", "message": "...", "tip": "..." },
+    { "step": 2, "day": "3. gün", "channel": "WhatsApp", "channelIcon": "ti-brand-whatsapp", "title": "...", "message": "...", "tip": "..." },
+    { "step": 3, "day": "7. gün", "channel": "WhatsApp", "channelIcon": "ti-brand-whatsapp", "title": "...", "message": "...", "tip": "..." },
+    { "step": 4, "day": "30. gün", "channel": "WhatsApp", "channelIcon": "ti-brand-whatsapp", "title": "...", "message": "...", "tip": "..." },
+    { "step": 5, "day": "60. gün", "channel": "WhatsApp", "channelIcon": "ti-brand-whatsapp", "title": "...", "message": "...", "tip": "..." }
+  ],
+  "ctaText": "..."
+}`;
+
+  try {
+    let res;
+    if (N8N_PROXY) {
+      res = await fetch(N8N_PROXY, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt }),
+      });
+      if (res.status === 429) {
+        clearInterval(ticker);
+        showLoading(false);
+        showErr('Çok fazla istek gönderildi. Lütfen biraz bekleyin.');
+        return;
+      }
+    } else {
+      res = await fetch('https://api.minimax.io/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer DEV_KEY' },
+        body: JSON.stringify({ model: 'MiniMax-M3', max_completion_tokens: 1500, messages: [{ role: 'user', content: prompt }] }),
+      });
+    }
+    const data = await res.json();
+    const text = N8N_PROXY
+      ? (data.content || []).map(b => b.text || '').join('')
+      : (data.choices?.[0]?.message?.content || '');
+    const clean = text.replace(/```json|```/g, '').trim();
+    const result = JSON.parse(clean);
+
+    rateData.count++;
+    saveRate(rateData);
+    updateRateBar();
+    clearInterval(ticker);
+    renderResults(result);
+  } catch(e) {
+    rateData.count++;
+    saveRate(rateData);
+    updateRateBar();
+    clearInterval(ticker);
+    renderResults(fallback(lastBiz, getCheckedChannels()));
+  }
+}
+
+function showErr(msg) {
+  const el = document.getElementById('err');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+
+function hideErr() {
+  document.getElementById('err').style.display = 'none';
+}
+
+function resetForm() {
+  document.getElementById('f-biz').value = '';
+  document.getElementById('f-sector').value = '';
+  document.getElementById('f-service').value = '';
+  document.getElementById('f-frequency').value = '';
+  document.getElementById('f-current-method').value = '';
+  document.getElementById('f-note').value = '';
+  document.querySelectorAll('#channel-group input').forEach(el => el.checked = false);
+  hideErr();
+  clearResults();
+  showLoading(false);
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function copyAll() {
+  if (!lastSteps.length) return;
+  const lines = [`=== ${lastBiz} — MÜŞTERİ TAKİP SENARYOSU ===`, ''];
+  lastSteps.forEach(s => {
+    lines.push(`ADIM ${s.step} — ${s.day} (${s.channel})`);
+    lines.push(`Başlık: ${s.title}`);
+    lines.push(`Mesaj: ${s.message}`);
+    if (s.tip) lines.push(`Not: ${s.tip}`);
+    lines.push('');
+  });
+  navigator.clipboard.writeText(lines.join('\n')).then(() => {
+    const btn = document.getElementById('copy-btn');
+    if (btn) {
+      btn.innerHTML = '<i class="ti ti-check" aria-hidden="true"></i> Kopyalandı!';
+      setTimeout(() => { btn.innerHTML = '<i class="ti ti-copy" aria-hidden="true"></i> Tümünü Kopyala'; }, 2000);
+    }
+  });
+}
+
+function downloadTxt() {
+  if (!lastSteps.length) return;
+  const lines = [`=== ${lastBiz} — MÜŞTERİ TAKİP SENARYOSU ===`, ''];
+  lastSteps.forEach(s => {
+    lines.push(`ADIM ${s.step} — ${s.day} (${s.channel})`);
+    lines.push(`Başlık: ${s.title}`);
+    lines.push(`Mesaj:`);
+    lines.push(s.message);
+    if (s.tip) lines.push(`Not: ${s.tip}`);
+    lines.push('---');
+  });
+  const blob = new Blob([lines.join('\n')], { type: 'text/plain;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'musteri-takip-senaryosu.txt';
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+updateRateBar();
+</script>
+</body>
+</html>
