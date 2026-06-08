@@ -64,7 +64,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\"model\":\"MiniMax-M3\",\"max_completion_tokens\":1500,\"messages\":[{\"role\":\"user\",\"content\":{{ JSON.stringify($json.prompt) }}}]}",
+        "jsonBody": "={\"model\":\"MiniMax-M3\",\"max_completion_tokens\":3000,\"messages\":[{\"role\":\"user\",\"content\":{{ JSON.stringify($json.prompt) }}}]}",
         "options": { "timeout": 60000 }
       },
       "id": "minimax-api-node",
