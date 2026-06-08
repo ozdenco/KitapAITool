@@ -75,7 +75,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const data = $input.first().json;\nlet text = data.choices?.[0]?.message?.content || '';\ntext = text.replace(/<think>[\s\S]*?<\/think>/g, '').trim();\nreturn [{ json: { content: [{ type: 'text', text }] } }];"
+        "jsCode": "const data = $input.first().json;\nlet text = data.choices?.[0]?.message?.content || '';\ntext = text.replace(/<think>[\\s\\S]*?<\/think>/g, '').trim();\nreturn [{ json: { content: [{ type: 'text', text }] } }];"
       },
       "id": "response-transform",
       "name": "Response Transform",
