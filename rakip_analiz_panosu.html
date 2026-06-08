@@ -525,6 +525,7 @@ function showLoading(v) {
 let lastResult = null;
 let lastBiz = '';
 let lastComps = [];
+let lastMyData = {};
 
 function renderResults(result, myData) {
   clearResults();
@@ -645,6 +646,7 @@ async function generate() {
   hideErr();
   lastBiz = biz;
   lastComps = comps;
+  lastMyData = { biz, sector, myWeb, myPlatforms, myPrice, strengths };
   clearResults();
   showLoading(true);
 
@@ -760,7 +762,18 @@ function resetForm() {
 
 function copyAll() {
   if (!lastResult) return;
-  const lines = [`=== ${lastBiz} — RAKİP ANALİZ RAPORU ===`, ''];
+  const md = lastMyData;
+  const formCtx = [
+    md.sector     ? `Sektör: ${md.sector}`                          : '',
+    md.myWeb      ? `Web sitesi: ${md.myWeb}`                       : '',
+    md.myPlatforms && md.myPlatforms.length ? `Platformlar: ${md.myPlatforms.join(', ')}` : '',
+    md.myPrice    ? `Fiyat segmenti: ${md.myPrice}`                 : '',
+    md.strengths  ? `Güçlü yönler: ${md.strengths}`                 : '',
+  ].filter(Boolean).join('\n');
+  const compCtx = lastComps.map((c, i) =>
+    `Rakip ${i+1}: ${c.name}${c.platforms.length ? ' (' + c.platforms.join(', ') + ')' : ''}${c.price ? ' · ' + c.price : ''}`
+  ).join('\n');
+  const lines = [`=== ${lastBiz} — RAKİP ANALİZ RAPORU ===`, formCtx, compCtx ? '\n--- RAKİPLER ---\n' + compCtx : '', ''];
   if (lastResult.summary) { lines.push('ÖZET:'); lines.push(lastResult.summary); lines.push(''); }
   if (lastResult.competitors) {
     lines.push('--- RAKİP ANALİZİ ---');
@@ -788,7 +801,18 @@ function copyAll() {
 
 function downloadTxt() {
   if (!lastResult) return;
-  const lines = [`=== ${lastBiz} — RAKİP ANALİZ RAPORU ===`, ''];
+  const md = lastMyData;
+  const formCtx = [
+    md.sector     ? `Sektör: ${md.sector}`                          : '',
+    md.myWeb      ? `Web sitesi: ${md.myWeb}`                       : '',
+    md.myPlatforms && md.myPlatforms.length ? `Platformlar: ${md.myPlatforms.join(', ')}` : '',
+    md.myPrice    ? `Fiyat segmenti: ${md.myPrice}`                 : '',
+    md.strengths  ? `Güçlü yönler: ${md.strengths}`                 : '',
+  ].filter(Boolean).join('\n');
+  const compCtx = lastComps.map((c, i) =>
+    `Rakip ${i+1}: ${c.name}${c.platforms.length ? ' (' + c.platforms.join(', ') + ')' : ''}${c.price ? ' · ' + c.price : ''}`
+  ).join('\n');
+  const lines = [`=== ${lastBiz} — RAKİP ANALİZ RAPORU ===`, formCtx, compCtx ? '\n--- RAKİPLER ---\n' + compCtx : '', ''];
   if (lastResult.summary) { lines.push('ÖZET:'); lines.push(lastResult.summary); lines.push(''); }
   if (lastResult.competitors) {
     lines.push('RAKİP ANALİZİ:');

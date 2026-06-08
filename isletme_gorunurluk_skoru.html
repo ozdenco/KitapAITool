@@ -415,17 +415,32 @@ function escHtml(s) {
 }
 
 function copyResults() {
-  const name   = document.getElementById('f-name').value.trim();
-  const score  = document.getElementById('score-num').textContent;
-  const level  = document.getElementById('score-title').textContent;
+  const name     = document.getElementById('f-name').value.trim();
+  const sector   = document.getElementById('f-sector').value;
+  const city     = document.getElementById('f-city').value.trim();
+  const web      = document.getElementById('f-web').value.trim();
+  const goal     = document.getElementById('f-goal').value;
+  const platforms = ['ch-gbp','ch-ig','ch-fb','ch-li','ch-wa','ch-no']
+    .filter(id => document.getElementById(id).checked)
+    .map(id => document.getElementById(id).value);
+  const score   = document.getElementById('score-num').textContent;
+  const level   = document.getElementById('score-title').textContent;
   const summary = document.getElementById('score-sub').textContent;
-  const items  = [...document.querySelectorAll('.item-card')].map(c => {
+  const items   = [...document.querySelectorAll('.item-card')].map(c => {
     const n = c.querySelector('.item-name').childNodes[0].textContent.trim();
     const d = c.querySelector('.item-desc').textContent.trim();
     const b = c.querySelector('.badge').textContent.trim();
     return `[${b}] ${n}\n${d}`;
   }).join('\n\n');
-  const text = `İşletme Görünürlük Skoru — ${name}\nSkor: ${score}/100 (${level})\n${summary}\n\n${'─'.repeat(40)}\n\n${items}`;
+  const formCtx = [
+    `İşletme: ${name}`,
+    sector   ? `Sektör: ${sector}`                       : '',
+    city     ? `Şehir: ${city}`                          : '',
+    web      ? `Web sitesi: ${web}`                      : '',
+    platforms.length ? `Platformlar: ${platforms.join(', ')}` : '',
+    goal     ? `Aylık hedef: ${goal} yeni müşteri`       : '',
+  ].filter(Boolean).join('\n');
+  const text = `İşletme Görünürlük Skoru — ${name}\n${formCtx}\n\nSkor: ${score}/100 (${level})\n${summary}\n\n${'─'.repeat(40)}\n\n${items}`;
   navigator.clipboard.writeText(text).then(() => alert('Sonuçlar panoya kopyalandı!'));
 }
 

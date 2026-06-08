@@ -401,6 +401,7 @@ function clearResults() {
 let lastRows = [];
 let lastSuggestions = [];
 let lastBiz = '';
+let lastFormData = {};
 
 function renderResults(rows, aiData) {
   clearResults();
@@ -480,6 +481,7 @@ async function generate() {
 
   hideErr();
   lastBiz = biz;
+  lastFormData = { biz, sector, budget, goal, audience, channels };
   clearResults();
   showLoading(true);
 
@@ -586,7 +588,16 @@ function resetForm() {
 
 function copyAll() {
   if (!lastRows.length) return;
-  const lines = ['=== REKLAM BÜTÇE DAĞILIMI ===', `İşletme: ${lastBiz}`, ''];
+  const fd = lastFormData;
+  const formCtx = [
+    `İşletme: ${fd.biz || lastBiz}`,
+    fd.sector   ? `Sektör: ${fd.sector}`                         : '',
+    fd.budget   ? `Aylık Bütçe: ${Number(fd.budget).toLocaleString('tr-TR')} TL` : '',
+    fd.goal     ? `Hedef: ${fd.goal}`                            : '',
+    fd.audience ? `Hedef Kitle: ${fd.audience}`                  : '',
+    fd.channels && fd.channels.length ? `Kanallar: ${fd.channels.join(', ')}` : '',
+  ].filter(Boolean).join('\n');
+  const lines = ['=== REKLAM BÜTÇE DAĞILIMI ===', formCtx, ''];
   const totalBudget = lastRows.reduce((a, b) => a + b.budget, 0);
   const totalClicks = lastRows.reduce((a, b) => a + b.clicks, 0);
   const totalLeads = lastRows.reduce((a, b) => a + b.leads, 0);
@@ -616,7 +627,16 @@ function copyAll() {
 
 function downloadTxt() {
   if (!lastRows.length) return;
-  const lines = ['=== REKLAM BÜTÇE DAĞILIMI ===', `İşletme: ${lastBiz}`, ''];
+  const fd = lastFormData;
+  const formCtx = [
+    `İşletme: ${fd.biz || lastBiz}`,
+    fd.sector   ? `Sektör: ${fd.sector}`                         : '',
+    fd.budget   ? `Aylık Bütçe: ${Number(fd.budget).toLocaleString('tr-TR')} TL` : '',
+    fd.goal     ? `Hedef: ${fd.goal}`                            : '',
+    fd.audience ? `Hedef Kitle: ${fd.audience}`                  : '',
+    fd.channels && fd.channels.length ? `Kanallar: ${fd.channels.join(', ')}` : '',
+  ].filter(Boolean).join('\n');
+  const lines = ['=== REKLAM BÜTÇE DAĞILIMI ===', formCtx, ''];
   const totalBudget = lastRows.reduce((a, b) => a + b.budget, 0);
   lines.push(`Toplam Bütçe: ${totalBudget.toLocaleString('tr-TR')} TL`);
   lines.push('');

@@ -236,21 +236,18 @@ function getChecked() {
 }
 
 function show(id) {
-  ['form-section','loading-section','results-section'].forEach(s => {
-    document.getElementById(s).style.display = s === id ? (id==='results'?'block':id==='loading'?'block':'block') : 'none';
-  });
-  if(id==='loading-section') {
-    document.getElementById('loading-section').style.display='block';
-    document.getElementById('form-section').style.display='none';
-    document.getElementById('results-section').style.display='none';
-  } else if(id==='results-section') {
-    document.getElementById('results-section').style.display='block';
-    document.getElementById('loading-section').style.display='none';
-    document.getElementById('form-section').style.display='none';
+  if (id === 'loading-section') {
+    document.getElementById('form-section').style.display = 'none';
+    document.getElementById('loading-section').style.display = 'block';
+    document.getElementById('results-section').style.display = 'none';
+  } else if (id === 'results-section') {
+    document.getElementById('form-section').style.display = 'block';
+    document.getElementById('loading-section').style.display = 'none';
+    document.getElementById('results-section').style.display = 'block';
   } else {
-    document.getElementById('form-section').style.display='block';
-    document.getElementById('loading-section').style.display='none';
-    document.getElementById('results-section').style.display='none';
+    document.getElementById('form-section').style.display = 'block';
+    document.getElementById('loading-section').style.display = 'none';
+    document.getElementById('results-section').style.display = 'none';
   }
 }
 
@@ -268,6 +265,7 @@ async function generate() {
   if(!biz || !sector || !service) { err.style.display='block'; return; }
   err.style.display='none';
 
+  lastFormData = { biz, sector, city, service, age, price, current, pains };
   show('loading-section');
   let mi = 0;
   const msgEl = document.getElementById('loading-msg');
@@ -378,6 +376,7 @@ function fallback(biz, sector, pains) {
 }
 
 let allPersonasData = [];
+let lastFormData = {};
 
 function renderPersonas(data, biz) {
   allPersonasData = data.personas;
@@ -458,7 +457,19 @@ function copyPersona(idx, btn) {
 }
 
 function copyAll() {
-  const text = allPersonasData.map(personaToText).join('\n\n');
+  const fd = lastFormData;
+  const header = [
+    '=== Müşteri Persona Raporu ===',
+    fd.biz     ? `İşletme: ${fd.biz}`                          : '',
+    fd.sector  ? `Sektör: ${fd.sector}`                        : '',
+    fd.city    ? `Şehir: ${fd.city}`                           : '',
+    fd.service ? `Hizmet/Ürün: ${fd.service}`                  : '',
+    fd.age     ? `Hedef yaş: ${fd.age}`                        : '',
+    fd.price   ? `Fiyat segmenti: ${fd.price}`                 : '',
+    (fd.pains && fd.pains.length) ? `Müşteri öncelikleri: ${fd.pains.join(', ')}` : '',
+    '',
+  ].filter(Boolean).join('\n');
+  const text = header + '\n' + allPersonasData.map(personaToText).join('\n\n');
   navigator.clipboard.writeText(text).then(() => alert('Tüm personalar panoya kopyalandı!'));
 }
 

@@ -250,9 +250,9 @@ function getChecked(groupId) {
 }
 
 function show(id) {
-  ['form-section','loading-section','results-section'].forEach(s => {
-    document.getElementById(s).style.display = s === id ? 'block' : 'none';
-  });
+  document.getElementById('form-section').style.display = (id === 'form-section' || id === 'results-section') ? 'block' : 'none';
+  document.getElementById('loading-section').style.display = id === 'loading-section' ? 'block' : 'none';
+  document.getElementById('results-section').style.display = id === 'results-section' ? 'block' : 'none';
 }
 
 function getStartDate() {
@@ -525,6 +525,18 @@ Gün numaraları ${start+1}'den ${end}'e kadar olsun. Tam ${end-start} eleman.`;
 }
 
 function downloadCSV() {
+  const { biz, sector, audience, platforms, tone, lang, special } = formData;
+  const esc = s => `"${String(s||'').replace(/"/g,'""')}"`;
+  const metaRows = [
+    `${esc('İşletme')},${esc(biz||'')}`,
+    `${esc('Sektör')},${esc(sector||'')}`,
+    audience ? `${esc('Hedef Kitle')},${esc(audience)}` : null,
+    `${esc('Platformlar')},${esc((platforms||[]).join(' | '))}`,
+    tone ? `${esc('Marka Tonu')},${esc(tone)}` : null,
+    `${esc('Dil')},${esc(lang||'')}`,
+    special ? `${esc('Özel Günler')},${esc(special)}` : null,
+    '',
+  ].filter(r => r !== null);
   const headers = ['Gün','Tarih','Gün Adı','Konu','Format','Platform','Taslak Metin','Özel Gün'];
   const rows = allDays.map(d => {
     const dt = d.date;
@@ -532,14 +544,14 @@ function downloadCSV() {
       d.day,
       `${dt.getDate()} ${TR_MONTHS[dt.getMonth()]} ${dt.getFullYear()}`,
       TR_DAYS[dt.getDay()],
-      `"${d.topic.replace(/"/g,'""')}"`,
+      esc(d.topic),
       d.format,
       d.platform,
-      `"${d.draft.replace(/"/g,'""')}"`,
+      esc(d.draft),
       d.isSpecial ? 'Evet' : 'Hayır'
-    ];
+    ].join(',');
   });
-  const csv = [headers, ...rows].map(r => r.join(',')).join('\n');
+  const csv = [...metaRows, headers.join(','), ...rows].join('\n');
   const bom = '\uFEFF';
   const blob = new Blob([bom + csv], { type: 'text/csv;charset=utf-8' });
   const url = URL.createObjectURL(blob);
@@ -549,7 +561,6 @@ function downloadCSV() {
   a.click();
   URL.revokeObjectURL(url);
 }
-
 function restart() {
   document.getElementById('f-biz').value = '';
   document.getElementById('f-sector').value = '';
