@@ -78,6 +78,15 @@ input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3p
   .check-group{grid-template-columns:1fr 1fr}
   .action-row{flex-direction:column}
 }
+
+/* Form collapse */
+.form-collapsed-bar{display:none;align-items:center;justify-content:space-between;padding:.5rem 0;border-bottom:0.5px solid #F1EFE8;margin-bottom:0}
+.form-card.is-collapsed .form-collapsed-bar{display:flex}
+.form-card.is-collapsed #form-body{display:none}
+.form-collapsed-title{font-size:14px;font-weight:500;color:#1C1B19}
+.form-collapsed-sub{font-size:12px;color:#9A9792;margin-top:2px}
+.form-expand-btn{display:flex;align-items:center;gap:5px;padding:7px 14px;background:#F0FAF6;border:0.5px solid #9FE1CB;border-radius:8px;font-size:13px;font-weight:500;color:#085041;cursor:pointer;white-space:nowrap}
+.form-expand-btn:hover{background:#E1F5EE}
 </style>
 </head>
 <body>
@@ -88,7 +97,17 @@ input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3p
   </div>
 
   <!-- FORM (her zaman görünür) -->
-  <div class="form-card">
+  <div class="form-card" id="form-section">
+  <div class="form-collapsed-bar">
+    <div>
+      <div class="form-collapsed-title">WhatsApp Satış Script Üretici</div>
+      <div class="form-collapsed-sub">Formu düzenlemek için tıklayın</div>
+    </div>
+    <button class="form-expand-btn" onclick="expandForm()">
+      <i class="ti ti-chevron-down" aria-hidden="true"></i> Formu Aç
+    </button>
+  </div>
+  <div id="form-body">
     <h1>WhatsApp Satış Script Üretici</h1>
     <p class="subtitle">Ürün/hizmetiniz ve en sık karşılaştığınız itirazları girin — ilk temastan kapanışa kadar 5 hazır WhatsApp mesajı oluşturalım.</p>
 
@@ -175,7 +194,8 @@ input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3p
   <button class="btn-primary" id="generate-btn" onclick="generate()">
       <i class="ti ti-brand-whatsapp" aria-hidden="true"></i> Scriptleri Oluştur
     </button>
-  </div>
+    </div>
+</div>
 
   <!-- LOADING (form altında) -->
   <div class="loading" id="loading-section" style="display:none">
@@ -318,7 +338,7 @@ function showLoading(on) {
 }
 
 function showResults(on) {
-  document.getElementById('results-section').style.display = on ? 'block' : 'none';
+  document.getElementById('results-section').style.display = on ? 'block' : 'none'; if (on) collapseForm();
 }
 
 function clearResults() {
@@ -724,6 +744,19 @@ function importFormJSON(input) {
 document.addEventListener('change', e => { if (document.getElementById('form-section')?.contains(e.target)) saveForm(); });
 document.addEventListener('input',  e => { if (document.getElementById('form-section')?.contains(e.target)) saveForm(); });
 restoreForm();
+
+// ── Form Collapse ──────────────────────────────────────────────────────────
+function collapseForm() {
+  const fc = document.querySelector('.form-card');
+  if (fc) fc.classList.add('is-collapsed');
+}
+function expandForm() {
+  const fc = document.querySelector('.form-card');
+  if (fc) {
+    fc.classList.remove('is-collapsed');
+    fc.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+}
 </script>
 </body>
 </html>
