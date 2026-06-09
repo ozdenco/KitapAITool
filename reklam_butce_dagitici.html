@@ -782,7 +782,7 @@ function expandForm() {
   const fc = document.getElementById('form-section');
   if (fc) {
     fc.classList.remove('is-collapsed');
-    fc.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if (fc.scrollIntoView) fc.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 }
 </script>
