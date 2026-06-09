@@ -806,6 +806,7 @@ function copyAll() {
   if (!lastResult) return;
   const md = lastMyData;
   const formCtx = [
+    md.biz        ? `İşletme: ${md.biz}`                            : '',
     md.sector     ? `Sektör: ${md.sector}`                          : '',
     md.myWeb      ? `Web sitesi: ${md.myWeb}`                       : '',
     md.myPlatforms && md.myPlatforms.length ? `Platformlar: ${md.myPlatforms.join(', ')}` : '',

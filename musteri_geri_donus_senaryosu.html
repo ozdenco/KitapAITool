@@ -521,6 +521,7 @@ function copyAll() {
   if (!lastSteps.length) return;
   const fd = lastFormData;
   const formCtx = [
+    fd.biz        ? `İşletme: ${fd.biz}`                         : '',
     fd.sector     ? `Sektör: ${fd.sector}`                       : '',
     fd.service    ? `Hizmet: ${fd.service}`                      : '',
     fd.frequency  ? `Satın alma sıklığı: ${fd.frequency}`        : '',

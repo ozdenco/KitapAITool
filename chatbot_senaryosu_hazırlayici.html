@@ -617,6 +617,7 @@ function copyAll() {
   if (!currentScenario) return;
   const fd = lastFormData;
   const formCtx = [
+    fd.biz         ? `İşletme: ${fd.biz}`                        : '',
     fd.sector      ? `Sektör: ${fd.sector}`                      : '',
     fd.services    ? `Hizmetler: ${fd.services}`                  : '',
     fd.hours       ? `Mesai: ${fd.hours}`                         : '',
