@@ -533,10 +533,11 @@ function copyAll() {
     fd.service ? `Hizmet/Ürün: ${fd.service}`                  : '',
     fd.age     ? `Hedef yaş: ${fd.age}`                        : '',
     fd.price   ? `Fiyat segmenti: ${fd.price}`                 : '',
+    fd.current ? `Mevcut müşteri özellikleri: ${fd.current}`   : '',
     (fd.pains && fd.pains.length) ? `Müşteri öncelikleri: ${fd.pains.join(', ')}` : '',
     '',
   ].filter(Boolean).join('\n');
-  const text = header + '\n' + allPersonasData.map(personaToText).join('\n\n');
+  const text = header + '\n' + allPersonasData.map(personaToText).join('\n\n' + '─'.repeat(40) + '\n\n');
   navigator.clipboard.writeText(text).then(() => alert('Tüm personalar panoya kopyalandı!'));
 }
 
