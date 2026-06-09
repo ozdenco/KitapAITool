@@ -130,7 +130,15 @@
         "respondWith": "json",
         "responseBody": "={{ JSON.stringify($json) }}",
         "options": {
-          "responseCode": 200
+          "responseCode": 200,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json; charset=utf-8"
+              }
+            ]
+          }
         }
       },
       "id": "respond-success",
