@@ -195,6 +195,7 @@ input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3p
         <p id="results-sub"></p>
       </div>
       <div class="action-row">
+        <button class="btn-sm" id="copy-all-btn" onclick="copyAll()"><i class="ti ti-copy" aria-hidden="true"></i> Tümünü Kopyala</button>
         <button class="btn-sm" onclick="downloadCSV()"><i class="ti ti-download" aria-hidden="true"></i> CSV İndir</button>
         <button class="btn-sm" onclick="restart()"><i class="ti ti-refresh" aria-hidden="true"></i> Yeniden</button>
       </div>
@@ -231,6 +232,8 @@ input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3p
 // const N8N_PROXY = null;
 // Production (web sitesi):
 const N8N_PROXY = 'https://n8n.srv1492396.hstgr.cloud/webhook/kolay-kobi-takvim';
+
+function escHtml(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
 
 const loadingMsgs = [
   "İçerik fikirleri üretiliyor...",
@@ -451,11 +454,11 @@ function renderDays(days) {
           <div class="day-weekday">${dayName} ${TR_MONTHS[dt.getMonth()]}</div>
         </div>
         <div class="day-content">
-          <div class="day-topic">${d.topic}</div>
-          <div class="day-draft">${d.draft}</div>
+          <div class="day-topic">${escHtml(d.topic)}</div>
+          <div class="day-draft">${escHtml(d.draft)}</div>
           <div class="day-tags">
-            <span class="tag tag-format">${d.format}</span>
-            <span class="tag tag-platform">${d.platform}</span>
+            <span class="tag tag-format">${escHtml(d.format)}</span>
+            <span class="tag tag-platform">${escHtml(d.platform)}</span>
             ${d.isSpecial ? '<span class="tag tag-special">Özel gün</span>' : ''}
           </div>
         </div>
@@ -524,6 +527,28 @@ Gün numaraları ${start+1}'den ${end}'e kadar olsun. Tam ${end-start} eleman.`;
   }
   btn.disabled = false;
   btn.innerHTML = '<i class="ti ti-refresh" aria-hidden="true"></i> Bu haftayı yenile';
+}
+
+function copyAll() {
+  if (!allDays.length) return;
+  const fd = lastFormData;
+  const header = [
+    `İşletme: ${fd.biz||''}`,
+    `Sektör: ${fd.sector||''}`,
+    `Hedef Kitle: ${fd.audience||''}`,
+    `Platformlar: ${fd.platforms||''}`,
+    `Ton: ${fd.tone||''}`,
+    `Dil: ${fd.lang||''}`,
+    '---'
+  ].join('\n');
+  const body = allDays.map(d => {
+    const dt = d.date;
+    return `Gün ${d.day} — ${dt.getDate()} ${TR_MONTHS[dt.getMonth()]}\nKonu: ${d.topic}\nFormat: ${d.format} · ${d.platform}\n\n${d.draft}`;
+  }).join('\n\n---\n\n');
+  navigator.clipboard.writeText(header + '\n' + body).then(() => {
+    const btn = document.getElementById('copy-all-btn');
+    if (btn) { btn.textContent = 'Kopyalandı ✓'; setTimeout(() => btn.textContent = 'Tümünü Kopyala', 2000); }
+  });
 }
 
 function downloadCSV() {

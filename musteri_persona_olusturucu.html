@@ -219,6 +219,8 @@ input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3p
 // Production (web sitesi):
 const N8N_PROXY = 'https://n8n.srv1492396.hstgr.cloud/webhook/kolay-kobi-persona';
 
+function escHtml(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
+
 const loadingMsgs = [
   "Hedef müşteri profilleri analiz ediliyor...",
   "Demografi ve motivasyonlar değerlendiriliyor...",
@@ -397,32 +399,32 @@ function renderPersonas(data, biz) {
         <div class="persona-top">
           <div class="avatar" style="background:${col.bg};color:${col.color}">${initials}</div>
           <div class="persona-meta">
-            <div class="persona-name">${p.name}, ${p.age}</div>
-            <div class="persona-role">${p.job} · ${p.location}</div>
+            <div class="persona-name">${escHtml(p.name)}, ${escHtml(p.age)}</div>
+            <div class="persona-role">${escHtml(p.job)} · ${escHtml(p.location)}</div>
           </div>
         </div>
-        <div class="persona-quote">"${p.quote}"</div>
+        <div class="persona-quote">"${escHtml(p.quote)}"</div>
       </div>
       <div class="persona-body">
         <div class="persona-sections">
           <div>
             <div class="psec-title">Motivasyonlar</div>
-            <div class="tag-list">${p.motivations.map(m=>`<span class="tag tag-motive">${m}</span>`).join('')}</div>
+            <div class="tag-list">${p.motivations.map(m=>`<span class="tag tag-motive">${escHtml(m)}</span>`).join('')}</div>
           </div>
           <div>
             <div class="psec-title">İtirazlar</div>
-            <div class="tag-list">${p.objections.map(o=>`<span class="tag tag-objection">${o}</span>`).join('')}</div>
+            <div class="tag-list">${p.objections.map(o=>`<span class="tag tag-objection">${escHtml(o)}</span>`).join('')}</div>
           </div>
           <div>
             <div class="psec-title">Platform tercihleri</div>
-            <div class="tag-list">${p.platforms.map(pl=>`<span class="tag tag-platform">${pl}</span>`).join('')}</div>
+            <div class="tag-list">${p.platforms.map(pl=>`<span class="tag tag-platform">${escHtml(pl)}</span>`).join('')}</div>
           </div>
           <div>
             <div class="psec-title">İçerik tercihleri</div>
-            <div class="tag-list">${p.contentPrefs.map(c=>`<span class="tag tag-content">${c}</span>`).join('')}</div>
+            <div class="tag-list">${p.contentPrefs.map(c=>`<span class="tag tag-content">${escHtml(c)}</span>`).join('')}</div>
           </div>
         </div>
-        ${p.summary ? `<div style="margin-top:1rem;font-size:13px;color:#444441;line-height:1.5;padding:10px 12px;background:#F7F6F2;border-radius:8px"><strong style="font-weight:500;color:#1C1B19">Strateji:</strong> ${p.summary}</div>` : ''}
+        ${p.summary ? `<div style="margin-top:1rem;font-size:13px;color:#444441;line-height:1.5;padding:10px 12px;background:#F7F6F2;border-radius:8px"><strong style="font-weight:500;color:#1C1B19">Strateji:</strong> ${escHtml(p.summary)}</div>` : ''}
       </div>
       <div class="persona-footer">
         <span style="font-size:12px;color:#888780">Persona ${i+1} / ${data.personas.length}</span>
