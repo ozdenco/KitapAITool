@@ -180,7 +180,22 @@ tr:last-child td{border-bottom:none}
       </div>
     </div>
 
-    <button class="btn-primary" id="gen-btn" onclick="generate()">
+    
+  <!-- Form kaydet/yükle -->
+  <div style="display:flex;gap:8px;margin-top:1rem;flex-wrap:wrap" id="form-persist-row">
+    <button type="button" onclick="exportFormJSON()" style="display:flex;align-items:center;gap:5px;padding:7px 13px;background:#fff;border:0.5px solid #D3D1C7;border-radius:8px;font-size:12px;color:#6B6963;cursor:pointer">
+      <i class="ti ti-device-floppy" aria-hidden="true"></i> Formu Kaydet
+    </button>
+    <label style="display:flex;align-items:center;gap:5px;padding:7px 13px;background:#fff;border:0.5px solid #D3D1C7;border-radius:8px;font-size:12px;color:#6B6963;cursor:pointer">
+      <i class="ti ti-upload" aria-hidden="true"></i> Form Yükle
+      <input type="file" accept=".json" style="display:none" onchange="importFormJSON(this)">
+    </label>
+    <span id="import-notice" style="display:none;align-items:center;gap:4px;font-size:12px;color:#1D9E75;padding:7px 0">
+      <i class="ti ti-circle-check" aria-hidden="true"></i> Form yüklendi
+    </span>
+  </div>
+
+  <button class="btn-primary" id="gen-btn" onclick="generate()">
       <i class="ti ti-calculator" aria-hidden="true"></i> Bütçe Dağılımını Hesapla
     </button>
 
@@ -660,6 +675,78 @@ function downloadTxt() {
 }
 
 updateRateBar();
+
+// ── Form Kalıcılığı (localStorage + JSON export/import) ──────────────────────
+const LS_KEY = 'kkform_' + location.pathname.replace(/\//g,'_');
+
+function saveForm() {
+  const form = document.getElementById('form-section');
+  if (!form) return;
+  const data = {};
+  form.querySelectorAll('input,select,textarea').forEach(el => {
+    if (!el.id) return;
+    data[el.id] = el.type === 'checkbox' ? el.checked : el.value;
+  });
+  try { localStorage.setItem(LS_KEY, JSON.stringify(data)); } catch(e) {}
+}
+
+function restoreForm() {
+  try {
+    const saved = localStorage.getItem(LS_KEY);
+    if (!saved) return;
+    const data = JSON.parse(saved);
+    Object.entries(data).forEach(([id, val]) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      if (el.type === 'checkbox') el.checked = val;
+      else el.value = val;
+    });
+  } catch(e) {}
+}
+
+function exportFormJSON() {
+  const form = document.getElementById('form-section');
+  if (!form) return;
+  const data = { _tool: document.title, _date: new Date().toISOString() };
+  form.querySelectorAll('input,select,textarea').forEach(el => {
+    if (!el.id) return;
+    data[el.id] = el.type === 'checkbox' ? el.checked : el.value;
+  });
+  const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'form-' + location.pathname.replace(/\//g,'').replace(/-/g,'_') + '.json';
+  a.click();
+}
+
+function importFormJSON(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const data = JSON.parse(e.target.result);
+      Object.entries(data).forEach(([id, val]) => {
+        if (id.startsWith('_')) return;
+        const el = document.getElementById(id);
+        if (!el) return;
+        if (el.type === 'checkbox') el.checked = val;
+        else el.value = val;
+      });
+      saveForm();
+      input.value = '';
+      const notice = document.getElementById('import-notice');
+      if (notice) { notice.style.display='block'; setTimeout(()=>notice.style.display='none', 2500); }
+    } catch(e) { alert('Geçersiz form dosyası.'); }
+  };
+  reader.readAsText(file);
+}
+
+// Auto-save on any change
+document.addEventListener('change', e => { if (document.getElementById('form-section')?.contains(e.target)) saveForm(); });
+document.addEventListener('input',  e => { if (document.getElementById('form-section')?.contains(e.target)) saveForm(); });
+// Restore on load
+restoreForm();
 </script>
 </body>
 </html>
