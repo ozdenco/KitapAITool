@@ -512,7 +512,8 @@ function downloadTxt() {
     `Hizmet/Ürün: ${fd.service||''}`,
     `Hedef Yaş: ${fd.age||''}`,
     `Fiyat Aralığı: ${fd.price||''}`,
-    `Öncelikler: ${fd.priorities||''}`,
+    `Mevcut müşteri özellikleri: ${fd.current||''}`,
+    `Müşteri öncelikleri: ${(fd.pains && fd.pains.length) ? fd.pains.join(', ') : ''}`,
     '','='.repeat(50),''
   ].join('\n');
   const body = allPersonasData.map(p => personaToText(p)).join('\n\n' + '─'.repeat(40) + '\n\n');
