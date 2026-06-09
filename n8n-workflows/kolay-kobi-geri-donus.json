@@ -97,11 +97,11 @@
           ]
         },
         "sendBody": true,
-        "specifyBody": "string",
+        "specifyBody": "json",
         "options": {
           "timeout": 60000
         },
-        "body": "={{ $json.apiBody }}"
+        "jsonBody": "={{ $json.apiBody }}"
       },
       "id": "minimax-api-node",
       "name": "MiniMax API",
