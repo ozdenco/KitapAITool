@@ -224,6 +224,8 @@ input:focus,select:focus{border-color:#1D9E75;box-shadow:0 0 0 3px rgba(29,158,1
         <span class="section-title" style="margin-bottom:0">Öncelikli Aksiyonlar</span>
         <div class="action-row" style="margin-bottom:0">
           <button class="btn-sm" onclick="copyResults()"><i class="ti ti-copy" aria-hidden="true"></i> Kopyala</button>
+          <button class="btn-sm" onclick="window.print()"><i class="ti ti-printer" aria-hidden="true"></i> Yazdır</button>
+          <button class="btn-sm" onclick="downloadTxt()"><i class="ti ti-file-text" aria-hidden="true"></i> TXT İndir</button>
           <button class="btn-sm" onclick="resetForm()"><i class="ti ti-refresh" aria-hidden="true"></i> Formu Boşalt</button>
         </div>
       </div>
@@ -304,6 +306,8 @@ ${name} için 0-100 arası bir görünürlük skoru ve öncelikli aksiyon listes
 - Google Business yoksa kritik eksik say
 - Sosyal medya varlığına göre değerlendir
 - Sektöre özgü değerlendirme yap (${sector})
+
+Tüm metin alanları Türkçe olsun.
 
 SADECE JSON döndür:
 {
@@ -459,6 +463,28 @@ function copyResults() {
   ].filter(Boolean).join('\n');
   const text = `İşletme Görünürlük Skoru — ${name}\n${formCtx}\n\nSkor: ${score}/100 (${level})\n${summary}\n\n${'─'.repeat(40)}\n\n${items}`;
   navigator.clipboard.writeText(text).then(() => alert('Sonuçlar panoya kopyalandı!'));
+}
+
+function downloadTxt() {
+  const name = document.getElementById('f-biz')?.value || '';
+  const sector = document.getElementById('f-sector')?.value || '';
+  const city = document.getElementById('f-city')?.value || '';
+  const scoreEl = document.getElementById('score-number');
+  const score = scoreEl ? scoreEl.textContent : '';
+  const items = [...document.querySelectorAll('#items-list .item-row')].map(row => {
+    const name = row.querySelector('.item-name')?.textContent || '';
+    const desc = row.querySelector('.item-desc')?.textContent || '';
+    return `• ${name}: ${desc}`;
+  }).join('\n');
+  const text = [
+    `İşletme: ${name}`, `Sektör: ${sector}`, `Şehir: ${city}`,
+    '', `Görünürlük Skoru: ${score}/100`, '', 'Aksiyonlar:', items
+  ].join('\n');
+  const blob = new Blob([text], {type:'text/plain;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `gorunurluk-skoru-${(name||'isletme').replace(/\s+/g,'-').toLowerCase()}.txt`;
+  a.click();
 }
 
 function resetForm() {
