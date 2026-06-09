@@ -568,14 +568,15 @@ Gün numaraları ${start+1}'den ${end}'e kadar olsun. Tam ${end-start} eleman.`;
 
 function copyAll() {
   if (!allDays.length) return;
-  const fd = lastFormData;
+  const fd = formData || {};
   const header = [
     `İşletme: ${fd.biz||''}`,
     `Sektör: ${fd.sector||''}`,
     `Hedef Kitle: ${fd.audience||''}`,
-    `Platformlar: ${fd.platforms||''}`,
+    `Platformlar: ${fd.platforms && fd.platforms.length ? fd.platforms.join(', ') : ''}`,
     `Ton: ${fd.tone||''}`,
     `Dil: ${fd.lang||''}`,
+    `Özel gün/kampanya: ${fd.special||''}`,
     '---'
   ].join('\n');
   const body = allDays.map(d => {
@@ -590,11 +591,14 @@ function copyAll() {
 
 function downloadTxt() {
   if (!allDays.length) return;
-  const fd = lastFormData;
+  const fd = formData || {};
   const header = [
     `İşletme: ${fd.biz||''}`, `Sektör: ${fd.sector||''}`,
-    `Hedef Kitle: ${fd.audience||''}`, `Platformlar: ${fd.platforms||''}`,
-    `Ton: ${fd.tone||''}`, `Dil: ${fd.lang||''}`, '', '='.repeat(50), ''
+    `Hedef Kitle: ${fd.audience||''}`,
+    `Platformlar: ${fd.platforms && fd.platforms.length ? fd.platforms.join(', ') : ''}`,
+    `Ton: ${fd.tone||''}`, `Dil: ${fd.lang||''}`,
+    `Özel gün/kampanya: ${fd.special||''}`,
+    '', '='.repeat(50), ''
   ].join('\n');
   const body = allDays.map(d => {
     const dt = d.date;

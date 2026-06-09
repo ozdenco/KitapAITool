@@ -553,6 +553,7 @@ function downloadTxt() {
     fd.service    ? `Hizmet: ${fd.service}`                      : '',
     fd.frequency  ? `Satın alma sıklığı: ${fd.frequency}`        : '',
     fd.channels && fd.channels.length ? `Takip kanalları: ${fd.channels.join(', ')}` : '',
+    fd.currentMethod ? `Mevcut yöntem: ${fd.currentMethod}`     : '',
     fd.note       ? `Not: ${fd.note}`                            : '',
   ].filter(Boolean).join('\n');
   const lines = [`=== ${lastBiz} — MÜŞTERİ TAKİP SENARYOSU ===`, formCtx, ''];

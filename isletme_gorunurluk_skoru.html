@@ -489,12 +489,12 @@ function downloadTxt() {
   const name = document.getElementById('f-biz')?.value || '';
   const sector = document.getElementById('f-sector')?.value || '';
   const city = document.getElementById('f-city')?.value || '';
-  const scoreEl = document.getElementById('score-number');
+  const scoreEl = document.getElementById('score-num');
   const score = scoreEl ? scoreEl.textContent : '';
-  const items = [...document.querySelectorAll('#items-list .item-row')].map(row => {
-    const name = row.querySelector('.item-name')?.textContent || '';
-    const desc = row.querySelector('.item-desc')?.textContent || '';
-    return `• ${name}: ${desc}`;
+  const items = [...document.querySelectorAll('#items-list .item-card')].map(card => {
+    const nm = card.querySelector('.item-name')?.textContent?.trim() || '';
+    const desc = card.querySelector('.item-desc')?.textContent?.trim() || '';
+    return `• ${nm}: ${desc}`;
   }).join('\n');
   const text = [
     `İşletme: ${name}`, `Sektör: ${sector}`, `Şehir: ${city}`,
