@@ -421,32 +421,35 @@ async function generate() {
   const msgEl = document.getElementById('loading-msg');
   const ticker = setInterval(() => { mi = (mi + 1) % loadingMsgs.length; msgEl.textContent = loadingMsgs[mi]; }, 1800);
 
+  const channelIconMap = { 'WhatsApp': 'ti-brand-whatsapp', 'E-posta': 'ti-mail', 'SMS': 'ti-message', 'Telefon': 'ti-phone' };
+
   const prompt = `Sen müşteri tutma ve CRM uzmanısın. Aşağıdaki işletme için 5 adımlık müşteri geri dönüş senaryosu hazırla.
 
 ═══ İŞLETME BİLGİLERİ ═══
-İşletme: ${biz}
+İşletme adı: ${biz}
 Sektör: ${sector}
-Hizmet/Ürün: ${service}
+Hizmet / Ürün açıklaması: ${service}
 Satın alma sıklığı: ${frequency}
-Takip kanalları: ${channels.join(', ')}
+Kullanılacak takip kanalları (YALNIZCA bunları kullan): ${channels.join(', ')}
 Mevcut takip yöntemi: ${currentMethod || 'belirtilmemiş'}
-Özel not: ${note || 'belirtilmemiş'}
+${note ? `Özel talimatlar (MUTLAKA dikkate al): ${note}` : ''}
 
-═══ SENARYO KURALLARI ═══
-1. Her adım için gün numarası, kanal ve hazır mesaj taslağı ver
-2. Mesajlar ${biz} işletmesine özgün, doğal Türkçe olsun
-3. İlk adım hizmet/satın alma sonrası 1. gün olsun
-4. Kanallar: ${channels.join(', ')} arasından seç
-5. Mesajlar kısa, samimi, emoji uygun
+═══ YAZIM KURALLARI ═══
+- Mesajlar ${biz} adına yazılmış, doğal ve samimi Türkçe olsun
+- Her mesaj hizmet/ürün açıklamasındaki sektöre ve müşteri profiline özgü olsun — genel kalıplardan kaçın
+- Varsa özel talimatlara göre ton ve içeriği ayarla (hız, fiyat, yaklaşım vb.)
+- "channel" alanı YALNIZCA şu değerlerden biri olabilir: ${channels.join(', ')}
+- Satın alma sıklığına göre takip günlerini ayarla (${frequency} sıklık için uygun aralıklar seç)
+- Her adımdaki "tip" alanı o adıma özel pratik bir ipucu olsun
 
-SADECE JSON döndür:
+SADECE JSON döndür, Türkçe karakterleri koru:
 {
   "steps": [
-    { "step": 1, "day": "1. gün", "channel": "WhatsApp", "channelIcon": "ti-brand-whatsapp", "title": "...", "message": "...", "tip": "..." },
-    { "step": 2, "day": "3. gün", "channel": "WhatsApp", "channelIcon": "ti-brand-whatsapp", "title": "...", "message": "...", "tip": "..." },
-    { "step": 3, "day": "7. gün", "channel": "WhatsApp", "channelIcon": "ti-brand-whatsapp", "title": "...", "message": "...", "tip": "..." },
-    { "step": 4, "day": "30. gün", "channel": "WhatsApp", "channelIcon": "ti-brand-whatsapp", "title": "...", "message": "...", "tip": "..." },
-    { "step": 5, "day": "60. gün", "channel": "WhatsApp", "channelIcon": "ti-brand-whatsapp", "title": "...", "message": "...", "tip": "..." }
+    { "step": 1, "day": "1. gün", "channel": "${channels[0]}", "channelIcon": "${channelIconMap[channels[0]] || 'ti-message'}", "title": "...", "message": "...", "tip": "..." },
+    { "step": 2, "day": "3. gün", "channel": "${channels[Math.min(1,channels.length-1)]}", "channelIcon": "${channelIconMap[channels[Math.min(1,channels.length-1)]] || 'ti-message'}", "title": "...", "message": "...", "tip": "..." },
+    { "step": 3, "day": "7. gün", "channel": "${channels[0]}", "channelIcon": "${channelIconMap[channels[0]] || 'ti-message'}", "title": "...", "message": "...", "tip": "..." },
+    { "step": 4, "day": "30. gün", "channel": "${channels[Math.min(1,channels.length-1)]}", "channelIcon": "${channelIconMap[channels[Math.min(1,channels.length-1)]] || 'ti-message'}", "title": "...", "message": "...", "tip": "..." },
+    { "step": 5, "day": "60. gün", "channel": "${channels[0]}", "channelIcon": "${channelIconMap[channels[0]] || 'ti-message'}", "title": "...", "message": "...", "tip": "..." }
   ],
   "ctaText": "..."
 }`;
