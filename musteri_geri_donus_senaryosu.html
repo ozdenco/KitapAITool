@@ -238,12 +238,7 @@ input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3p
       <p id="results-sub">Hazır mesaj taslakları ve zamanlama planı oluşturuldu</p>
     </div>
 
-    <div class="warn-box" id="warn-whatsapp" style="display:none">
-      <i class="ti ti-alert-triangle" aria-hidden="true"></i>
-      <span>WhatsApp toplu mesaj göndermek için Meta Business onayı gereklidir. Bireysel mesajlar için herhangi bir onay gerekmez.</span>
-    </div>
-
-    <div class="steps-list" id="steps-list"></div>
+<div class="steps-list" id="steps-list"></div>
 
     <div class="actions">
       <button class="btn-secondary" id="copy-btn" onclick="copyAll()">
@@ -355,11 +350,7 @@ function renderResults(result) {
   lastSteps = result.steps || [];
   showLoading(false);
 
-  const channels = lastSteps.map(s => s.channel);
-  const hasWhatsApp = channels.includes('WhatsApp');
-  document.getElementById('warn-whatsapp').style.display = hasWhatsApp ? 'flex' : 'none';
-
-  const list = document.getElementById('steps-list');
+const list = document.getElementById('steps-list');
   list.innerHTML = lastSteps.map(s => {
     const icon = s.channelIcon || CHANNEL_ICONS_MAP[s.channel] || 'ti-message';
     return `
