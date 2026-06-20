@@ -408,6 +408,7 @@ async function generate() {
   lastFormData = { biz, sector, service, frequency, channels, currentMethod, note };
   clearResults();
   showLoading(true);
+  window.scrollTo({ top: 0, behavior: 'smooth' });
   const genBtn = document.getElementById('gen-btn');
   if (genBtn) { genBtn.disabled = true; genBtn.style.opacity = '0.6'; }
 

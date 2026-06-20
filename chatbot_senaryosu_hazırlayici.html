@@ -511,6 +511,7 @@ async function generate() {
   lastFormData = { biz, sector, services, hours, faqs, redirectGoal, redirectLink };
   clearResults();
   showLoading(true);
+  window.scrollTo({ top: 0, behavior: 'smooth' });
   let genBtn = document.getElementById('gen-btn') || document.getElementById('analyze-btn');
   if (genBtn) { genBtn.disabled = true; genBtn.style.opacity = '0.6'; }
 

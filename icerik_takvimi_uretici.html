@@ -324,6 +324,7 @@ async function generate() {
   const genBtn = document.getElementById('gen-btn') || document.getElementById('analyze-btn');
   if (genBtn) { genBtn.disabled = true; genBtn.style.opacity = '0.6'; }
   show('loading-section');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
   let mi = 0;
   const msgEl = document.getElementById('loading-msg');
   const ticker = setInterval(() => { mi=(mi+1)%loadingMsgs.length; msgEl.textContent=loadingMsgs[mi]; }, 1800);
