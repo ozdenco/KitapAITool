@@ -408,6 +408,8 @@ async function generate() {
   lastFormData = { biz, sector, service, frequency, channels, currentMethod, note };
   clearResults();
   showLoading(true);
+  const genBtn = document.getElementById('gen-btn');
+  if (genBtn) { genBtn.disabled = true; genBtn.style.opacity = '0.6'; }
 
   let mi = 0;
   const msgEl = document.getElementById('loading-msg');
@@ -457,6 +459,7 @@ SADECE JSON döndür, Türkçe karakterleri koru:
       if (res.status === 429) {
         clearInterval(ticker);
         showLoading(false);
+        if (genBtn) { genBtn.disabled = false; genBtn.style.opacity = ''; }
         showErr('Çok fazla istek gönderildi. Lütfen biraz bekleyin.');
         return;
       }
@@ -478,12 +481,14 @@ SADECE JSON döndür, Türkçe karakterleri koru:
     saveRate(rateData);
     updateRateBar();
     clearInterval(ticker);
+    if (genBtn) { genBtn.disabled = false; genBtn.style.opacity = ''; }
     renderResults(result);
   } catch(e) {
     rateData.count++;
     saveRate(rateData);
     updateRateBar();
     clearInterval(ticker);
+    if (genBtn) { genBtn.disabled = false; genBtn.style.opacity = ''; }
     renderResults(fallback(lastBiz, getCheckedChannels()));
   }
 }
