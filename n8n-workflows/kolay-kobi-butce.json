@@ -152,7 +152,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const data = $input.first().json;\nconst body = JSON.stringify({\n  model: 'MiniMax-M3',\n  max_completion_tokens: 3000,\n  messages: [{ role: 'user', content: data.prompt || '' }]\n});\nreturn [{ json: { ...data, apiBody: body } }];"
+        "jsCode": "const data = $input.first().json;\nconst body = JSON.stringify({\n  model: 'MiniMax-M3',\n  max_completion_tokens: 4000,\n  messages: [{ role: 'user', content: data.prompt || '' }]\n});\nreturn [{ json: { ...data, apiBody: body } }];"
       },
       "id": "build-body-node",
       "name": "Build Request Body",
