@@ -387,7 +387,7 @@ Tam olarak 30 eleman olsun. Tekrar eden içeriklerden kaçın, çeşitlilik sağ
     const text = N8N_PROXY
       ? (data.content || []).map(b => b.text || '').join('')
       : (data.choices?.[0]?.message?.content || '');
-    const clean = text.replace(/```json|```/g, '').trim();
+    const s = text.indexOf('{'); const e = text.lastIndexOf('}'); const clean = (s !== -1 && e !== -1) ? text.slice(s, e + 1) : text.replace(/```json|```/g, '').trim();
     const result = JSON.parse(clean);
     if (genBtn) { genBtn.disabled = false; genBtn.style.opacity = ''; }
     renderResults(result);
@@ -551,7 +551,7 @@ Gün numaraları ${start+1}'den ${end}'e kadar olsun. Tam ${end-start} eleman.`;
     const text = N8N_PROXY
       ? (data.content || []).map(b => b.text || '').join('')
       : (data.choices?.[0]?.message?.content || '');
-    const clean = text.replace(/```json|```/g, '').trim();
+    const s = text.indexOf('{'); const e = text.lastIndexOf('}'); const clean = (s !== -1 && e !== -1) ? text.slice(s, e + 1) : text.replace(/```json|```/g, '').trim();
     const result = JSON.parse(clean);
     const startDate = allDays[0].date;
     result.days.forEach((d, i) => {

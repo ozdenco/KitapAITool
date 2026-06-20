@@ -114,7 +114,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// MiniMax OpenAI-compatible response → Anthropic-style dönüşümü\n// HTML dosyaları data.content[0].text formatını bekliyor\nconst data = $input.first().json;\nlet text = data.choices?.[0]?.message?.content || '';\ntext = text.replace(/<think>[\\s\\S]*?<\\/think>/g, '').trim();\nreturn [{ json: { content: [{ type: 'text', text }] } }];"
+        "jsCode": "const data = $input.first().json;\nlet text = data.choices?.[0]?.message?.content || '';\n// <think> blogu icinde </think> olabilir; regex yerine ilk { den parse et\nconst jsonStart = text.indexOf('{');\nconst jsonEnd = text.lastIndexOf('}');\nif (jsonStart !== -1 && jsonEnd !== -1) text = text.slice(jsonStart, jsonEnd + 1);\nreturn [{ json: { content: [{ type: 'text', text }] } }];"
       },
       "id": "response-transform",
       "name": "Response Transform",

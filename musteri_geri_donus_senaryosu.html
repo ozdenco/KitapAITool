@@ -476,7 +476,7 @@ SADECE JSON döndür, Türkçe karakterleri koru:
       ? (data.content || []).map(b => b.text || '').join('')
       : (data.choices?.[0]?.message?.content || '');
     console.log('Parsed text (ilk 400 karakter):', text.slice(0, 400));
-    const clean = text.replace(/```json|```/g, '').trim();
+    const s = text.indexOf('{'); const e = text.lastIndexOf('}'); const clean = (s !== -1 && e !== -1) ? text.slice(s, e + 1) : text.replace(/```json|```/g, '').trim();
     const result = JSON.parse(clean);
 
     rateData.count++;
