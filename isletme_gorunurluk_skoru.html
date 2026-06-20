@@ -329,23 +329,23 @@ ${name} için 0-100 arası bir görünürlük skoru ve öncelikli aksiyon listes
 
 Tüm metin alanları Türkçe olsun.
 
-SADECE JSON döndür:
+SADECE JSON dondur:
 {
-  "score": <0-100 arası tam sayı>,
-  "level": "<Başlangıç|Gelişmekte|Orta|İyi|Mükemmel>",
-  "summary": "<${name} için 1-2 cümle özet>",
+  "score": [0-100 arasi tam sayi],
+  "level": "[Baslangic|Gelismekte|Orta|Iyi|Mukemmel]",
+  "summary": "[${name} icin 1-2 cumle ozet]",
   "items": [
     {
-      "status": "<red|amber|green>",
-      "icon": "<tabler icon adı, örn: ti-world>",
-      "name": "<kısa başlık>",
-      "desc": "<somut 1-2 cümle açıklama>",
-      "badge": "<Kritik|İyileştir|Güçlü>"
+      "status": "[red|amber|green]",
+      "icon": "[tabler icon adi, ornek: ti-world]",
+      "name": "[kisa baslik]",
+      "desc": "[somut 1-2 cumle aciklama]",
+      "badge": "[Kritik|Iyilestir|Guclu]"
     }
   ],
-  "ctaText": "<${name} için kişisel 1 cümle>"
+  "ctaText": "[${name} icin kisisel 1 cumle]"
 }
-6-8 item olsun. Önce red, sonra amber, sonra green.`;
+6-8 item olsun. Once red, sonra amber, sonra green. Tum metin alanlari Turkce olsun.`;
 
   try {
     let data;
@@ -388,27 +388,28 @@ SADECE JSON döndür:
 }
 
 function generateFallback(name, sector, platforms, web) {
-  const hasWeb = !!web;
-  const hasGbp = platforms.includes('Google Business');
-  const hasSocial = platforms.some(p => ['Instagram','Facebook','LinkedIn'].includes(p));
-  let score = 20;
+  var hasWeb = !!web;
+  var hasGbp = platforms.includes("Google Business");
+  var hasSocial = platforms.some(function(p) { return ["Instagram","Facebook","LinkedIn"].includes(p); });
+  var score = 20;
   if (hasWeb) score += 25;
   if (hasGbp) score += 25;
   if (hasSocial) score += 20;
   score = Math.min(score + Math.floor(Math.random() * 10), 100);
+  var level = score < 30 ? "Baslangic" : score < 50 ? "Gelismekte" : score < 70 ? "Orta" : "Iyi";
+  var items = [];
+  if (!hasGbp) items.push({ status:"red",   icon:"ti-map-pin",        name:"Google Business Profile eksik", desc:"Isletmenizi Google Haritalar'a ekleyin. Yerel aramalarda cok daha fazla gorunurluk saglar.", badge:"Kritik" });
+  if (!hasWeb) items.push({ status:"red",   icon:"ti-world",           name:"Web sitesi yok",                desc:"Basit bir tek sayfali site bile guvenilirligi artirir ve Google aramalarinda bulunmanizi saglar.", badge:"Kritik" });
+  if (!hasSocial) items.push({ status:"amber", icon:"ti-brand-instagram", name:"Sosyal medya varligi zayif",   desc:"Ektorunuze uygun en az bir platformda duzenli paylasim marka bilinirligini artirir.", badge:"Iyilestir" });
+  items.push({ status:"amber", icon:"ti-star",  name:"Musteri yorumlari", desc:"Google ve sosyal medyada yorum toplamak arama siralamasini ve guveni dogrudan etkiler.", badge:"Iyilestir" });
+  if (hasWeb) items.push({ status:"green", icon:"ti-world",   name:"Web sitesi mevcut",     desc:"Dijital varliginizin temeli hazir. SEO optimizasyonu ile siralamay iyilestirin.", badge:"Guclu" });
+  if (hasGbp) items.push({ status:"green", icon:"ti-map-pin", name:"Google Business aktif", desc:"Yerel aramalar icin kritik adimi tamamladiniz. Profil fotograflari ile guclendirin.", badge:"Guclu" });
   return {
-    score,
-    level: score < 30 ? 'Başlangıç' : score < 50 ? 'Gelişmekte' : score < 70 ? 'Orta' : 'İyi',
-    summary: `${name} için dijital görünürlük analizi tamamlandı. Birkaç kritik alanda iyileştirme yapılması durumunda müşteri kazanım hızı önemli ölçüde artabilir.`,
-    items: [
-      !hasGbp && { status:'red',   icon:'ti-map-pin',        name:'Google Business Profile eksik', desc:'İşletmenizi Google Haritalar\'a ekleyin. Yerel aramalarda %70 daha fazla görünürlük sağlar.', badge:'Kritik' },
-      !hasWeb && { status:'red',   icon:'ti-world',           name:'Web sitesi yok',                desc:'Basit bir tek sayfalık site bile güvenilirliği artırır ve Google aramalarında bulunmanızı sağlar.', badge:'Kritik' },
-      !hasSocial && { status:'amber', icon:'ti-brand-instagram', name:'Sosyal medya varlığı zayıf',   desc:'Sektörünüze uygun en az bir platformda düzenli paylaşım marka bilinirliğini artırır.', badge:'İyileştir' },
-      { status:'amber', icon:'ti-star',  name:'Müşteri yorumları', desc:'Google ve sosyal medyada yorum toplamak arama sıralamasını ve güveni doğrudan etkiler.', badge:'İyileştir' },
-      hasWeb && { status:'green', icon:'ti-world',    name:'Web sitesi mevcut', desc:'Dijital varlığınızın temeli hazır. SEO optimizasyonu ile sıralamayı iyileştirebilirsiniz.', badge:'Güçlü' },
-      hasGbp && { status:'green', icon:'ti-map-pin',  name:'Google Business aktif', desc:'Yerel aramalar için kritik adımı tamamladınız. Profil fotoğrafları ile güçlendirin.', badge:'Güçlü' },
-    ].filter(Boolean),
-    ctaText: `${name} için kişiselleştirilmiş bir dijital görünürlük planı hazırlayalım.`
+    score: score,
+    level: level,
+    summary: name + " icin dijital gorunurluk analizi tamamlandi.",
+    items: items,
+    ctaText: name + " icin kisilestirilmis bir dijital gorunurluk plani hazirlayin."
   };
 }
 
@@ -552,7 +553,7 @@ function resetForm() {
 
     const notice = document.createElement('div');
     notice.style.cssText = 'background:#F0FAF6;border:0.5px solid #9FE1CB;border-radius:8px;padding:10px 14px;font-size:13px;color:#085041;display:flex;align-items:center;gap:8px;margin-bottom:1rem';
-    notice.innerHTML = '<i class="ti ti-circle-check" aria-hidden="true"></i> Form, launcher\'dan aktarılan verilerle dolduruldu.';
+    notice.innerHTML = "<i class=\"ti ti-circle-check\" aria-hidden=\"true\"></i> Form, launcher'dan aktarilan verilerle dolduruldu.";
     const fc = document.querySelector('.form-card');
     fc.insertBefore(notice, fc.querySelector('.subtitle').nextSibling);
     setTimeout(() => notice.remove(), 5000);
