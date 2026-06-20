@@ -475,9 +475,12 @@ SADECE JSON döndür, Türkçe karakterleri koru:
       });
     }
     const data = await res.json();
+    console.log('n8n HTTP status:', res.status);
+    console.log('n8n response:', JSON.stringify(data).slice(0, 800));
     const text = N8N_PROXY
       ? (data.content || []).map(b => b.text || '').join('')
       : (data.choices?.[0]?.message?.content || '');
+    console.log('Parsed text (ilk 400 karakter):', text.slice(0, 400));
     const clean = text.replace(/```json|```/g, '').trim();
     const result = JSON.parse(clean);
 
