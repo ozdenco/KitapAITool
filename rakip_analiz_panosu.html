@@ -365,7 +365,7 @@ td:first-child{font-weight:500;color:#6B6963;font-size:12px}
       <i class="ti ti-telescope" aria-hidden="true"></i> Rakip Analizi Başlat
     </button>
 
-    <button class="btn-secondary" onclick="resetForm()" style="margin-top:10px;width:100%">
+    <button type="button" id="reset-btn" class="btn-secondary" onclick="resetForm()" style="margin-top:10px;width:100%">
       <i class="ti ti-eraser" aria-hidden="true"></i> Formu Boşalt
     </button>
     </div>
@@ -690,9 +690,11 @@ async function generate() {
   lastMyData = { biz, sector, myWeb, myPlatforms, myPrice, strengths };
   clearResults();
   showLoading(true);
-  window.scrollTo({ top: 0, behavior: 'smooth' });
+  document.getElementById('loading-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
   const genBtn = document.getElementById('gen-btn');
   if (genBtn) { genBtn.disabled = true; genBtn.style.opacity = '0.6'; }
+  const resetBtn = document.getElementById('reset-btn');
+  if (resetBtn) { resetBtn.disabled = true; resetBtn.style.opacity = '0.6'; }
 
   let mi = 0;
   const msgEl = document.getElementById('loading-msg');
@@ -768,6 +770,7 @@ SADECE JSON döndür:
     updateRateBar();
     clearInterval(ticker);
     if (genBtn) { genBtn.disabled = false; genBtn.style.opacity = ''; }
+    if (resetBtn) { resetBtn.disabled = false; resetBtn.style.opacity = ''; }
     renderResults(result, { biz, myPlatforms, myPrice, myWeb });
   } catch(e) {
     rateData.count++;
@@ -775,6 +778,7 @@ SADECE JSON döndür:
     updateRateBar();
     clearInterval(ticker);
     if (genBtn) { genBtn.disabled = false; genBtn.style.opacity = ''; }
+    if (resetBtn) { resetBtn.disabled = false; resetBtn.style.opacity = ''; }
     renderResults(fallback(biz, comps), { biz, myPlatforms, myPrice, myWeb });
   }
 }

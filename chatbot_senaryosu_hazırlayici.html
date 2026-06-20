@@ -230,7 +230,7 @@ input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3p
       <i class="ti ti-robot" aria-hidden="true"></i> Chatbot Senaryosu Oluştur
     </button>
 
-    <button class="btn-secondary" onclick="resetForm()" style="margin-top:10px;width:100%">
+    <button type="button" id="reset-btn" class="btn-secondary" onclick="resetForm()" style="margin-top:10px;width:100%">
       <i class="ti ti-eraser" aria-hidden="true"></i> Formu Boşalt
     </button>
     </div>
@@ -511,9 +511,11 @@ async function generate() {
   lastFormData = { biz, sector, services, hours, faqs, redirectGoal, redirectLink };
   clearResults();
   showLoading(true);
-  window.scrollTo({ top: 0, behavior: 'smooth' });
+  document.getElementById('loading-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
   let genBtn = document.getElementById('gen-btn') || document.getElementById('analyze-btn');
   if (genBtn) { genBtn.disabled = true; genBtn.style.opacity = '0.6'; }
+  const resetBtn = document.getElementById('reset-btn');
+  if (resetBtn) { resetBtn.disabled = true; resetBtn.style.opacity = '0.6'; }
 
   let mi = 0;
   const msgEl = document.getElementById('loading-msg');
@@ -563,6 +565,7 @@ SADECE JSON döndür:
         showLoading(false);
         showErr('Çok fazla istek gönderildi. Lütfen biraz bekleyin.');
         if (genBtn) { genBtn.disabled = false; genBtn.style.opacity = ''; }
+        if (resetBtn) { resetBtn.disabled = false; resetBtn.style.opacity = ''; }
         return;
       }
     } else {
@@ -585,6 +588,7 @@ SADECE JSON döndür:
     clearInterval(ticker);
     renderResults(result);
     if (genBtn) { genBtn.disabled = false; genBtn.style.opacity = ''; }
+    if (resetBtn) { resetBtn.disabled = false; resetBtn.style.opacity = ''; }
   } catch(e) {
     rateData.count++;
     saveRate(rateData);
@@ -592,6 +596,7 @@ SADECE JSON döndür:
     clearInterval(ticker);
     renderResults(fallback(lastBiz, document.getElementById('f-redirect-goal').value, document.getElementById('f-redirect-link').value.trim()));
     if (genBtn) { genBtn.disabled = false; genBtn.style.opacity = ''; }
+    if (resetBtn) { resetBtn.disabled = false; resetBtn.style.opacity = ''; }
   }
 }
 
