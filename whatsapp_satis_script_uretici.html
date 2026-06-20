@@ -375,6 +375,8 @@ async function generate() {
 
   clearResults();
   showLoading(true);
+  const genBtn = document.getElementById('gen-btn') || document.getElementById('analyze-btn') || document.getElementById('generate-btn');
+  if (genBtn) { genBtn.disabled = true; genBtn.style.opacity = '0.6'; }
   document.getElementById('loading-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
   let mi = 0;
   const msgEl = document.getElementById('loading-msg');
@@ -433,6 +435,7 @@ SADECE JSON döndür, başka hiçbir şey yazma:
         showLoading(false);
         err.textContent = 'Sunucu tarafında günlük limit doldu. Lütfen yarın tekrar deneyin.';
         err.style.display = 'block';
+        if (genBtn) { genBtn.disabled = false; genBtn.style.opacity = ''; }
         return;
       }
       data = await res.json();
@@ -462,11 +465,13 @@ SADECE JSON döndür, başka hiçbir şey yazma:
       : (data.choices?.[0]?.message?.content || '');
     const clean = text.replace(/```json|```/g, '').trim();
     const result = JSON.parse(clean);
+    if (genBtn) { genBtn.disabled = false; genBtn.style.opacity = ''; }
     renderResults(result, biz);
   } catch(e) {
     clearInterval(ticker);
     incrementUsage();
     updateRateBar();
+    if (genBtn) { genBtn.disabled = false; genBtn.style.opacity = ''; }
     renderResults(fallback(biz, sector, objections, service, price, target, advantage));
   }
 }

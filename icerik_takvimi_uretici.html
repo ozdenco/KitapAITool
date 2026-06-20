@@ -210,7 +210,7 @@ input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3p
     </span>
   </div>
 
-  <button type="button" class="btn-primary" onclick="generate()">
+  <button type="button" class="btn-primary" id="gen-btn" onclick="generate()">
       <i class="ti ti-calendar" aria-hidden="true"></i> Takvimi Oluştur
     </button>
     </div>
@@ -321,6 +321,8 @@ async function generate() {
 
   formData = { biz, sector, audience, platforms, tone, lang, special };
 
+  const genBtn = document.getElementById('gen-btn') || document.getElementById('analyze-btn');
+  if (genBtn) { genBtn.disabled = true; genBtn.style.opacity = '0.6'; }
   show('loading-section');
   let mi = 0;
   const msgEl = document.getElementById('loading-msg');
@@ -374,6 +376,7 @@ Tam olarak 30 eleman olsun. Tekrar eden içeriklerden kaçın, çeşitlilik sağ
         show('form-section');
         document.getElementById('err').textContent = 'Sunucu tarafında günlük limit doldu. Lütfen yarın tekrar deneyin.';
         document.getElementById('err').style.display = 'block';
+        if (genBtn) { genBtn.disabled = false; genBtn.style.opacity = ''; }
         return;
       }
     } else {
@@ -390,9 +393,11 @@ Tam olarak 30 eleman olsun. Tekrar eden içeriklerden kaçın, çeşitlilik sağ
       : (data.choices?.[0]?.message?.content || '');
     const clean = text.replace(/```json|```/g, '').trim();
     const result = JSON.parse(clean);
+    if (genBtn) { genBtn.disabled = false; genBtn.style.opacity = ''; }
     renderResults(result);
   } catch(e) {
     clearInterval(ticker);
+    if (genBtn) { genBtn.disabled = false; genBtn.style.opacity = ''; }
     renderResults(fallback(biz, sector, platforms));
   }
 }

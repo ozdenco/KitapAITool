@@ -210,7 +210,7 @@ input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3p
     </span>
   </div>
 
-  <button type="button" class="btn-primary" onclick="generate()">
+  <button type="button" class="btn-primary" id="gen-btn" onclick="generate()">
       <i class="ti ti-users" aria-hidden="true"></i> Personaları Oluştur
     </button>
     </div>
@@ -312,6 +312,8 @@ async function generate() {
   err.style.display='none';
 
   lastFormData = { biz, sector, city, service, age, price, current, pains };
+  const genBtn = document.getElementById('gen-btn') || document.getElementById('analyze-btn');
+  if (genBtn) { genBtn.disabled = true; genBtn.style.opacity = '0.6'; }
   show('loading-section');
   let mi = 0;
   const msgEl = document.getElementById('loading-msg');
@@ -363,6 +365,7 @@ SADECE JSON döndür, başka hiçbir şey yazma:
         show('form-section');
         document.getElementById('err').textContent = 'Sunucu tarafında günlük limit doldu. Lütfen yarın tekrar deneyin.';
         document.getElementById('err').style.display = 'block';
+        if (genBtn) { genBtn.disabled = false; genBtn.style.opacity = ''; }
         return;
       }
     } else {
@@ -379,9 +382,11 @@ SADECE JSON döndür, başka hiçbir şey yazma:
       : (data.choices?.[0]?.message?.content || '');
     const clean = text.replace(/```json|```/g,'').trim();
     const result = JSON.parse(clean);
+    if (genBtn) { genBtn.disabled = false; genBtn.style.opacity = ''; }
     renderPersonas(result, biz);
   } catch(e) {
     clearInterval(ticker);
+    if (genBtn) { genBtn.disabled = false; genBtn.style.opacity = ''; }
     renderPersonas(fallback(biz,sector,pains), biz);
   }
 }

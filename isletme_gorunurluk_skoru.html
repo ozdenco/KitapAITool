@@ -302,6 +302,8 @@ async function startAnalysis() {
 
   showResults(false);
   showLoading(true);
+  const genBtn = document.getElementById('gen-btn') || document.getElementById('analyze-btn');
+  if (genBtn) { genBtn.disabled = true; genBtn.style.opacity = '0.6'; }
   document.getElementById('loading-section').scrollIntoView({ behavior:'smooth', block:'start' });
 
   let mi = 0;
@@ -361,6 +363,7 @@ SADECE JSON dondur:
         showLoading(false);
         err.textContent = 'Sunucu tarafında günlük limit doldu. Lütfen yarın tekrar deneyin.';
         err.style.display = 'block';
+        if (genBtn) { genBtn.disabled = false; genBtn.style.opacity = ''; }
         return;
       }
       data = await res.json();
@@ -381,9 +384,11 @@ SADECE JSON dondur:
       ? (data.content || []).map(b => b.text || '').join('')
       : (data.choices?.[0]?.message?.content || '');
     const clean = text.replace(/```json|```/g, '').trim();
+    if (genBtn) { genBtn.disabled = false; genBtn.style.opacity = ''; }
     renderResult(JSON.parse(clean), name, sector, platforms, web);
   } catch(e) {
     clearInterval(ticker);
+    if (genBtn) { genBtn.disabled = false; genBtn.style.opacity = ''; }
     renderResult(generateFallback(name, sector, platforms, web), name, sector, platforms, web);
   }
 }

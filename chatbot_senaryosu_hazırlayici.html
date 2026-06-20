@@ -511,6 +511,8 @@ async function generate() {
   lastFormData = { biz, sector, services, hours, faqs, redirectGoal, redirectLink };
   clearResults();
   showLoading(true);
+  let genBtn = document.getElementById('gen-btn') || document.getElementById('analyze-btn');
+  if (genBtn) { genBtn.disabled = true; genBtn.style.opacity = '0.6'; }
 
   let mi = 0;
   const msgEl = document.getElementById('loading-msg');
@@ -559,6 +561,7 @@ SADECE JSON döndür:
         clearInterval(ticker);
         showLoading(false);
         showErr('Çok fazla istek gönderildi. Lütfen biraz bekleyin.');
+        if (genBtn) { genBtn.disabled = false; genBtn.style.opacity = ''; }
         return;
       }
     } else {
@@ -580,12 +583,14 @@ SADECE JSON döndür:
     updateRateBar();
     clearInterval(ticker);
     renderResults(result);
+    if (genBtn) { genBtn.disabled = false; genBtn.style.opacity = ''; }
   } catch(e) {
     rateData.count++;
     saveRate(rateData);
     updateRateBar();
     clearInterval(ticker);
     renderResults(fallback(lastBiz, document.getElementById('f-redirect-goal').value, document.getElementById('f-redirect-link').value.trim()));
+    if (genBtn) { genBtn.disabled = false; genBtn.style.opacity = ''; }
   }
 }
 
