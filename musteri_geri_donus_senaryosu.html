@@ -484,6 +484,7 @@ SADECE JSON döndür, Türkçe karakterleri koru:
     if (genBtn) { genBtn.disabled = false; genBtn.style.opacity = ''; }
     renderResults(result);
   } catch(e) {
+    console.error('Geri donus hata:', e);
     rateData.count++;
     saveRate(rateData);
     updateRateBar();
