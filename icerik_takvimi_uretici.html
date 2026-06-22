@@ -158,6 +158,19 @@ input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3p
       </div>
     </div>
 
+    <div class="field">
+      <label>Haftanın hangi günleri paylaşım yapılsın? <span style="color:#A32D2D">*</span></label>
+      <div class="check-group" id="weekday-group" style="grid-template-columns:repeat(7,1fr)">
+        <label class="check-item"><input type="checkbox" value="1"> Pzt</label>
+        <label class="check-item"><input type="checkbox" value="2"> Sal</label>
+        <label class="check-item"><input type="checkbox" value="3"> Çar</label>
+        <label class="check-item"><input type="checkbox" value="4"> Per</label>
+        <label class="check-item"><input type="checkbox" value="5"> Cum</label>
+        <label class="check-item"><input type="checkbox" value="6"> Cmt</label>
+        <label class="check-item"><input type="checkbox" value="0"> Paz</label>
+      </div>
+    </div>
+
     <div class="row2">
       <div class="field">
         <label>Marka tonu</label>
@@ -311,10 +324,21 @@ async function generate() {
   const special = document.getElementById('f-special').value.trim();
   const err = document.getElementById('err');
 
-  if (!biz || !sector || platforms.length === 0) { err.style.display='block'; return; }
+  const weekdays = [...document.querySelectorAll('#weekday-group input:checked')].map(el => parseInt(el.value));
+  if (!biz || !sector || platforms.length === 0 || weekdays.length === 0) { err.style.display='block'; err.textContent='Lütfen işletme adı, sektör, en az bir platform ve en az bir gün seçin.'; return; }
   err.style.display = 'none';
 
-  formData = { biz, sector, audience, platforms, tone, lang, special };
+  // Seçilen haftanın günlerine göre 30 gün içindeki paylaşım günlerini hesapla
+  const startInput = document.getElementById('f-start').value;
+  const startDate = startInput ? new Date(startInput + 'T00:00:00') : new Date();
+  const postingDays = [];
+  for (let i = 0; i < 30; i++) {
+    const d = new Date(startDate);
+    d.setDate(d.getDate() + i);
+    if (weekdays.includes(d.getDay())) postingDays.push(i + 1);
+  }
+
+  formData = { biz, sector, audience, platforms, tone, lang, special, weekdays, postingDays, startDate: startDate.toISOString() };
 
   const genBtn = document.getElementById('gen-btn') || document.getElementById('analyze-btn');
   if (genBtn) { genBtn.disabled = true; genBtn.style.opacity = '0.6'; }
@@ -325,7 +349,11 @@ async function generate() {
   const ticker = setInterval(() => { mi=(mi+1)%loadingMsgs.length; msgEl.textContent=loadingMsgs[mi]; }, 1800);
 
   const platformList = platforms.join(', ');
-  const prompt = `Sen bir sosyal medya stratejisti ve içerik uzmanısın. Aşağıdaki işletme için 30 günlük sosyal medya içerik takvimi oluştur.
+  const specialNote = special
+    ? `Özel günler/kampanyalar: ${special}\n⚠️ Bu özel günlere denk gelen takvim günlerinde isSpecial:true yap ve draft metnini doğrudan o etkinlik/kampanyaya göre yaz. Özel günleri kesinlikle atlatma.`
+    : 'Özel günler/kampanyalar: Yok';
+
+  const prompt = `Sen bir sosyal medya stratejisti ve içerik uzmanısın. Aşağıdaki işletme için sosyal medya içerik takvimi oluştur.
 
 İşletme Bilgileri:
 - İşletme: ${biz}
@@ -334,7 +362,10 @@ async function generate() {
 - Platformlar: ${platformList}
 - Marka tonu: ${tone || 'Profesyonel'}
 - Dil: ${lang}
-- Özel günler/kampanyalar: ${special || 'Yok'}
+- ${specialNote}
+
+YALNIZCA şu günler için içerik üret (toplam ${postingDays.length} gün): ${postingDays.join(', ')}
+Diğer günlere kesinlikle içerik yazma. "days" dizisi tam olarak ${postingDays.length} eleman içersin.
 
 Her gün için şunları üret:
 - topic: Kısa başlık (maks 8 kelime)
@@ -343,21 +374,15 @@ Her gün için şunları üret:
 - draft: 1-2 cümlelik hazır taslak metin (${lang} dilinde, marka tonuna uygun, kullanıma hazır)
 - isSpecial: true/false (özel gün/kampanya ise true)
 
+Tekrar eden içeriklerden kaçın, çeşitlilik sağla. Formatlarda dengeli dağılım yap.
+
 SADECE JSON döndür, açıklama yazma:
 {
   "days": [
-    {
-      "day": 1,
-      "topic": "...",
-      "format": "...",
-      "platform": "...",
-      "draft": "...",
-      "isSpecial": false
-    }
+    { "day": ${postingDays[0]}, "topic": "...", "format": "...", "platform": "...", "draft": "...", "isSpecial": false }
   ],
   "ctaText": "..."
-}
-Tam olarak 30 eleman olsun. Tekrar eden içeriklerden kaçın, çeşitlilik sağla. Formatlarda Reels, Hikaye, Carousel, Statik, Video, Blog arasında dengeli dağılım yap.`;
+}`;
 
   try {
     let res;
@@ -659,6 +684,7 @@ function restart() {
   document.getElementById('f-special').value = '';
   document.getElementById('f-start').value = '';
   document.querySelectorAll('#platform-group input').forEach(el => el.checked = false);
+  document.querySelectorAll('#weekday-group input').forEach(el => el.checked = false);
   allDays = [];
   show('form-section');
 }
