@@ -276,6 +276,11 @@ input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3p
             <span id="test-bot-name">Chatbot</span>
           </div>
           <div class="test-messages" id="test-messages"></div>
+          <div style="display:flex;gap:6px;padding:.5rem .75rem;background:#f7f6f2;border-top:0.5px solid #E2E0D8;flex-wrap:wrap">
+            <button onclick="addTestMessage(currentScenario&&currentScenario.closing||'Kapanış mesajı yok','bot')" style="font-size:11px;padding:4px 10px;border:0.5px solid #D3D1C7;border-radius:6px;background:#fff;cursor:pointer;color:#1C1B19"><i class="ti ti-door-exit"></i> Kapanışı Test Et</button>
+            <button onclick="addTestMessage(currentScenario&&currentScenario.offHours||'Mesai dışı mesajı yok','bot')" style="font-size:11px;padding:4px 10px;border:0.5px solid #D3D1C7;border-radius:6px;background:#fff;cursor:pointer;color:#1C1B19"><i class="ti ti-moon"></i> Mesai Dışını Test Et</button>
+            <button onclick="addTestMessage(currentScenario&&currentScenario.fallback||'Fallback mesajı yok','bot')" style="font-size:11px;padding:4px 10px;border:0.5px solid #D3D1C7;border-radius:6px;background:#fff;cursor:pointer;color:#1C1B19"><i class="ti ti-question-mark"></i> Fallback'i Test Et</button>
+          </div>
           <div class="test-input-row">
             <input type="text" id="test-input" placeholder="Mesajınızı yazın..." onkeydown="if(event.key==='Enter')sendTestMsg()">
             <button class="test-send-btn" onclick="sendTestMsg()">
@@ -283,7 +288,7 @@ input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3p
             </button>
           </div>
         </div>
-        <p style="font-size:12px;color:#6B6963;padding:.75rem 1.25rem">Bu test penceresi oluşturulan senaryoya göre statik eşleştirme yapar. Gerçek chatbot entegrasyonu için Kolay KOBİ ile görüşün.</p>
+        <p style="font-size:12px;color:#6B6963;padding:.75rem 1.25rem">Test butonlarıyla kapanış, mesai dışı ve fallback mesajlarını doğrudan görebilirsiniz. Sohbette "teşekkür" veya "tamam" yazarsanız kapanış mesajı tetiklenir.</p>
       </div>
     </div>
 
@@ -428,6 +433,8 @@ function renderResults(result) {
         <div class="balloon">${escHtml(faq.answer)}</div>
         ${faq.followup ? `<div class="flow-arrow">↓ devamında</div><div class="balloon grey">${escHtml(faq.followup)}</div>` : ''}
         ${(faq.keywords && faq.keywords.length) ? `<div class="keywords-row">${faq.keywords.map(k => `<span class="kw-tag">${escHtml(k)}</span>`).join('')}</div>` : ''}
+        <div class="flow-arrow" style="margin-top:8px">↓ konuşma kapanışa yönlendirilir</div>
+        <div style="font-size:12px;color:#6B6963;background:#F0FAF6;border-radius:8px;padding:7px 10px;display:flex;align-items:center;gap:6px"><i class="ti ti-door-exit" style="color:#1D9E75"></i> Kapanış / Yönlendirme mesajı gönderilir</div>
       </div>
     </div>
   `).join('');
@@ -448,10 +455,33 @@ function addTestMessage(text, type) {
   container.scrollTop = container.scrollHeight;
 }
 
+function isOffHours() {
+  const now = new Date();
+  const h = now.getHours();
+  const day = now.getDay(); // 0=Paz, 6=Cmt
+  return day === 0 || day === 6 || h < 9 || h >= 18;
+}
+
+const CLOSING_TRIGGERS = ['teşekkür', 'tamam', 'anladım', 'görüşürüz', 'iyiyi', 'harika', 'süper', 'mükemmel', 'tamamdır', 'iyi günler', 'hoşça kal', 'güle güle'];
+const OFFHOURS_TRIGGERS = ['şu an mevcut', 'müsait misiniz', 'açık mısınız', 'mesai', 'hafta sonu', 'akşam', 'gece'];
+
 function findBotResponse(userText) {
   if (!currentScenario) return 'Senaryo yüklenmedi.';
   const lower = userText.toLowerCase();
+
+  // Mesai dışı kontrolü
+  if (OFFHOURS_TRIGGERS.some(t => lower.includes(t)) || isOffHours()) {
+    return currentScenario.offHours || 'Şu an mesai saatleri dışındayız. En kısa sürede geri dönüş yapacağız.';
+  }
+
+  // Kapanış tetikleyicileri
+  if (CLOSING_TRIGGERS.some(t => lower.includes(t))) {
+    return currentScenario.closing || 'Yardımcı olabildiysem ne mutlu! Başka bir sorunuz olursa buradayız.';
+  }
+
   if (!currentScenario.faqs) return currentScenario.fallback || 'Anlayamadım, lütfen tekrar deneyin.';
+
+  // FAQ keyword eşleşmesi
   let best = null;
   let bestCount = 0;
   for (const faq of currentScenario.faqs) {
@@ -463,6 +493,8 @@ function findBotResponse(userText) {
   if (best && bestCount > 0) {
     let resp = best.answer;
     if (best.followup) resp += '\n\n' + best.followup;
+    // Kapanış mesajını sona ekle
+    if (currentScenario.closing) resp += '\n\n' + currentScenario.closing;
     return resp;
   }
   return currentScenario.fallback || 'Anlayamadım, lütfen tekrar deneyin.';
