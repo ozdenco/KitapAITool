@@ -277,9 +277,9 @@ input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3p
           </div>
           <div class="test-messages" id="test-messages"></div>
           <div style="display:flex;gap:6px;padding:.5rem .75rem;background:#f7f6f2;border-top:0.5px solid #E2E0D8;flex-wrap:wrap">
-            <button onclick="addTestMessage(currentScenario&&currentScenario.closing||'Kapanış mesajı yok','bot')" style="font-size:11px;padding:4px 10px;border:0.5px solid #D3D1C7;border-radius:6px;background:#fff;cursor:pointer;color:#1C1B19"><i class="ti ti-door-exit"></i> Kapanışı Test Et</button>
-            <button onclick="addTestMessage(currentScenario&&currentScenario.offHours||'Mesai dışı mesajı yok','bot')" style="font-size:11px;padding:4px 10px;border:0.5px solid #D3D1C7;border-radius:6px;background:#fff;cursor:pointer;color:#1C1B19"><i class="ti ti-moon"></i> Mesai Dışını Test Et</button>
-            <button onclick="addTestMessage(currentScenario&&currentScenario.fallback||'Fallback mesajı yok','bot')" style="font-size:11px;padding:4px 10px;border:0.5px solid #D3D1C7;border-radius:6px;background:#fff;cursor:pointer;color:#1C1B19"><i class="ti ti-question-mark"></i> Fallback'i Test Et</button>
+            <button onclick="addTestMessage(currentScenario?.closing||'Kapanış mesajı yok','bot')" style="font-size:11px;padding:4px 10px;border:0.5px solid #D3D1C7;border-radius:6px;background:#fff;cursor:pointer;color:#1C1B19"><i class="ti ti-door-exit"></i> Kapanışı Test Et</button>
+            <button onclick="addTestMessage(currentScenario?.offHours||'Mesai dışı mesajı yok','bot')" style="font-size:11px;padding:4px 10px;border:0.5px solid #D3D1C7;border-radius:6px;background:#fff;cursor:pointer;color:#1C1B19"><i class="ti ti-moon"></i> Mesai Dışını Test Et</button>
+            <button onclick="addTestMessage(currentScenario?.fallback||'Fallback mesajı yok','bot')" style="font-size:11px;padding:4px 10px;border:0.5px solid #D3D1C7;border-radius:6px;background:#fff;cursor:pointer;color:#1C1B19"><i class="ti ti-question-mark"></i> Fallback'i Test Et</button>
           </div>
           <div class="test-input-row">
             <input type="text" id="test-input" placeholder="Mesajınızı yazın..." onkeydown="if(event.key==='Enter')sendTestMsg()">
@@ -462,20 +462,20 @@ function isOffHours() {
   return day === 0 || day === 6 || h < 9 || h >= 18;
 }
 
-const CLOSING_TRIGGERS = ['teşekkür', 'tamam', 'anladım', 'görüşürüz', 'iyiyi', 'harika', 'süper', 'mükemmel', 'tamamdır', 'iyi günler', 'hoşça kal', 'güle güle'];
-const OFFHOURS_TRIGGERS = ['şu an mevcut', 'müsait misiniz', 'açık mısınız', 'mesai', 'hafta sonu', 'akşam', 'gece'];
+const CLOSING_REGEX = /teşekkür|tamam|anladım|görüşürüz|iyi ki|harika|süper|mükemmel|tamamdır|iyi günler|hoşça kal|güle güle/;
+const OFFHOURS_REGEX = /şu an mevcut|müsait misiniz|açık mısınız|mesai|hafta sonu|akşam|gece/;
 
 function findBotResponse(userText) {
   if (!currentScenario) return 'Senaryo yüklenmedi.';
   const lower = userText.toLowerCase();
 
   // Mesai dışı kontrolü
-  if (OFFHOURS_TRIGGERS.some(t => lower.includes(t)) || isOffHours()) {
+  if (OFFHOURS_REGEX.test(lower) || isOffHours()) {
     return currentScenario.offHours || 'Şu an mesai saatleri dışındayız. En kısa sürede geri dönüş yapacağız.';
   }
 
   // Kapanış tetikleyicileri
-  if (CLOSING_TRIGGERS.some(t => lower.includes(t))) {
+  if (CLOSING_REGEX.test(lower)) {
     return currentScenario.closing || 'Yardımcı olabildiysem ne mutlu! Başka bir sorunuz olursa buradayız.';
   }
 

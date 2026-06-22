@@ -332,10 +332,10 @@ async function generate() {
   const startInput = document.getElementById('f-start').value;
   const startDate = startInput ? new Date(startInput + 'T00:00:00') : new Date();
   const postingDays = [];
+  const startMs = startDate.getTime();
   for (let i = 0; i < 30; i++) {
-    const d = new Date(startDate);
-    d.setDate(d.getDate() + i);
-    if (weekdays.includes(d.getDay())) postingDays.push(i + 1);
+    const day = new Date(startMs + i * 86400000).getDay();
+    if (weekdays.includes(day)) postingDays.push(i + 1);
   }
 
   formData = { biz, sector, audience, platforms, tone, lang, special, weekdays, postingDays, startDate: startDate.toISOString() };
