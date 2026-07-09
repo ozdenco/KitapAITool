@@ -415,6 +415,11 @@ async function generate() {
 
   const channelIconMap = { 'WhatsApp': 'ti-brand-whatsapp', 'E-posta': 'ti-mail', 'SMS': 'ti-message', 'Telefon': 'ti-phone' };
 
+  const channelArr0 = channels[0];
+  const channelArr1 = channels[Math.min(1, channels.length - 1)];
+  const icon0 = channelIconMap[channelArr0] || 'ti-message';
+  const icon1 = channelIconMap[channelArr1] || 'ti-message';
+
   const prompt = `Sen müşteri tutma ve CRM uzmanısın. Aşağıdaki işletme için 5 adımlık müşteri geri dönüş senaryosu hazırla.
 
 ═══ İŞLETME BİLGİLERİ ═══
@@ -427,21 +432,21 @@ Mevcut takip yöntemi: ${currentMethod || 'belirtilmemiş'}
 ${note ? `Özel talimatlar (MUTLAKA dikkate al): ${note}` : ''}
 
 ═══ YAZIM KURALLARI ═══
-- Mesajlar ${biz} adına yazılmış, doğal ve samimi Türkçe olsun
-- Her mesaj hizmet/ürün açıklamasındaki sektöre ve müşteri profiline özgü olsun — genel kalıplardan kaçın
-- Varsa özel talimatlara göre ton ve içeriği ayarla (hız, fiyat, yaklaşım vb.)
-- "channel" alanı YALNIZCA şu değerlerden biri olabilir: ${channels.join(', ')}
-- Satın alma sıklığına göre takip günlerini ayarla (${frequency} sıklık için uygun aralıklar seç)
-- Her adımdaki "tip" alanı o adıma özel pratik bir ipucu olsun
+1. GÜNLER: Satın alma sıklığına göre belirle — ${frequency} için mantıklı takip aralıkları seç. Şablona bağlı kalma, kendi hesapla. Örnek: aylık alışveriş → 1/3/7/21/45 gün; 6 aylık → 3/14/30/90/150 gün.
+2. KİŞİSELLEŞTİRME (EN ÖNEMLİ KURAL): Her mesaj hizmet açıklamasındaki somut detayları içersin. "Merhaba! [İşletme adı] olarak sizi tercih ettiğiniz için teşekkür ederiz." gibi genel kalıplar YASAK. Mesaj, başka hiçbir işletmede kullanılamayacak kadar özgün olsun.
+3. SEKTÖR DILI: Hedef kitlenin kullandığı teknik/sektörel terminoloji ve değer önerileri mesajlarda geçsin.
+4. İçerik: Her adım farklı bir değer önerisi / eylem çağrısı içersin — tekrar etme.
+5. "channel" alanı YALNIZCA şu değerlerden biri olabilir: ${channels.join(', ')}
+6. "tip" alanı o adıma özel, uygulanabilir bir ipucu olsun.
 
 SADECE JSON döndür, Türkçe karakterleri koru:
 {
   "steps": [
-    { "step": 1, "day": "1. gün", "channel": "${channels[0]}", "channelIcon": "${channelIconMap[channels[0]] || 'ti-message'}", "title": "...", "message": "...", "tip": "..." },
-    { "step": 2, "day": "3. gün", "channel": "${channels[Math.min(1,channels.length-1)]}", "channelIcon": "${channelIconMap[channels[Math.min(1,channels.length-1)]] || 'ti-message'}", "title": "...", "message": "...", "tip": "..." },
-    { "step": 3, "day": "7. gün", "channel": "${channels[0]}", "channelIcon": "${channelIconMap[channels[0]] || 'ti-message'}", "title": "...", "message": "...", "tip": "..." },
-    { "step": 4, "day": "30. gün", "channel": "${channels[Math.min(1,channels.length-1)]}", "channelIcon": "${channelIconMap[channels[Math.min(1,channels.length-1)]] || 'ti-message'}", "title": "...", "message": "...", "tip": "..." },
-    { "step": 5, "day": "60. gün", "channel": "${channels[0]}", "channelIcon": "${channelIconMap[channels[0]] || 'ti-message'}", "title": "...", "message": "...", "tip": "..." }
+    { "step": 1, "day": "... gün", "channel": "${channelArr0}", "channelIcon": "${icon0}", "title": "...", "message": "...", "tip": "..." },
+    { "step": 2, "day": "... gün", "channel": "${channelArr1}", "channelIcon": "${icon1}", "title": "...", "message": "...", "tip": "..." },
+    { "step": 3, "day": "... gün", "channel": "${channelArr0}", "channelIcon": "${icon0}", "title": "...", "message": "...", "tip": "..." },
+    { "step": 4, "day": "... gün", "channel": "${channelArr1}", "channelIcon": "${icon1}", "title": "...", "message": "...", "tip": "..." },
+    { "step": 5, "day": "... gün", "channel": "${channelArr0}", "channelIcon": "${icon0}", "title": "...", "message": "...", "tip": "..." }
   ],
   "ctaText": "..."
 }`;
