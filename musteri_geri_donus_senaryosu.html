@@ -451,10 +451,26 @@ SADECE JSON döndür, Türkçe karakterleri koru:
   "ctaText": "..."
 }`;
 
+  const fetchWithRetry = async (url, opts, retries = 2) => {
+    for (let attempt = 0; attempt <= retries; attempt++) {
+      try {
+        const r = await fetch(url, opts);
+        return r;
+      } catch (err) {
+        if (attempt < retries) {
+          document.getElementById('loading-msg').textContent = `Yapay zeka meşgul, tekrar deneniyor (${attempt + 1}/${retries})...`;
+          await new Promise(res => setTimeout(res, 4000));
+        } else {
+          throw err;
+        }
+      }
+    }
+  };
+
   try {
     let res;
     if (N8N_PROXY) {
-      res = await fetch(N8N_PROXY, {
+      res = await fetchWithRetry(N8N_PROXY, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt }),
@@ -489,14 +505,11 @@ SADECE JSON döndür, Türkçe karakterleri koru:
     if (resetBtn) { resetBtn.disabled = false; resetBtn.style.opacity = ''; }
     renderResults(result);
   } catch(e) {
-    console.error('Geri donus hata:', e);
-    rateData.count++;
-    saveRate(rateData);
-    updateRateBar();
     clearInterval(ticker);
     if (genBtn) { genBtn.disabled = false; genBtn.style.opacity = ''; }
     if (resetBtn) { resetBtn.disabled = false; resetBtn.style.opacity = ''; }
-    renderResults(fallback(lastBiz, getCheckedChannels()));
+    showLoading(false);
+    showErr('Sunucuya bağlanılamadı. Yapay zeka meşgul olabilir — lütfen 30 saniye sonra tekrar deneyin.');
   }
 }
 
