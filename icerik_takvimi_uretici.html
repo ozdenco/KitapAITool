@@ -480,9 +480,9 @@ function renderResults(result) {
   document.getElementById('cta-sub').textContent = result.ctaText || 'Takvim hazır — şimdi uygulamaya geçmek için destek alalım.';
 
   // Assign actual dates to days
-  allDays = allDays.map((d, i) => {
+  allDays = allDays.map(d => {
     const dt = new Date(startDate);
-    dt.setDate(dt.getDate() + i);
+    dt.setDate(dt.getDate() + (d.day - 1));
     return { ...d, date: dt };
   });
 
@@ -496,9 +496,9 @@ function showWeek(week, btn) {
   document.querySelectorAll('.wtab').forEach(t => t.classList.remove('active'));
   btn.classList.add('active');
 
-  const start = (week - 1) * 7;
-  const end = Math.min(start + 7, 30);
-  const weekDays = allDays.slice(start, end);
+  const start = (week - 1) * 7 + 1;
+  const end = Math.min(start + 6, 30);
+  const weekDays = allDays.filter(d => d.day >= start && d.day <= end);
   renderDays(weekDays);
 }
 
@@ -526,15 +526,15 @@ function renderDays(days) {
             ${d.isSpecial ? '<span class="tag tag-special">Özel gün</span>' : ''}
           </div>
         </div>
-        <button class="day-copy" onclick="copyDay(${d.day-1}, this)" title="Kopyala">
+        <button class="day-copy" onclick="copyDay(${d.day}, this)" title="Kopyala">
           <i class="ti ti-copy" style="font-size:14px" aria-hidden="true"></i>
         </button>
       </div>`;
   });
 }
 
-function copyDay(idx, btn) {
-  const d = allDays[idx];
+function copyDay(dayNum, btn) {
+  const d = allDays.find(x => x.day === dayNum);
   const dt = d.date;
   const text = `Gün ${d.day} — ${dt.getDate()} ${TR_MONTHS[dt.getMonth()]}\nKonu: ${d.topic}\nFormat: ${d.format} · ${d.platform}\n\n${d.draft}`;
   navigator.clipboard.writeText(text).then(() => {
@@ -552,18 +552,21 @@ async function refreshWeek() {
   btn.disabled = true;
   btn.innerHTML = '<i class="ti ti-refresh" aria-hidden="true"></i> Yenileniyor...';
 
-  const start = (currentWeek - 1) * 7;
-  const end = Math.min(start + 7, 30);
+  const start = (currentWeek - 1) * 7 + 1;
+  const end = Math.min(start + 6, 30);
   const weekNum = currentWeek;
-  const { biz, sector, audience, platforms, tone, lang, special } = formData;
+  const { biz, sector, audience, platforms, tone, lang, special, weekdays } = formData;
+  const weekDayNumbers = formData.postingDays.filter(d => d >= start && d <= end);
 
-  const prompt = `Sen bir sosyal medya stratejistisi. Aşağıdaki işletme için ${weekNum}. haftanın (gün ${start+1}–${end}) içeriklerini yeniden oluştur.
+  const prompt = `Sen bir sosyal medya stratejistisi. Aşağıdaki işletme için ${weekNum}. haftanın içeriklerini yeniden oluştur.
 
 İşletme: ${biz} | Sektör: ${sector} | Platformlar: ${platforms.join(', ')} | Ton: ${tone || 'Profesyonel'} | Dil: ${lang}
 
+YALNIZCA şu günler için içerik üret (toplam ${weekDayNumbers.length} gün): ${weekDayNumbers.join(', ')}
+Diğer günlere kesinlikle içerik yazma. "days" dizisi tam olarak ${weekDayNumbers.length} eleman içersin.
+
 SADECE JSON döndür:
-{"days":[{"day":<sayı>,"topic":"...","format":"...","platform":"...","draft":"...","isSpecial":false}]}
-Gün numaraları ${start+1}'den ${end}'e kadar olsun. Tam ${end-start} eleman.`;
+{"days":[{"day":<sayı>,"topic":"...","format":"...","platform":"...","draft":"...","isSpecial":false}]}`;
 
   try {
     let res;
@@ -578,14 +581,16 @@ Gün numaraları ${start+1}'den ${end}'e kadar olsun. Tam ${end-start} eleman.`;
       : (data.choices?.[0]?.message?.content || '');
     const s = text.indexOf('{'); const e = text.lastIndexOf('}'); const clean = (s !== -1 && e !== -1) ? text.slice(s, e + 1) : text.replace(/```json|```/g, '').trim();
     const result = JSON.parse(clean);
-    const startDate = allDays[0].date;
-    result.days.forEach((d, i) => {
-      const dt = new Date(startDate);
-      dt.setDate(dt.getDate() + start + i);
+    const periodStart = getStartDate();
+    result.days.forEach(d => {
+      const dt = new Date(periodStart);
+      dt.setDate(dt.getDate() + (d.day - 1));
       d.date = dt;
-      allDays[start + i] = d;
+      const idx = allDays.findIndex(x => x.day === d.day);
+      if (idx !== -1) allDays[idx] = d; else allDays.push(d);
     });
-    renderDays(allDays.slice(start, end));
+    allDays.sort((a, b) => a.day - b.day);
+    renderDays(allDays.filter(d => d.day >= start && d.day <= end));
   } catch(e) {
     // keep current
   }
