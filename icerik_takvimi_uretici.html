@@ -349,8 +349,12 @@ async function generate() {
   const ticker = setInterval(() => { mi=(mi+1)%loadingMsgs.length; msgEl.textContent=loadingMsgs[mi]; }, 1800);
 
   const platformList = platforms.join(', ');
+  const dayDateMap = postingDays.map(dayNum => {
+    const dt = new Date(startMs + (dayNum - 1) * 86400000);
+    return `Gün ${dayNum} = ${dt.getDate()} ${TR_MONTHS[dt.getMonth()]} ${dt.getFullYear()} (${TR_DAYS[dt.getDay()]})`;
+  }).join('\n');
   const specialNote = special
-    ? `Özel günler/kampanyalar: ${special}\n⚠️ Bu özel günlere denk gelen takvim günlerinde isSpecial:true yap ve draft metnini doğrudan o etkinlik/kampanyaya göre yaz. Özel günleri kesinlikle atlatma.`
+    ? `Özel günler/kampanyalar: ${special}\n⚠️ Yukarıdaki gün-tarih eşleşmesini kullanarak bu özel günlere/tarihlere denk gelen paylaşım günlerini bul, o günlerde isSpecial:true yap ve draft metnini doğrudan o etkinlik/kampanyaya göre yaz. Özel günleri kesinlikle atlatma.`
     : 'Özel günler/kampanyalar: Yok';
 
   const prompt = `Sen bir sosyal medya stratejisti ve içerik uzmanısın. Aşağıdaki işletme için sosyal medya içerik takvimi oluştur.
@@ -360,11 +364,12 @@ async function generate() {
 - Sektör: ${sector}
 - Hedef kitle: ${audience || 'Genel hedef kitle'}
 - Platformlar: ${platformList}
-- Marka tonu: ${tone || 'Profesyonel'}
+- Marka tonu: ${tone || 'Profesyonel'} — draft metinlerinde bu tonu belirgin şekilde hissettir, jenerik/nötr ifadelerden kaçın
 - Dil: ${lang}
 - ${specialNote}
 
-YALNIZCA şu günler için içerik üret (toplam ${postingDays.length} gün): ${postingDays.join(', ')}
+YALNIZCA şu günler için içerik üret (toplam ${postingDays.length} gün), her günün takvim tarihi aşağıda verilmiştir:
+${dayDateMap}
 Diğer günlere kesinlikle içerik yazma. "days" dizisi tam olarak ${postingDays.length} eleman içersin.
 
 Her gün için şunları üret:
@@ -384,10 +389,25 @@ SADECE JSON döndür, açıklama yazma:
   "ctaText": "..."
 }`;
 
+  const fetchWithRetry = async (url, opts, retries = 2) => {
+    for (let attempt = 0; attempt <= retries; attempt++) {
+      try {
+        return await fetch(url, opts);
+      } catch (err) {
+        if (attempt < retries) {
+          msgEl.textContent = `Yapay zeka meşgul, tekrar deneniyor (${attempt + 1}/${retries})...`;
+          await new Promise(r => setTimeout(r, 4000));
+        } else {
+          throw err;
+        }
+      }
+    }
+  };
+
   try {
     let res;
     if (N8N_PROXY) {
-      res = await fetch(N8N_PROXY, {
+      res = await fetchWithRetry(N8N_PROXY, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt })
@@ -419,53 +439,10 @@ SADECE JSON döndür, açıklama yazma:
   } catch(e) {
     clearInterval(ticker);
     if (genBtn) { genBtn.disabled = false; genBtn.style.opacity = ''; }
-    renderResults(fallback(biz, sector, platforms));
+    show('form-section');
+    err.style.display = 'block';
+    err.textContent = 'Takvim oluşturulamadı. Yapay zeka meşgul olabilir veya sunucuya bağlanılamadı — lütfen tekrar deneyin.';
   }
-}
-
-function fallback(biz, sector, platforms) {
-  const formats = ['Reels','Statik görsel','Hikaye','Carousel','Video','Hikaye'];
-  const topics = [
-    `${sector} hakkında 3 bilinmeyeni`,
-    'Müşteri başarı hikayesi',
-    'Sıkça sorulan sorular',
-    'Ekip arkası görüntüler',
-    'İpucu ve pratik bilgi',
-    `Neden ${biz}?`,
-    'Sektör trendi',
-    'Müşteri yorumu',
-    'Hizmet tanıtımı',
-    'Motivasyon paylaşımı',
-    'Nasıl yapılır rehberi',
-    'Haftalık özet',
-    'Sektörden haber',
-    'Çalışma ortamı',
-    'Uzman tavsiyesi',
-    'Kampanya duyurusu',
-    'Önce/sonra',
-    'Sektör istatistikleri',
-    'Takipçi sorusu yanıtı',
-    'Blog / yazı paylaşımı',
-    'Canlı yayın duyurusu',
-    'Referans müşteri',
-    'Çalışan tanıtımı',
-    'Ürün/hizmet detayı',
-    'Süreç anlatımı',
-    'Sektör miti çürütme',
-    'Teşekkür paylaşımı',
-    'Yeni içerik duyurusu',
-    'Haftalık motivasyon',
-    'Aylık değerlendirme'
-  ];
-  const days = Array.from({length:30}, (_,i) => ({
-    day: i+1,
-    topic: topics[i % topics.length],
-    format: formats[i % formats.length],
-    platform: platforms[i % platforms.length],
-    draft: `${topics[i % topics.length]} hakkında bilgi vermek istiyoruz. ${biz} olarak her zaman yanınızdayız. #${sector.replace(/\s/g,'').replace('/','').toLowerCase()}`,
-    isSpecial: false
-  }));
-  return { days, ctaText: `${biz} için kişiselleştirilmiş bir içerik stratejisi hazırlayalım.` };
 }
 
 function renderResults(result) {
@@ -608,6 +585,7 @@ function copyAll() {
     `Platformlar: ${fd.platforms && fd.platforms.length ? fd.platforms.join(', ') : ''}`,
     `Ton: ${fd.tone||''}`,
     `Dil: ${fd.lang||''}`,
+    `Paylaşım günleri: ${fd.weekdays && fd.weekdays.length ? fd.weekdays.map(w => TR_DAYS[w]).join(', ') : ''}`,
     `Özel gün/kampanya: ${fd.special||''}`,
     '---'
   ].join('\n');
@@ -629,6 +607,7 @@ function downloadTxt() {
     `Hedef Kitle: ${fd.audience||''}`,
     `Platformlar: ${fd.platforms && fd.platforms.length ? fd.platforms.join(', ') : ''}`,
     `Ton: ${fd.tone||''}`, `Dil: ${fd.lang||''}`,
+    `Paylaşım günleri: ${fd.weekdays && fd.weekdays.length ? fd.weekdays.map(w => TR_DAYS[w]).join(', ') : ''}`,
     `Özel gün/kampanya: ${fd.special||''}`,
     '', '='.repeat(50), ''
   ].join('\n');
