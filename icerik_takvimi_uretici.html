@@ -281,6 +281,33 @@ const N8N_PROXY = '/wp-json/kolaykobi/v1/ai/takvim';
 
 function escHtml(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
 
+// MiniMax bazen Türkçe özel karakterleri (ı,ü,ç,ö,ş,ğ) yanlış kod sayfasıyla
+// (CJK/GBK) üretip bozuyor. Çıktıda CJK karakter varsa (Çince istenmediği
+// sürece) yanıtı bozuk kabul edip yeniden deniyoruz.
+function hasEncodingCorruption(text, lang) {
+  if (lang === 'Çince') return false;
+  return /[㐀-鿿]/.test(text);
+}
+
+async function fetchJsonWithRetry(url, opts, lang, onRetry, retries = 2) {
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    let res;
+    try {
+      res = await fetch(url, opts);
+    } catch (err) {
+      if (attempt < retries) { onRetry && onRetry(attempt, 'network'); await new Promise(r => setTimeout(r, 4000)); continue; }
+      throw err;
+    }
+    if (res.status === 429) return res;
+    const data = await res.json();
+    const text = (data.content || []).map(b => b.text || '').join('') || (data.choices?.[0]?.message?.content || '');
+    if (hasEncodingCorruption(text, lang)) {
+      if (attempt < retries) { onRetry && onRetry(attempt, 'encoding'); await new Promise(r => setTimeout(r, 1500)); continue; }
+    }
+    return { status: res.status, _text: text };
+  }
+}
+
 const loadingMsgs = [
   "İçerik fikirleri üretiliyor...",
   "Platform formatları belirleniyor...",
@@ -434,29 +461,20 @@ SADECE JSON döndür, açıklama yazma:
   "ctaText": "..."
 }`;
 
-  const fetchWithRetry = async (url, opts, retries = 2) => {
-    for (let attempt = 0; attempt <= retries; attempt++) {
-      try {
-        return await fetch(url, opts);
-      } catch (err) {
-        if (attempt < retries) {
-          msgEl.textContent = `Yapay zeka meşgul, tekrar deneniyor (${attempt + 1}/${retries})...`;
-          await new Promise(r => setTimeout(r, 4000));
-        } else {
-          throw err;
-        }
-      }
-    }
+  const onRetry = (attempt, reason) => {
+    msgEl.textContent = reason === 'encoding'
+      ? `Yanıtta karakter bozulması tespit edildi, tekrar deneniyor (${attempt + 1}/2)...`
+      : `Yapay zeka meşgul, tekrar deneniyor (${attempt + 1}/2)...`;
   };
 
   try {
     let res;
     if (N8N_PROXY) {
-      res = await fetchWithRetry(N8N_PROXY, {
+      res = await fetchJsonWithRetry(N8N_PROXY, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt })
-      });
+      }, lang, onRetry);
       if (res.status === 429) {
         clearInterval(ticker);
         show('form-section');
@@ -466,17 +484,16 @@ SADECE JSON döndür, açıklama yazma:
         return;
       }
     } else {
-      res = await fetch('https://api.minimax.io/v1/chat/completions', {
+      const rawRes = await fetch('https://api.minimax.io/v1/chat/completions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer DEV_KEY' },
         body: JSON.stringify({ model:'MiniMax-M3', max_completion_tokens:4000, messages:[{role:'user',content:prompt}] })
       });
+      const rawData = await rawRes.json();
+      res = { _text: rawData.choices?.[0]?.message?.content || '' };
     }
     clearInterval(ticker);
-    const data = await res.json();
-    const text = N8N_PROXY
-      ? (data.content || []).map(b => b.text || '').join('')
-      : (data.choices?.[0]?.message?.content || '');
+    const text = res._text;
     const s = text.indexOf('{'); const e = text.lastIndexOf('}'); const clean = (s !== -1 && e !== -1) ? text.slice(s, e + 1) : text.replace(/```json|```/g, '').trim();
     const result = JSON.parse(clean);
     if (genBtn) { genBtn.disabled = false; genBtn.style.opacity = ''; }
@@ -590,17 +607,20 @@ Diğer günlere kesinlikle içerik yazma. "days" dizisi tam olarak ${weekDayNumb
 SADECE JSON döndür:
 {"days":[{"day":<sayı>,"topic":"...","format":"...","platform":"...","draft":"...","isSpecial":false}]}`;
 
+  const onRetry = (attempt, reason) => {
+    btn.innerHTML = `<i class="ti ti-refresh" aria-hidden="true"></i> ${reason === 'encoding' ? 'Karakter hatası, tekrar deneniyor' : 'Meşgul, tekrar deneniyor'} (${attempt + 1}/2)...`;
+  };
+
   try {
-    let res;
+    let text;
     if (N8N_PROXY) {
-      res = await fetch(N8N_PROXY, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({prompt}) });
+      const res = await fetchJsonWithRetry(N8N_PROXY, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({prompt}) }, lang, onRetry);
+      text = res._text;
     } else {
-      res = await fetch('https://api.minimax.io/v1/chat/completions', { method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer DEV_KEY'}, body:JSON.stringify({model:'MiniMax-M3',max_completion_tokens:1500,messages:[{role:'user',content:prompt}]}) });
+      const res = await fetch('https://api.minimax.io/v1/chat/completions', { method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer DEV_KEY'}, body:JSON.stringify({model:'MiniMax-M3',max_completion_tokens:1500,messages:[{role:'user',content:prompt}]}) });
+      const data = await res.json();
+      text = data.choices?.[0]?.message?.content || '';
     }
-    const data = await res.json();
-    const text = N8N_PROXY
-      ? (data.content || []).map(b => b.text || '').join('')
-      : (data.choices?.[0]?.message?.content || '');
     const s = text.indexOf('{'); const e = text.lastIndexOf('}'); const clean = (s !== -1 && e !== -1) ? text.slice(s, e + 1) : text.replace(/```json|```/g, '').trim();
     const result = JSON.parse(clean);
     const periodStart = getStartDate();
@@ -614,7 +634,7 @@ SADECE JSON döndür:
     allDays.sort((a, b) => a.day - b.day);
     renderDays(allDays.filter(d => d.day >= start && d.day <= end));
   } catch(e) {
-    // keep current
+    alert('Bu hafta yenilenemedi. Yapay zeka meşgul olabilir veya yanıt bozuk geldi — lütfen tekrar deneyin.');
   }
   btn.disabled = false;
   btn.innerHTML = '<i class="ti ti-refresh" aria-hidden="true"></i> Bu haftayı yenile';
