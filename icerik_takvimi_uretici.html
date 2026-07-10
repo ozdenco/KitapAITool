@@ -793,7 +793,7 @@ show('form-section');
 
     const notice = document.createElement('div');
     notice.style.cssText = 'background:#F0FAF6;border:0.5px solid #9FE1CB;border-radius:8px;padding:10px 14px;font-size:13px;color:#085041;display:flex;align-items:center;gap:8px;margin-bottom:1rem';
-    notice.innerHTML = '<i class="ti ti-circle-check" aria-hidden="true"></i> Form, launcher\'dan aktarılan verilerle dolduruldu.';
+    notice.innerHTML = "<i class=\"ti ti-circle-check\" aria-hidden=\"true\"></i> Form, launcher'dan aktarılan verilerle dolduruldu.";
     const fc = document.querySelector('.form-card') || document.querySelector('form') || document.body.firstElementChild;
     if (fc) fc.insertBefore(notice, fc.children[2] || fc.firstChild);
     setTimeout(() => notice.remove(), 5000);
