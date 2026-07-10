@@ -349,12 +349,57 @@ async function generate() {
   const ticker = setInterval(() => { mi=(mi+1)%loadingMsgs.length; msgEl.textContent=loadingMsgs[mi]; }, 1800);
 
   const platformList = platforms.join(', ');
-  const dayDateMap = postingDays.map(dayNum => {
-    const dt = new Date(startMs + (dayNum - 1) * 86400000);
-    return `Gün ${dayNum} = ${dt.getDate()} ${TR_MONTHS[dt.getMonth()]} ${dt.getFullYear()} (${TR_DAYS[dt.getDay()]})`;
+  const postingDates = postingDays.map(dayNum => new Date(startMs + (dayNum - 1) * 86400000));
+  const dayDateMap = postingDays.map((dayNum, idx) => {
+    const dt = postingDates[idx];
+    return `Sıra No ${dayNum} → ${dt.getDate()} ${TR_MONTHS[dt.getMonth()]} ${dt.getFullYear()} (${TR_DAYS[dt.getDay()]})`;
   }).join('\n');
+
+  // "Ayın X'i" ve "ilk hafta" gibi takvim-gün-of-month kalıplarını kendimiz
+  // çözüp en yakın ÖNCEKİ paylaşım gününe kesin talimat olarak eşliyoruz —
+  // bu hesabı modelin tahminine bırakmak "Sıra No 14" ile "ayın 14'ü"nün
+  // karışmasına yol açıyordu.
+  const resolvedCampaigns = [];
+  if (special) {
+    const dayOfMonthMatches = [...special.matchAll(/ayın\s+(\d{1,2})/gi)].map(m => parseInt(m[1]));
+    const firstWeekMatch = /ilk\s+hafta/i.test(special);
+    const monthsCovered = new Set(postingDates.map(dt => `${dt.getFullYear()}-${dt.getMonth()}`));
+
+    const findNearestOnOrBefore = (targetDt) => {
+      let best = null;
+      postingDates.forEach((dt, idx) => {
+        if (dt.getTime() <= targetDt.getTime()) {
+          if (!best || dt.getTime() > best.dt.getTime()) best = { dt, dayNum: postingDays[idx] };
+        }
+      });
+      if (!best) postingDates.forEach((dt, idx) => {
+        if (!best || dt.getTime() < best.dt.getTime()) best = { dt, dayNum: postingDays[idx] };
+      });
+      return best;
+    };
+
+    dayOfMonthMatches.forEach(domNum => {
+      monthsCovered.forEach(key => {
+        const [y, mo] = key.split('-').map(Number);
+        const target = new Date(y, mo, domNum, 0, 0, 0);
+        const match = findNearestOnOrBefore(target);
+        if (match) resolvedCampaigns.push(`"Ayın ${domNum}'i" kampanyası → Sıra No ${match.dayNum} (${match.dt.getDate()} ${TR_MONTHS[match.dt.getMonth()]}, hedef tarihe en yakın/önceki paylaşım günü) için isSpecial:true yap ve o gün duyur.`);
+      });
+    });
+    if (firstWeekMatch) {
+      monthsCovered.forEach(key => {
+        const [y, mo] = key.split('-').map(Number);
+        postingDates.forEach((dt, idx) => {
+          if (dt.getFullYear() === y && dt.getMonth() === mo && dt.getDate() <= 7) {
+            resolvedCampaigns.push(`"Ayın ilk haftası" kampanyası → Sıra No ${postingDays[idx]} (${dt.getDate()} ${TR_MONTHS[dt.getMonth()]}, o ayın ilk haftasındaki paylaşım günü) için isSpecial:true yap ve o gün duyur.`);
+          }
+        });
+      });
+    }
+  }
+
   const specialNote = special
-    ? `Özel günler/kampanyalar: ${special}\n⚠️ Yukarıdaki gün-tarih eşleşmesini kullanarak bu özel günlere/tarihlere denk gelen paylaşım günlerini bul, o günlerde isSpecial:true yap ve draft metnini doğrudan o etkinlik/kampanyaya göre yaz. Özel günleri kesinlikle atlatma.`
+    ? `Özel günler/kampanyalar: ${special}\n${resolvedCampaigns.length ? 'KESİN TALİMAT — bu eşleşmeleri birebir uygula:\n' + resolvedCampaigns.join('\n') : '⚠️ Bu kampanyaları takvim tarihleriyle eşleştirip en yakın paylaşım gününde isSpecial:true yap.'}\n⚠️ ÖNEMLİ: "Sıra No" etiketi sadece bu listedeki sıralamadır, ayın kaçıncı günü olduğuyla KARIŞTIRMA — "Sıra No 14" ile "ayın 14'ü" birbirinden tamamen bağımsızdır.`
     : 'Özel günler/kampanyalar: Yok';
 
   const prompt = `Sen bir sosyal medya stratejisti ve içerik uzmanısın. Aşağıdaki işletme için sosyal medya içerik takvimi oluştur.
@@ -368,9 +413,9 @@ async function generate() {
 - Dil: ${lang}
 - ${specialNote}
 
-YALNIZCA şu günler için içerik üret (toplam ${postingDays.length} gün), her günün takvim tarihi aşağıda verilmiştir:
+YALNIZCA şu Sıra No'lar için içerik üret (toplam ${postingDays.length} gün), her Sıra No'nun takvim tarihi aşağıda verilmiştir:
 ${dayDateMap}
-Diğer günlere kesinlikle içerik yazma. "days" dizisi tam olarak ${postingDays.length} eleman içersin.
+Diğer Sıra No'lar için kesinlikle içerik yazma. "days" dizisi tam olarak ${postingDays.length} eleman içersin. Çıktıdaki "day" alanına yukarıdaki Sıra No değerini yaz (takvim tarihini değil).
 
 Her gün için şunları üret:
 - topic: Kısa başlık (maks 8 kelime)
