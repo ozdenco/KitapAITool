@@ -22,6 +22,13 @@ add_action('rest_api_init', function () {
 });
 
 function kolaykobi_ai_proxy(WP_REST_Request $request) {
+    // Reasoning modelinin uzun süren isteklerinde PHP'nin varsayılan
+    // max_execution_time'ı (genelde 30-60s) wp_remote_post'un timeout
+    // parametresini beklemeden süreci öldürmesin diye yükseltiyoruz.
+    if (function_exists('set_time_limit')) {
+        @set_time_limit(280);
+    }
+
     // İzin verilen n8n webhook'ları — tool adı → webhook path
     $tools = array(
         'geri-donus' => 'kolay-kobi-geri-donus',
