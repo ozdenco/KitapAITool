@@ -305,14 +305,14 @@ async function fetchJsonWithRetry(url, opts, lang, onRetry, retries = 2) {
     try {
       res = await fetch(url, opts);
     } catch (err) {
-      if (attempt < retries) { onRetry && onRetry(attempt, `network`); await new Promise(r => setTimeout(r, 4000)); continue; }
+      if (attempt < retries) { onRetry?.(attempt, `network`); await new Promise(r => setTimeout(r, 4000)); continue; }
       throw err;
     }
     if (res.status === 429) return res;
     const data = await res.json();
     const text = (data.content || []).map(b => b.text || ``).join(``) || (data.choices?.[0]?.message?.content || ``);
     if (hasEncodingCorruption(text, lang)) {
-      if (attempt < retries) { onRetry && onRetry(attempt, `encoding`); await new Promise(r => setTimeout(r, 1500)); continue; }
+      if (attempt < retries) { onRetry?.(attempt, `encoding`); await new Promise(r => setTimeout(r, 1500)); continue; }
     }
     return { status: res.status, _text: text };
   }
@@ -427,7 +427,7 @@ async function generate() {
       monthsCovered.forEach(key => {
         const [y, mo] = key.split(`-`).map(Number);
         postingDates.forEach((dt, idx) => {
-          if (dt.getFullYear() === y && dt.getMonth() === mo && dt.getDate() <= 7) {
+          if ([dt.getFullYear() === y, dt.getMonth() === mo, dt.getDate() <= 7].every(Boolean)) {
             resolvedCampaigns.push(`"Ayın ilk haftası" kampanyası → Sıra No ${postingDays[idx]} (${dt.getDate()} ${TR_MONTHS[dt.getMonth()]}, o ayın ilk haftasındaki paylaşım günü) için isSpecial:true yap ve o gün duyur.`);
           }
         });
@@ -504,7 +504,7 @@ SADECE JSON döndür, açıklama yazma:
     }
     clearInterval(ticker);
     const text = res._text;
-    const s = text.indexOf(`{`); const e = text.lastIndexOf(`}`); const clean = (s !== -1 && e !== -1) ? text.slice(s, e + 1) : text.replace(/```json|```/g, ``).trim();
+    const s = text.indexOf(`{`); const e = text.lastIndexOf(`}`); const clean = [s !== -1, e !== -1].every(Boolean) ? text.slice(s, e + 1) : text.replace(/```json|```/g, ``).trim();
     const result = JSON.parse(clean);
     if (genBtn) { genBtn.disabled = false; genBtn.style.opacity = ``; }
     renderResults(result);
@@ -547,7 +547,7 @@ function showWeek(week, btn) {
 
   const start = (week - 1) * 7 + 1;
   const end = Math.min(start + 6, 30);
-  const weekDays = allDays.filter(d => d.day >= start && d.day <= end);
+  const weekDays = allDays.filter(d => [d.day >= start, d.day <= end].every(Boolean));
   renderDays(weekDays);
 }
 
@@ -605,7 +605,7 @@ async function refreshWeek() {
   const end = Math.min(start + 6, 30);
   const weekNum = currentWeek;
   const { biz, sector, audience, platforms, tone, lang, special, weekdays } = formData;
-  const weekDayNumbers = formData.postingDays.filter(d => d >= start && d <= end);
+  const weekDayNumbers = formData.postingDays.filter(d => [d >= start, d <= end].every(Boolean));
 
   const prompt = `Sen bir sosyal medya stratejistisi. Aşağıdaki işletme için ${weekNum}. haftanın içeriklerini yeniden oluştur.
 
@@ -631,7 +631,7 @@ SADECE JSON döndür:
       const data = await res.json();
       text = data.choices?.[0]?.message?.content || ``;
     }
-    const s = text.indexOf(`{`); const e = text.lastIndexOf(`}`); const clean = (s !== -1 && e !== -1) ? text.slice(s, e + 1) : text.replace(/```json|```/g, ``).trim();
+    const s = text.indexOf(`{`); const e = text.lastIndexOf(`}`); const clean = [s !== -1, e !== -1].every(Boolean) ? text.slice(s, e + 1) : text.replace(/```json|```/g, ``).trim();
     const result = JSON.parse(clean);
     const periodStart = getStartDate();
     result.days.forEach(d => {
@@ -642,7 +642,7 @@ SADECE JSON döndür:
       if (idx !== -1) allDays[idx] = d; else allDays.push(d);
     });
     allDays.sort((a, b) => a.day - b.day);
-    renderDays(allDays.filter(d => d.day >= start && d.day <= end));
+    renderDays(allDays.filter(d => [d.day >= start, d.day <= end].every(Boolean)));
   } catch(e) {
     alert(`Bu hafta yenilenemedi. Yapay zeka meşgul olabilir veya yanıt bozuk geldi — lütfen tekrar deneyin.`);
   }
@@ -657,10 +657,10 @@ function copyAll() {
     `İşletme: ${fd.biz||''}`,
     `Sektör: ${fd.sector||''}`,
     `Hedef Kitle: ${fd.audience||''}`,
-    `Platformlar: ${fd.platforms && fd.platforms.length ? fd.platforms.join(', ') : ''}`,
+    `Platformlar: ${fd.platforms?.length ? fd.platforms.join(', ') : ''}`,
     `Ton: ${fd.tone||''}`,
     `Dil: ${fd.lang||''}`,
-    `Paylaşım günleri: ${fd.weekdays && fd.weekdays.length ? fd.weekdays.map(w => TR_DAYS[w]).join(', ') : ''}`,
+    `Paylaşım günleri: ${fd.weekdays?.length ? fd.weekdays.map(w => TR_DAYS[w]).join(', ') : ''}`,
     `Özel gün/kampanya: ${fd.special||''}`,
     `---`
   ].join(`\n`);
@@ -680,9 +680,9 @@ function downloadTxt() {
   const header = [
     `İşletme: ${fd.biz||''}`, `Sektör: ${fd.sector||''}`,
     `Hedef Kitle: ${fd.audience||''}`,
-    `Platformlar: ${fd.platforms && fd.platforms.length ? fd.platforms.join(', ') : ''}`,
+    `Platformlar: ${fd.platforms?.length ? fd.platforms.join(', ') : ''}`,
     `Ton: ${fd.tone||''}`, `Dil: ${fd.lang||''}`,
-    `Paylaşım günleri: ${fd.weekdays && fd.weekdays.length ? fd.weekdays.map(w => TR_DAYS[w]).join(', ') : ''}`,
+    `Paylaşım günleri: ${fd.weekdays?.length ? fd.weekdays.map(w => TR_DAYS[w]).join(', ') : ''}`,
     `Özel gün/kampanya: ${fd.special||''}`,
     ``, `=`.repeat(50), ``
   ].join(`\n`);
