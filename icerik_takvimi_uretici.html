@@ -287,15 +287,15 @@ input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3p
 // Geliştirme/test: null yap (doğrudan Claude API)
 // const N8N_PROXY = null;
 // Production (web sitesi):
-const N8N_PROXY = '/wp-json/kolaykobi/v1/ai/takvim';
+const N8N_PROXY = `/wp-json/kolaykobi/v1/ai/takvim`;
 
-function escHtml(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
+function escHtml(s){return String(s||``).replace(/&/g,`&amp;`).replace(/</g,`&lt;`).replace(/>/g,`&gt;`).replace(/"/g,`&quot;`).replace(/'/g,`&#39;`);}
 
 // MiniMax bazen Türkçe özel karakterleri (ı,ü,ç,ö,ş,ğ) yanlış kod sayfasıyla
 // (CJK/GBK) üretip bozuyor. Çıktıda CJK karakter varsa (Çince istenmediği
 // sürece) yanıtı bozuk kabul edip yeniden deniyoruz.
 function hasEncodingCorruption(text, lang) {
-  if (lang === 'Çince') return false;
+  if (lang === `Çince`) return false;
   return /[㐀-鿿]/.test(text);
 }
 
@@ -305,29 +305,29 @@ async function fetchJsonWithRetry(url, opts, lang, onRetry, retries = 2) {
     try {
       res = await fetch(url, opts);
     } catch (err) {
-      if (attempt < retries) { onRetry && onRetry(attempt, 'network'); await new Promise(r => setTimeout(r, 4000)); continue; }
+      if (attempt < retries) { onRetry && onRetry(attempt, `network`); await new Promise(r => setTimeout(r, 4000)); continue; }
       throw err;
     }
     if (res.status === 429) return res;
     const data = await res.json();
-    const text = (data.content || []).map(b => b.text || '').join('') || (data.choices?.[0]?.message?.content || '');
+    const text = (data.content || []).map(b => b.text || ``).join(``) || (data.choices?.[0]?.message?.content || ``);
     if (hasEncodingCorruption(text, lang)) {
-      if (attempt < retries) { onRetry && onRetry(attempt, 'encoding'); await new Promise(r => setTimeout(r, 1500)); continue; }
+      if (attempt < retries) { onRetry && onRetry(attempt, `encoding`); await new Promise(r => setTimeout(r, 1500)); continue; }
     }
     return { status: res.status, _text: text };
   }
 }
 
 const loadingMsgs = [
-  "İçerik fikirleri üretiliyor...",
-  "Platform formatları belirleniyor...",
-  "Taslak metinler yazılıyor...",
-  "Özel günler takvime ekleniyor...",
-  "30 günlük plan hazırlanıyor..."
+  `İçerik fikirleri üretiliyor...`,
+  `Platform formatları belirleniyor...`,
+  `Taslak metinler yazılıyor...`,
+  `Özel günler takvime ekleniyor...`,
+  `30 günlük plan hazırlanıyor...`
 ];
 
-const TR_DAYS = ['Paz','Pzt','Sal','Çar','Per','Cum','Cmt'];
-const TR_MONTHS = ['Oca','Şub','Mar','Nis','May','Haz','Tem','Ağu','Eyl','Eki','Kas','Ara'];
+const TR_DAYS = [`Paz`,`Pzt`,`Sal`,`Çar`,`Per`,`Cum`,`Cmt`];
+const TR_MONTHS = [`Oca`,`Şub`,`Mar`,`Nis`,`May`,`Haz`,`Tem`,`Ağu`,`Eyl`,`Eki`,`Kas`,`Ara`];
 
 let allDays = [];
 let currentWeek = 1;
@@ -338,36 +338,36 @@ function getChecked(groupId) {
 }
 
 function show(id) {
-  document.getElementById('form-section').style.display = (id === 'form-section' || id === 'results-section') ? 'block' : 'none';
-  document.getElementById('loading-section').style.display = id === 'loading-section' ? 'block' : 'none';
-  document.getElementById('results-section').style.display = id === 'results-section' ? 'block' : 'none';
+  document.getElementById(`form-section`).style.display = (id === `form-section` || id === `results-section`) ? `block` : `none`;
+  document.getElementById(`loading-section`).style.display = id === `loading-section` ? `block` : `none`;
+  document.getElementById(`results-section`).style.display = id === `results-section` ? `block` : `none`;
 }
 
 function getStartDate() {
-  const val = document.getElementById('f-start').value;
-  if (val) return new Date(val + 'T00:00:00');
+  const val = document.getElementById(`f-start`).value;
+  if (val) return new Date(val + `T00:00:00`);
   const d = new Date();
   d.setDate(d.getDate() + 1);
   return d;
 }
 
 async function generate() {
-  const biz = document.getElementById('f-biz').value.trim();
-  const sector = document.getElementById('f-sector').value;
-  const audience = document.getElementById('f-audience').value.trim();
-  const platforms = getChecked('platform-group');
-  const tone = document.getElementById('f-tone').value;
-  const lang = document.getElementById('f-lang').value;
-  const special = document.getElementById('f-special').value.trim();
-  const err = document.getElementById('err');
+  const biz = document.getElementById(`f-biz`).value.trim();
+  const sector = document.getElementById(`f-sector`).value;
+  const audience = document.getElementById(`f-audience`).value.trim();
+  const platforms = getChecked(`platform-group`);
+  const tone = document.getElementById(`f-tone`).value;
+  const lang = document.getElementById(`f-lang`).value;
+  const special = document.getElementById(`f-special`).value.trim();
+  const err = document.getElementById(`err`);
 
-  const weekdays = [...document.querySelectorAll('#weekday-group input:checked')].map(el => parseInt(el.value));
-  if (!biz || !sector || platforms.length === 0 || weekdays.length === 0) { err.style.display='block'; err.textContent='Lütfen işletme adı, sektör, en az bir platform ve en az bir gün seçin.'; return; }
-  err.style.display = 'none';
+  const weekdays = [...document.querySelectorAll(`#weekday-group input:checked`)].map(el => parseInt(el.value));
+  if (!biz || !sector || platforms.length === 0 || weekdays.length === 0) { err.style.display=`block`; err.textContent=`Lütfen işletme adı, sektör, en az bir platform ve en az bir gün seçin.`; return; }
+  err.style.display = `none`;
 
   // Seçilen haftanın günlerine göre 30 gün içindeki paylaşım günlerini hesapla
-  const startInput = document.getElementById('f-start').value;
-  const startDate = startInput ? new Date(startInput + 'T00:00:00') : new Date();
+  const startInput = document.getElementById(`f-start`).value;
+  const startDate = startInput ? new Date(startInput + `T00:00:00`) : new Date();
   const postingDays = [];
   const startMs = startDate.getTime();
   for (let i = 0; i < 30; i++) {
@@ -377,20 +377,20 @@ async function generate() {
 
   formData = { biz, sector, audience, platforms, tone, lang, special, weekdays, postingDays, startDate: startDate.toISOString() };
 
-  const genBtn = document.getElementById('gen-btn') || document.getElementById('analyze-btn');
-  if (genBtn) { genBtn.disabled = true; genBtn.style.opacity = '0.6'; }
-  show('loading-section');
-  window.scrollTo({ top: 0, behavior: 'smooth' });
+  const genBtn = document.getElementById(`gen-btn`) || document.getElementById(`analyze-btn`);
+  if (genBtn) { genBtn.disabled = true; genBtn.style.opacity = `0.6`; }
+  show(`loading-section`);
+  window.scrollTo({ top: 0, behavior: `smooth` });
   let mi = 0;
-  const msgEl = document.getElementById('loading-msg');
+  const msgEl = document.getElementById(`loading-msg`);
   const ticker = setInterval(() => { mi=(mi+1)%loadingMsgs.length; msgEl.textContent=loadingMsgs[mi]; }, 1800);
 
-  const platformList = platforms.join(', ');
+  const platformList = platforms.join(`, `);
   const postingDates = postingDays.map(dayNum => new Date(startMs + (dayNum - 1) * 86400000));
   const dayDateMap = postingDays.map((dayNum, idx) => {
     const dt = postingDates[idx];
     return `Sıra No ${dayNum} → ${dt.getDate()} ${TR_MONTHS[dt.getMonth()]} ${dt.getFullYear()} (${TR_DAYS[dt.getDay()]})`;
-  }).join('\n');
+  }).join(`\n`);
 
   // "Ayın X'i" ve "ilk hafta" gibi takvim-gün-of-month kalıplarını kendimiz
   // çözüp en yakın ÖNCEKİ paylaşım gününe kesin talimat olarak eşliyoruz —
@@ -417,7 +417,7 @@ async function generate() {
 
     dayOfMonthMatches.forEach(domNum => {
       monthsCovered.forEach(key => {
-        const [y, mo] = key.split('-').map(Number);
+        const [y, mo] = key.split(`-`).map(Number);
         const target = new Date(y, mo, domNum, 0, 0, 0);
         const match = findNearestOnOrBefore(target);
         if (match) resolvedCampaigns.push(`"Ayın ${domNum}'i" kampanyası → Sıra No ${match.dayNum} (${match.dt.getDate()} ${TR_MONTHS[match.dt.getMonth()]}, hedef tarihe en yakın/önceki paylaşım günü) için isSpecial:true yap ve o gün duyur.`);
@@ -425,7 +425,7 @@ async function generate() {
     });
     if (firstWeekMatch) {
       monthsCovered.forEach(key => {
-        const [y, mo] = key.split('-').map(Number);
+        const [y, mo] = key.split(`-`).map(Number);
         postingDates.forEach((dt, idx) => {
           if (dt.getFullYear() === y && dt.getMonth() === mo && dt.getDate() <= 7) {
             resolvedCampaigns.push(`"Ayın ilk haftası" kampanyası → Sıra No ${postingDays[idx]} (${dt.getDate()} ${TR_MONTHS[dt.getMonth()]}, o ayın ilk haftasındaki paylaşım günü) için isSpecial:true yap ve o gün duyur.`);
@@ -437,7 +437,7 @@ async function generate() {
 
   const specialNote = special
     ? `Özel günler/kampanyalar: ${special}\n${resolvedCampaigns.length ? 'KESİN TALİMAT — bu eşleşmeleri birebir uygula:\n' + resolvedCampaigns.join('\n') : '⚠️ Bu kampanyaları takvim tarihleriyle eşleştirip en yakın paylaşım gününde isSpecial:true yap.'}\n⚠️ ÖNEMLİ: "Sıra No" etiketi sadece bu listedeki sıralamadır, ayın kaçıncı günü olduğuyla KARIŞTIRMA — "Sıra No 14" ile "ayın 14'ü" birbirinden tamamen bağımsızdır.`
-    : 'Özel günler/kampanyalar: Yok';
+    : `Özel günler/kampanyalar: Yok`;
 
   const prompt = `Sen bir sosyal medya stratejisti ve içerik uzmanısın. Aşağıdaki işletme için sosyal medya içerik takvimi oluştur.
 
@@ -472,7 +472,7 @@ SADECE JSON döndür, açıklama yazma:
 }`;
 
   const onRetry = (attempt, reason) => {
-    msgEl.textContent = reason === 'encoding'
+    msgEl.textContent = reason === `encoding`
       ? `Yanıtta karakter bozulması tespit edildi, tekrar deneniyor (${attempt + 1}/2)...`
       : `Yapay zeka meşgul, tekrar deneniyor (${attempt + 1}/2)...`;
   };
@@ -481,39 +481,39 @@ SADECE JSON döndür, açıklama yazma:
     let res;
     if (N8N_PROXY) {
       res = await fetchJsonWithRetry(N8N_PROXY, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: `POST`,
+        headers: { 'Content-Type': `application/json` },
         body: JSON.stringify({ prompt })
       }, lang, onRetry);
       if (res.status === 429) {
         clearInterval(ticker);
-        show('form-section');
-        document.getElementById('err').textContent = 'Sunucu tarafında günlük limit doldu. Lütfen yarın tekrar deneyin.';
-        document.getElementById('err').style.display = 'block';
-        if (genBtn) { genBtn.disabled = false; genBtn.style.opacity = ''; }
+        show(`form-section`);
+        document.getElementById(`err`).textContent = `Sunucu tarafında günlük limit doldu. Lütfen yarın tekrar deneyin.`;
+        document.getElementById(`err`).style.display = `block`;
+        if (genBtn) { genBtn.disabled = false; genBtn.style.opacity = ``; }
         return;
       }
     } else {
-      const rawRes = await fetch('https://api.minimax.io/v1/chat/completions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer DEV_KEY' },
-        body: JSON.stringify({ model:'MiniMax-M3', max_completion_tokens:4000, messages:[{role:'user',content:prompt}] })
+      const rawRes = await fetch(`https://api.minimax.io/v1/chat/completions`, {
+        method: `POST`,
+        headers: { 'Content-Type': `application/json`, 'Authorization': `Bearer DEV_KEY` },
+        body: JSON.stringify({ model:`MiniMax-M3`, max_completion_tokens:4000, messages:[{role:`user`,content:prompt}] })
       });
       const rawData = await rawRes.json();
-      res = { _text: rawData.choices?.[0]?.message?.content || '' };
+      res = { _text: rawData.choices?.[0]?.message?.content || `` };
     }
     clearInterval(ticker);
     const text = res._text;
-    const s = text.indexOf('{'); const e = text.lastIndexOf('}'); const clean = (s !== -1 && e !== -1) ? text.slice(s, e + 1) : text.replace(/```json|```/g, '').trim();
+    const s = text.indexOf(`{`); const e = text.lastIndexOf(`}`); const clean = (s !== -1 && e !== -1) ? text.slice(s, e + 1) : text.replace(/```json|```/g, ``).trim();
     const result = JSON.parse(clean);
-    if (genBtn) { genBtn.disabled = false; genBtn.style.opacity = ''; }
+    if (genBtn) { genBtn.disabled = false; genBtn.style.opacity = ``; }
     renderResults(result);
   } catch(e) {
     clearInterval(ticker);
-    if (genBtn) { genBtn.disabled = false; genBtn.style.opacity = ''; }
-    show('form-section');
-    err.style.display = 'block';
-    err.textContent = 'Takvim oluşturulamadı. Yapay zeka meşgul olabilir veya sunucuya bağlanılamadı — lütfen tekrar deneyin.';
+    if (genBtn) { genBtn.disabled = false; genBtn.style.opacity = ``; }
+    show(`form-section`);
+    err.style.display = `block`;
+    err.textContent = `Takvim oluşturulamadı. Yapay zeka meşgul olabilir veya sunucuya bağlanılamadı — lütfen tekrar deneyin.`;
   }
 }
 
@@ -521,12 +521,12 @@ function renderResults(result) {
   allDays = result.days;
   const startDate = getStartDate();
 
-  document.getElementById('results-title').textContent = `${formData.biz} — 30 Günlük İçerik Takvimi`;
+  document.getElementById(`results-title`).textContent = `${formData.biz} — 30 Günlük İçerik Takvimi`;
   const fmt = d => `${d.getDate()} ${TR_MONTHS[d.getMonth()]} ${d.getFullYear()}`;
   const endDate = new Date(startDate);
   endDate.setDate(endDate.getDate() + 29);
-  document.getElementById('results-sub').textContent = `${fmt(startDate)} – ${fmt(endDate)} · ${formData.platforms.join(', ')}`;
-  document.getElementById('cta-sub').textContent = result.ctaText || 'Takvim hazır — şimdi uygulamaya geçmek için destek alalım.';
+  document.getElementById(`results-sub`).textContent = `${fmt(startDate)} – ${fmt(endDate)} · ${formData.platforms.join(', ')}`;
+  document.getElementById(`cta-sub`).textContent = result.ctaText || `Takvim hazır — şimdi uygulamaya geçmek için destek alalım.`;
 
   // Assign actual dates to days
   allDays = allDays.map(d => {
@@ -536,14 +536,14 @@ function renderResults(result) {
   });
 
   currentWeek = 1;
-  showWeek(1, document.querySelector('.wtab'));
-  show('results-section'); collapseForm();
+  showWeek(1, document.querySelector(`.wtab`));
+  show(`results-section`); collapseForm();
 }
 
 function showWeek(week, btn) {
   currentWeek = week;
-  document.querySelectorAll('.wtab').forEach(t => t.classList.remove('active'));
-  btn.classList.add('active');
+  document.querySelectorAll(`.wtab`).forEach(t => t.classList.remove(`active`));
+  btn.classList.add(`active`);
 
   const start = (week - 1) * 7 + 1;
   const end = Math.min(start + 6, 30);
@@ -552,8 +552,8 @@ function showWeek(week, btn) {
 }
 
 function renderDays(days) {
-  const grid = document.getElementById('days-grid');
-  grid.innerHTML = '';
+  const grid = document.getElementById(`days-grid`);
+  grid.innerHTML = ``;
   days.forEach((d, idx) => {
     const dt = d.date;
     const dayName = TR_DAYS[dt.getDay()];
@@ -587,19 +587,19 @@ function copyDay(dayNum, btn) {
   const dt = d.date;
   const text = `Gün ${d.day} — ${dt.getDate()} ${TR_MONTHS[dt.getMonth()]}\nKonu: ${d.topic}\nFormat: ${d.format} · ${d.platform}\n\n${d.draft}`;
   navigator.clipboard.writeText(text).then(() => {
-    btn.innerHTML = '<i class="ti ti-check" style="font-size:14px" aria-hidden="true"></i>';
-    btn.classList.add('copied');
+    btn.innerHTML = `<i class="ti ti-check" style="font-size:14px" aria-hidden="true"></i>`;
+    btn.classList.add(`copied`);
     setTimeout(() => {
-      btn.innerHTML = '<i class="ti ti-copy" style="font-size:14px" aria-hidden="true"></i>';
-      btn.classList.remove('copied');
+      btn.innerHTML = `<i class="ti ti-copy" style="font-size:14px" aria-hidden="true"></i>`;
+      btn.classList.remove(`copied`);
     }, 1800);
   });
 }
 
 async function refreshWeek() {
-  const btn = document.getElementById('refresh-week-btn');
+  const btn = document.getElementById(`refresh-week-btn`);
   btn.disabled = true;
-  btn.innerHTML = '<i class="ti ti-refresh" aria-hidden="true"></i> Yenileniyor...';
+  btn.innerHTML = `<i class="ti ti-refresh" aria-hidden="true"></i> Yenileniyor...`;
 
   const start = (currentWeek - 1) * 7 + 1;
   const end = Math.min(start + 6, 30);
@@ -624,14 +624,14 @@ SADECE JSON döndür:
   try {
     let text;
     if (N8N_PROXY) {
-      const res = await fetchJsonWithRetry(N8N_PROXY, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({prompt}) }, lang, onRetry);
+      const res = await fetchJsonWithRetry(N8N_PROXY, { method:`POST`, headers:{'Content-Type':`application/json`}, body:JSON.stringify({prompt}) }, lang, onRetry);
       text = res._text;
     } else {
-      const res = await fetch('https://api.minimax.io/v1/chat/completions', { method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer DEV_KEY'}, body:JSON.stringify({model:'MiniMax-M3',max_completion_tokens:1500,messages:[{role:'user',content:prompt}]}) });
+      const res = await fetch(`https://api.minimax.io/v1/chat/completions`, { method:`POST`, headers:{'Content-Type':`application/json`,'Authorization':`Bearer DEV_KEY`}, body:JSON.stringify({model:`MiniMax-M3`,max_completion_tokens:1500,messages:[{role:`user`,content:prompt}]}) });
       const data = await res.json();
-      text = data.choices?.[0]?.message?.content || '';
+      text = data.choices?.[0]?.message?.content || ``;
     }
-    const s = text.indexOf('{'); const e = text.lastIndexOf('}'); const clean = (s !== -1 && e !== -1) ? text.slice(s, e + 1) : text.replace(/```json|```/g, '').trim();
+    const s = text.indexOf(`{`); const e = text.lastIndexOf(`}`); const clean = (s !== -1 && e !== -1) ? text.slice(s, e + 1) : text.replace(/```json|```/g, ``).trim();
     const result = JSON.parse(clean);
     const periodStart = getStartDate();
     result.days.forEach(d => {
@@ -644,10 +644,10 @@ SADECE JSON döndür:
     allDays.sort((a, b) => a.day - b.day);
     renderDays(allDays.filter(d => d.day >= start && d.day <= end));
   } catch(e) {
-    alert('Bu hafta yenilenemedi. Yapay zeka meşgul olabilir veya yanıt bozuk geldi — lütfen tekrar deneyin.');
+    alert(`Bu hafta yenilenemedi. Yapay zeka meşgul olabilir veya yanıt bozuk geldi — lütfen tekrar deneyin.`);
   }
   btn.disabled = false;
-  btn.innerHTML = '<i class="ti ti-refresh" aria-hidden="true"></i> Bu haftayı yenile';
+  btn.innerHTML = `<i class="ti ti-refresh" aria-hidden="true"></i> Bu haftayı yenile`;
 }
 
 function copyAll() {
@@ -662,15 +662,15 @@ function copyAll() {
     `Dil: ${fd.lang||''}`,
     `Paylaşım günleri: ${fd.weekdays && fd.weekdays.length ? fd.weekdays.map(w => TR_DAYS[w]).join(', ') : ''}`,
     `Özel gün/kampanya: ${fd.special||''}`,
-    '---'
-  ].join('\n');
+    `---`
+  ].join(`\n`);
   const body = allDays.map(d => {
     const dt = d.date;
     return `Gün ${d.day} — ${dt.getDate()} ${TR_MONTHS[dt.getMonth()]}\nKonu: ${d.topic}\nFormat: ${d.format} · ${d.platform}\n\n${d.draft}`;
-  }).join('\n\n---\n\n');
-  navigator.clipboard.writeText(header + '\n' + body).then(() => {
-    const btn = document.getElementById('copy-all-btn');
-    if (btn) { btn.textContent = 'Kopyalandı ✓'; setTimeout(() => btn.textContent = 'Tümünü Kopyala', 2000); }
+  }).join(`\n\n---\n\n`);
+  navigator.clipboard.writeText(header + `\n` + body).then(() => {
+    const btn = document.getElementById(`copy-all-btn`);
+    if (btn) { btn.textContent = `Kopyalandı ✓`; setTimeout(() => btn.textContent = `Tümünü Kopyala`, 2000); }
   });
 }
 
@@ -684,14 +684,14 @@ function downloadTxt() {
     `Ton: ${fd.tone||''}`, `Dil: ${fd.lang||''}`,
     `Paylaşım günleri: ${fd.weekdays && fd.weekdays.length ? fd.weekdays.map(w => TR_DAYS[w]).join(', ') : ''}`,
     `Özel gün/kampanya: ${fd.special||''}`,
-    '', '='.repeat(50), ''
-  ].join('\n');
+    ``, `=`.repeat(50), ``
+  ].join(`\n`);
   const body = allDays.map(d => {
     const dt = d.date;
     return `Gün ${d.day} — ${dt.getDate()} ${TR_MONTHS[dt.getMonth()]}\nKonu: ${d.topic}\nFormat: ${d.format} · ${d.platform}\n\n${d.draft}`;
-  }).join('\n\n─'.repeat(1) + '\n\n');
-  const blob = new Blob([header + body], {type:'text/plain;charset=utf-8'});
-  const a = document.createElement('a');
+  }).join(`\n\n─`.repeat(1) + `\n\n`);
+  const blob = new Blob([header + body], {type:`text/plain;charset=utf-8`});
+  const a = document.createElement(`a`);
   a.href = URL.createObjectURL(blob);
   a.download = `icerik-takvimi-${(fd.biz||'takvim').replace(/\s+/g,'-').toLowerCase()}.txt`;
   a.click();
@@ -708,9 +708,9 @@ function downloadCSV() {
     tone ? `${esc('Marka Tonu')},${esc(tone)}` : null,
     `${esc('Dil')},${esc(lang||'')}`,
     special ? `${esc('Özel Günler')},${esc(special)}` : null,
-    '',
+    ``,
   ].filter(r => r !== null);
-  const headers = ['Gün','Tarih','Gün Adı','Konu','Format','Platform','Taslak Metin','Özel Gün'];
+  const headers = [`Gün`,`Tarih`,`Gün Adı`,`Konu`,`Format`,`Platform`,`Taslak Metin`,`Özel Gün`];
   const rows = allDays.map(d => {
     const dt = d.date;
     return [
@@ -721,39 +721,39 @@ function downloadCSV() {
       d.format,
       d.platform,
       esc(d.draft),
-      d.isSpecial ? 'Evet' : 'Hayır'
-    ].join(',');
+      d.isSpecial ? `Evet` : `Hayır`
+    ].join(`,`);
   });
-  const csv = [...metaRows, headers.join(','), ...rows].join('\n');
-  const bom = '\uFEFF';
-  const blob = new Blob([bom + csv], { type: 'text/csv;charset=utf-8' });
+  const csv = [...metaRows, headers.join(`,`), ...rows].join(`\n`);
+  const bom = `\uFEFF`;
+  const blob = new Blob([bom + csv], { type: `text/csv;charset=utf-8` });
   const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
+  const a = document.createElement(`a`);
   a.href = url;
   a.download = `${formData.biz || 'icerik'}_30_gunluk_takvim.csv`;
   a.click();
   URL.revokeObjectURL(url);
 }
 function restart() {
-  document.getElementById('f-biz').value = '';
-  document.getElementById('f-sector').value = '';
-  document.getElementById('f-audience').value = '';
-  document.getElementById('f-tone').value = '';
-  document.getElementById('f-lang').value = 'Türkçe';
-  document.getElementById('f-special').value = '';
-  document.getElementById('f-start').value = '';
-  document.querySelectorAll('#platform-group input').forEach(el => el.checked = false);
-  document.querySelectorAll('#weekday-group input').forEach(el => el.checked = false);
+  document.getElementById(`f-biz`).value = ``;
+  document.getElementById(`f-sector`).value = ``;
+  document.getElementById(`f-audience`).value = ``;
+  document.getElementById(`f-tone`).value = ``;
+  document.getElementById(`f-lang`).value = `Türkçe`;
+  document.getElementById(`f-special`).value = ``;
+  document.getElementById(`f-start`).value = ``;
+  document.querySelectorAll(`#platform-group input`).forEach(el => el.checked = false);
+  document.querySelectorAll(`#weekday-group input`).forEach(el => el.checked = false);
   allDays = [];
-  show('form-section');
+  show(`form-section`);
 }
 
 // Set default start date to tomorrow
 const tomorrow = new Date();
 tomorrow.setDate(tomorrow.getDate() + 1);
-document.getElementById('f-start').value = tomorrow.toISOString().split('T')[0];
+document.getElementById(`f-start`).value = tomorrow.toISOString().split(`T`)[0];
 
-show('form-section');
+show(`form-section`);
 </script>
 </body>
 </html>
@@ -763,53 +763,53 @@ show('form-section');
 (function() {
   try {
     let payload = null;
-    const urlParam = new URLSearchParams(window.location.search).get('kkb_import');
+    const urlParam = new URLSearchParams(window.location.search).get(`kkb_import`);
     if (urlParam) payload = JSON.parse(decodeURIComponent(urlParam));
     if (!payload) {
-      const raw = sessionStorage.getItem('kkb_import');
+      const raw = sessionStorage.getItem(`kkb_import`);
       if (raw) payload = JSON.parse(raw);
     }
     if (!payload) return;
     if (Date.now() - payload.ts > 10 * 60 * 1000) return;
-    if (payload.app !== 'takvim') return;
+    if (payload.app !== `takvim`) return;
 
     const d = payload.data;
 
-    if (d.biz)      document.getElementById('f-biz').value      = d.biz;
-    if (d.target)   document.getElementById('f-audience').value = d.target;
+    if (d.biz)      document.getElementById(`f-biz`).value      = d.biz;
+    if (d.target)   document.getElementById(`f-audience`).value = d.target;
 
     // Sektör eşleştirmesi
     if (d.sector) {
-      const norm = s => s.trim().toLowerCase().replace(/\s*\/\s*/g, '/');
-      const sectorEl = document.getElementById('f-sector');
-      const opts = [...sectorEl.options].filter(o => o.value !== '');
+      const norm = s => s.trim().toLowerCase().replace(/\s*\/\s*/g, `/`);
+      const sectorEl = document.getElementById(`f-sector`);
+      const opts = [...sectorEl.options].filter(o => o.value !== ``);
       let match = opts.find(o => norm(o.value) === norm(d.sector));
-      if (!match) match = opts.find(o => norm(o.value).startsWith(norm(d.sector.split('/')[0].trim())));
-      if (!match) match = opts.find(o => norm(d.sector).includes(norm(o.value.split('/')[0].trim())));
+      if (!match) match = opts.find(o => norm(o.value).startsWith(norm(d.sector.split(`/`)[0].trim())));
+      if (!match) match = opts.find(o => norm(d.sector).includes(norm(o.value.split(`/`)[0].trim())));
       if (match) sectorEl.value = match.value;
     }
 
-    sessionStorage.removeItem('kkb_import');
+    sessionStorage.removeItem(`kkb_import`);
 
-    const notice = document.createElement('div');
-    notice.style.cssText = 'background:#F0FAF6;border:0.5px solid #9FE1CB;border-radius:8px;padding:10px 14px;font-size:13px;color:#085041;display:flex;align-items:center;gap:8px;margin-bottom:1rem';
-    notice.innerHTML = "<i class=\"ti ti-circle-check\" aria-hidden=\"true\"></i> Form, launcher'dan aktarılan verilerle dolduruldu.";
-    const fc = document.querySelector('.form-card') || document.querySelector('form') || document.body.firstElementChild;
+    const notice = document.createElement(`div`);
+    notice.style.cssText = `background:#F0FAF6;border:0.5px solid #9FE1CB;border-radius:8px;padding:10px 14px;font-size:13px;color:#085041;display:flex;align-items:center;gap:8px;margin-bottom:1rem`;
+    notice.innerHTML = `<i class="ti ti-circle-check" aria-hidden="true"></i> Form, launcher'dan aktarılan verilerle dolduruldu.`;
+    const fc = document.querySelector(`.form-card`) || document.querySelector(`form`) || document.body.firstElementChild;
     if (fc) fc.insertBefore(notice, fc.children[2] || fc.firstChild);
     setTimeout(() => notice.remove(), 5000);
   } catch(e) {}
 })();
 
 // ── Form Kalıcılığı (localStorage + JSON export/import) ──────────────────────
-const LS_KEY = 'kkform_' + location.pathname.replace(/\//g,'_');
+const LS_KEY = `kkform_` + location.pathname.replace(/\//g,`_`);
 
 function saveForm() {
-  const form = document.getElementById('form-section');
+  const form = document.getElementById(`form-section`);
   if (!form) return;
   const data = {};
-  form.querySelectorAll('input,select,textarea').forEach(el => {
+  form.querySelectorAll(`input,select,textarea`).forEach(el => {
     if (!el.id) return;
-    data[el.id] = el.type === 'checkbox' ? el.checked : el.value;
+    data[el.id] = el.type === `checkbox` ? el.checked : el.value;
   });
   try { localStorage.setItem(LS_KEY, JSON.stringify(data)); } catch(e) {}
 }
@@ -822,24 +822,24 @@ function restoreForm() {
     Object.entries(data).forEach(([id, val]) => {
       const el = document.getElementById(id);
       if (!el) return;
-      if (el.type === 'checkbox') el.checked = val;
+      if (el.type === `checkbox`) el.checked = val;
       else el.value = val;
     });
   } catch(e) {}
 }
 
 function exportFormJSON() {
-  const form = document.getElementById('form-section');
+  const form = document.getElementById(`form-section`);
   if (!form) return;
   const data = { _tool: document.title, _date: new Date().toISOString() };
-  form.querySelectorAll('input,select,textarea').forEach(el => {
+  form.querySelectorAll(`input,select,textarea`).forEach(el => {
     if (!el.id) return;
-    data[el.id] = el.type === 'checkbox' ? el.checked : el.value;
+    data[el.id] = el.type === `checkbox` ? el.checked : el.value;
   });
-  const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json;charset=utf-8'});
-  const a = document.createElement('a');
+  const blob = new Blob([JSON.stringify(data, null, 2)], {type:`application/json;charset=utf-8`});
+  const a = document.createElement(`a`);
   a.href = URL.createObjectURL(blob);
-  a.download = 'form-' + location.pathname.replace(/\//g,'').replace(/-/g,'_') + '.json';
+  a.download = `form-` + location.pathname.replace(/\//g,``).replace(/-/g,`_`) + `.json`;
   a.click();
 }
 
@@ -851,37 +851,37 @@ function importFormJSON(input) {
     try {
       const data = JSON.parse(e.target.result);
       Object.entries(data).forEach(([id, val]) => {
-        if (id.startsWith('_')) return;
+        if (id.startsWith(`_`)) return;
         const el = document.getElementById(id);
         if (!el) return;
-        if (el.type === 'checkbox') el.checked = val;
+        if (el.type === `checkbox`) el.checked = val;
         else el.value = val;
       });
       saveForm();
-      input.value = '';
-      const notice = document.getElementById('import-notice');
-      if (notice) { notice.style.display='block'; setTimeout(()=>notice.style.display='none', 2500); }
-    } catch(e) { alert('Geçersiz form dosyası.'); }
+      input.value = ``;
+      const notice = document.getElementById(`import-notice`);
+      if (notice) { notice.style.display=`block`; setTimeout(()=>notice.style.display=`none`, 2500); }
+    } catch(e) { alert(`Geçersiz form dosyası.`); }
   };
   reader.readAsText(file);
 }
 
 // Auto-save on any change
-document.addEventListener('change', e => { if (document.getElementById('form-section')?.contains(e.target)) saveForm(); });
-document.addEventListener('input',  e => { if (document.getElementById('form-section')?.contains(e.target)) saveForm(); });
+document.addEventListener(`change`, e => { if (document.getElementById(`form-section`)?.contains(e.target)) saveForm(); });
+document.addEventListener(`input`,  e => { if (document.getElementById(`form-section`)?.contains(e.target)) saveForm(); });
 // Restore on load
 restoreForm();
 
 // ── Form Collapse ──────────────────────────────────────────────────────────
 function collapseForm() {
-  const fc = document.getElementById('form-section');
-  if (fc) fc.classList.add('is-collapsed');
+  const fc = document.getElementById(`form-section`);
+  if (fc) fc.classList.add(`is-collapsed`);
 }
 function expandForm() {
-  const fc = document.getElementById('form-section');
+  const fc = document.getElementById(`form-section`);
   if (fc) {
-    fc.classList.remove('is-collapsed');
-    if (fc.scrollIntoView) fc.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    fc.classList.remove(`is-collapsed`);
+    if (fc.scrollIntoView) fc.scrollIntoView({ behavior: `smooth`, block: `start` });
   }
 }
 </script>
