@@ -106,6 +106,9 @@ input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3p
   .results{display:block!important}
   .loading{display:none!important}
   .btn-primary,.btn-secondary,.btn-sm,.actions,.cta-box,.reset-link{display:none!important}
+  .week-tabs,.refresh-row,.days-grid{display:none!important}
+  #print-all-days{display:block!important;visibility:visible}
+  #print-all-days *{visibility:visible}
 }
 </style>
 </head>
@@ -252,7 +255,7 @@ input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3p
         <button class="btn-sm" id="copy-all-btn" onclick="copyAll()"><i class="ti ti-copy" aria-hidden="true"></i> Tümünü Kopyala</button>
         <button class="btn-sm" onclick="downloadTxt()"><i class="ti ti-file-text" aria-hidden="true"></i> TXT İndir</button>
         <button class="btn-sm" onclick="downloadCSV()"><i class="ti ti-download" aria-hidden="true"></i> CSV İndir</button>
-        <button class="btn-sm" onclick="window.print()"><i class="ti ti-printer" aria-hidden="true"></i> Yazdır</button>
+        <button class="btn-sm" onclick="printFullCalendar()"><i class="ti ti-printer" aria-hidden="true"></i> Yazdır</button>
         <button class="btn-sm" onclick="restart()"><i class="ti ti-refresh" aria-hidden="true"></i> Yeniden</button>
       </div>
     </div>
@@ -271,6 +274,7 @@ input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3p
     </div>
 
     <div class="days-grid" id="days-grid"></div>
+    <div id="print-all-days" style="display:none"></div>
 
     <div class="cta-box" style="margin-top:1.5rem">
       <div class="cta-title">İçerik stratejinizi birlikte yönetelim</div>
@@ -418,18 +422,23 @@ async function generate() {
       .map(m => parseInt(m[1]));
 
     // "ayın 1'i ve 15'inde" gibi tek "ayın" sözcüğüyle birden fazla günün
-    // listelendiği durumları yakalamak için: metinde "ayın" geçiyorsa,
-    // iyelik/hal eki (apostrofla) taşıyan diğer gün ifadelerini de (15'inde,
-    // 20'sinde vb.) topla — apostrof zorunlu olduğu için "%20" veya "500
-    // TL" gibi alakasız sayıları yanlışlıkla yakalamaz. "3. haftasında" ile
-    // çakışmayı önlemek için hemen ardından "hafta" gelenleri hariç tut.
-    const hasAyinContext = /ayın\s/i.test(special);
-    const suffixedDayMatches = hasAyinContext
-      ? [...special.matchAll(/(\d{1,2})['’]\s*[a-zA-ZışİĞğÜüÇçÖö]{1,6}\b/g)]
-          .filter(m => !/^\s*\.?\s*hafta/i.test(special.slice(m.index + m[0].length)))
-          .map(m => parseInt(m[1]))
-          .filter(n => [n >= 1, n <= 31].every(Boolean))
-      : [];
+    // listelendiği durumları yakalamak için: iyelik/hal eki (apostrofla)
+    // taşıyan diğer gün ifadelerini de (15'inde, 20'sinde vb.) topluyoruz —
+    // ama YALNIZCA "ayın" ile AYNI virgülle ayrılmış cümle parçasında
+    // geçenleri. "3. haftasında" ile çakışmayı önlemek için hemen ardından
+    // "hafta" gelenleri, "N alana M'si bedava/ücretsiz/hediye" (kampanya
+    // koşulu, gün değil) kalıbına uyanları da hariç tutuyoruz — bu kalıp
+    // gerçekte yaşanan bir yanlış-eşleşmeye ("3 alana 1'i bedava" → "ayın
+    // 1'i" sanılması) yol açmıştı.
+    const ayinSegments = special.split(/[,;]/).filter(seg => /ayın\s/i.test(seg));
+    const suffixedDayMatches = ayinSegments.flatMap(seg =>
+      [...seg.matchAll(/(\d{1,2})['’]\s*[a-zA-ZışİĞğÜüÇçÖö]{1,6}\b/g)]
+        .filter(m => !/^\s*\.?\s*hafta/i.test(seg.slice(m.index + m[0].length)))
+        .filter(m => !/(alana|alan)\s*$/i.test(seg.slice(0, m.index)))
+        .filter(m => !/^\s*(bedava|ücretsiz|ucretsiz|hediye)/i.test(seg.slice(m.index + m[0].length)))
+        .map(m => parseInt(m[1]))
+        .filter(n => [n >= 1, n <= 31].every(Boolean))
+    );
 
     const dayOfMonthMatches = [...new Set([...primaryDayMatches, ...suffixedDayMatches])];
 
@@ -486,23 +495,29 @@ async function generate() {
     // günler — sabit tarihli veya "ayın N. pazar/cuma günü" gibi kurala
     // bağlı olanlar burada çözülüyor.
     const namedHolidays = [
-      { keywords: [`sevgililer günü`, `sevgililer gunu`], resolve: y => new Date(y, 1, 14) },
-      { keywords: [`kadınlar günü`, `kadinlar gunu`], resolve: y => new Date(y, 2, 8) },
-      { keywords: [`işçi bayramı`, `emek ve dayanışma`, `1 mayıs`], resolve: y => new Date(y, 4, 1) },
-      { keywords: [`demokrasi ve millî birlik`, `demokrasi ve milli birlik`, `15 temmuz`], resolve: y => new Date(y, 6, 15) },
-      { keywords: [`anneler günü`, `anneler gunu`], resolve: y => getNthWeekdayOfMonth(y, 4, 0, 2) },
-      { keywords: [`babalar günü`, `babalar gunu`], resolve: y => getNthWeekdayOfMonth(y, 5, 0, 3) },
-      { keywords: [`öğretmenler günü`, `ogretmenler gunu`], resolve: y => new Date(y, 10, 24) },
-      { keywords: [`cumhuriyet bayramı`, `cumhuriyet bayrami`], resolve: y => new Date(y, 9, 29) },
-      { keywords: [`zafer bayramı`, `zafer bayrami`], resolve: y => new Date(y, 7, 30) },
-      { keywords: [`yılbaşı`, `yilbasi`], resolve: y => new Date(y, 0, 1) },
-      { keywords: [`black friday`, `efsane cuma`, `kara cuma`], resolve: y => getLastWeekdayOfMonth(y, 10, 5) },
-      { keywords: [`cyber monday`, `siber pazartesi`], resolve: y => { const bf = getLastWeekdayOfMonth(y, 10, 5); return new Date(y, 10, bf.getDate() + 3); } },
-      { keywords: [`en uzun gece`], resolve: y => new Date(y, 11, 21) },
-      { keywords: [`11.11`, `11 kasım indirim`, `11 kasim indirim`, `tekliler günü`, `tekliler gunu`], resolve: y => new Date(y, 10, 11) },
+      { label: `23 Nisan Ulusal Egemenlik ve Çocuk Bayramı`, keywords: [`23 nisan`, `ulusal egemenlik`, `çocuk bayramı`, `cocuk bayrami`], resolve: y => new Date(y, 3, 23) },
+      { label: `Sevgililer Günü`, keywords: [`sevgililer günü`, `sevgililer gunu`], resolve: y => new Date(y, 1, 14) },
+      { label: `Kadınlar Günü`, keywords: [`kadınlar günü`, `kadinlar gunu`], resolve: y => new Date(y, 2, 8) },
+      { label: `İşçi Bayramı (1 Mayıs)`, keywords: [`işçi bayramı`, `emek ve dayanışma`, `1 mayıs`], resolve: y => new Date(y, 4, 1) },
+      { label: `19 Mayıs Atatürk'ü Anma Gençlik ve Spor Bayramı`, keywords: [`19 mayıs`, `19 mayis`, `gençlik ve spor bayramı`, `genclik ve spor bayrami`], resolve: y => new Date(y, 4, 19) },
+      { label: `Demokrasi ve Millî Birlik Günü (15 Temmuz)`, keywords: [`demokrasi ve millî birlik`, `demokrasi ve milli birlik`, `15 temmuz`], resolve: y => new Date(y, 6, 15) },
+      { label: `Anneler Günü`, keywords: [`anneler günü`, `anneler gunu`], resolve: y => getNthWeekdayOfMonth(y, 4, 0, 2) },
+      { label: `Babalar Günü`, keywords: [`babalar günü`, `babalar gunu`], resolve: y => getNthWeekdayOfMonth(y, 5, 0, 3) },
+      { label: `Öğretmenler Günü`, keywords: [`öğretmenler günü`, `ogretmenler gunu`], resolve: y => new Date(y, 10, 24) },
+      { label: `Zafer Bayramı (30 Ağustos)`, keywords: [`zafer bayramı`, `zafer bayrami`], resolve: y => new Date(y, 7, 30) },
+      { label: `Cumhuriyet Bayramı (29 Ekim)`, keywords: [`cumhuriyet bayramı`, `cumhuriyet bayrami`], resolve: y => new Date(y, 9, 29) },
+      { label: `Yılbaşı`, keywords: [`yılbaşı`, `yilbasi`], resolve: y => new Date(y, 0, 1) },
+      { label: `Black Friday`, keywords: [`black friday`, `efsane cuma`, `kara cuma`], resolve: y => getLastWeekdayOfMonth(y, 10, 5) },
+      { label: `Cyber Monday`, keywords: [`cyber monday`, `siber pazartesi`], resolve: y => { const bf = getLastWeekdayOfMonth(y, 10, 5); return new Date(y, 10, bf.getDate() + 3); } },
+      { label: `En Uzun Gece (21 Aralık)`, keywords: [`en uzun gece`], resolve: y => new Date(y, 11, 21) },
+      { label: `11.11 İndirim Günü`, keywords: [`11.11`, `11 kasım indirim`, `11 kasim indirim`, `tekliler günü`, `tekliler gunu`], resolve: y => new Date(y, 10, 11) },
     ];
     const specialLower = special.toLocaleLowerCase(`tr`);
-    const matchedHolidays = namedHolidays.filter(h => h.keywords.some(kw => specialLower.includes(kw)));
+    // Ulusal/bilinen özel günler kullanıcı metninde geçmese bile HER ZAMAN
+    // kontrol edilir (dönem içine denk geliyorsa eklenir) — kullanıcının
+    // aklına gelmeyen ama işletmesiyle alakalı olabilecek günleri (ör.
+    // "Anneler Günü" yazıp "19 Mayıs"ı unutması) kaçırmayalım diye.
+    const matchedHolidays = namedHolidays;
 
     // Belirli bir güne değil bir DÖNEME yayılan isimli kampanyalar (Okula
     // Dönüş, Yeni Yıl Hazırlıkları vb.) — dateRangeMatches ile aynı mantıkla
@@ -615,7 +630,7 @@ async function generate() {
         const reversed = [...matches].reverse();
         reversed.forEach((match, i) => {
           const stage = i === 0 ? `gün mesajı` : `öncesi hatırlatma`;
-          resolvedCampaigns.push(`Özel gün (${target.getDate()} ${TR_MONTHS[target.getMonth()]}) → Sıra No ${match.dayNum} (${match.dt.getDate()} ${TR_MONTHS[match.dt.getMonth()]}) için isSpecial:true yap; bu gün "${stage}" niteliğinde bir mesaj yaz.`);
+          resolvedCampaigns.push(`"${holiday.label}" (${target.getDate()} ${TR_MONTHS[target.getMonth()]}) → Sıra No ${match.dayNum} (${match.dt.getDate()} ${TR_MONTHS[match.dt.getMonth()]}) için isSpecial:true yap; bu gün "${stage}" niteliğinde, "${holiday.label}" temalı bir mesaj yaz.`);
         });
       });
     });
@@ -830,6 +845,51 @@ function renderDays(days) {
         </button>
       </div>`;
   });
+}
+
+// "Yazdır" butonu yalnızca ekranda o an görünen haftayı (days-grid) yazdırırdı,
+// çünkü hafta sekmeleri aynı konteynerin içeriğini değiştirip diğer haftaların
+// DOM'dan tamamen silinmesine yol açıyordu. Bunun yerine form bilgilerini ve
+// TÜM günleri ayrı, sadece yazdırmada görünen bir konteynere basıyoruz.
+function printFullCalendar() {
+  if (!allDays.length) return;
+  const fd = formData || {};
+  const container = document.getElementById(`print-all-days`);
+  const metaRows = [
+    [`İşletme`, fd.biz],
+    [`Sektör`, fd.sector],
+    [`Hedef Kitle`, fd.audience],
+    [`Platformlar`, fd.platforms?.length ? fd.platforms.join(`, `) : ``],
+    [`Marka Tonu`, fd.tone],
+    [`Dil`, fd.lang],
+    [`Paylaşım Günleri`, fd.weekdays?.length ? fd.weekdays.map(w => TR_DAYS[w]).join(`, `) : ``],
+    [`Özel Gün/Kampanya`, fd.special],
+  ].filter(([, v]) => v);
+  const metaHtml = `<div style="margin-bottom:1.5rem;font-size:13px;color:#1C1B19;line-height:1.7">` +
+    metaRows.map(([k, v]) => `<div><strong>${escHtml(k)}:</strong> ${escHtml(v)}</div>`).join(``) +
+    `</div>`;
+  const daysHtml = allDays.map(d => {
+    const dt = d.date;
+    return `
+      <div class="day-card" style="${d.isSpecial ? `border-left:3px solid #EF9F27;border-radius:0 12px 12px 0;` : ``}">
+        <div>
+          <div class="day-num">Gün ${d.day}</div>
+          <div class="day-date" style="${d.isSpecial ? `color:#BA7517` : ``}">${dt.getDate()}</div>
+          <div class="day-weekday">${TR_DAYS[dt.getDay()]} ${TR_MONTHS[dt.getMonth()]}</div>
+        </div>
+        <div class="day-content">
+          <div class="day-topic">${escHtml(d.topic)}</div>
+          <div class="day-draft">${escHtml(d.draft)}</div>
+          <div class="day-tags">
+            <span class="tag tag-format">${escHtml(d.format)}</span>
+            <span class="tag tag-platform">${escHtml(d.platform)}</span>
+            ${d.isSpecial ? `<span class="tag tag-special">Özel gün</span>` : ``}
+          </div>
+        </div>
+      </div>`;
+  }).join(``);
+  container.innerHTML = `<h1 style="font-size:20px;margin-bottom:1rem">${escHtml(document.getElementById('results-title')?.textContent || '30 Günlük İçerik Takvimi')}</h1>` + metaHtml + `<div class="days-grid" style="display:grid!important">${daysHtml}</div>`;
+  window.print();
 }
 
 function copyDay(dayNum, btn) {

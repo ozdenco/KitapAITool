@@ -26,7 +26,7 @@ function kolaykobi_ai_proxy(WP_REST_Request $request) {
     // max_execution_time'ı (genelde 30-60s) wp_remote_post'un timeout
     // parametresini beklemeden süreci öldürmesin diye yükseltiyoruz.
     if (function_exists('set_time_limit')) {
-        @set_time_limit(280);
+        @set_time_limit(340);
     }
 
     // İzin verilen n8n webhook'ları — tool adı → webhook path
@@ -54,7 +54,7 @@ function kolaykobi_ai_proxy(WP_REST_Request $request) {
     $response = wp_remote_post(
         'https://n8n.srv1492396.hstgr.cloud/webhook/' . $tools[$tool],
         array(
-            'timeout' => 180,
+            'timeout' => 320,
             'headers' => array('Content-Type' => 'application/json'),
             'body'    => wp_json_encode(array('prompt' => $prompt)),
         )
