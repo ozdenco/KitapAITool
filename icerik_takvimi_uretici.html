@@ -291,6 +291,19 @@ const N8N_PROXY = `/wp-json/kolaykobi/v1/ai/takvim`;
 
 function escHtml(s){return String(s||``).replace(/&/g,`&amp;`).replace(/</g,`&lt;`).replace(/>/g,`&gt;`).replace(/"/g,`&quot;`).replace(/'/g,`&#39;`);}
 
+// Reasoning modeli bazen </think> kapanmadan ÖNCE taslak bir JSON iskeleti
+// yazıyor, asıl cevap ise </think> SONRASINDA geliyor. indexOf('{') metnin
+// başından aradığı için yanlışlıkla taslaktan başlayıp asıl cevabın sonuna
+// kadar (aradaki düz metin dahil) her şeyi yakalayabiliyor — bu yüzden arama
+// varsa </think>'ten SONRAKİ kısımla sınırlandırılıyor.
+function extractJson(text) {
+  const thinkEnd = text.lastIndexOf(`</think>`);
+  const searchText = thinkEnd !== -1 ? text.slice(thinkEnd + `</think>`.length) : text;
+  const s = searchText.indexOf(`{`);
+  const e = searchText.lastIndexOf(`}`);
+  return [s !== -1, e !== -1].every(Boolean) ? searchText.slice(s, e + 1) : searchText.replace(/```json|```/g, ``).trim();
+}
+
 // MiniMax bazen Türkçe özel karakterleri (ı,ü,ç,ö,ş,ğ) yanlış kod sayfasıyla
 // (CJK/GBK) üretip bozuyor. Çıktıda CJK karakter varsa (Çince istenmediği
 // sürece) yanıtı bozuk kabul edip yeniden deniyoruz.
@@ -664,9 +677,17 @@ async function generate() {
   // işlemesi için ayrı bir talimat veriyoruz.
   const hasDateAnchoredCampaign = [resolvedCampaigns.length > 0, matchedMovable.length > 0].some(Boolean);
 
+  // Kullanıcı bir şey yazmış olsa da olmasa da, dönemin kapsadığı ay(lar)a
+  // ait BİLİNEN diğer resmi/milli günleri/fırsatları (yazmayı unuttuğu
+  // olası günler dahil — ör. "Anneler Günü" yazıp "19 Mayıs"ı unutması gibi)
+  // kendi bilgisiyle tarasın ve atlamadığından emin olsun istiyoruz.
+  const coveredMonthNames = [...new Set(postingDates.map(dt => TR_MONTHS[dt.getMonth()]))].join(`, `);
+  const noSpecialFallback = `⚠️ Kullanıcı bu alanı boş bırakmış. Yine de ${coveredMonthNames} ayına/aylarına özgü, işletmenin sektörüyle alakalı genel bir dönemsel/mevsimsel fırsatı (örn. "${coveredMonthNames} ayı fırsatları", sezonluk bir tema, ilgili bir gün) kendi bilgine dayanarak belirle ve bunun için EN AZ 1 paylaşım gününde isSpecial:true yaparak öne çıkan bir içerik üret. Zorlama bir bahane uydurma; gerçekten o aya özgü, akla yatkın bir şey seç.`;
+  const otherKnownDaysNote = `⚠️ Yukarıdakilere EK olarak: ${coveredMonthNames} ayına/aylarına denk gelen, kullanıcının YAZMAYI UNUTMUŞ OLABİLECEĞİ bilinen resmi/milli bayramları veya sektörle alakalı önemli günleri (varsa) kendi bilgine dayanarak tespit et ve bunlar için de en az birer paylaşım gününde isSpecial:true yaparak içerik üret — kullanıcının belirttiği kampanyaların yerine geçmesin, onlara ek olsun.`;
+
   const specialNote = special
-    ? `Özel günler/kampanyalar: ${special}\n${resolvedCampaigns.length ? `KESİN TALİMAT — bu eşleşmeleri birebir uygula:\n${resolvedCampaigns.join('\n')}` : ``}${movableDateNote}${hasDateAnchoredCampaign ? `` : `⚠️ Bu kampanya belirli bir takvim tarihine/haftasına bağlı değil (örn. sürekli geçerli bir indirim/fırsat). Kampanyayı 3-4 farklı paylaşım gününe dağıt, her birinde FARKLI bir açıdan işle (ürün faydası, aciliyet, müşteri hikayesi, karşılaştırma vb.) ve o günlerde isSpecial:true yap — aynı mesajı tekrarlama.`}\n⚠️ ÖNEMLİ: "Sıra No" etiketi sadece bu listedeki sıralamadır, ayın kaçıncı günü olduğuyla KARIŞTIRMA — "Sıra No 14" ile "ayın 14'ü" birbirinden tamamen bağımsızdır.`
-    : `Özel günler/kampanyalar: Yok`;
+    ? `Özel günler/kampanyalar: ${special}\n${resolvedCampaigns.length ? `KESİN TALİMAT — bu eşleşmeleri birebir uygula:\n${resolvedCampaigns.join('\n')}` : ``}${movableDateNote}${hasDateAnchoredCampaign ? `` : `⚠️ Bu kampanya belirli bir takvim tarihine/haftasına bağlı değil (örn. sürekli geçerli bir indirim/fırsat). Kampanyayı 3-4 farklı paylaşım gününe dağıt, her birinde FARKLI bir açıdan işle (ürün faydası, aciliyet, müşteri hikayesi, karşılaştırma vb.) ve o günlerde isSpecial:true yap — aynı mesajı tekrarlama.`}\n⚠️ ÖNEMLİ: "Sıra No" etiketi sadece bu listedeki sıralamadır, ayın kaçıncı günü olduğuyla KARIŞTIRMA — "Sıra No 14" ile "ayın 14'ü" birbirinden tamamen bağımsızdır.\n${otherKnownDaysNote}`
+    : `Özel günler/kampanyalar: Yok\n${noSpecialFallback}`;
 
   const prompt = `Sen bir sosyal medya stratejisti ve içerik uzmanısın. Aşağıdaki işletme için sosyal medya içerik takvimi oluştur.
 
@@ -733,7 +754,7 @@ SADECE JSON döndür, açıklama yazma:
     }
     clearInterval(ticker);
     const text = res._text;
-    const s = text.indexOf(`{`); const e = text.lastIndexOf(`}`); const clean = [s !== -1, e !== -1].every(Boolean) ? text.slice(s, e + 1) : text.replace(/```json|```/g, ``).trim();
+    const clean = extractJson(text);
     const result = JSON.parse(clean);
     if (genBtn) { genBtn.disabled = false; genBtn.style.opacity = ``; }
     renderResults(result);
@@ -860,7 +881,7 @@ SADECE JSON döndür:
       const data = await res.json();
       text = data.choices?.[0]?.message?.content || ``;
     }
-    const s = text.indexOf(`{`); const e = text.lastIndexOf(`}`); const clean = [s !== -1, e !== -1].every(Boolean) ? text.slice(s, e + 1) : text.replace(/```json|```/g, ``).trim();
+    const clean = extractJson(text);
     const result = JSON.parse(clean);
     const periodStart = getStartDate();
     result.days.forEach(d => {
