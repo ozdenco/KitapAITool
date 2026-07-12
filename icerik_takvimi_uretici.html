@@ -402,25 +402,35 @@ async function generate() {
     const firstWeekMatch = /ilk\s+hafta/i.test(special);
     const monthsCovered = new Set(postingDates.map(dt => `${dt.getFullYear()}-${dt.getMonth()}`));
 
-    const findNearestOnOrBefore = (targetDt) => {
-      let best = null;
+    // Tarihe kadar olan en yakın N paylaşım gününü (eskiden yeniye sıralı) bulur —
+    // tek seferlik duyuru yerine teaser → hatırlatma → son çağrı zinciri kurmak için.
+    const findLastNOnOrBefore = (targetDt, count) => {
+      const before = [];
       postingDates.forEach((dt, idx) => {
-        if (dt.getTime() <= targetDt.getTime()) {
-          if (!best || dt.getTime() > best.dt.getTime()) best = { dt, dayNum: postingDays[idx] };
-        }
+        if (dt.getTime() <= targetDt.getTime()) before.push({ dt, dayNum: postingDays[idx] });
       });
-      if (!best) postingDates.forEach((dt, idx) => {
-        if (!best || dt.getTime() < best.dt.getTime()) best = { dt, dayNum: postingDays[idx] };
-      });
-      return best;
+      before.sort((a, b) => a.dt.getTime() - b.dt.getTime());
+      let picked = before.slice(-count);
+      if (!picked.length) {
+        const after = postingDates.map((dt, idx) => ({ dt, dayNum: postingDays[idx] })).sort((a, b) => a.dt.getTime() - b.dt.getTime());
+        picked = after.slice(0, 1);
+      }
+      return picked;
     };
+
+    const campaignStageLabels = [`son çağrı/son gün hatırlatması`, `hatırlatma`, `ilk duyuru/teaser`];
 
     dayOfMonthMatches.forEach(domNum => {
       monthsCovered.forEach(key => {
         const [y, mo] = key.split(`-`).map(Number);
         const target = new Date(y, mo, domNum, 0, 0, 0);
-        const match = findNearestOnOrBefore(target);
-        if (match) resolvedCampaigns.push(`"Ayın ${domNum}'i" kampanyası → Sıra No ${match.dayNum} (${match.dt.getDate()} ${TR_MONTHS[match.dt.getMonth()]}, hedef tarihe en yakın/önceki paylaşım günü) için isSpecial:true yap ve o gün duyur.`);
+        const matches = findLastNOnOrBefore(target, 3);
+        // matches eskiden yeniye sıralı; en yakın olan (son eleman) "son çağrı" olsun
+        const reversed = [...matches].reverse();
+        reversed.forEach((match, i) => {
+          const stage = campaignStageLabels[i] || `hatırlatma`;
+          resolvedCampaigns.push(`"Ayın ${domNum}'i" kampanyası → Sıra No ${match.dayNum} (${match.dt.getDate()} ${TR_MONTHS[match.dt.getMonth()]}) için isSpecial:true yap; bu gün "${stage}" niteliğinde, önceki/sonraki duyurulardan FARKLI bir mesaj yaz (tekrar etme, aciliyet ve tonu aşamaya göre ayarla).`);
+        });
       });
     });
     if (firstWeekMatch) {
