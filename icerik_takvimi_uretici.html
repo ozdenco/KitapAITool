@@ -948,7 +948,7 @@ function downloadTxt() {
 }
 
 function downloadCSV() {
-  const { biz, sector, audience, platforms, tone, lang, special } = formData;
+  const { biz, sector, audience, platforms, tone, lang, special, weekdays } = formData;
   const esc = s => `"${String(s||'').replace(/"/g,'""')}"`;
   const metaRows = [
     `${esc('İşletme')},${esc(biz||'')}`,
@@ -957,6 +957,7 @@ function downloadCSV() {
     `${esc('Platformlar')},${esc((platforms||[]).join(' | '))}`,
     tone ? `${esc('Marka Tonu')},${esc(tone)}` : null,
     `${esc('Dil')},${esc(lang||'')}`,
+    weekdays?.length ? `${esc('Paylaşım Günleri')},${esc(weekdays.map(w => TR_DAYS[w]).join(' | '))}` : null,
     special ? `${esc('Özel Günler')},${esc(special)}` : null,
     ``,
   ].filter(r => r !== null);
