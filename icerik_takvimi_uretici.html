@@ -397,10 +397,120 @@ async function generate() {
   // bu hesabı modelin tahminine bırakmak "Sıra No 14" ile "ayın 14'ü"nün
   // karışmasına yol açıyordu.
   const resolvedCampaigns = [];
+  let matchedMovable = [];
   if (special) {
-    const dayOfMonthMatches = [...special.matchAll(/ayın\s+(\d{1,2})/gi)].map(m => parseInt(m[1]));
-    const firstWeekMatch = /ilk\s+hafta/i.test(special);
+    // Birincil kalıp: "ayın 14'ü" gibi "ayın" hemen ardından gelen gün.
+    const primaryDayMatches = [...special.matchAll(/ayın\s+(\d{1,2})/gi)]
+      .filter(m => !/^\s*\.?\s*hafta/i.test(special.slice(m.index + m[0].length)))
+      .map(m => parseInt(m[1]));
+
+    // "ayın 1'i ve 15'inde" gibi tek "ayın" sözcüğüyle birden fazla günün
+    // listelendiği durumları yakalamak için: metinde "ayın" geçiyorsa,
+    // iyelik/hal eki (apostrofla) taşıyan diğer gün ifadelerini de (15'inde,
+    // 20'sinde vb.) topla — apostrof zorunlu olduğu için "%20" veya "500
+    // TL" gibi alakasız sayıları yanlışlıkla yakalamaz. "3. haftasında" ile
+    // çakışmayı önlemek için hemen ardından "hafta" gelenleri hariç tut.
+    const hasAyinContext = /ayın\s/i.test(special);
+    const suffixedDayMatches = hasAyinContext
+      ? [...special.matchAll(/(\d{1,2})['’]\s*[a-zA-ZışİĞğÜüÇçÖö]{1,6}\b/g)]
+          .filter(m => !/^\s*\.?\s*hafta/i.test(special.slice(m.index + m[0].length)))
+          .map(m => parseInt(m[1]))
+          .filter(n => [n >= 1, n <= 31].every(Boolean))
+      : [];
+
+    const dayOfMonthMatches = [...new Set([...primaryDayMatches, ...suffixedDayMatches])];
+
+    // "23 Nisan" gibi ay adıyla yazılmış, tekrar etmeyen (bir kerelik) tarihler
+    const turkishMonthMap = { ocak:0, şubat:1, subat:1, mart:2, nisan:3, mayıs:4, mayis:4, haziran:5, temmuz:6, ağustos:7, agustos:7, eylül:8, eylul:8, ekim:9, kasım:10, kasim:10, aralık:11, aralik:11 };
+    const namedDateMatches = [...special.matchAll(/(\d{1,2})\s+(Ocak|Şubat|Subat|Mart|Nisan|Mayıs|Mayis|Haziran|Temmuz|Ağustos|Agustos|Eylül|Eylul|Ekim|Kasım|Kasim|Aralık|Aralik)\b/gi)]
+      .map(m => ({ day: parseInt(m[1]), month: turkishMonthMap[m[2].toLowerCase()] }));
+
+    // "1-7 Ocak arası" / "5 ile 12 Eylül arasında" gibi tarih aralığı
+    // kampanyaları — aralığın başında, ortasında ve sonunda birer duyuru.
+    const dateRangeMatches = [...special.matchAll(/(\d{1,2})\s*(?:-|ile)\s*(\d{1,2})\s+(Ocak|Şubat|Subat|Mart|Nisan|Mayıs|Mayis|Haziran|Temmuz|Ağustos|Agustos|Eylül|Eylul|Ekim|Kasım|Kasim|Aralık|Aralik)\b/gi)]
+      .map(m => ({ startDay: parseInt(m[1]), endDay: parseInt(m[2]), month: turkishMonthMap[m[3].toLowerCase()] }));
+
     const monthsCovered = new Set(postingDates.map(dt => `${dt.getFullYear()}-${dt.getMonth()}`));
+
+    // "ilk/ikinci/üçüncü/dördüncü hafta" veya "2. hafta" gibi ordinal hafta
+    // ifadelerini tespit eder. Haftalar Pazartesi başlangıçlı sayılır — ayın
+    // 1'ini içeren hafta = 1. hafta (önceki aydan taşsa bile).
+    const weekWordMap = { ilk: 1, birinci: 1, ikinci: 2, üçüncü: 3, ucuncu: 3, dördüncü: 4, dorduncu: 4, beşinci: 5, besinci: 5 };
+    const weekNumMatches = new Set();
+    Object.entries(weekWordMap).forEach(([word, num]) => {
+      if (new RegExp(word + `\\s+hafta`, `i`).test(special)) weekNumMatches.add(num);
+    });
+    [...special.matchAll(/(\d)\s*\.?\s*hafta/gi)].forEach(m => weekNumMatches.add(parseInt(m[1])));
+    const lastWeekMatch = /son\s+hafta/i.test(special);
+
+    const getWeekRange = (year, month, weekNum) => {
+      const firstOfMonth = new Date(year, month, 1);
+      const daysSinceMonday = (firstOfMonth.getDay() + 6) % 7;
+      const week1Start = new Date(year, month, 1 - daysSinceMonday);
+      const weekStart = new Date(week1Start.getTime() + (weekNum - 1) * 7 * 86400000);
+      const weekEnd = new Date(weekStart.getTime() + 6 * 86400000);
+      return { weekStart, weekEnd };
+    };
+    const getLastWeekRange = (year, month) => {
+      const lastOfMonth = new Date(year, month + 1, 0);
+      const daysSinceMonday = (lastOfMonth.getDay() + 6) % 7;
+      const weekStart = new Date(year, month, lastOfMonth.getDate() - daysSinceMonday);
+      const weekEnd = new Date(weekStart.getTime() + 6 * 86400000);
+      return { weekStart, weekEnd };
+    };
+    const getNthWeekdayOfMonth = (year, month, weekday, n) => {
+      const first = new Date(year, month, 1);
+      const firstOccurrence = 1 + ((weekday - first.getDay() + 7) % 7);
+      return new Date(year, month, firstOccurrence + (n - 1) * 7);
+    };
+    const getLastWeekdayOfMonth = (year, month, weekday) => {
+      const last = new Date(year, month + 1, 0);
+      const lastOccurrence = last.getDate() - ((last.getDay() - weekday + 7) % 7);
+      return new Date(year, month, lastOccurrence);
+    };
+
+    // Türkiye'de yaygın, tarihi kullanıcı tarafından genelde YAZILMAYAN özel
+    // günler — sabit tarihli veya "ayın N. pazar/cuma günü" gibi kurala
+    // bağlı olanlar burada çözülüyor.
+    const namedHolidays = [
+      { keywords: [`sevgililer günü`, `sevgililer gunu`], resolve: y => new Date(y, 1, 14) },
+      { keywords: [`kadınlar günü`, `kadinlar gunu`], resolve: y => new Date(y, 2, 8) },
+      { keywords: [`işçi bayramı`, `emek ve dayanışma`, `1 mayıs`], resolve: y => new Date(y, 4, 1) },
+      { keywords: [`demokrasi ve millî birlik`, `demokrasi ve milli birlik`, `15 temmuz`], resolve: y => new Date(y, 6, 15) },
+      { keywords: [`anneler günü`, `anneler gunu`], resolve: y => getNthWeekdayOfMonth(y, 4, 0, 2) },
+      { keywords: [`babalar günü`, `babalar gunu`], resolve: y => getNthWeekdayOfMonth(y, 5, 0, 3) },
+      { keywords: [`öğretmenler günü`, `ogretmenler gunu`], resolve: y => new Date(y, 10, 24) },
+      { keywords: [`cumhuriyet bayramı`, `cumhuriyet bayrami`], resolve: y => new Date(y, 9, 29) },
+      { keywords: [`zafer bayramı`, `zafer bayrami`], resolve: y => new Date(y, 7, 30) },
+      { keywords: [`yılbaşı`, `yilbasi`], resolve: y => new Date(y, 0, 1) },
+      { keywords: [`black friday`, `efsane cuma`, `kara cuma`], resolve: y => getLastWeekdayOfMonth(y, 10, 5) },
+      { keywords: [`cyber monday`, `siber pazartesi`], resolve: y => { const bf = getLastWeekdayOfMonth(y, 10, 5); return new Date(y, 10, bf.getDate() + 3); } },
+      { keywords: [`en uzun gece`], resolve: y => new Date(y, 11, 21) },
+      { keywords: [`11.11`, `11 kasım indirim`, `11 kasim indirim`, `tekliler günü`, `tekliler gunu`], resolve: y => new Date(y, 10, 11) },
+    ];
+    const specialLower = special.toLocaleLowerCase(`tr`);
+    const matchedHolidays = namedHolidays.filter(h => h.keywords.some(kw => specialLower.includes(kw)));
+
+    // Belirli bir güne değil bir DÖNEME yayılan isimli kampanyalar (Okula
+    // Dönüş, Yeni Yıl Hazırlıkları vb.) — dateRangeMatches ile aynı mantıkla
+    // (başlangıç/orta/bitiş duyurusu) işlenir.
+    const namedRangeCampaigns = [
+      { keywords: [`okula dönüş`, `okula donus`, `back to school`], label: `Okula Dönüş`, resolveRange: y => ({ start: new Date(y, 7, 20), end: new Date(y, 8, 15) }) },
+      { keywords: [`yeni yıl hazırlık`, `yeni yil hazirlik`, `yılbaşı hazırlık`, `yilbasi hazirlik`], label: `Yeni Yıl Hazırlıkları`, resolveRange: y => ({ start: new Date(y, 11, 1), end: new Date(y, 11, 31) }) },
+      { keywords: [`yaz tatili`, `yaz sezonu`], label: `Yaz Tatili`, resolveRange: y => ({ start: new Date(y, 5, 15), end: new Date(y, 7, 31) }) },
+    ];
+    const matchedRangeCampaigns = namedRangeCampaigns.filter(c => c.keywords.some(kw => specialLower.includes(kw)));
+
+    // Hicri takvime göre yıldan yıla kayan (Ramazan/Kurban Bayramı gibi) veya
+    // MEB tarafından yıl bazında ayrıca belirlenen (sömestr tatili) günler —
+    // bunları programatik olarak YANLIŞ tarihle sabitlemek riskli olduğu
+    // için AI'nin kendi takvim bilgisine bırakıyoruz, sadece dikkat çekiyoruz.
+    const movableDateCampaigns = [
+      { keywords: [`ramazan bayramı`, `ramazan bayrami`, `ramazan öncesi`, `ramazan oncesi`], label: `Ramazan Bayramı` },
+      { keywords: [`kurban bayramı`, `kurban bayrami`, `kurban öncesi`, `kurban oncesi`], label: `Kurban Bayramı` },
+      { keywords: [`sömestr`, `somestr`, `yarıyıl tatili`, `yariyil tatili`], label: `Sömestr/Yarıyıl Tatili` },
+    ];
+    matchedMovable = movableDateCampaigns.filter(c => c.keywords.some(kw => specialLower.includes(kw)));
 
     // Tarihe kadar olan en yakın N paylaşım gününü (eskiden yeniye sıralı) bulur —
     // tek seferlik duyuru yerine teaser → hatırlatma → son çağrı zinciri kurmak için.
@@ -433,20 +543,129 @@ async function generate() {
         });
       });
     });
-    if (firstWeekMatch) {
+    const weekLabels = { 1: `ilk`, 2: `ikinci`, 3: `üçüncü`, 4: `dördüncü`, 5: `beşinci` };
+    weekNumMatches.forEach(weekNum => {
       monthsCovered.forEach(key => {
         const [y, mo] = key.split(`-`).map(Number);
+        const { weekStart, weekEnd } = getWeekRange(y, mo, weekNum);
         postingDates.forEach((dt, idx) => {
-          if ([dt.getFullYear() === y, dt.getMonth() === mo, dt.getDate() <= 7].every(Boolean)) {
-            resolvedCampaigns.push(`"Ayın ilk haftası" kampanyası → Sıra No ${postingDays[idx]} (${dt.getDate()} ${TR_MONTHS[dt.getMonth()]}, o ayın ilk haftasındaki paylaşım günü) için isSpecial:true yap ve o gün duyur.`);
+          if ([dt.getTime() >= weekStart.getTime(), dt.getTime() <= weekEnd.getTime()].every(Boolean)) {
+            resolvedCampaigns.push(`"Ayın ${weekLabels[weekNum] || weekNum + `.`} haftası" kampanyası → Sıra No ${postingDays[idx]} (${dt.getDate()} ${TR_MONTHS[dt.getMonth()]}, ${weekStart.getDate()} ${TR_MONTHS[weekStart.getMonth()]}–${weekEnd.getDate()} ${TR_MONTHS[weekEnd.getMonth()]} aralığındaki paylaşım günü) için isSpecial:true yap ve o gün duyur.`);
+          }
+        });
+      });
+    });
+    if (lastWeekMatch) {
+      monthsCovered.forEach(key => {
+        const [y, mo] = key.split(`-`).map(Number);
+        const { weekStart, weekEnd } = getLastWeekRange(y, mo);
+        postingDates.forEach((dt, idx) => {
+          if ([dt.getTime() >= weekStart.getTime(), dt.getTime() <= weekEnd.getTime()].every(Boolean)) {
+            resolvedCampaigns.push(`"Ayın son haftası" kampanyası → Sıra No ${postingDays[idx]} (${dt.getDate()} ${TR_MONTHS[dt.getMonth()]}) için isSpecial:true yap ve o gün duyur.`);
           }
         });
       });
     }
+
+    // "23 Nisan" gibi ay adıyla yazılmış, tekrarlanmayan tek seferlik tarihler —
+    // bu tarih dönem içindeki her yıl/ay geçişinde bir kez hedeflenir.
+    // Aynı takvim gününün hem açık tarih metniyle (örn. "21 Aralık") hem de
+    // anahtar kelimeyle (örn. "en uzun gece") iki kez yakalanıp mükerrer
+    // talimat üretmesini önlemek için çözülen tarihleri burada takip ederiz.
+    const resolvedDayMonthKeys = new Set();
+
+    namedDateMatches.forEach(({ day, month }) => {
+      resolvedDayMonthKeys.add(`${day}-${month}`);
+      monthsCovered.forEach(key => {
+        const [y, mo] = key.split(`-`).map(Number);
+        if (mo !== month) return;
+        const target = new Date(y, mo, day, 0, 0, 0);
+        const matches = findLastNOnOrBefore(target, 2);
+        const reversed = [...matches].reverse();
+        reversed.forEach((match, i) => {
+          const stage = i === 0 ? `gün mesajı` : `öncesi hatırlatma`;
+          resolvedCampaigns.push(`"${day} ${TR_MONTHS[month]}" özel günü → Sıra No ${match.dayNum} (${match.dt.getDate()} ${TR_MONTHS[match.dt.getMonth()]}) için isSpecial:true yap; bu gün "${stage}" niteliğinde bir mesaj yaz.`);
+        });
+      });
+    });
+
+    // Tarihi kullanıcı tarafından yazılmayan yaygın özel günler (Anneler
+    // Günü, Sevgililer Günü vb.) — hesaplanan tarihe göre aynı 2 aşamalı
+    // (gün mesajı + öncesi hatırlatma) mantıkla yerleştirilir.
+    matchedHolidays.forEach(holiday => {
+      monthsCovered.forEach(key => {
+        const [y, mo] = key.split(`-`).map(Number);
+        const target = holiday.resolve(y);
+        if (target.getMonth() !== mo || target.getFullYear() !== y) return;
+        if (resolvedDayMonthKeys.has(`${target.getDate()}-${target.getMonth()}`)) return;
+        const matches = findLastNOnOrBefore(target, 2);
+        const reversed = [...matches].reverse();
+        reversed.forEach((match, i) => {
+          const stage = i === 0 ? `gün mesajı` : `öncesi hatırlatma`;
+          resolvedCampaigns.push(`Özel gün (${target.getDate()} ${TR_MONTHS[target.getMonth()]}) → Sıra No ${match.dayNum} (${match.dt.getDate()} ${TR_MONTHS[match.dt.getMonth()]}) için isSpecial:true yap; bu gün "${stage}" niteliğinde bir mesaj yaz.`);
+        });
+      });
+    });
+
+    // "1-7 Ocak arası" gibi tarih aralığı kampanyaları — başlangıç, orta ve
+    // bitiş civarına birer duyuru (aynı mesajı tekrarlamadan).
+    dateRangeMatches.forEach(({ startDay, endDay, month }) => {
+      monthsCovered.forEach(key => {
+        const [y, mo] = key.split(`-`).map(Number);
+        if (mo !== month) return;
+        const rangeStart = new Date(y, mo, startDay);
+        const rangeEnd = new Date(y, mo, endDay, 23, 59, 59);
+        const inRange = postingDates
+          .map((dt, idx) => ({ dt, dayNum: postingDays[idx] }))
+          .filter(p => [p.dt.getTime() >= rangeStart.getTime(), p.dt.getTime() <= rangeEnd.getTime()].every(Boolean));
+        if (!inRange.length) return;
+        const stageFor = (i, total) => i === 0 ? `kampanya başlangıcı/duyurusu` : i === total - 1 ? `kampanya son günü/son çağrı` : `kampanya devam ediyor hatırlatması`;
+        inRange.forEach((p, i) => {
+          resolvedCampaigns.push(`"${startDay}-${endDay} ${TR_MONTHS[month]}" dönemsel kampanyası → Sıra No ${p.dayNum} (${p.dt.getDate()} ${TR_MONTHS[p.dt.getMonth()]}) için isSpecial:true yap; bu gün "${stageFor(i, inRange.length)}" niteliğinde, önceki/sonraki duyurulardan FARKLI bir mesaj yaz.`);
+        });
+      });
+    });
+
+    // "Okula Dönüş", "Yeni Yıl Hazırlıkları" gibi isimli, belirli bir DÖNEME
+    // yayılan kampanyalar — aynı başlangıç/orta/bitiş mantığıyla işlenir.
+    // Aralık kampanyaları birden çok ay kapsayabildiği için (ör. Okula Dönüş
+    // Ağustos+Eylül) ay-anahtarına göre değil, yalnızca YIL bazında bir kez
+    // hesaplanır — aksi halde her ay için aynı aralık tekrar tekrar eklenir.
+    const yearsCovered = new Set([...monthsCovered].map(key => parseInt(key.split(`-`)[0])));
+    matchedRangeCampaigns.forEach(({ label, resolveRange }) => {
+      yearsCovered.forEach(y => {
+        const { start, end } = resolveRange(y);
+        const inRange = postingDates
+          .map((dt, idx) => ({ dt, dayNum: postingDays[idx] }))
+          .filter(p => [p.dt.getTime() >= start.getTime(), p.dt.getTime() <= end.getTime()].every(Boolean));
+        if (!inRange.length) return;
+        const stageFor = (i, total) => i === 0 ? `kampanya başlangıcı/duyurusu` : i === total - 1 ? `kampanya son günü/son çağrı` : `kampanya devam ediyor hatırlatması`;
+        // Aşırı sık işaretlemeyi önlemek için en fazla 4 gün seç (baş, 1/3, 2/3, son)
+        const capped = inRange.length <= 4 ? inRange : [inRange[0], inRange[Math.floor(inRange.length/3)], inRange[Math.floor(2*inRange.length/3)], inRange[inRange.length-1]];
+        capped.forEach((p, i) => {
+          resolvedCampaigns.push(`"${label}" kampanyası → Sıra No ${p.dayNum} (${p.dt.getDate()} ${TR_MONTHS[p.dt.getMonth()]}) için isSpecial:true yap; bu gün "${stageFor(i, capped.length)}" niteliğinde, önceki/sonraki duyurulardan FARKLI bir mesaj yaz.`);
+        });
+      });
+    });
   }
 
+  // Hicri takvime göre kayan veya yıl bazında ayrıca belirlenen (Ramazan/
+  // Kurban Bayramı, sömestr tatili vb.) günler için tarihi biz hesaplamıyoruz
+  // — yanlış tarih vermek hiç vermemekten kötüdür. Bunun yerine AI'nin kendi
+  // takvim bilgisiyle doğru Miladi tarihi bulmasını istiyoruz.
+  const movableDateNote = matchedMovable.length
+    ? `\n⚠️ Metinde şu hareketli tarihli özel günler geçiyor: ${matchedMovable.map(m => m.label).join(', ')}. Bunlar hicri takvime göre yıldan yıla kayar veya yıl bazında ayrıca belirlenir — kendi bilgine göre bu dönem için (${[...new Set(postingDates.map(d => d.getFullYear()))].join('/')}) doğru Miladi tarihi/tarih aralığını belirle ve en yakın paylaşım gününde/günlerinde (varsa 1-2 gün öncesinde hatırlatmayla) isSpecial:true yaparak duyur.`
+    : ``;
+
+  // Tarihe bağlı olmayan, süregelen genel kampanyalar (örn. "2 alana 3.
+  // bedava", market/perakende tipi indirimler) tek bir güne sabitlenemez —
+  // bunları farklı paylaşım günlerine dağıtarak birden fazla kez, her
+  // seferinde farklı bir açıdan (ürün faydası, aciliyet, sosyal kanıt vb.)
+  // işlemesi için ayrı bir talimat veriyoruz.
+  const hasDateAnchoredCampaign = [resolvedCampaigns.length > 0, matchedMovable.length > 0].some(Boolean);
+
   const specialNote = special
-    ? `Özel günler/kampanyalar: ${special}\n${resolvedCampaigns.length ? 'KESİN TALİMAT — bu eşleşmeleri birebir uygula:\n' + resolvedCampaigns.join('\n') : '⚠️ Bu kampanyaları takvim tarihleriyle eşleştirip en yakın paylaşım gününde isSpecial:true yap.'}\n⚠️ ÖNEMLİ: "Sıra No" etiketi sadece bu listedeki sıralamadır, ayın kaçıncı günü olduğuyla KARIŞTIRMA — "Sıra No 14" ile "ayın 14'ü" birbirinden tamamen bağımsızdır.`
+    ? `Özel günler/kampanyalar: ${special}\n${resolvedCampaigns.length ? `KESİN TALİMAT — bu eşleşmeleri birebir uygula:\n${resolvedCampaigns.join('\n')}` : ``}${movableDateNote}${hasDateAnchoredCampaign ? `` : `⚠️ Bu kampanya belirli bir takvim tarihine/haftasına bağlı değil (örn. sürekli geçerli bir indirim/fırsat). Kampanyayı 3-4 farklı paylaşım gününe dağıt, her birinde FARKLI bir açıdan işle (ürün faydası, aciliyet, müşteri hikayesi, karşılaştırma vb.) ve o günlerde isSpecial:true yap — aynı mesajı tekrarlama.`}\n⚠️ ÖNEMLİ: "Sıra No" etiketi sadece bu listedeki sıralamadır, ayın kaçıncı günü olduğuyla KARIŞTIRMA — "Sıra No 14" ile "ayın 14'ü" birbirinden tamamen bağımsızdır.`
     : `Özel günler/kampanyalar: Yok`;
 
   const prompt = `Sen bir sosyal medya stratejisti ve içerik uzmanısın. Aşağıdaki işletme için sosyal medya içerik takvimi oluştur.
