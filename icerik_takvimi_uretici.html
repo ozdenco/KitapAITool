@@ -174,14 +174,15 @@ input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3p
     <div class="field">
       <label>Haftanın hangi günleri paylaşım yapılsın? <span style="color:#A32D2D">*</span></label>
       <div class="check-group" id="weekday-group" style="grid-template-columns:repeat(7,1fr)">
-        <label class="check-item"><input type="checkbox" value="1"> Pzt</label>
-        <label class="check-item"><input type="checkbox" value="2"> Sal</label>
-        <label class="check-item"><input type="checkbox" value="3"> Çar</label>
-        <label class="check-item"><input type="checkbox" value="4"> Per</label>
-        <label class="check-item"><input type="checkbox" value="5"> Cum</label>
-        <label class="check-item"><input type="checkbox" value="6"> Cmt</label>
-        <label class="check-item"><input type="checkbox" value="0"> Paz</label>
+        <label class="check-item"><input type="checkbox" value="1" onchange="enforceWeekdayCap(this)"> Pzt</label>
+        <label class="check-item"><input type="checkbox" value="2" onchange="enforceWeekdayCap(this)"> Sal</label>
+        <label class="check-item"><input type="checkbox" value="3" onchange="enforceWeekdayCap(this)"> Çar</label>
+        <label class="check-item"><input type="checkbox" value="4" onchange="enforceWeekdayCap(this)"> Per</label>
+        <label class="check-item"><input type="checkbox" value="5" onchange="enforceWeekdayCap(this)"> Cum</label>
+        <label class="check-item"><input type="checkbox" value="6" onchange="enforceWeekdayCap(this)"> Cmt</label>
+        <label class="check-item"><input type="checkbox" value="0" onchange="enforceWeekdayCap(this)"> Paz</label>
       </div>
+      <p style="font-size:12px;color:#9A9792;margin-top:6px">En fazla 3 gün seçebilirsiniz (yapay zeka yanıt süresi nedeniyle).</p>
     </div>
 
     <div class="row2">
@@ -255,7 +256,7 @@ input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3p
         <button class="btn-sm" id="copy-all-btn" onclick="copyAll()"><i class="ti ti-copy" aria-hidden="true"></i> Tümünü Kopyala</button>
         <button class="btn-sm" onclick="downloadTxt()"><i class="ti ti-file-text" aria-hidden="true"></i> TXT İndir</button>
         <button class="btn-sm" onclick="downloadCSV()"><i class="ti ti-download" aria-hidden="true"></i> CSV İndir</button>
-        <button class="btn-sm" onclick="printFullCalendar()"><i class="ti ti-printer" aria-hidden="true"></i> Yazdır</button>
+        <button class="btn-sm" id="print-btn" onclick="printFullCalendar()"><i class="ti ti-printer" aria-hidden="true"></i> Yazdır</button>
         <button class="btn-sm" onclick="restart()"><i class="ti ti-refresh" aria-hidden="true"></i> Yeniden</button>
       </div>
     </div>
@@ -294,6 +295,17 @@ input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3p
 const N8N_PROXY = `/wp-json/kolaykobi/v1/ai/takvim`;
 
 function escHtml(s){return String(s||``).replace(/&/g,`&amp;`).replace(/</g,`&lt;`).replace(/>/g,`&gt;`).replace(/"/g,`&quot;`).replace(/'/g,`&#39;`);}
+
+// Haftada 3'ten fazla paylaşım günü seçilmesini engeller — yanıt süresi
+// (ve maliyet) haftalık sıklıkla katlanarak arttığı için üst sınır koyduk.
+function enforceWeekdayCap(changedEl) {
+  const checked = [...document.querySelectorAll(`#weekday-group input:checked`)];
+  if (checked.length > 3) {
+    changedEl.checked = false;
+    const err = document.getElementById(`err`);
+    if (err) { err.style.display = `block`; err.textContent = `En fazla 3 gün seçebilirsiniz.`; }
+  }
+}
 
 // Reasoning modeli bazen </think> kapanmadan ÖNCE taslak bir JSON iskeleti
 // yazıyor, asıl cevap ise </think> SONRASINDA geliyor. indexOf('{') metnin
@@ -349,6 +361,9 @@ const TR_MONTHS = [`Oca`,`Şub`,`Mar`,`Nis`,`May`,`Haz`,`Tem`,`Ağu`,`Eyl`,`Eki`
 let allDays = [];
 let currentWeek = 1;
 let formData = {};
+let chunkGroups = [];
+let loadedGroupIds = new Set();
+let campaignCtx = {};
 
 function getChecked(groupId) {
   return [...document.querySelectorAll(`#${groupId} input:checked`)].map(el => el.value);
@@ -368,51 +383,13 @@ function getStartDate() {
   return d;
 }
 
-async function generate() {
-  const biz = document.getElementById(`f-biz`).value.trim();
-  const sector = document.getElementById(`f-sector`).value;
-  const audience = document.getElementById(`f-audience`).value.trim();
-  const platforms = getChecked(`platform-group`);
-  const tone = document.getElementById(`f-tone`).value;
-  const lang = document.getElementById(`f-lang`).value;
-  const special = document.getElementById(`f-special`).value.trim();
-  const err = document.getElementById(`err`);
-
-  const weekdays = [...document.querySelectorAll(`#weekday-group input:checked`)].map(el => parseInt(el.value));
-  if (!biz || !sector || platforms.length === 0 || weekdays.length === 0) { err.style.display=`block`; err.textContent=`Lütfen işletme adı, sektör, en az bir platform ve en az bir gün seçin.`; return; }
-  err.style.display = `none`;
-
-  // Seçilen haftanın günlerine göre 30 gün içindeki paylaşım günlerini hesapla
-  const startInput = document.getElementById(`f-start`).value;
-  const startDate = startInput ? new Date(startInput + `T00:00:00`) : new Date();
-  const postingDays = [];
-  const startMs = startDate.getTime();
-  for (let i = 0; i < 30; i++) {
-    const day = new Date(startMs + i * 86400000).getDay();
-    if (weekdays.includes(day)) postingDays.push(i + 1);
-  }
-
-  formData = { biz, sector, audience, platforms, tone, lang, special, weekdays, postingDays, startDate: startDate.toISOString() };
-
-  const genBtn = document.getElementById(`gen-btn`) || document.getElementById(`analyze-btn`);
-  if (genBtn) { genBtn.disabled = true; genBtn.style.opacity = `0.6`; }
-  show(`loading-section`);
-  window.scrollTo({ top: 0, behavior: `smooth` });
-  let mi = 0;
-  const msgEl = document.getElementById(`loading-msg`);
-  const ticker = setInterval(() => { mi=(mi+1)%loadingMsgs.length; msgEl.textContent=loadingMsgs[mi]; }, 1800);
-
-  const platformList = platforms.join(`, `);
-  const postingDates = postingDays.map(dayNum => new Date(startMs + (dayNum - 1) * 86400000));
-  const dayDateMap = postingDays.map((dayNum, idx) => {
-    const dt = postingDates[idx];
-    return `Sıra No ${dayNum} → ${dt.getDate()} ${TR_MONTHS[dt.getMonth()]} ${dt.getFullYear()} (${TR_DAYS[dt.getDay()]})`;
-  }).join(`\n`);
-
-  // "Ayın X'i" ve "ilk hafta" gibi takvim-gün-of-month kalıplarını kendimiz
-  // çözüp en yakın ÖNCEKİ paylaşım gününe kesin talimat olarak eşliyoruz —
-  // bu hesabı modelin tahminine bırakmak "Sıra No 14" ile "ayın 14'ü"nün
-  // karışmasına yol açıyordu.
+// "Ayın X'i" ve "ilk hafta" gibi takvim-gün-of-month kalıplarını kendimiz
+// çözüp en yakın ÖNCEKİ paylaşım gününe kesin talimat olarak eşliyoruz — bu
+// hesabı modelin tahminine bırakmak "Sıra No 14" ile "ayın 14'ü"nün
+// karışmasına yol açıyordu. Bu fonksiyon TÜM 30 günlük dönem için TEK SEFER
+// çalışır (saf JS, AI çağrısı yok) — sonra her parça (chunk) kendi Sıra
+// No'larına denk gelen talimatları buradan filtreler.
+function resolveCampaigns(special, postingDays, postingDates) {
   const resolvedCampaigns = [];
   let matchedMovable = [];
   if (special) {
@@ -567,7 +544,7 @@ async function generate() {
         const reversed = [...matches].reverse();
         reversed.forEach((match, i) => {
           const stage = campaignStageLabels[i] || `hatırlatma`;
-          resolvedCampaigns.push(`"Ayın ${domNum}'i" kampanyası → Sıra No ${match.dayNum} (${match.dt.getDate()} ${TR_MONTHS[match.dt.getMonth()]}) için isSpecial:true yap; bu gün "${stage}" niteliğinde, önceki/sonraki duyurulardan FARKLI bir mesaj yaz (tekrar etme, aciliyet ve tonu aşamaya göre ayarla).`);
+          resolvedCampaigns.push({ dayNum: match.dayNum, text: `"Ayın ${domNum}'i" kampanyası → Sıra No ${match.dayNum} (${match.dt.getDate()} ${TR_MONTHS[match.dt.getMonth()]}) için isSpecial:true yap; bu gün "${stage}" niteliğinde, önceki/sonraki duyurulardan FARKLI bir mesaj yaz (tekrar etme, aciliyet ve tonu aşamaya göre ayarla).` });
         });
       });
     });
@@ -578,7 +555,7 @@ async function generate() {
         const { weekStart, weekEnd } = getWeekRange(y, mo, weekNum);
         postingDates.forEach((dt, idx) => {
           if ([dt.getTime() >= weekStart.getTime(), dt.getTime() <= weekEnd.getTime()].every(Boolean)) {
-            resolvedCampaigns.push(`"Ayın ${weekLabels[weekNum] || weekNum + `.`} haftası" kampanyası → Sıra No ${postingDays[idx]} (${dt.getDate()} ${TR_MONTHS[dt.getMonth()]}, ${weekStart.getDate()} ${TR_MONTHS[weekStart.getMonth()]}–${weekEnd.getDate()} ${TR_MONTHS[weekEnd.getMonth()]} aralığındaki paylaşım günü) için isSpecial:true yap ve o gün duyur.`);
+            resolvedCampaigns.push({ dayNum: postingDays[idx], text: `"Ayın ${weekLabels[weekNum] || weekNum + `.`} haftası" kampanyası → Sıra No ${postingDays[idx]} (${dt.getDate()} ${TR_MONTHS[dt.getMonth()]}, ${weekStart.getDate()} ${TR_MONTHS[weekStart.getMonth()]}–${weekEnd.getDate()} ${TR_MONTHS[weekEnd.getMonth()]} aralığındaki paylaşım günü) için isSpecial:true yap ve o gün duyur.` });
           }
         });
       });
@@ -589,7 +566,7 @@ async function generate() {
         const { weekStart, weekEnd } = getLastWeekRange(y, mo);
         postingDates.forEach((dt, idx) => {
           if ([dt.getTime() >= weekStart.getTime(), dt.getTime() <= weekEnd.getTime()].every(Boolean)) {
-            resolvedCampaigns.push(`"Ayın son haftası" kampanyası → Sıra No ${postingDays[idx]} (${dt.getDate()} ${TR_MONTHS[dt.getMonth()]}) için isSpecial:true yap ve o gün duyur.`);
+            resolvedCampaigns.push({ dayNum: postingDays[idx], text: `"Ayın son haftası" kampanyası → Sıra No ${postingDays[idx]} (${dt.getDate()} ${TR_MONTHS[dt.getMonth()]}) için isSpecial:true yap ve o gün duyur.` });
           }
         });
       });
@@ -612,7 +589,7 @@ async function generate() {
         const reversed = [...matches].reverse();
         reversed.forEach((match, i) => {
           const stage = i === 0 ? `gün mesajı` : `öncesi hatırlatma`;
-          resolvedCampaigns.push(`"${day} ${TR_MONTHS[month]}" özel günü → Sıra No ${match.dayNum} (${match.dt.getDate()} ${TR_MONTHS[match.dt.getMonth()]}) için isSpecial:true yap; bu gün "${stage}" niteliğinde bir mesaj yaz.`);
+          resolvedCampaigns.push({ dayNum: match.dayNum, text: `"${day} ${TR_MONTHS[month]}" özel günü → Sıra No ${match.dayNum} (${match.dt.getDate()} ${TR_MONTHS[match.dt.getMonth()]}) için isSpecial:true yap; bu gün "${stage}" niteliğinde bir mesaj yaz.` });
         });
       });
     });
@@ -630,7 +607,7 @@ async function generate() {
         const reversed = [...matches].reverse();
         reversed.forEach((match, i) => {
           const stage = i === 0 ? `gün mesajı` : `öncesi hatırlatma`;
-          resolvedCampaigns.push(`"${holiday.label}" (${target.getDate()} ${TR_MONTHS[target.getMonth()]}) → Sıra No ${match.dayNum} (${match.dt.getDate()} ${TR_MONTHS[match.dt.getMonth()]}) için isSpecial:true yap; bu gün "${stage}" niteliğinde, "${holiday.label}" temalı bir mesaj yaz.`);
+          resolvedCampaigns.push({ dayNum: match.dayNum, text: `"${holiday.label}" (${target.getDate()} ${TR_MONTHS[target.getMonth()]}) → Sıra No ${match.dayNum} (${match.dt.getDate()} ${TR_MONTHS[match.dt.getMonth()]}) için isSpecial:true yap; bu gün "${stage}" niteliğinde, "${holiday.label}" temalı bir mesaj yaz.` });
         });
       });
     });
@@ -649,7 +626,7 @@ async function generate() {
         if (!inRange.length) return;
         const stageFor = (i, total) => i === 0 ? `kampanya başlangıcı/duyurusu` : i === total - 1 ? `kampanya son günü/son çağrı` : `kampanya devam ediyor hatırlatması`;
         inRange.forEach((p, i) => {
-          resolvedCampaigns.push(`"${startDay}-${endDay} ${TR_MONTHS[month]}" dönemsel kampanyası → Sıra No ${p.dayNum} (${p.dt.getDate()} ${TR_MONTHS[p.dt.getMonth()]}) için isSpecial:true yap; bu gün "${stageFor(i, inRange.length)}" niteliğinde, önceki/sonraki duyurulardan FARKLI bir mesaj yaz.`);
+          resolvedCampaigns.push({ dayNum: p.dayNum, text: `"${startDay}-${endDay} ${TR_MONTHS[month]}" dönemsel kampanyası → Sıra No ${p.dayNum} (${p.dt.getDate()} ${TR_MONTHS[p.dt.getMonth()]}) için isSpecial:true yap; bu gün "${stageFor(i, inRange.length)}" niteliğinde, önceki/sonraki duyurulardan FARKLI bir mesaj yaz.` });
         });
       });
     });
@@ -671,40 +648,43 @@ async function generate() {
         // Aşırı sık işaretlemeyi önlemek için en fazla 4 gün seç (baş, 1/3, 2/3, son)
         const capped = inRange.length <= 4 ? inRange : [inRange[0], inRange[Math.floor(inRange.length/3)], inRange[Math.floor(2*inRange.length/3)], inRange[inRange.length-1]];
         capped.forEach((p, i) => {
-          resolvedCampaigns.push(`"${label}" kampanyası → Sıra No ${p.dayNum} (${p.dt.getDate()} ${TR_MONTHS[p.dt.getMonth()]}) için isSpecial:true yap; bu gün "${stageFor(i, capped.length)}" niteliğinde, önceki/sonraki duyurulardan FARKLI bir mesaj yaz.`);
+          resolvedCampaigns.push({ dayNum: p.dayNum, text: `"${label}" kampanyası → Sıra No ${p.dayNum} (${p.dt.getDate()} ${TR_MONTHS[p.dt.getMonth()]}) için isSpecial:true yap; bu gün "${stageFor(i, capped.length)}" niteliğinde, önceki/sonraki duyurulardan FARKLI bir mesaj yaz.` });
         });
       });
     });
   }
 
-  // Hicri takvime göre kayan veya yıl bazında ayrıca belirlenen (Ramazan/
-  // Kurban Bayramı, sömestr tatili vb.) günler için tarihi biz hesaplamıyoruz
-  // — yanlış tarih vermek hiç vermemekten kötüdür. Bunun yerine AI'nin kendi
-  // takvim bilgisiyle doğru Miladi tarihi bulmasını istiyoruz.
+  const hasDateAnchoredCampaign = [resolvedCampaigns.length > 0, matchedMovable.length > 0].some(Boolean);
+  return { resolvedCampaigns, matchedMovable, hasDateAnchoredCampaign };
+}
+
+// Belirli bir PARÇA (chunk — dönemin bir alt kümesi) için prompt üretir.
+// resolvedCampaigns (tüm dönem için önceden hesaplanmış) bu parçanın Sıra
+// No'larına göre filtrelenir; böylece hangi parça ne zaman istenirse
+// istensin özel günler doğru yerde çıkar.
+function buildCalendarPrompt(chunkPostingDays, chunkPostingDates, ctx) {
+  const { biz, sector, audience, platformList, tone, lang, special, resolvedCampaigns, matchedMovable, hasDateAnchoredCampaign } = ctx;
+  const dayDateMap = chunkPostingDays.map((dayNum, idx) => {
+    const dt = chunkPostingDates[idx];
+    return `Sıra No ${dayNum} → ${dt.getDate()} ${TR_MONTHS[dt.getMonth()]} ${dt.getFullYear()} (${TR_DAYS[dt.getDay()]})`;
+  }).join(`\n`);
+
+  const chunkDayNums = new Set(chunkPostingDays);
+  const chunkCampaignTexts = resolvedCampaigns.filter(c => chunkDayNums.has(c.dayNum)).map(c => c.text);
+
   const movableDateNote = matchedMovable.length
-    ? `\n⚠️ Metinde şu hareketli tarihli özel günler geçiyor: ${matchedMovable.map(m => m.label).join(', ')}. Bunlar hicri takvime göre yıldan yıla kayar veya yıl bazında ayrıca belirlenir — kendi bilgine göre bu dönem için (${[...new Set(postingDates.map(d => d.getFullYear()))].join('/')}) doğru Miladi tarihi/tarih aralığını belirle ve en yakın paylaşım gününde/günlerinde (varsa 1-2 gün öncesinde hatırlatmayla) isSpecial:true yaparak duyur.`
+    ? `\n⚠️ Metinde şu hareketli tarihli özel günler geçiyor: ${matchedMovable.map(m => m.label).join(', ')}. Bunlar hicri takvime göre yıldan yıla kayar veya yıl bazında ayrıca belirlenir — kendi bilgine göre bu dönem için (${[...new Set(chunkPostingDates.map(d => d.getFullYear()))].join('/')}) doğru Miladi tarihi/tarih aralığını belirle ve en yakın paylaşım gününde/günlerinde (varsa 1-2 gün öncesinde hatırlatmayla) isSpecial:true yaparak duyur.`
     : ``;
 
-  // Tarihe bağlı olmayan, süregelen genel kampanyalar (örn. "2 alana 3.
-  // bedava", market/perakende tipi indirimler) tek bir güne sabitlenemez —
-  // bunları farklı paylaşım günlerine dağıtarak birden fazla kez, her
-  // seferinde farklı bir açıdan (ürün faydası, aciliyet, sosyal kanıt vb.)
-  // işlemesi için ayrı bir talimat veriyoruz.
-  const hasDateAnchoredCampaign = [resolvedCampaigns.length > 0, matchedMovable.length > 0].some(Boolean);
-
-  // Kullanıcı bir şey yazmış olsa da olmasa da, dönemin kapsadığı ay(lar)a
-  // ait BİLİNEN diğer resmi/milli günleri/fırsatları (yazmayı unuttuğu
-  // olası günler dahil — ör. "Anneler Günü" yazıp "19 Mayıs"ı unutması gibi)
-  // kendi bilgisiyle tarasın ve atlamadığından emin olsun istiyoruz.
-  const coveredMonthNames = [...new Set(postingDates.map(dt => TR_MONTHS[dt.getMonth()]))].join(`, `);
+  const coveredMonthNames = [...new Set(chunkPostingDates.map(dt => TR_MONTHS[dt.getMonth()]))].join(`, `);
   const noSpecialFallback = `⚠️ Kullanıcı bu alanı boş bırakmış. Yine de ${coveredMonthNames} ayına/aylarına özgü, işletmenin sektörüyle alakalı genel bir dönemsel/mevsimsel fırsatı (örn. "${coveredMonthNames} ayı fırsatları", sezonluk bir tema, ilgili bir gün) kendi bilgine dayanarak belirle ve bunun için EN AZ 1 paylaşım gününde isSpecial:true yaparak öne çıkan bir içerik üret. Zorlama bir bahane uydurma; gerçekten o aya özgü, akla yatkın bir şey seç.`;
   const otherKnownDaysNote = `⚠️ Yukarıdakilere EK olarak: ${coveredMonthNames} ayına/aylarına denk gelen, kullanıcının YAZMAYI UNUTMUŞ OLABİLECEĞİ bilinen resmi/milli bayramları veya sektörle alakalı önemli günleri (varsa) kendi bilgine dayanarak tespit et ve bunlar için de en az birer paylaşım gününde isSpecial:true yaparak içerik üret — kullanıcının belirttiği kampanyaların yerine geçmesin, onlara ek olsun.`;
 
   const specialNote = special
-    ? `Özel günler/kampanyalar: ${special}\n${resolvedCampaigns.length ? `KESİN TALİMAT — bu eşleşmeleri birebir uygula:\n${resolvedCampaigns.join('\n')}` : ``}${movableDateNote}${hasDateAnchoredCampaign ? `` : `⚠️ Bu kampanya belirli bir takvim tarihine/haftasına bağlı değil (örn. sürekli geçerli bir indirim/fırsat). Kampanyayı 3-4 farklı paylaşım gününe dağıt, her birinde FARKLI bir açıdan işle (ürün faydası, aciliyet, müşteri hikayesi, karşılaştırma vb.) ve o günlerde isSpecial:true yap — aynı mesajı tekrarlama.`}\n⚠️ ÖNEMLİ: "Sıra No" etiketi sadece bu listedeki sıralamadır, ayın kaçıncı günü olduğuyla KARIŞTIRMA — "Sıra No 14" ile "ayın 14'ü" birbirinden tamamen bağımsızdır.\n${otherKnownDaysNote}`
+    ? `Özel günler/kampanyalar: ${special}\n${chunkCampaignTexts.length ? `KESİN TALİMAT — bu eşleşmeleri birebir uygula:\n${chunkCampaignTexts.join('\n')}` : ``}${movableDateNote}${hasDateAnchoredCampaign ? `` : `⚠️ Bu kampanya belirli bir takvim tarihine/haftasına bağlı değil (örn. sürekli geçerli bir indirim/fırsat). Kampanyayı bu parçadaki 3-4 farklı paylaşım gününe dağıt, her birinde FARKLI bir açıdan işle (ürün faydası, aciliyet, müşteri hikayesi, karşılaştırma vb.) ve o günlerde isSpecial:true yap — aynı mesajı tekrarlama.`}\n⚠️ ÖNEMLİ: "Sıra No" etiketi sadece bu listedeki sıralamadır, ayın kaçıncı günü olduğuyla KARIŞTIRMA — "Sıra No 14" ile "ayın 14'ü" birbirinden tamamen bağımsızdır.\n${otherKnownDaysNote}`
     : `Özel günler/kampanyalar: Yok\n${noSpecialFallback}`;
 
-  const prompt = `Sen bir sosyal medya stratejisti ve içerik uzmanısın. Aşağıdaki işletme için sosyal medya içerik takvimi oluştur.
+  return `Sen bir sosyal medya stratejisti ve içerik uzmanısın. Aşağıdaki işletme için sosyal medya içerik takvimi oluştur.
 
 İşletme Bilgileri:
 - İşletme: ${biz}
@@ -715,9 +695,9 @@ async function generate() {
 - Dil: ${lang}
 - ${specialNote}
 
-YALNIZCA şu Sıra No'lar için içerik üret (toplam ${postingDays.length} gün), her Sıra No'nun takvim tarihi aşağıda verilmiştir:
+YALNIZCA şu Sıra No'lar için içerik üret (toplam ${chunkPostingDays.length} gün), her Sıra No'nun takvim tarihi aşağıda verilmiştir:
 ${dayDateMap}
-Diğer Sıra No'lar için kesinlikle içerik yazma. "days" dizisi tam olarak ${postingDays.length} eleman içersin. Çıktıdaki "day" alanına yukarıdaki Sıra No değerini yaz (takvim tarihini değil).
+Diğer Sıra No'lar için kesinlikle içerik yazma. "days" dizisi tam olarak ${chunkPostingDays.length} eleman içersin. Çıktıdaki "day" alanına yukarıdaki Sıra No değerini yaz (takvim tarihini değil).
 
 Her gün için şunları üret:
 - topic: Kısa başlık (maks 8 kelime)
@@ -731,33 +711,56 @@ Tekrar eden içeriklerden kaçın, çeşitlilik sağla. Formatlarda dengeli dağ
 SADECE JSON döndür, açıklama yazma:
 {
   "days": [
-    { "day": ${postingDays[0]}, "topic": "...", "format": "...", "platform": "...", "draft": "...", "isSpecial": false }
+    { "day": ${chunkPostingDays[0]}, "topic": "...", "format": "...", "platform": "...", "draft": "...", "isSpecial": false }
   ],
   "ctaText": "..."
 }`;
+}
 
-  const onRetry = (attempt, reason) => {
-    msgEl.textContent = reason === `encoding`
-      ? `Yanıtta karakter bozulması tespit edildi, tekrar deneniyor (${attempt + 1}/2)...`
-      : `Yapay zeka meşgul, tekrar deneniyor (${attempt + 1}/2)...`;
-  };
+// Haftada kaç gün paylaşım seçildiğine göre dönemi kaç "parça"ya böleceğimizi
+// belirler — n8n/PHP-FPM sunucu timeout tavanına (~180sn) çarpmamak için:
+// 1 gün/hafta → tek parça (30 gün, tek istek, timeout riski yok, test edildi)
+// 2 gün/hafta → 2 parça (1-15, 16-30 — yani 1-2. hafta / 3-4-5. hafta)
+// 3 gün/hafta → 5 parça (her hafta ayrı, sadece görüntülenince istenir)
+function computeChunkGroups(weekdayCount) {
+  if (weekdayCount <= 1) return [{ id: 0, dayStart: 1, dayEnd: 30, weeks: [1, 2, 3, 4, 5] }];
+  if (weekdayCount === 2) return [
+    { id: 0, dayStart: 1, dayEnd: 15, weeks: [1, 2] },
+    { id: 1, dayStart: 16, dayEnd: 30, weeks: [3, 4, 5] },
+  ];
+  return [1, 2, 3, 4, 5].map(w => ({ id: w - 1, dayStart: (w - 1) * 7 + 1, dayEnd: Math.min((w - 1) * 7 + 7, 30), weeks: [w] }));
+}
+function groupForWeek(week) {
+  return chunkGroups.find(g => g.weeks.includes(week));
+}
 
-  try {
+// Bir parçayı AI'den ister, sonucu allDays'e işler (upsert). Aynı parça için
+// eşzamanlı birden fazla çağrı gelirse (ör. hızlı çift tıklama) aynı Promise
+// paylaşılır, tekrar istek atılmaz.
+const pendingGroupFetches = new Map();
+function fetchAndMergeGroup(group, startDate) {
+  if (pendingGroupFetches.has(group.id)) return pendingGroupFetches.get(group.id);
+  const p = (async () => {
+    const startMs = startDate.getTime();
+    const chunkPostingDays = formData.postingDays.filter(d => [d >= group.dayStart, d <= group.dayEnd].every(Boolean));
+    const chunkPostingDates = chunkPostingDays.map(d => new Date(startMs + (d - 1) * 86400000));
+    const prompt = buildCalendarPrompt(chunkPostingDays, chunkPostingDates, campaignCtx);
+
+    const onRetry = (attempt, reason) => {
+      const msgEl = document.getElementById(`loading-msg`);
+      if (msgEl) msgEl.textContent = reason === `encoding`
+        ? `Yanıtta karakter bozulması tespit edildi, tekrar deneniyor (${attempt + 1}/2)...`
+        : `Yapay zeka meşgul, tekrar deneniyor (${attempt + 1}/2)...`;
+    };
+
     let res;
     if (N8N_PROXY) {
       res = await fetchJsonWithRetry(N8N_PROXY, {
         method: `POST`,
         headers: { 'Content-Type': `application/json` },
         body: JSON.stringify({ prompt })
-      }, lang, onRetry);
-      if (res.status === 429) {
-        clearInterval(ticker);
-        show(`form-section`);
-        document.getElementById(`err`).textContent = `Sunucu tarafında günlük limit doldu. Lütfen yarın tekrar deneyin.`;
-        document.getElementById(`err`).style.display = `block`;
-        if (genBtn) { genBtn.disabled = false; genBtn.style.opacity = ``; }
-        return;
-      }
+      }, campaignCtx.lang, onRetry);
+      if (res.status === 429) { const e = new Error(`RATE_LIMIT`); throw e; }
     } else {
       const rawRes = await fetch(`https://api.minimax.io/v1/chat/completions`, {
         method: `POST`,
@@ -767,48 +770,140 @@ SADECE JSON döndür, açıklama yazma:
       const rawData = await rawRes.json();
       res = { _text: rawData.choices?.[0]?.message?.content || `` };
     }
-    clearInterval(ticker);
     const text = res._text;
     const clean = extractJson(text);
     const result = JSON.parse(clean);
+    const newDays = result.days.map(d => {
+      const dt = new Date(startMs + (d.day - 1) * 86400000);
+      return { ...d, date: dt };
+    });
+    newDays.forEach(nd => {
+      const idx = allDays.findIndex(x => x.day === nd.day);
+      if (idx !== -1) allDays[idx] = nd; else allDays.push(nd);
+    });
+    allDays.sort((a, b) => a.day - b.day);
+    loadedGroupIds.add(group.id);
+    return result;
+  })();
+  pendingGroupFetches.set(group.id, p);
+  p.finally(() => pendingGroupFetches.delete(group.id));
+  return p;
+}
+
+// Henüz istenmemiş tüm parçaları getirir — dışa aktarma (yazdır/kopyala/
+// indir) işlemleri tüm 30 günü göstermeden önce çağrılır.
+async function ensureAllGroupsLoaded() {
+  const missing = chunkGroups.filter(g => !loadedGroupIds.has(g.id));
+  if (!missing.length) return;
+  await Promise.all(missing.map(g => fetchAndMergeGroup(g, getStartDate())));
+}
+
+async function generate() {
+  const biz = document.getElementById(`f-biz`).value.trim();
+  const sector = document.getElementById(`f-sector`).value;
+  const audience = document.getElementById(`f-audience`).value.trim();
+  const platforms = getChecked(`platform-group`);
+  const tone = document.getElementById(`f-tone`).value;
+  const lang = document.getElementById(`f-lang`).value;
+  const special = document.getElementById(`f-special`).value.trim();
+  const err = document.getElementById(`err`);
+
+  const weekdays = [...document.querySelectorAll(`#weekday-group input:checked`)].map(el => parseInt(el.value));
+  if (!biz || !sector || platforms.length === 0 || weekdays.length === 0) { err.style.display=`block`; err.textContent=`Lütfen işletme adı, sektör, en az bir platform ve en az bir gün seçin.`; return; }
+  if (weekdays.length > 3) { err.style.display=`block`; err.textContent=`En fazla 3 gün seçebilirsiniz.`; return; }
+  err.style.display = `none`;
+
+  // Seçilen haftanın günlerine göre 30 gün içindeki paylaşım günlerini hesapla
+  const startInput = document.getElementById(`f-start`).value;
+  const startDate = startInput ? new Date(startInput + `T00:00:00`) : new Date();
+  const postingDays = [];
+  const startMs = startDate.getTime();
+  for (let i = 0; i < 30; i++) {
+    const day = new Date(startMs + i * 86400000).getDay();
+    if (weekdays.includes(day)) postingDays.push(i + 1);
+  }
+
+  formData = { biz, sector, audience, platforms, tone, lang, special, weekdays, postingDays, startDate: startDate.toISOString() };
+
+  const platformList = platforms.join(`, `);
+  const postingDates = postingDays.map(dayNum => new Date(startMs + (dayNum - 1) * 86400000));
+  const { resolvedCampaigns, matchedMovable, hasDateAnchoredCampaign } = resolveCampaigns(special, postingDays, postingDates);
+  campaignCtx = { biz, sector, audience, platformList, tone, lang, special, resolvedCampaigns, matchedMovable, hasDateAnchoredCampaign };
+
+  chunkGroups = computeChunkGroups(weekdays.length);
+  loadedGroupIds = new Set();
+  allDays = [];
+
+  const genBtn = document.getElementById(`gen-btn`) || document.getElementById(`analyze-btn`);
+  if (genBtn) { genBtn.disabled = true; genBtn.style.opacity = `0.6`; }
+  show(`loading-section`);
+  window.scrollTo({ top: 0, behavior: `smooth` });
+  let mi = 0;
+  const msgEl = document.getElementById(`loading-msg`);
+  const ticker = setInterval(() => { mi=(mi+1)%loadingMsgs.length; msgEl.textContent=loadingMsgs[mi]; }, 1800);
+
+  try {
+    const result = await fetchAndMergeGroup(chunkGroups[0], startDate);
+    clearInterval(ticker);
     if (genBtn) { genBtn.disabled = false; genBtn.style.opacity = ``; }
-    renderResults(result);
+    renderResultsShell(result.ctaText);
   } catch(e) {
     clearInterval(ticker);
     if (genBtn) { genBtn.disabled = false; genBtn.style.opacity = ``; }
     show(`form-section`);
     err.style.display = `block`;
-    err.textContent = `Takvim oluşturulamadı. Yapay zeka meşgul olabilir veya sunucuya bağlanılamadı — lütfen tekrar deneyin.`;
+    err.textContent = e?.message === `RATE_LIMIT`
+      ? `Sunucu tarafında günlük limit doldu. Lütfen yarın tekrar deneyin.`
+      : `Takvim oluşturulamadı. Yapay zeka meşgul olabilir veya sunucuya bağlanılamadı — lütfen tekrar deneyin.`;
   }
 }
 
-function renderResults(result) {
-  allDays = result.days;
+// İlk parça (chunk) başarıyla geldikten sonra sonuç ekranının çerçevesini
+// (başlık, alt başlık, CTA) kurar ve 1. haftayı gösterir. allDays'e gün
+// ekleme/tarih atama işini artık fetchAndMergeGroup yapıyor.
+function renderResultsShell(ctaText) {
   const startDate = getStartDate();
-
   document.getElementById(`results-title`).textContent = `${formData.biz} — 30 Günlük İçerik Takvimi`;
   const fmt = d => `${d.getDate()} ${TR_MONTHS[d.getMonth()]} ${d.getFullYear()}`;
   const endDate = new Date(startDate);
   endDate.setDate(endDate.getDate() + 29);
   document.getElementById(`results-sub`).textContent = `${fmt(startDate)} – ${fmt(endDate)} · ${formData.platforms.join(', ')}`;
-  document.getElementById(`cta-sub`).textContent = result.ctaText || `Takvim hazır — şimdi uygulamaya geçmek için destek alalım.`;
-
-  // Assign actual dates to days
-  allDays = allDays.map(d => {
-    const dt = new Date(startDate);
-    dt.setDate(dt.getDate() + (d.day - 1));
-    return { ...d, date: dt };
-  });
+  document.getElementById(`cta-sub`).textContent = ctaText || `Takvim hazır — şimdi uygulamaya geçmek için destek alalım.`;
 
   currentWeek = 1;
-  showWeek(1, document.querySelector(`.wtab`));
   show(`results-section`); collapseForm();
+  renderDays(allDays.filter(d => [d.day >= 1, d.day <= 7].every(Boolean)));
 }
 
-function showWeek(week, btn) {
+function renderLoadingWeek() {
+  const grid = document.getElementById(`days-grid`);
+  grid.innerHTML = `<div style="text-align:center;padding:3rem 1rem"><div class="spinner" style="margin:0 auto 1.25rem"></div><p style="font-size:14px;color:#6B6963">Bu haftanın içerikleri hazırlanıyor...</p></div>`;
+}
+function renderWeekLoadError(e) {
+  const grid = document.getElementById(`days-grid`);
+  const msg = e?.message === `RATE_LIMIT`
+    ? `Günlük limit doldu, yarın tekrar deneyin.`
+    : `Bu hafta yüklenemedi. Yapay zeka meşgul olabilir — sekmeye tekrar tıklayarak deneyin.`;
+  grid.innerHTML = `<div style="text-align:center;padding:3rem 1rem;color:#A32D2D;font-size:14px">${escHtml(msg)}</div>`;
+}
+
+async function showWeek(week, btn) {
   currentWeek = week;
   document.querySelectorAll(`.wtab`).forEach(t => t.classList.remove(`active`));
   btn.classList.add(`active`);
+
+  const group = groupForWeek(week);
+  if (group) {
+    if (!loadedGroupIds.has(group.id)) {
+      renderLoadingWeek();
+      try {
+        await fetchAndMergeGroup(group, getStartDate());
+      } catch(e) {
+        renderWeekLoadError(e);
+        return;
+      }
+    }
+  }
 
   const start = (week - 1) * 7 + 1;
   const end = Math.min(start + 6, 30);
@@ -851,8 +946,15 @@ function renderDays(days) {
 // çünkü hafta sekmeleri aynı konteynerin içeriğini değiştirip diğer haftaların
 // DOM'dan tamamen silinmesine yol açıyordu. Bunun yerine form bilgilerini ve
 // TÜM günleri ayrı, sadece yazdırmada görünen bir konteynere basıyoruz.
-function printFullCalendar() {
+async function printFullCalendar() {
   if (!allDays.length) return;
+  const btn = document.getElementById(`print-btn`);
+  if (btn) { btn.disabled = true; btn.innerHTML = `<i class="ti ti-loader-2" aria-hidden="true"></i> Hazırlanıyor...`; }
+  try {
+    await ensureAllGroupsLoaded();
+  } finally {
+    if (btn) { btn.disabled = false; btn.innerHTML = `<i class="ti ti-printer" aria-hidden="true"></i> Yazdır`; }
+  }
   const fd = formData || {};
   const container = document.getElementById(`print-all-days`);
   const metaRows = [
@@ -913,19 +1015,17 @@ async function refreshWeek() {
 
   const start = (currentWeek - 1) * 7 + 1;
   const end = Math.min(start + 6, 30);
-  const weekNum = currentWeek;
-  const { biz, sector, audience, platforms, tone, lang, special, weekdays } = formData;
-  const weekDayNumbers = formData.postingDays.filter(d => [d >= start, d <= end].every(Boolean));
+  const periodStart = getStartDate();
+  const startMs = periodStart.getTime();
+  const weekPostingDays = formData.postingDays.filter(d => [d >= start, d <= end].every(Boolean));
+  const weekPostingDates = weekPostingDays.map(d => new Date(startMs + (d - 1) * 86400000));
 
-  const prompt = `Sen bir sosyal medya stratejistisi. Aşağıdaki işletme için ${weekNum}. haftanın içeriklerini yeniden oluştur.
-
-İşletme: ${biz} | Sektör: ${sector} | Platformlar: ${platforms.join(', ')} | Ton: ${tone || 'Profesyonel'} | Dil: ${lang}
-
-YALNIZCA şu günler için içerik üret (toplam ${weekDayNumbers.length} gün): ${weekDayNumbers.join(', ')}
-Diğer günlere kesinlikle içerik yazma. "days" dizisi tam olarak ${weekDayNumbers.length} eleman içersin.
-
-SADECE JSON döndür:
-{"days":[{"day":<sayı>,"topic":"...","format":"...","platform":"...","draft":"...","isSpecial":false}]}`;
+  // Aynı prompt üreticiyi (buildCalendarPrompt) kullanıyoruz ki "Bu haftayı
+  // yenile" de generate() ile birebir aynı kampanya/özel gün mantığını
+  // uygulasın — eskiden bu buton kendi ayrı, çok sade promptunu kurup
+  // "Bu ay özel günler / kampanyalar var mı?" alanını tamamen görmezden
+  // geliyordu.
+  const prompt = buildCalendarPrompt(weekPostingDays, weekPostingDates, campaignCtx);
 
   const onRetry = (attempt, reason) => {
     btn.innerHTML = `<i class="ti ti-refresh" aria-hidden="true"></i> ${reason === 'encoding' ? 'Karakter hatası, tekrar deneniyor' : 'Meşgul, tekrar deneniyor'} (${attempt + 1}/2)...`;
@@ -934,24 +1034,24 @@ SADECE JSON döndür:
   try {
     let text;
     if (N8N_PROXY) {
-      const res = await fetchJsonWithRetry(N8N_PROXY, { method:`POST`, headers:{'Content-Type':`application/json`}, body:JSON.stringify({prompt}) }, lang, onRetry);
+      const res = await fetchJsonWithRetry(N8N_PROXY, { method:`POST`, headers:{'Content-Type':`application/json`}, body:JSON.stringify({prompt}) }, campaignCtx.lang, onRetry);
       text = res._text;
     } else {
-      const res = await fetch(`https://api.minimax.io/v1/chat/completions`, { method:`POST`, headers:{'Content-Type':`application/json`,'Authorization':`Bearer DEV_KEY`}, body:JSON.stringify({model:`MiniMax-M3`,max_completion_tokens:1500,messages:[{role:`user`,content:prompt}]}) });
+      const res = await fetch(`https://api.minimax.io/v1/chat/completions`, { method:`POST`, headers:{'Content-Type':`application/json`,'Authorization':`Bearer DEV_KEY`}, body:JSON.stringify({model:`MiniMax-M3`,max_completion_tokens:4000,messages:[{role:`user`,content:prompt}]}) });
       const data = await res.json();
       text = data.choices?.[0]?.message?.content || ``;
     }
     const clean = extractJson(text);
     const result = JSON.parse(clean);
-    const periodStart = getStartDate();
     result.days.forEach(d => {
-      const dt = new Date(periodStart);
-      dt.setDate(dt.getDate() + (d.day - 1));
+      const dt = new Date(startMs + (d.day - 1) * 86400000);
       d.date = dt;
       const idx = allDays.findIndex(x => x.day === d.day);
       if (idx !== -1) allDays[idx] = d; else allDays.push(d);
     });
     allDays.sort((a, b) => a.day - b.day);
+    const group = groupForWeek(currentWeek);
+    if (group) loadedGroupIds.add(group.id);
     renderDays(allDays.filter(d => [d.day >= start, d.day <= end].every(Boolean)));
   } catch(e) {
     alert(`Bu hafta yenilenemedi. Yapay zeka meşgul olabilir veya yanıt bozuk geldi — lütfen tekrar deneyin.`);
@@ -960,8 +1060,16 @@ SADECE JSON döndür:
   btn.innerHTML = `<i class="ti ti-refresh" aria-hidden="true"></i> Bu haftayı yenile`;
 }
 
-function copyAll() {
+async function copyAll() {
   if (!allDays.length) return;
+  const btn = document.getElementById(`copy-all-btn`);
+  const originalLabel = btn ? btn.innerHTML : ``;
+  if (btn) { btn.disabled = true; btn.innerHTML = `<i class="ti ti-loader-2" aria-hidden="true"></i> Hazırlanıyor...`; }
+  try {
+    await ensureAllGroupsLoaded();
+  } finally {
+    if (btn) { btn.disabled = false; btn.innerHTML = originalLabel; }
+  }
   const fd = formData || {};
   const header = [
     `İşletme: ${fd.biz||''}`,
@@ -979,13 +1087,13 @@ function copyAll() {
     return `Gün ${d.day} — ${dt.getDate()} ${TR_MONTHS[dt.getMonth()]}\nKonu: ${d.topic}\nFormat: ${d.format} · ${d.platform}\n\n${d.draft}`;
   }).join(`\n\n---\n\n`);
   navigator.clipboard.writeText(header + `\n` + body).then(() => {
-    const btn = document.getElementById(`copy-all-btn`);
     if (btn) { btn.textContent = `Kopyalandı ✓`; setTimeout(() => btn.textContent = `Tümünü Kopyala`, 2000); }
   });
 }
 
-function downloadTxt() {
+async function downloadTxt() {
   if (!allDays.length) return;
+  await ensureAllGroupsLoaded();
   const fd = formData || {};
   const header = [
     `İşletme: ${fd.biz||''}`, `Sektör: ${fd.sector||''}`,
@@ -1007,7 +1115,9 @@ function downloadTxt() {
   a.click();
 }
 
-function downloadCSV() {
+async function downloadCSV() {
+  if (!allDays.length) return;
+  await ensureAllGroupsLoaded();
   const { biz, sector, audience, platforms, tone, lang, special, weekdays } = formData;
   const esc = s => `"${String(s||'').replace(/"/g,'""')}"`;
   const metaRows = [
@@ -1056,6 +1166,9 @@ function restart() {
   document.querySelectorAll(`#platform-group input`).forEach(el => el.checked = false);
   document.querySelectorAll(`#weekday-group input`).forEach(el => el.checked = false);
   allDays = [];
+  chunkGroups = [];
+  loadedGroupIds = new Set();
+  campaignCtx = {};
   show(`form-section`);
 }
 
