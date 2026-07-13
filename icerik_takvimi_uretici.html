@@ -220,7 +220,7 @@ input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3p
     
   <!-- Form kaydet/yükle -->
   <div style="display:flex;gap:8px;margin-top:1rem;flex-wrap:wrap" id="form-persist-row">
-    <button type="button" onclick="exportFormJSON()" style="display:flex;align-items:center;gap:5px;padding:7px 13px;background:#fff;border:0.5px solid #D3D1C7;border-radius:8px;font-size:12px;color:#6B6963;cursor:pointer">
+    <button type="button" id="save-form-btn" onclick="exportFormJSON()" style="display:flex;align-items:center;gap:5px;padding:7px 13px;background:#fff;border:0.5px solid #D3D1C7;border-radius:8px;font-size:12px;color:#6B6963;cursor:pointer">
       <i class="ti ti-device-floppy" aria-hidden="true"></i> Formu Kaydet
     </button>
     <label style="display:flex;align-items:center;gap:5px;padding:7px 13px;background:#fff;border:0.5px solid #D3D1C7;border-radius:8px;font-size:12px;color:#6B6963;cursor:pointer">
@@ -254,8 +254,8 @@ input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3p
       </div>
       <div class="action-row">
         <button class="btn-sm" id="copy-all-btn" onclick="copyAll()"><i class="ti ti-copy" aria-hidden="true"></i> Tümünü Kopyala</button>
-        <button class="btn-sm" onclick="downloadTxt()"><i class="ti ti-file-text" aria-hidden="true"></i> TXT İndir</button>
-        <button class="btn-sm" onclick="downloadCSV()"><i class="ti ti-download" aria-hidden="true"></i> CSV İndir</button>
+        <button class="btn-sm" id="txt-btn" onclick="downloadTxt()"><i class="ti ti-file-text" aria-hidden="true"></i> TXT İndir</button>
+        <button class="btn-sm" id="csv-btn" onclick="downloadCSV()"><i class="ti ti-download" aria-hidden="true"></i> CSV İndir</button>
         <button class="btn-sm" id="print-btn" onclick="printFullCalendar()"><i class="ti ti-printer" aria-hidden="true"></i> Yazdır</button>
         <button class="btn-sm" onclick="restart()"><i class="ti ti-refresh" aria-hidden="true"></i> Yeniden</button>
       </div>
@@ -684,8 +684,18 @@ function buildCalendarPrompt(chunkPostingDays, chunkPostingDates, ctx) {
     : ``;
 
   const coveredMonthNames = [...new Set(chunkPostingDates.map(dt => TR_MONTHS[dt.getMonth()]))].join(`, `);
-  const noSpecialFallback = `⚠️ Kullanıcı bu alanı boş bırakmış. Yine de ${coveredMonthNames} ayına/aylarına özgü, işletmenin sektörüyle alakalı genel bir dönemsel/mevsimsel fırsatı (örn. "${coveredMonthNames} ayı fırsatları", sezonluk bir tema, ilgili bir gün) kendi bilgine dayanarak belirle ve bunun için EN AZ 1 paylaşım gününde isSpecial:true yaparak öne çıkan bir içerik üret. Zorlama bir bahane uydurma; gerçekten o aya özgü, akla yatkın bir şey seç.`;
-  const otherKnownDaysNote = `⚠️ Yukarıdakilere EK olarak: ${coveredMonthNames} ayına/aylarına denk gelen, kullanıcının YAZMAYI UNUTMUŞ OLABİLECEĞİ bilinen resmi/milli bayramları veya sektörle alakalı önemli günleri (varsa) kendi bilgine dayanarak tespit et ve bunlar için de en az birer paylaşım gününde isSpecial:true yaparak içerik üret — kullanıcının belirttiği kampanyaların yerine geçmesin, onlara ek olsun.`;
+  // Bu parçanın gerçek tarih aralığını (ay adı değil, tam tarih) açıkça
+  // veriyoruz ki AI "Mayıs ayına özgü bir gün" ararken, bu parçanın
+  // BAŞLANGICINDAN ÖNCE geçmiş bir tarihi (ör. 19 Mayıs'ı 25 Mayıs'ta
+  // "bugün kutlu olsun" diye) yanlışlıkla güncel/gelecek bir gün gibi
+  // sunmasın — gerçekte yaşanan bir hataydı bu.
+  const chunkFirstDate = chunkPostingDates[0];
+  const chunkLastDate = chunkPostingDates[chunkPostingDates.length - 1];
+  const chunkRangeStr = [chunkFirstDate, chunkLastDate].every(Boolean)
+    ? `${chunkFirstDate.getDate()} ${TR_MONTHS[chunkFirstDate.getMonth()]} – ${chunkLastDate.getDate()} ${TR_MONTHS[chunkLastDate.getMonth()]} ${chunkLastDate.getFullYear()}`
+    : coveredMonthNames;
+  const noSpecialFallback = `⚠️ Kullanıcı bu alanı boş bırakmış. Yine de bu parçanın kapsadığı ${chunkRangeStr} tarih aralığına özgü, işletmenin sektörüyle alakalı genel bir dönemsel/mevsimsel fırsatı (örn. sezonluk bir tema, ilgili bir gün) kendi bilgine dayanarak belirle ve bunun için EN AZ 1 paylaşım gününde isSpecial:true yaparak öne çıkan bir içerik üret. Zorlama bir bahane uydurma; gerçekten o tarihlere özgü, akla yatkın bir şey seç.`;
+  const otherKnownDaysNote = `⚠️ Yukarıdakilere EK olarak: SADECE ${chunkRangeStr} tarih aralığına denk gelen veya bu aralıktan hemen önce/sonra gelen, kullanıcının YAZMAYI UNUTMUŞ OLABİLECEĞİ bilinen resmi/milli bayramları veya sektörle alakalı önemli günleri (varsa) kendi bilgine dayanarak tespit et ve bunlar için de en az birer paylaşım gününde isSpecial:true yaparak içerik üret. ÖNEMLİ: bu tarih aralığının BAŞLANGICINDAN ÖNCE geçmiş bir günü (ör. aralık ${chunkFirstDate ? chunkFirstDate.getDate() + ' ' + TR_MONTHS[chunkFirstDate.getMonth()] : ''} ile başlıyorken bundan önceki bir tarihi) "bugün/yarın kutlu olsun" gibi güncelmiş gibi ASLA sunma — sadece bu parçanın kendi tarih aralığındaki veya ondan SONRAKİ günleri kullan. Kullanıcının belirttiği kampanyaların yerine geçmesin, onlara ek olsun.`;
 
   const specialNote = special
     ? `Özel günler/kampanyalar: ${special}\n${chunkCampaignTexts.length ? `KESİN TALİMAT — bu eşleşmeleri birebir uygula:\n${chunkCampaignTexts.join('\n')}` : ``}${movableDateNote}${hasDateAnchoredCampaign ? `` : `⚠️ Bu kampanya belirli bir takvim tarihine/haftasına bağlı değil (örn. sürekli geçerli bir indirim/fırsat). Kampanyayı bu parçadaki 3-4 farklı paylaşım gününe dağıt, her birinde FARKLI bir açıdan işle (ürün faydası, aciliyet, müşteri hikayesi, karşılaştırma vb.) ve o günlerde isSpecial:true yap — aynı mesajı tekrarlama.`}\n⚠️ ÖNEMLİ: "Sıra No" etiketi sadece bu listedeki sıralamadır, ayın kaçıncı günü olduğuyla KARIŞTIRMA — "Sıra No 14" ile "ayın 14'ü" birbirinden tamamen bağımsızdır.\n${otherKnownDaysNote}`
@@ -918,9 +928,17 @@ async function showWeek(week, btn) {
       try {
         await fetchAndMergeGroup(group, getStartDate());
       } catch(e) {
-        renderWeekLoadError(e);
+        // Kullanıcı beklerken başka bir haftaya geçmiş olabilir — o zaman bu
+        // gecikmiş hata mesajını, artık görüntülenmekte olan farklı haftanın
+        // üzerine YAZMA. Yalnızca hâlâ bu haftadaysak hata göster.
+        if (currentWeek === week) renderWeekLoadError(e);
         return;
       }
+      // Fetch tamamlandı ama bu sırada kullanıcı başka bir haftaya geçtiyse
+      // (ör. yavaş bir istek beklenirken sekme değiştirdiyse), o haftanın
+      // içeriğini bu geç gelen sonuçla EZME — mevcut görünüm zaten kendi
+      // fetch'ini tetiklemiş veya tetikleyecektir.
+      if (currentWeek !== week) return;
     }
   }
 
@@ -969,11 +987,9 @@ async function printFullCalendar() {
   if (!allDays.length) return;
   const btn = document.getElementById(`print-btn`);
   if (btn) { btn.disabled = true; btn.innerHTML = `<i class="ti ti-loader-2" aria-hidden="true"></i> Hazırlanıyor...`; }
-  try {
-    await ensureAllGroupsLoaded();
-  } finally {
-    if (btn) { btn.disabled = false; btn.innerHTML = `<i class="ti ti-printer" aria-hidden="true"></i> Yazdır`; }
-  }
+  const ok = await ensureAllGroupsLoadedOrAlert();
+  if (btn) { btn.disabled = false; btn.innerHTML = `<i class="ti ti-printer" aria-hidden="true"></i> Yazdır`; }
+  if (!ok) return;
   const fd = formData || {};
   const container = document.getElementById(`print-all-days`);
   const metaRows = [
@@ -1079,16 +1095,28 @@ async function refreshWeek() {
   btn.innerHTML = `<i class="ti ti-refresh" aria-hidden="true"></i> Bu haftayı yenile`;
 }
 
+// Tüm haftaları getirmeye çalışır; biri (ör. daha önce başarısız olmuş bir
+// hafta) yüklenemezse kullanıcıya görünür bir uyarı verir ve false döner —
+// eskiden bu durumda ilgili buton (Kopyala/TXT/CSV/Yazdır) sessizce hiçbir
+// şey yapmıyormuş gibi görünüyordu.
+async function ensureAllGroupsLoadedOrAlert() {
+  try {
+    await ensureAllGroupsLoaded();
+    return true;
+  } catch(e) {
+    alert(`Bazı haftalar yüklenemediği için işlem tamamlanamadı. Lütfen yüklenemeyen hafta sekmesine tıklayıp tekrar deneyin, sonra yeniden deneyin.`);
+    return false;
+  }
+}
+
 async function copyAll() {
   if (!allDays.length) return;
   const btn = document.getElementById(`copy-all-btn`);
   const originalLabel = btn ? btn.innerHTML : ``;
   if (btn) { btn.disabled = true; btn.innerHTML = `<i class="ti ti-loader-2" aria-hidden="true"></i> Hazırlanıyor...`; }
-  try {
-    await ensureAllGroupsLoaded();
-  } finally {
-    if (btn) { btn.disabled = false; btn.innerHTML = originalLabel; }
-  }
+  const ok = await ensureAllGroupsLoadedOrAlert();
+  if (btn) { btn.disabled = false; btn.innerHTML = originalLabel; }
+  if (!ok) return;
   const fd = formData || {};
   const header = [
     `İşletme: ${fd.biz||''}`,
@@ -1112,7 +1140,7 @@ async function copyAll() {
 
 async function downloadTxt() {
   if (!allDays.length) return;
-  await ensureAllGroupsLoaded();
+  if (!(await ensureAllGroupsLoadedOrAlert())) return;
   const fd = formData || {};
   const header = [
     `İşletme: ${fd.biz||''}`, `Sektör: ${fd.sector||''}`,
@@ -1132,11 +1160,13 @@ async function downloadTxt() {
   a.href = URL.createObjectURL(blob);
   a.download = `icerik-takvimi-${(fd.biz||'takvim').replace(/\s+/g,'-').toLowerCase()}.txt`;
   a.click();
+  const btn = document.getElementById(`txt-btn`);
+  if (btn) { const o = btn.innerHTML; btn.innerHTML = `<i class="ti ti-circle-check" aria-hidden="true"></i> İndirildi ✓`; setTimeout(() => btn.innerHTML = o, 2000); }
 }
 
 async function downloadCSV() {
   if (!allDays.length) return;
-  await ensureAllGroupsLoaded();
+  if (!(await ensureAllGroupsLoadedOrAlert())) return;
   const { biz, sector, audience, platforms, tone, lang, special, weekdays } = formData;
   const esc = s => `"${String(s||'').replace(/"/g,'""')}"`;
   const metaRows = [
@@ -1173,6 +1203,8 @@ async function downloadCSV() {
   a.download = `${formData.biz || 'icerik'}_30_gunluk_takvim.csv`;
   a.click();
   URL.revokeObjectURL(url);
+  const btn = document.getElementById(`csv-btn`);
+  if (btn) { const o = btn.innerHTML; btn.innerHTML = `<i class="ti ti-circle-check" aria-hidden="true"></i> İndirildi ✓`; setTimeout(() => btn.innerHTML = o, 2000); }
 }
 function restart() {
   document.getElementById(`f-biz`).value = ``;
@@ -1284,6 +1316,14 @@ function exportFormJSON() {
   a.href = URL.createObjectURL(blob);
   a.download = `form-` + location.pathname.replace(/\//g,``).replace(/-/g,`_`) + `.json`;
   a.click();
+  // Dosya indirme tarayıcıda sessizce (görünür bir onay olmadan) gerçekleşir
+  // — kullanıcı "hiçbir şey olmadı" sanmasın diye kısa süreli bir onay göster.
+  const btn = document.getElementById(`save-form-btn`);
+  if (btn) {
+    const original = btn.innerHTML;
+    btn.innerHTML = `<i class="ti ti-circle-check" aria-hidden="true"></i> Kaydedildi ✓`;
+    setTimeout(() => { btn.innerHTML = original; }, 2000);
+  }
 }
 
 function importFormJSON(input) {
