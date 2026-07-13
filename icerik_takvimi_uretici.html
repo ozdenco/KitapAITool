@@ -115,6 +115,8 @@ input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3p
 <body>
 <div class="app">
 
+  <div id="cta-hint-banner" style="display:none;background:#F0FAF6;border:0.5px solid #9FE1CB;border-radius:10px;padding:12px 16px;font-size:13px;color:#085041;margin-bottom:1rem;line-height:1.6"></div>
+
   <!-- FORM -->
   <div class="form-card" id="form-section">
   <div class="form-collapsed-bar">
@@ -182,7 +184,7 @@ input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3p
         <label class="check-item"><input type="checkbox" value="6" onchange="enforceWeekdayCap(this)"> Cmt</label>
         <label class="check-item"><input type="checkbox" value="0" onchange="enforceWeekdayCap(this)"> Paz</label>
       </div>
-      <p style="font-size:12px;color:#9A9792;margin-top:6px">En fazla 3 gün seçebilirsiniz (yapay zeka yanıt süresi nedeniyle).</p>
+      <p style="font-size:12px;color:#9A9792;margin-top:6px">En fazla 2 gün seçebilirsiniz (yapay zeka yanıt süresi ve maliyeti nedeniyle).</p>
     </div>
 
     <div class="row2">
@@ -253,7 +255,6 @@ input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3p
         <p id="results-sub"></p>
       </div>
       <div class="action-row">
-        <button class="btn-sm" id="copy-all-btn" onclick="copyAll()"><i class="ti ti-copy" aria-hidden="true"></i> Tümünü Kopyala</button>
         <button class="btn-sm" id="txt-btn" onclick="downloadTxt()"><i class="ti ti-file-text" aria-hidden="true"></i> TXT İndir</button>
         <button class="btn-sm" id="csv-btn" onclick="downloadCSV()"><i class="ti ti-download" aria-hidden="true"></i> CSV İndir</button>
         <button class="btn-sm" id="print-btn" onclick="printFullCalendar()"><i class="ti ti-printer" aria-hidden="true"></i> Yazdır</button>
@@ -261,17 +262,11 @@ input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3p
       </div>
     </div>
 
-    <div class="week-tabs" id="week-tabs">
-      <button class="wtab active" onclick="showWeek(1,this)">1. Hafta</button>
-      <button class="wtab" onclick="showWeek(2,this)">2. Hafta</button>
-      <button class="wtab" onclick="showWeek(3,this)">3. Hafta</button>
-      <button class="wtab" onclick="showWeek(4,this)">4. Hafta</button>
-      <button class="wtab" onclick="showWeek(5,this)">5. Hafta</button>
-    </div>
+    <div class="week-tabs" id="week-tabs"></div>
 
-    <div class="refresh-row">
-      <button class="btn-sm" id="refresh-week-btn" onclick="refreshWeek()"><i class="ti ti-refresh" aria-hidden="true"></i> Bu haftayı yenile</button>
-      <span class="refresh-hint">Mevcut haftanın içeriklerini yeniden oluştur</span>
+    <div class="refresh-row" id="refresh-row">
+      <button class="btn-sm" id="refresh-week-btn" onclick="refreshCurrentTab()"><i class="ti ti-refresh" aria-hidden="true"></i> Bu bölümü yenile</button>
+      <span class="refresh-hint" id="refresh-hint">Görüntülenen içerikleri yeniden oluştur</span>
     </div>
 
     <div class="days-grid" id="days-grid"></div>
@@ -296,14 +291,25 @@ const N8N_PROXY = `/wp-json/kolaykobi/v1/ai/takvim`;
 
 function escHtml(s){return String(s||``).replace(/&/g,`&amp;`).replace(/</g,`&lt;`).replace(/>/g,`&gt;`).replace(/"/g,`&quot;`).replace(/'/g,`&#39;`);}
 
-// Haftada 3'ten fazla paylaşım günü seçilmesini engeller — yanıt süresi
+// Belirli işlemlerden (Yeniden, Bu Bölümü Yenile, CSV İndir) sonra kısa
+// süreli bir danışmanlık CTA'sı gösterir.
+function showConsultCta(prefix) {
+  const banner = document.getElementById(`cta-hint-banner`);
+  if (!banner) return;
+  banner.innerHTML = `${escHtml(prefix)} <a href="https://kolaykobi.com/iletisim" target="_blank" rel="noopener noreferrer" style="color:#1D9E75;font-weight:500">Ücretsiz görüşme ayarlayın</a>, size özel yapay zeka uygulamaları tasarlayalım.`;
+  banner.style.display = `block`;
+  clearTimeout(showConsultCta._t);
+  showConsultCta._t = setTimeout(() => { banner.style.display = `none`; }, 8000);
+}
+
+// Haftada 2'den fazla paylaşım günü seçilmesini engeller — yanıt süresi
 // (ve maliyet) haftalık sıklıkla katlanarak arttığı için üst sınır koyduk.
 function enforceWeekdayCap(changedEl) {
   const checked = [...document.querySelectorAll(`#weekday-group input:checked`)];
-  if (checked.length > 3) {
+  if (checked.length > 2) {
     changedEl.checked = false;
     const err = document.getElementById(`err`);
-    if (err) { err.style.display = `block`; err.textContent = `En fazla 3 gün seçebilirsiniz.`; }
+    if (err) { err.style.display = `block`; err.innerHTML = `En fazla 2 gün seçebilirsiniz. Daha sık paylaşım ve size özel bir yapay zeka çözümü mü istiyorsunuz? <a href="https://kolaykobi.com/iletisim" target="_blank" rel="noopener noreferrer" style="color:#1D9E75;font-weight:500">Ücretsiz görüşme ayarlayın</a>, size özel yapay zeka uygulamaları tasarlayalım.`; }
   }
 }
 
@@ -328,7 +334,15 @@ function hasEncodingCorruption(text, lang) {
   return /[㐀-鿿]/.test(text);
 }
 
+// AI çağrısını yapar, yanıtı ayrıştırır ve JSON.parse eder — TAMAMI yeniden
+// deneme döngüsünün İÇİNDE. Eskiden JSON.parse bu döngünün DIŞINDAydı: ağ
+// hatası veya karakter bozulması otomatik tekrar deneniyordu ama AI'nin
+// döndürdüğü JSON eksik/kesik/bozuk gelirse (özellikle kampanya sayısı
+// yüksek, dolayısıyla modelin daha uzun "düşündüğü" haftalarda daha olası)
+// HİÇ yeniden denenmeden anında hata veriliyordu — gerçekte yaşanan bir
+// hataydı bu (bir hafta tutarlı şekilde başarısız oluyordu).
 async function fetchJsonWithRetry(url, opts, lang, onRetry, retries = 2) {
+  let lastParseError = null;
   for (let attempt = 0; attempt <= retries; attempt++) {
     let res;
     try {
@@ -337,13 +351,21 @@ async function fetchJsonWithRetry(url, opts, lang, onRetry, retries = 2) {
       if (attempt < retries) { onRetry?.(attempt, `network`); await new Promise(r => setTimeout(r, 4000)); continue; }
       throw err;
     }
-    if (res.status === 429) return res;
+    if (res.status === 429) return { status: 429 };
     const data = await res.json();
     const text = (data.content || []).map(b => b.text || ``).join(``) || (data.choices?.[0]?.message?.content || ``);
     if (hasEncodingCorruption(text, lang)) {
       if (attempt < retries) { onRetry?.(attempt, `encoding`); await new Promise(r => setTimeout(r, 1500)); continue; }
     }
-    return { status: res.status, _text: text };
+    try {
+      const clean = extractJson(text);
+      const result = JSON.parse(clean);
+      return { status: res.status, result };
+    } catch (parseErr) {
+      lastParseError = parseErr;
+      if (attempt < retries) { onRetry?.(attempt, `parse`); await new Promise(r => setTimeout(r, 2000)); continue; }
+      throw lastParseError;
+    }
   }
 }
 
@@ -359,8 +381,9 @@ const TR_DAYS = [`Paz`,`Pzt`,`Sal`,`Çar`,`Per`,`Cum`,`Cmt`];
 const TR_MONTHS = [`Oca`,`Şub`,`Mar`,`Nis`,`May`,`Haz`,`Tem`,`Ağu`,`Eyl`,`Eki`,`Kas`,`Ara`];
 
 let allDays = [];
-let currentWeek = 1;
 let formData = {};
+let viewTabs = [];
+let currentTabIndex = 0;
 let chunkGroups = [];
 let loadedGroupIds = new Set();
 let campaignCtx = {};
@@ -734,28 +757,48 @@ SADECE JSON döndür, açıklama yazma:
 }`;
 }
 
-// Haftada kaç gün paylaşım seçildiğine göre dönemi kaç "parça"ya böleceğimizi
-// belirler — n8n/PHP-FPM sunucu timeout tavanına (~180sn) çarpmamak için:
-// 1 gün/hafta → tek parça (30 gün, tek istek, timeout riski yok, test edildi)
-// 2-3 gün/hafta → her ZAMAN haftalık (7 günlük) parçalar kullanılır — canlı
-// testte 15 günlük tek parça, kampanya sayısı arttıkça modelin "düşünme"
-// süresi de arttığından ~180-200sn'ye kadar çıkıp sunucu tavanına
-// yaklaşabiliyordu (bir denemede zaman aşımına bile uğradı); haftalık
-// parçalar ise tutarlı şekilde ~75-90sn'de tamamlanıyor. 2 gün/hafta'da
-// kullanıcı deneyimini korumak için ilk gösterimde 1. VE 2. hafta paralel
-// olarak eş zamanlı istenir (computeEagerGroupIds); 3 gün/hafta'da sadece
-// 1. hafta eager, diğerleri sekmeye tıklanınca istenir.
+// Haftada kaç gün paylaşım seçildiğine göre dönemi kaç "FETCH parça"sına
+// böleceğimizi belirler — n8n/PHP-FPM sunucu timeout tavanına (~180sn)
+// çarpmamak için: 1 gün/hafta → tek parça (30 gün, tek istek, timeout
+// riski yok, test edildi). 2 gün/hafta → her zaman haftalık (7 günlük)
+// küçük parçalar kullanılır — canlı testte 15 günlük tek parça, kampanya
+// sayısı arttıkça modelin "düşünme" süresi de arttığından ~180-200sn'ye
+// kadar çıkıp sunucu tavanına yaklaşabiliyordu (bir denemede zaman
+// aşımına bile uğradı); haftalık parçalar ise tutarlı şekilde ~75-90sn'de
+// tamamlanıyor. Bu FETCH parçaları, kullanıcıya gösterilen TAB'lardan
+// (computeViewTabs) farklı bir kavram — bir tab birden fazla fetch
+// parçasını kapsayabilir.
 function computeChunkGroups(weekdayCount) {
-  if (weekdayCount <= 1) return [{ id: 0, dayStart: 1, dayEnd: 30, weeks: [1, 2, 3, 4, 5] }];
-  return [1, 2, 3, 4, 5].map(w => ({ id: w - 1, dayStart: (w - 1) * 7 + 1, dayEnd: Math.min((w - 1) * 7 + 7, 30), weeks: [w] }));
+  if (weekdayCount <= 1) return [{ id: 0, dayStart: 1, dayEnd: 30 }];
+  return [1, 2, 3, 4, 5].map(w => ({ id: w - 1, dayStart: (w - 1) * 7 + 1, dayEnd: Math.min((w - 1) * 7 + 7, 30) }));
 }
-function computeEagerGroupIds(weekdayCount) {
-  if (weekdayCount <= 1) return [0];
-  if (weekdayCount === 2) return [0, 1];
-  return [0];
+
+// Kullanıcıya gösterilen SEKMELERİ (tab) belirler — maliyet/basitlik için
+// haftada 1 gün seçilirse hiç sekme yok (tüm ay tek sayfa, tek istek);
+// haftada 2 gün seçilirse yalnızca 2 sekme (1-15. gün / 16-30. gün).
+// Her sekme, arka planda hangi fetch parçalarına ihtiyaç duyduğunu bilir;
+// bir sekmeye ilk kez tıklandığında o parçalar (varsa birden fazla,
+// PARALEL) istenir.
+function computeViewTabs(weekdayCount) {
+  if (weekdayCount <= 1) return [{ label: `Tüm Ay`, dayStart: 1, dayEnd: 30, fetchGroupIds: [0] }];
+  return [
+    { label: `1-15. Gün`, dayStart: 1, dayEnd: 15, fetchGroupIds: [0, 1] },
+    { label: `16-30. Gün`, dayStart: 16, dayEnd: 30, fetchGroupIds: [2, 3, 4] },
+  ];
 }
-function groupForWeek(week) {
-  return chunkGroups.find(g => g.weeks.includes(week));
+
+function renderTabButtons() {
+  const container = document.getElementById(`week-tabs`);
+  if (!container) return;
+  if (viewTabs.length <= 1) {
+    container.style.display = `none`;
+    container.innerHTML = ``;
+    return;
+  }
+  container.style.display = `flex`;
+  container.innerHTML = viewTabs.map((t, i) =>
+    `<button class="wtab${i === 0 ? ` active` : ``}" onclick="showTab(${i},this)">${escHtml(t.label)}</button>`
+  ).join(``);
 }
 
 // Bir parçayı AI'den ister, sonucu allDays'e işler (upsert). Aynı parça için
@@ -792,11 +835,10 @@ function fetchAndMergeGroup(group, startDate) {
         body: JSON.stringify({ model:`MiniMax-M3`, max_completion_tokens:4000, messages:[{role:`user`,content:prompt}] })
       });
       const rawData = await rawRes.json();
-      res = { _text: rawData.choices?.[0]?.message?.content || `` };
+      const clean = extractJson(rawData.choices?.[0]?.message?.content || ``);
+      res = { status: 200, result: JSON.parse(clean) };
     }
-    const text = res._text;
-    const clean = extractJson(text);
-    const result = JSON.parse(clean);
+    const result = res.result;
     const newDays = result.days.map(d => {
       const dt = new Date(startMs + (d.day - 1) * 86400000);
       return { ...d, date: dt };
@@ -834,7 +876,7 @@ async function generate() {
 
   const weekdays = [...document.querySelectorAll(`#weekday-group input:checked`)].map(el => parseInt(el.value));
   if (!biz || !sector || platforms.length === 0 || weekdays.length === 0) { err.style.display=`block`; err.textContent=`Lütfen işletme adı, sektör, en az bir platform ve en az bir gün seçin.`; return; }
-  if (weekdays.length > 3) { err.style.display=`block`; err.textContent=`En fazla 3 gün seçebilirsiniz.`; return; }
+  if (weekdays.length > 2) { err.style.display=`block`; err.innerHTML=`En fazla 2 gün seçebilirsiniz. Daha sık paylaşım ve size özel bir yapay zeka çözümü mü istiyorsunuz? <a href="https://kolaykobi.com/iletisim" target="_blank" rel="noopener noreferrer" style="color:#1D9E75;font-weight:500">Ücretsiz görüşme ayarlayın</a>, size özel yapay zeka uygulamaları tasarlayalım.`; return; }
   err.style.display = `none`;
 
   // Seçilen haftanın günlerine göre 30 gün içindeki paylaşım günlerini hesapla
@@ -855,6 +897,7 @@ async function generate() {
   campaignCtx = { biz, sector, audience, platformList, tone, lang, special, resolvedCampaigns, matchedMovable, hasDateAnchoredCampaign };
 
   chunkGroups = computeChunkGroups(weekdays.length);
+  viewTabs = computeViewTabs(weekdays.length);
   loadedGroupIds = new Set();
   allDays = [];
 
@@ -867,11 +910,14 @@ async function generate() {
   const ticker = setInterval(() => { mi=(mi+1)%loadingMsgs.length; msgEl.textContent=loadingMsgs[mi]; }, 1800);
 
   try {
-    // Haftada 2 gün seçiliyken kullanıcı deneyimini korumak için ilk gösterime
-    // giren haftalar (1-2. hafta) PARALEL istenir — her biri kendi başına
-    // hızlı (~75-90sn) olduğu için toplam bekleme, tek büyük 15 günlük
-    // istekten daha uzun sürmez, üstelik sunucu timeout riskini de taşımaz.
-    const eagerGroups = computeEagerGroupIds(weekdays.length).map(id => chunkGroups.find(g => g.id === id)).filter(Boolean);
+    // İlk sekmenin (Tab 0) ihtiyaç duyduğu tüm fetch parçaları PARALEL
+    // istenir — 1 gün/hafta'da tek parça, 2 gün/hafta'da 1-15. gün için
+    // 2 haftalık parça. Her biri kendi başına hızlı (~75-90sn) olduğu için
+    // toplam bekleme tek büyük istekten uzun sürmez, sunucu timeout riskini
+    // de taşımaz.
+    currentTabIndex = 0;
+    const firstTab = viewTabs[0];
+    const eagerGroups = firstTab.fetchGroupIds.map(id => chunkGroups.find(g => g.id === id)).filter(Boolean);
     const results = await Promise.all(eagerGroups.map(g => fetchAndMergeGroup(g, startDate)));
     clearInterval(ticker);
     if (genBtn) { genBtn.disabled = false; genBtn.style.opacity = ``; }
@@ -887,9 +933,9 @@ async function generate() {
   }
 }
 
-// İlk parça (chunk) başarıyla geldikten sonra sonuç ekranının çerçevesini
-// (başlık, alt başlık, CTA) kurar ve 1. haftayı gösterir. allDays'e gün
-// ekleme/tarih atama işini artık fetchAndMergeGroup yapıyor.
+// İlk sekmenin fetch parçaları başarıyla geldikten sonra sonuç ekranının
+// çerçevesini (başlık, alt başlık, CTA) kurar ve tab düğmelerini basar.
+// allDays'e gün ekleme/tarih atama işini artık fetchAndMergeGroup yapıyor.
 function renderResultsShell(ctaText) {
   const startDate = getStartDate();
   document.getElementById(`results-title`).textContent = `${formData.biz} — 30 Günlük İçerik Takvimi`;
@@ -899,53 +945,50 @@ function renderResultsShell(ctaText) {
   document.getElementById(`results-sub`).textContent = `${fmt(startDate)} – ${fmt(endDate)} · ${formData.platforms.join(', ')}`;
   document.getElementById(`cta-sub`).textContent = ctaText || `Takvim hazır — şimdi uygulamaya geçmek için destek alalım.`;
 
-  currentWeek = 1;
+  currentTabIndex = 0;
+  renderTabButtons();
   show(`results-section`); collapseForm();
-  renderDays(allDays.filter(d => [d.day >= 1, d.day <= 7].every(Boolean)));
+  const tab = viewTabs[0];
+  renderDays(allDays.filter(d => [d.day >= tab.dayStart, d.day <= tab.dayEnd].every(Boolean)));
 }
 
 function renderLoadingWeek() {
   const grid = document.getElementById(`days-grid`);
-  grid.innerHTML = `<div style="text-align:center;padding:3rem 1rem"><div class="spinner" style="margin:0 auto 1.25rem"></div><p style="font-size:14px;color:#6B6963">Bu haftanın içerikleri hazırlanıyor...</p></div>`;
+  grid.innerHTML = `<div style="text-align:center;padding:3rem 1rem"><div class="spinner" style="margin:0 auto 1.25rem"></div><p style="font-size:14px;color:#6B6963">İçerikler hazırlanıyor...</p></div>`;
 }
 function renderWeekLoadError(e) {
   const grid = document.getElementById(`days-grid`);
   const msg = e?.message === `RATE_LIMIT`
     ? `Günlük limit doldu, yarın tekrar deneyin.`
-    : `Bu hafta yüklenemedi. Yapay zeka meşgul olabilir — sekmeye tekrar tıklayarak deneyin.`;
+    : `Bu bölüm yüklenemedi. Yapay zeka meşgul olabilir — sekmeye tekrar tıklayarak deneyin.`;
   grid.innerHTML = `<div style="text-align:center;padding:3rem 1rem;color:#A32D2D;font-size:14px">${escHtml(msg)}</div>`;
 }
 
-async function showWeek(week, btn) {
-  currentWeek = week;
+async function showTab(tabIndex, btn) {
+  currentTabIndex = tabIndex;
   document.querySelectorAll(`.wtab`).forEach(t => t.classList.remove(`active`));
   btn.classList.add(`active`);
 
-  const group = groupForWeek(week);
-  if (group) {
-    if (!loadedGroupIds.has(group.id)) {
-      renderLoadingWeek();
-      try {
-        await fetchAndMergeGroup(group, getStartDate());
-      } catch(e) {
-        // Kullanıcı beklerken başka bir haftaya geçmiş olabilir — o zaman bu
-        // gecikmiş hata mesajını, artık görüntülenmekte olan farklı haftanın
-        // üzerine YAZMA. Yalnızca hâlâ bu haftadaysak hata göster.
-        if (currentWeek === week) renderWeekLoadError(e);
-        return;
-      }
-      // Fetch tamamlandı ama bu sırada kullanıcı başka bir haftaya geçtiyse
-      // (ör. yavaş bir istek beklenirken sekme değiştirdiyse), o haftanın
-      // içeriğini bu geç gelen sonuçla EZME — mevcut görünüm zaten kendi
-      // fetch'ini tetiklemiş veya tetikleyecektir.
-      if (currentWeek !== week) return;
+  const tab = viewTabs[tabIndex];
+  const missingGroups = tab.fetchGroupIds.map(id => chunkGroups.find(g => g.id === id)).filter(Boolean).filter(g => !loadedGroupIds.has(g.id));
+  if (missingGroups.length) {
+    renderLoadingWeek();
+    try {
+      await Promise.all(missingGroups.map(g => fetchAndMergeGroup(g, getStartDate())));
+    } catch(e) {
+      // Kullanıcı beklerken başka bir sekmeye geçmiş olabilir — o zaman bu
+      // gecikmiş hata mesajını, artık görüntülenmekte olan farklı sekmenin
+      // üzerine YAZMA. Yalnızca hâlâ bu sekmedeysek hata göster.
+      if (currentTabIndex === tabIndex) renderWeekLoadError(e);
+      return;
     }
+    // Fetch tamamlandı ama bu sırada kullanıcı başka bir sekmeye geçtiyse,
+    // o sekmenin içeriğini bu geç gelen sonuçla EZME.
+    if (currentTabIndex !== tabIndex) return;
   }
 
-  const start = (week - 1) * 7 + 1;
-  const end = Math.min(start + 6, 30);
-  const weekDays = allDays.filter(d => [d.day >= start, d.day <= end].every(Boolean));
-  renderDays(weekDays);
+  const tabDays = allDays.filter(d => [d.day >= tab.dayStart, d.day <= tab.dayEnd].every(Boolean));
+  renderDays(tabDays);
 }
 
 function renderDays(days) {
@@ -1043,56 +1086,32 @@ function copyDay(dayNum, btn) {
   });
 }
 
-async function refreshWeek() {
+// Mevcut sekmenin içeriğini yeniden oluşturur. Sekmenin ALTINDAKİ her fetch
+// parçasını (1 gün/hafta'da tek parça, 2 gün/hafta'da 1-2 haftalık parça)
+// PARALEL olarak zorla yeniden ister (fetchAndMergeGroup kendi içinde
+// önbelleğe bakmaz, çağrıldığında her zaman taze istek atar) — böylece
+// "yenile" de generate() ile aynı güvenli, küçük-istek granülaritesini
+// korur ve aynı zamanda buildCalendarPrompt+campaignCtx sayesinde "Bu ay
+// özel günler / kampanyalar var mı?" alanını da doğru şekilde uygular.
+async function refreshCurrentTab() {
   const btn = document.getElementById(`refresh-week-btn`);
+  const originalLabel = btn.innerHTML;
   btn.disabled = true;
   btn.innerHTML = `<i class="ti ti-refresh" aria-hidden="true"></i> Yenileniyor...`;
 
-  const start = (currentWeek - 1) * 7 + 1;
-  const end = Math.min(start + 6, 30);
-  const periodStart = getStartDate();
-  const startMs = periodStart.getTime();
-  const weekPostingDays = formData.postingDays.filter(d => [d >= start, d <= end].every(Boolean));
-  const weekPostingDates = weekPostingDays.map(d => new Date(startMs + (d - 1) * 86400000));
-
-  // Aynı prompt üreticiyi (buildCalendarPrompt) kullanıyoruz ki "Bu haftayı
-  // yenile" de generate() ile birebir aynı kampanya/özel gün mantığını
-  // uygulasın — eskiden bu buton kendi ayrı, çok sade promptunu kurup
-  // "Bu ay özel günler / kampanyalar var mı?" alanını tamamen görmezden
-  // geliyordu.
-  const prompt = buildCalendarPrompt(weekPostingDays, weekPostingDates, campaignCtx);
-
-  const onRetry = (attempt, reason) => {
-    btn.innerHTML = `<i class="ti ti-refresh" aria-hidden="true"></i> ${reason === 'encoding' ? 'Karakter hatası, tekrar deneniyor' : 'Meşgul, tekrar deneniyor'} (${attempt + 1}/2)...`;
-  };
+  const tab = viewTabs[currentTabIndex];
+  const groups = tab.fetchGroupIds.map(id => chunkGroups.find(g => g.id === id)).filter(Boolean);
+  const startDate = getStartDate();
 
   try {
-    let text;
-    if (N8N_PROXY) {
-      const res = await fetchJsonWithRetry(N8N_PROXY, { method:`POST`, headers:{'Content-Type':`application/json`}, body:JSON.stringify({prompt}) }, campaignCtx.lang, onRetry);
-      text = res._text;
-    } else {
-      const res = await fetch(`https://api.minimax.io/v1/chat/completions`, { method:`POST`, headers:{'Content-Type':`application/json`,'Authorization':`Bearer DEV_KEY`}, body:JSON.stringify({model:`MiniMax-M3`,max_completion_tokens:4000,messages:[{role:`user`,content:prompt}]}) });
-      const data = await res.json();
-      text = data.choices?.[0]?.message?.content || ``;
-    }
-    const clean = extractJson(text);
-    const result = JSON.parse(clean);
-    result.days.forEach(d => {
-      const dt = new Date(startMs + (d.day - 1) * 86400000);
-      d.date = dt;
-      const idx = allDays.findIndex(x => x.day === d.day);
-      if (idx !== -1) allDays[idx] = d; else allDays.push(d);
-    });
-    allDays.sort((a, b) => a.day - b.day);
-    const group = groupForWeek(currentWeek);
-    if (group) loadedGroupIds.add(group.id);
-    renderDays(allDays.filter(d => [d.day >= start, d.day <= end].every(Boolean)));
+    await Promise.all(groups.map(g => fetchAndMergeGroup(g, startDate)));
+    renderDays(allDays.filter(d => [d.day >= tab.dayStart, d.day <= tab.dayEnd].every(Boolean)));
+    showConsultCta(`İçerikler yenilendi.`);
   } catch(e) {
-    alert(`Bu hafta yenilenemedi. Yapay zeka meşgul olabilir veya yanıt bozuk geldi — lütfen tekrar deneyin.`);
+    alert(`Yenilenemedi. Yapay zeka meşgul olabilir veya yanıt bozuk geldi — lütfen tekrar deneyin.`);
   }
   btn.disabled = false;
-  btn.innerHTML = `<i class="ti ti-refresh" aria-hidden="true"></i> Bu haftayı yenile`;
+  btn.innerHTML = originalLabel;
 }
 
 // Tüm haftaları getirmeye çalışır; biri (ör. daha önce başarısız olmuş bir
@@ -1107,35 +1126,6 @@ async function ensureAllGroupsLoadedOrAlert() {
     alert(`Bazı haftalar yüklenemediği için işlem tamamlanamadı. Lütfen yüklenemeyen hafta sekmesine tıklayıp tekrar deneyin, sonra yeniden deneyin.`);
     return false;
   }
-}
-
-async function copyAll() {
-  if (!allDays.length) return;
-  const btn = document.getElementById(`copy-all-btn`);
-  const originalLabel = btn ? btn.innerHTML : ``;
-  if (btn) { btn.disabled = true; btn.innerHTML = `<i class="ti ti-loader-2" aria-hidden="true"></i> Hazırlanıyor...`; }
-  const ok = await ensureAllGroupsLoadedOrAlert();
-  if (btn) { btn.disabled = false; btn.innerHTML = originalLabel; }
-  if (!ok) return;
-  const fd = formData || {};
-  const header = [
-    `İşletme: ${fd.biz||''}`,
-    `Sektör: ${fd.sector||''}`,
-    `Hedef Kitle: ${fd.audience||''}`,
-    `Platformlar: ${fd.platforms?.length ? fd.platforms.join(', ') : ''}`,
-    `Ton: ${fd.tone||''}`,
-    `Dil: ${fd.lang||''}`,
-    `Paylaşım günleri: ${fd.weekdays?.length ? fd.weekdays.map(w => TR_DAYS[w]).join(', ') : ''}`,
-    `Özel gün/kampanya: ${fd.special||''}`,
-    `---`
-  ].join(`\n`);
-  const body = allDays.map(d => {
-    const dt = d.date;
-    return `Gün ${d.day} — ${dt.getDate()} ${TR_MONTHS[dt.getMonth()]}\nKonu: ${d.topic}\nFormat: ${d.format} · ${d.platform}\n\n${d.draft}`;
-  }).join(`\n\n---\n\n`);
-  navigator.clipboard.writeText(header + `\n` + body).then(() => {
-    if (btn) { btn.textContent = `Kopyalandı ✓`; setTimeout(() => btn.textContent = `Tümünü Kopyala`, 2000); }
-  });
 }
 
 async function downloadTxt() {
@@ -1205,6 +1195,7 @@ async function downloadCSV() {
   URL.revokeObjectURL(url);
   const btn = document.getElementById(`csv-btn`);
   if (btn) { const o = btn.innerHTML; btn.innerHTML = `<i class="ti ti-circle-check" aria-hidden="true"></i> İndirildi ✓`; setTimeout(() => btn.innerHTML = o, 2000); }
+  showConsultCta(`Takviminiz indirildi.`);
 }
 function restart() {
   document.getElementById(`f-biz`).value = ``;
@@ -1218,9 +1209,12 @@ function restart() {
   document.querySelectorAll(`#weekday-group input`).forEach(el => el.checked = false);
   allDays = [];
   chunkGroups = [];
+  viewTabs = [];
+  currentTabIndex = 0;
   loadedGroupIds = new Set();
   campaignCtx = {};
   show(`form-section`);
+  showConsultCta(`Form sıfırlandı.`);
 }
 
 // Set default start date to tomorrow
