@@ -392,7 +392,14 @@ function getStartDate() {
 function resolveCampaigns(special, postingDays, postingDates) {
   const resolvedCampaigns = [];
   let matchedMovable = [];
-  if (special) {
+  // Not: bu blok "special" boş olsa bile HER ZAMAN çalışır — regex tabanlı
+  // metin eşleştirmeleri boş string üzerinde güvenle "eşleşme yok" sonucu
+  // verir, ama milli/bilinen bayram taraması (matchedHolidays) kullanıcı
+  // hiçbir şey yazmasa bile çalışmalı (ör. dönem Aralık/Ocak'ı kapsıyorsa
+  // Yılbaşı otomatik eklensin). Eskiden bu blok "if (special)" ile
+  // korunuyordu, bu da özel gün alanı boşken Yılbaşı gibi günlerin hiç
+  // tespit edilmemesine yol açıyordu.
+  {
     // Birincil kalıp: "ayın 14'ü" gibi "ayın" hemen ardından gelen gün.
     const primaryDayMatches = [...special.matchAll(/ayın\s+(\d{1,2})/gi)]
       .filter(m => !/^\s*\.?\s*hafta/i.test(special.slice(m.index + m[0].length)))
@@ -720,15 +727,22 @@ SADECE JSON döndür, açıklama yazma:
 // Haftada kaç gün paylaşım seçildiğine göre dönemi kaç "parça"ya böleceğimizi
 // belirler — n8n/PHP-FPM sunucu timeout tavanına (~180sn) çarpmamak için:
 // 1 gün/hafta → tek parça (30 gün, tek istek, timeout riski yok, test edildi)
-// 2 gün/hafta → 2 parça (1-15, 16-30 — yani 1-2. hafta / 3-4-5. hafta)
-// 3 gün/hafta → 5 parça (her hafta ayrı, sadece görüntülenince istenir)
+// 2-3 gün/hafta → her ZAMAN haftalık (7 günlük) parçalar kullanılır — canlı
+// testte 15 günlük tek parça, kampanya sayısı arttıkça modelin "düşünme"
+// süresi de arttığından ~180-200sn'ye kadar çıkıp sunucu tavanına
+// yaklaşabiliyordu (bir denemede zaman aşımına bile uğradı); haftalık
+// parçalar ise tutarlı şekilde ~75-90sn'de tamamlanıyor. 2 gün/hafta'da
+// kullanıcı deneyimini korumak için ilk gösterimde 1. VE 2. hafta paralel
+// olarak eş zamanlı istenir (computeEagerGroupIds); 3 gün/hafta'da sadece
+// 1. hafta eager, diğerleri sekmeye tıklanınca istenir.
 function computeChunkGroups(weekdayCount) {
   if (weekdayCount <= 1) return [{ id: 0, dayStart: 1, dayEnd: 30, weeks: [1, 2, 3, 4, 5] }];
-  if (weekdayCount === 2) return [
-    { id: 0, dayStart: 1, dayEnd: 15, weeks: [1, 2] },
-    { id: 1, dayStart: 16, dayEnd: 30, weeks: [3, 4, 5] },
-  ];
   return [1, 2, 3, 4, 5].map(w => ({ id: w - 1, dayStart: (w - 1) * 7 + 1, dayEnd: Math.min((w - 1) * 7 + 7, 30), weeks: [w] }));
+}
+function computeEagerGroupIds(weekdayCount) {
+  if (weekdayCount <= 1) return [0];
+  if (weekdayCount === 2) return [0, 1];
+  return [0];
 }
 function groupForWeek(week) {
   return chunkGroups.find(g => g.weeks.includes(week));
@@ -843,10 +857,15 @@ async function generate() {
   const ticker = setInterval(() => { mi=(mi+1)%loadingMsgs.length; msgEl.textContent=loadingMsgs[mi]; }, 1800);
 
   try {
-    const result = await fetchAndMergeGroup(chunkGroups[0], startDate);
+    // Haftada 2 gün seçiliyken kullanıcı deneyimini korumak için ilk gösterime
+    // giren haftalar (1-2. hafta) PARALEL istenir — her biri kendi başına
+    // hızlı (~75-90sn) olduğu için toplam bekleme, tek büyük 15 günlük
+    // istekten daha uzun sürmez, üstelik sunucu timeout riskini de taşımaz.
+    const eagerGroups = computeEagerGroupIds(weekdays.length).map(id => chunkGroups.find(g => g.id === id)).filter(Boolean);
+    const results = await Promise.all(eagerGroups.map(g => fetchAndMergeGroup(g, startDate)));
     clearInterval(ticker);
     if (genBtn) { genBtn.disabled = false; genBtn.style.opacity = ``; }
-    renderResultsShell(result.ctaText);
+    renderResultsShell(results[0]?.ctaText);
   } catch(e) {
     clearInterval(ticker);
     if (genBtn) { genBtn.disabled = false; genBtn.style.opacity = ``; }
