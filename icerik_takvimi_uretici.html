@@ -258,7 +258,7 @@ input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3p
         <button class="btn-sm" id="txt-btn" onclick="downloadTxt()"><i class="ti ti-file-text" aria-hidden="true"></i> TXT İndir</button>
         <button class="btn-sm" id="csv-btn" onclick="downloadCSV()"><i class="ti ti-download" aria-hidden="true"></i> CSV İndir</button>
         <button class="btn-sm" id="print-btn" onclick="printFullCalendar()"><i class="ti ti-printer" aria-hidden="true"></i> Yazdır</button>
-        <button class="btn-sm" onclick="restart()"><i class="ti ti-refresh" aria-hidden="true"></i> Yeniden</button>
+        <button class="btn-sm" onclick="requestNewVersionCta()"><i class="ti ti-refresh" aria-hidden="true"></i> Yeniden</button>
       </div>
     </div>
 
@@ -266,7 +266,7 @@ input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3p
 
     <div class="refresh-row" id="refresh-row">
       <button class="btn-sm" id="refresh-week-btn" onclick="refreshCurrentTab()"><i class="ti ti-refresh" aria-hidden="true"></i> Bu bölümü yenile</button>
-      <span class="refresh-hint" id="refresh-hint">Görüntülenen içerikleri yeniden oluştur</span>
+      <span class="refresh-hint" id="refresh-hint">Bu bölümü farklı bir şekilde yeniden oluşturmak için</span>
     </div>
 
     <div class="days-grid" id="days-grid"></div>
@@ -300,6 +300,14 @@ function showConsultCta(prefix) {
   banner.style.display = `block`;
   clearTimeout(showConsultCta._t);
   showConsultCta._t = setTimeout(() => { banner.style.display = `none`; }, 8000);
+}
+
+// Sonuç ekranındaki "Yeniden" butonu artık formu SIFIRLAMIYOR ve üretilen
+// içerikleri SİLMİYOR — sadece CTA popup'ını gösterir. Formu gerçekten
+// sıfırlayıp yeni bir takvim başlatmak isteyen kullanıcı alttaki "Yeni
+// takvim oluştur" bağlantısını kullanır (o link hâlâ restart() çağırır).
+function requestNewVersionCta() {
+  showConsultCta(`Farklı bir versiyon mu istiyorsunuz?`);
 }
 
 // Haftada 2'den fazla paylaşım günü seçilmesini engeller — yanıt süresi
@@ -789,16 +797,19 @@ function computeViewTabs(weekdayCount) {
 
 function renderTabButtons() {
   const container = document.getElementById(`week-tabs`);
+  const refreshRow = document.getElementById(`refresh-row`);
   if (!container) return;
   if (viewTabs.length <= 1) {
     container.style.display = `none`;
     container.innerHTML = ``;
+    if (refreshRow) refreshRow.style.display = `none`;
     return;
   }
   container.style.display = `flex`;
   container.innerHTML = viewTabs.map((t, i) =>
     `<button class="wtab${i === 0 ? ` active` : ``}" onclick="showTab(${i},this)">${escHtml(t.label)}</button>`
   ).join(``);
+  if (refreshRow) refreshRow.style.display = `flex`;
 }
 
 // Bir parçayı AI'den ister, sonucu allDays'e işler (upsert). Aynı parça için
@@ -1086,32 +1097,13 @@ function copyDay(dayNum, btn) {
   });
 }
 
-// Mevcut sekmenin içeriğini yeniden oluşturur. Sekmenin ALTINDAKİ her fetch
-// parçasını (1 gün/hafta'da tek parça, 2 gün/hafta'da 1-2 haftalık parça)
-// PARALEL olarak zorla yeniden ister (fetchAndMergeGroup kendi içinde
-// önbelleğe bakmaz, çağrıldığında her zaman taze istek atar) — böylece
-// "yenile" de generate() ile aynı güvenli, küçük-istek granülaritesini
-// korur ve aynı zamanda buildCalendarPrompt+campaignCtx sayesinde "Bu ay
-// özel günler / kampanyalar var mı?" alanını da doğru şekilde uygular.
-async function refreshCurrentTab() {
-  const btn = document.getElementById(`refresh-week-btn`);
-  const originalLabel = btn.innerHTML;
-  btn.disabled = true;
-  btn.innerHTML = `<i class="ti ti-refresh" aria-hidden="true"></i> Yenileniyor...`;
-
-  const tab = viewTabs[currentTabIndex];
-  const groups = tab.fetchGroupIds.map(id => chunkGroups.find(g => g.id === id)).filter(Boolean);
-  const startDate = getStartDate();
-
-  try {
-    await Promise.all(groups.map(g => fetchAndMergeGroup(g, startDate)));
-    renderDays(allDays.filter(d => [d.day >= tab.dayStart, d.day <= tab.dayEnd].every(Boolean)));
-    showConsultCta(`İçerikler yenilendi.`);
-  } catch(e) {
-    alert(`Yenilenemedi. Yapay zeka meşgul olabilir veya yanıt bozuk geldi — lütfen tekrar deneyin.`);
-  }
-  btn.disabled = false;
-  btn.innerHTML = originalLabel;
+// "Bu bölümü yenile" artık gerçekten yeniden üretim YAPMIYOR (tekrarlanan
+// AI çağrıları maliyeti ve eşzamanlı n8n çalıştırmalarını tetikliyordu) —
+// sadece ücretsiz görüşme CTA'sını gösterir. Buton zaten yalnızca 2
+// gün/hafta modunda (birden fazla sekme olduğunda) görünür; 1 gün/hafta'da
+// tamamen gizlenir çünkü üstteki "Yeniden" ile aynı işi tekrarlar.
+function refreshCurrentTab() {
+  showConsultCta(`Bu bölümü yeniden oluşturmak mı istiyorsunuz?`);
 }
 
 // Tüm haftaları getirmeye çalışır; biri (ör. daha önce başarısız olmuş bir
