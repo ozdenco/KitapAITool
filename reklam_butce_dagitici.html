@@ -476,7 +476,7 @@ function renderResults(rows, aiData) {
   `).join('');
 
   const sgrid = document.getElementById('suggestion-grid');
-  const suggestions = (aiData.suggestions && aiData.suggestions.length) ? aiData.suggestions : fallback().suggestions;
+  const suggestions = [aiData.suggestions, aiData.suggestions?.length].every(Boolean) ? aiData.suggestions : fallback().suggestions;
   sgrid.innerHTML = suggestions.map(s => `
     <div class="sug-card">
       <div class="sug-icon"><i class="ti ${escHtml(s.icon || 'ti-bulb')}" aria-hidden="true"></i></div>
@@ -591,7 +591,7 @@ SADECE JSON döndür:
     const text = N8N_PROXY
       ? (data.content || []).map(b => b.text || '').join('')
       : (data.choices?.[0]?.message?.content || '');
-    const s = text.indexOf('{'); const e = text.lastIndexOf('}'); const clean = (s !== -1 && e !== -1) ? text.slice(s, e + 1) : text.replace(/```json|```/g, '').trim();
+    const s = text.indexOf('{'); const e = text.lastIndexOf('}'); const clean = [s !== -1, e !== -1].every(Boolean) ? text.slice(s, e + 1) : text.replace(/```json|```/g, '').trim();
     const aiData = JSON.parse(clean);
 
     rateData.count++;
@@ -644,7 +644,7 @@ function copyAll() {
     fd.budget   ? `Aylık Bütçe: ${Number(fd.budget).toLocaleString('tr-TR')} TL` : '',
     fd.goal     ? `Hedef: ${fd.goal}`                            : '',
     fd.audience ? `Hedef Kitle: ${fd.audience}`                  : '',
-    fd.channels && fd.channels.length ? `Kanallar: ${fd.channels.join(', ')}` : '',
+    [fd.channels, fd.channels?.length].every(Boolean) ? `Kanallar: ${fd.channels.join(', ')}` : '',
   ].filter(Boolean).join('\n');
   const lines = ['=== REKLAM BÜTÇE DAĞILIMI ===', formCtx, ''];
   const totalBudget = lastRows.reduce((a, b) => a + b.budget, 0);
@@ -683,7 +683,7 @@ function downloadTxt() {
     fd.budget   ? `Aylık Bütçe: ${Number(fd.budget).toLocaleString('tr-TR')} TL` : '',
     fd.goal     ? `Hedef: ${fd.goal}`                            : '',
     fd.audience ? `Hedef Kitle: ${fd.audience}`                  : '',
-    fd.channels && fd.channels.length ? `Kanallar: ${fd.channels.join(', ')}` : '',
+    [fd.channels, fd.channels?.length].every(Boolean) ? `Kanallar: ${fd.channels.join(', ')}` : '',
   ].filter(Boolean).join('\n');
   const lines = ['=== REKLAM BÜTÇE DAĞILIMI ===', formCtx, ''];
   const totalBudget = lastRows.reduce((a, b) => a + b.budget, 0);

@@ -287,7 +287,7 @@ function showStatus(msg, type) {
 // ── Hazır mı kontrol ─────────────────────────────────────────────────────────
 function checkReady() {
   const btn = document.getElementById('open-btn');
-  btn.disabled = !(parsedData && selectedApp);
+  btn.disabled = ![parsedData, selectedApp].every(Boolean);
 }
 
 // ── Uygulamayı aç ────────────────────────────────────────────────────────────

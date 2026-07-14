@@ -757,7 +757,7 @@ SADECE JSON döndür:
     const text = N8N_PROXY
       ? (data.content || []).map(b => b.text || '').join('')
       : (data.choices?.[0]?.message?.content || '');
-    const s = text.indexOf('{'); const e = text.lastIndexOf('}'); const clean = (s !== -1 && e !== -1) ? text.slice(s, e + 1) : text.replace(/```json|```/g, '').trim();
+    const s = text.indexOf('{'); const e = text.lastIndexOf('}'); const clean = [s !== -1, e !== -1].every(Boolean) ? text.slice(s, e + 1) : text.replace(/```json|```/g, '').trim();
     const result = JSON.parse(clean);
 
     rateData.count++;
@@ -814,7 +814,7 @@ function copyAll() {
     md.biz        ? `İşletme: ${md.biz}`                            : '',
     md.sector     ? `Sektör: ${md.sector}`                          : '',
     md.myWeb      ? `Web sitesi: ${md.myWeb}`                       : '',
-    md.myPlatforms && md.myPlatforms.length ? `Platformlar: ${md.myPlatforms.join(', ')}` : '',
+    [md.myPlatforms, md.myPlatforms?.length].every(Boolean) ? `Platformlar: ${md.myPlatforms.join(', ')}` : '',
     md.myPrice    ? `Fiyat segmenti: ${md.myPrice}`                 : '',
     md.strengths  ? `Güçlü yönler: ${md.strengths}`                 : '',
   ].filter(Boolean).join('\n');
@@ -853,7 +853,7 @@ function downloadTxt() {
   const formCtx = [
     md.sector     ? `Sektör: ${md.sector}`                          : '',
     md.myWeb      ? `Web sitesi: ${md.myWeb}`                       : '',
-    md.myPlatforms && md.myPlatforms.length ? `Platformlar: ${md.myPlatforms.join(', ')}` : '',
+    [md.myPlatforms, md.myPlatforms?.length].every(Boolean) ? `Platformlar: ${md.myPlatforms.join(', ')}` : '',
     md.myPrice    ? `Fiyat segmenti: ${md.myPrice}`                 : '',
     md.strengths  ? `Güçlü yönler: ${md.strengths}`                 : '',
   ].filter(Boolean).join('\n');

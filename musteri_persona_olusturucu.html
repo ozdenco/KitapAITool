@@ -376,7 +376,7 @@ SADECE JSON döndür, başka hiçbir şey yazma:
     const text = N8N_PROXY
       ? (data.content || []).map(b=>b.text||'').join('')
       : (data.choices?.[0]?.message?.content || '');
-    const s = text.indexOf('{'); const e = text.lastIndexOf('}'); const clean = (s !== -1 && e !== -1) ? text.slice(s, e + 1) : text.replace(/```json|```/g,'').trim();
+    const s = text.indexOf('{'); const e = text.lastIndexOf('}'); const clean = [s !== -1, e !== -1].every(Boolean) ? text.slice(s, e + 1) : text.replace(/```json|```/g,'').trim();
     const result = JSON.parse(clean);
     if (genBtn) { genBtn.disabled = false; genBtn.style.opacity = ''; }
     renderPersonas(result, biz);
@@ -515,7 +515,7 @@ function downloadTxt() {
     `Hedef Yaş: ${fd.age||''}`,
     `Fiyat Aralığı: ${fd.price||''}`,
     `Mevcut müşteri özellikleri: ${fd.current||''}`,
-    `Müşteri öncelikleri: ${(fd.pains && fd.pains.length) ? fd.pains.join(', ') : ''}`,
+    `Müşteri öncelikleri: ${[fd.pains, fd.pains?.length].every(Boolean) ? fd.pains.join(', ') : ''}`,
     '','='.repeat(50),''
   ].join('\n');
   const body = allPersonasData.map(p => personaToText(p)).join('\n\n' + '─'.repeat(40) + '\n\n');
@@ -536,7 +536,7 @@ function copyAll() {
     fd.age     ? `Hedef yaş: ${fd.age}`                        : '',
     fd.price   ? `Fiyat segmenti: ${fd.price}`                 : '',
     fd.current ? `Mevcut müşteri özellikleri: ${fd.current}`   : '',
-    (fd.pains && fd.pains.length) ? `Müşteri öncelikleri: ${fd.pains.join(', ')}` : '',
+    [fd.pains, fd.pains?.length].every(Boolean) ? `Müşteri öncelikleri: ${fd.pains.join(', ')}` : '',
     '',
   ].filter(Boolean).join('\n');
   const text = header + '\n' + allPersonasData.map(personaToText).join('\n\n' + '─'.repeat(40) + '\n\n');

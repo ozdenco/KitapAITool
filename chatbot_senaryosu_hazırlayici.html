@@ -432,7 +432,7 @@ function renderResults(result) {
         <div style="font-size:11px;color:#6B6963;margin-bottom:4px">Kullanıcı bunu yazarsa → Bot şunu der:</div>
         <div class="balloon">${escHtml(faq.answer)}</div>
         ${faq.followup ? `<div class="flow-arrow">↓ devamında</div><div class="balloon grey">${escHtml(faq.followup)}</div>` : ''}
-        ${(faq.keywords && faq.keywords.length) ? `<div class="keywords-row">${faq.keywords.map(k => `<span class="kw-tag">${escHtml(k)}</span>`).join('')}</div>` : ''}
+        ${[faq.keywords, faq.keywords?.length].every(Boolean) ? `<div class="keywords-row">${faq.keywords.map(k => `<span class="kw-tag">${escHtml(k)}</span>`).join('')}</div>` : ''}
         <div class="flow-arrow" style="margin-top:8px">↓ konuşma kapanışa yönlendirilir</div>
         <div style="font-size:12px;color:#6B6963;background:#F0FAF6;border-radius:8px;padding:7px 10px;display:flex;align-items:center;gap:6px"><i class="ti ti-door-exit" style="color:#1D9E75"></i> Kapanış / Yönlendirme mesajı gönderilir</div>
       </div>
@@ -490,7 +490,7 @@ function findBotResponse(userText) {
     kws.forEach(kw => { if (lower.includes(kw.toLowerCase())) count++; });
     if (count > bestCount) { bestCount = count; best = faq; }
   }
-  if (best && bestCount > 0) {
+  if ([best, bestCount > 0].every(Boolean)) {
     let resp = best.answer;
     if (best.followup) resp += '\n\n' + best.followup;
     // Kapanış mesajını sona ekle
@@ -606,7 +606,7 @@ SADECE JSON döndür:
     const text = N8N_PROXY
       ? (data.content || []).map(b => b.text || '').join('')
       : (data.choices?.[0]?.message?.content || '');
-    const s = text.indexOf('{'); const e = text.lastIndexOf('}'); const clean = (s !== -1 && e !== -1) ? text.slice(s, e + 1) : text.replace(/```json|```/g, '').trim();
+    const s = text.indexOf('{'); const e = text.lastIndexOf('}'); const clean = [s !== -1, e !== -1].every(Boolean) ? text.slice(s, e + 1) : text.replace(/```json|```/g, '').trim();
     const result = JSON.parse(clean);
 
     rateData.count++;
@@ -660,7 +660,7 @@ function copyAll() {
     fd.sector      ? `Sektör: ${fd.sector}`                      : '',
     fd.services    ? `Hizmetler: ${fd.services}`                  : '',
     fd.hours       ? `Mesai: ${fd.hours}`                         : '',
-    fd.faqs && fd.faqs.length ? `SSS: ${fd.faqs.join(' | ')}`     : '',
+    [fd.faqs, fd.faqs?.length].every(Boolean) ? `SSS: ${fd.faqs.join(' | ')}`     : '',
     fd.redirectGoal ? `Yönlendirme: ${fd.redirectGoal}${fd.redirectLink ? ' → ' + fd.redirectLink : ''}` : '',
   ].filter(Boolean).join('\n');
   const lines = [`=== ${lastBiz} — CHATBOT SENARYOSU ===`, formCtx, ''];
@@ -693,7 +693,7 @@ function downloadTxt() {
     fd.sector      ? `Sektör: ${fd.sector}`                      : '',
     fd.services    ? `Hizmetler: ${fd.services}`                  : '',
     fd.hours       ? `Mesai: ${fd.hours}`                         : '',
-    fd.faqs && fd.faqs.length ? `SSS: ${fd.faqs.join(' | ')}`     : '',
+    [fd.faqs, fd.faqs?.length].every(Boolean) ? `SSS: ${fd.faqs.join(' | ')}`     : '',
     fd.redirectGoal ? `Yönlendirme: ${fd.redirectGoal}${fd.redirectLink ? ' → ' + fd.redirectLink : ''}` : '',
   ].filter(Boolean).join('\n');
   const lines = [`=== ${lastBiz} — CHATBOT SENARYOSU ===`, formCtx, ''];
