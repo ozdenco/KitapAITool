@@ -227,7 +227,8 @@ input:focus,select:focus{border-color:#1D9E75;box-shadow:0 0 0 3px rgba(29,158,1
 </div>
 
 <script>
-const N8N_PROXY = null;
+// const N8N_PROXY = null;
+const N8N_PROXY = '/wp-json/kolaykobi/v1/ai/skor';
 
 const loadingMsgs = [
   'İşletme bilgileri analiz ediliyor...',
@@ -332,8 +333,11 @@ SADECE JSON döndür:
       data = await res.json();
     }
     clearInterval(ticker);
-    const text  = data.content.map(b => b.text || '').join('');
-    const clean = text.replace(/```json|```/g, '').trim();
+    const text = (data.content || []).map(b => b.text || '').join('');
+    const thinkEnd = text.lastIndexOf('</think>');
+    const searchText = thinkEnd !== -1 ? text.slice(thinkEnd + '</think>'.length) : text;
+    const s = searchText.indexOf('{'); const e = searchText.lastIndexOf('}');
+    const clean = [s !== -1, e !== -1].every(Boolean) ? searchText.slice(s, e + 1) : searchText.replace(/```json|```/g, '').trim();
     renderResult(JSON.parse(clean), name, sector, platforms, web);
   } catch(e) {
     clearInterval(ticker);
@@ -355,12 +359,12 @@ function generateFallback(name, sector, platforms, web) {
     level: score < 30 ? 'Başlangıç' : score < 50 ? 'Gelişmekte' : score < 70 ? 'Orta' : 'İyi',
     summary: `${name} için dijital görünürlük analizi tamamlandı. Birkaç kritik alanda iyileştirme yapılması durumunda müşteri kazanım hızı önemli ölçüde artabilir.`,
     items: [
-      !hasGbp && { status:'red',   icon:'ti-map-pin',        name:'Google Business Profile eksik', desc:'İşletmenizi Google Haritalar\'a ekleyin. Yerel aramalarda %70 daha fazla görünürlük sağlar.', badge:'Kritik' },
-      !hasWeb && { status:'red',   icon:'ti-world',           name:'Web sitesi yok',                desc:'Basit bir tek sayfalık site bile güvenilirliği artırır ve Google aramalarında bulunmanızı sağlar.', badge:'Kritik' },
-      !hasSocial && { status:'amber', icon:'ti-brand-instagram', name:'Sosyal medya varlığı zayıf',   desc:'Sektörünüze uygun en az bir platformda düzenli paylaşım marka bilinirliğini artırır.', badge:'İyileştir' },
+      !hasGbp ? { status:'red',   icon:'ti-map-pin',        name:'Google Business Profile eksik', desc:'İşletmenizi Google Haritalar\'a ekleyin. Yerel aramalarda %70 daha fazla görünürlük sağlar.', badge:'Kritik' } : null,
+      !hasWeb ? { status:'red',   icon:'ti-world',           name:'Web sitesi yok',                desc:'Basit bir tek sayfalık site bile güvenilirliği artırır ve Google aramalarında bulunmanızı sağlar.', badge:'Kritik' } : null,
+      !hasSocial ? { status:'amber', icon:'ti-brand-instagram', name:'Sosyal medya varlığı zayıf',   desc:'Sektörünüze uygun en az bir platformda düzenli paylaşım marka bilinirliğini artırır.', badge:'İyileştir' } : null,
       { status:'amber', icon:'ti-star',  name:'Müşteri yorumları', desc:'Google ve sosyal medyada yorum toplamak arama sıralamasını ve güveni doğrudan etkiler.', badge:'İyileştir' },
-      hasWeb && { status:'green', icon:'ti-world',    name:'Web sitesi mevcut', desc:'Dijital varlığınızın temeli hazır. SEO optimizasyonu ile sıralamayı iyileştirebilirsiniz.', badge:'Güçlü' },
-      hasGbp && { status:'green', icon:'ti-map-pin',  name:'Google Business aktif', desc:'Yerel aramalar için kritik adımı tamamladınız. Profil fotoğrafları ile güçlendirin.', badge:'Güçlü' },
+      hasWeb ? { status:'green', icon:'ti-world',    name:'Web sitesi mevcut', desc:'Dijital varlığınızın temeli hazır. SEO optimizasyonu ile sıralamayı iyileştirebilirsiniz.', badge:'Güçlü' } : null,
+      hasGbp ? { status:'green', icon:'ti-map-pin',  name:'Google Business aktif', desc:'Yerel aramalar için kritik adımı tamamladınız. Profil fotoğrafları ile güçlendirin.', badge:'Güçlü' } : null,
     ].filter(Boolean),
     ctaText: `${name} için kişiselleştirilmiş bir dijital görünürlük planı hazırlayalım.`
   };
