@@ -349,7 +349,13 @@ function hasEncodingCorruption(text, lang) {
 // yüksek, dolayısıyla modelin daha uzun "düşündüğü" haftalarda daha olası)
 // HİÇ yeniden denenmeden anında hata veriliyordu — gerçekte yaşanan bir
 // hataydı bu (bir hafta tutarlı şekilde başarısız oluyordu).
-async function fetchJsonWithRetry(url, opts, lang, onRetry, retries = 2) {
+//
+// retries=1: MiniMax bazen n8n'in 300s node timeout'una çarpıp ağ hatası
+// olarak dönüyor — her deneme kendi başına ~5 dakikaya kadar sürebiliyor
+// (n8n tarafında yeni bir workflow çalıştırması olarak görünür). retries=2
+// iken en kötü durumda 3 deneme x ~5dk = ~15dk gibi kabul edilemez bir
+// bekleme oluyordu; retries=1 bunu en kötü durumda 2 denemeye (~10dk) indirir.
+async function fetchJsonWithRetry(url, opts, lang, onRetry, retries = 1) {
   let lastParseError = null;
   for (let attempt = 0; attempt <= retries; attempt++) {
     let res;
@@ -827,8 +833,8 @@ function fetchAndMergeGroup(group, startDate) {
     const onRetry = (attempt, reason) => {
       const msgEl = document.getElementById(`loading-msg`);
       if (msgEl) msgEl.textContent = reason === `encoding`
-        ? `Yanıtta karakter bozulması tespit edildi, tekrar deneniyor (${attempt + 1}/2)...`
-        : `Yapay zeka meşgul, tekrar deneniyor (${attempt + 1}/2)...`;
+        ? `Yanıtta karakter bozulması tespit edildi, tekrar deneniyor...`
+        : `Yapay zeka meşgul, tekrar deneniyor...`;
     };
 
     let res;
