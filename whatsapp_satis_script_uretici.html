@@ -239,8 +239,15 @@ input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3p
 // Production (web sitesi):
 const N8N_PROXY = '/wp-json/kolaykobi/v1/ai/wa';
 
+// MiniMax bazen Türkçe özel karakterleri (ı,ü,ç,ö,ş,ğ) yanlış kod sayfasıyla
+// (CJK/GBK) üretip bozuyor. Çıktıda CJK karakter varsa yanıtı bozuk kabul
+// edip yeniden deniyoruz.
+function hasEncodingCorruption(text) {
+  return /[㐀-鿿]/.test(text);
+}
+
 // ─── RATE LIMIT ───────────────────────────────────────────────────────────
-const DAILY_LIMIT = 200;
+const DAILY_LIMIT = 5;
 const RATE_KEY    = 'kkb_wa_usage';
 
 function getRateData() {
@@ -272,11 +279,16 @@ function updateRateBar() {
   const remaining = getRemainingUses();
   const used = DAILY_LIMIT - remaining;
 
+  // DAILY_LIMIT büyük bir sayı olabileceğinden (ör. test amaçlı) 1 nokta =
+  // 1 hak yerine sınırlı sayıda nokta gösterip her birine oranlı bir hak
+  // aralığı temsil ettiriyoruz — böylece limit yükseldiğinde ekran taşmıyor.
   const dotsEl = document.getElementById('rate-dots');
   dotsEl.innerHTML = '';
-  for (let i = 0; i < DAILY_LIMIT; i++) {
+  const maxDots = Math.min(DAILY_LIMIT, 10);
+  const usedDots = Math.round((used / DAILY_LIMIT) * maxDots);
+  for (let i = 0; i < maxDots; i++) {
     const dot = document.createElement('span');
-    dot.className = 'rate-dot' + (i < used ? ' used' : '');
+    dot.className = 'rate-dot' + (i < usedDots ? ' used' : '');
     dotsEl.appendChild(dot);
   }
 
@@ -415,38 +427,45 @@ SADECE JSON döndür, başka hiçbir şey yazma:
 }`;
 
   try {
-    let data;
+    let text = '';
 
-    if (N8N_PROXY) {
-      // ── N8N PROXY modu (web sitesi) ──────────────────────────────────────
-      // n8n rate limit + API key güvenliğini yönetir
-      const res = await fetch(N8N_PROXY, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt })
-      });
-      if (res.status === 429) {
-        clearInterval(ticker);
-        showLoading(false);
-        err.textContent = 'Sunucu tarafında günlük limit doldu. Lütfen yarın tekrar deneyin.';
-        err.style.display = 'block';
-        if (genBtn) { genBtn.disabled = false; genBtn.style.opacity = ''; }
-        return;
+    for (let attempt = 0; attempt <= 1; attempt++) {
+      let data;
+      if (N8N_PROXY) {
+        // ── N8N PROXY modu (web sitesi) ──────────────────────────────────────
+        // n8n rate limit + API key güvenliğini yönetir
+        const res = await fetch(N8N_PROXY, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt })
+        });
+        if (res.status === 429) {
+          clearInterval(ticker);
+          showLoading(false);
+          err.textContent = 'Sunucu tarafında günlük limit doldu. Lütfen yarın tekrar deneyin.';
+          err.style.display = 'block';
+          if (genBtn) { genBtn.disabled = false; genBtn.style.opacity = ''; }
+          return;
+        }
+        data = await res.json();
+        // n8n { content: [{type:'text', text:'...'}] } formatı döndürür
+      } else {
+        // ── Doğrudan MiniMax API (geliştirme/test) ───────────────────────────
+        const res = await fetch('https://api.minimax.io/v1/chat/completions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer DEV_KEY' },
+          body: JSON.stringify({
+            model: 'MiniMax-M3',
+            max_completion_tokens: 1500,
+            messages: [{ role: 'user', content: prompt }]
+          })
+        });
+        data = await res.json();
       }
-      data = await res.json();
-      // n8n { content: [{type:'text', text:'...'}] } formatı döndürür
-    } else {
-      // ── Doğrudan MiniMax API (geliştirme/test) ───────────────────────────
-      const res = await fetch('https://api.minimax.io/v1/chat/completions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer DEV_KEY' },
-        body: JSON.stringify({
-          model: 'MiniMax-M3',
-          max_completion_tokens: 1500,
-          messages: [{ role: 'user', content: prompt }]
-        })
-      });
-      data = await res.json();
+      text = N8N_PROXY
+        ? (data.content || []).map(b => b.text || '').join('')
+        : (data.choices?.[0]?.message?.content || '');
+      if (!hasEncodingCorruption(text)) break;
     }
 
     clearInterval(ticker);
@@ -455,9 +474,6 @@ SADECE JSON döndür, başka hiçbir şey yazma:
     incrementUsage();
     updateRateBar();
 
-    const text = N8N_PROXY
-      ? (data.content || []).map(b => b.text || '').join('')
-      : (data.choices?.[0]?.message?.content || '');
     const thinkEnd = text.lastIndexOf('</think>');
     const searchText = thinkEnd !== -1 ? text.slice(thinkEnd + '</think>'.length) : text;
     const s = searchText.indexOf('{'); const e = searchText.lastIndexOf('}'); const clean = [s !== -1, e !== -1].every(Boolean) ? searchText.slice(s, e + 1) : searchText.replace(/```json|```/g, '').trim();

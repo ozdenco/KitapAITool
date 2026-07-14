@@ -285,6 +285,13 @@ input:focus,select:focus{border-color:#1D9E75;box-shadow:0 0 0 3px rgba(29,158,1
 // Production (web sitesi):
 const N8N_PROXY = '/wp-json/kolaykobi/v1/ai/skor';
 
+// MiniMax bazen Türkçe özel karakterleri (ı,ü,ç,ö,ş,ğ) yanlış kod sayfasıyla
+// (CJK/GBK) üretip bozuyor. Çıktıda CJK karakter varsa yanıtı bozuk kabul
+// edip yeniden deniyoruz.
+function hasEncodingCorruption(text) {
+  return /[㐀-鿿]/.test(text);
+}
+
 const loadingMsgs = [
   'İşletme bilgileri analiz ediliyor...',
   'Dijital varlık kontrol ediliyor...',
@@ -366,38 +373,42 @@ async function startAnalysis() {
     '6-8 item olsun. Once red, sonra amber, sonra green. Tum metin alanlari Turkce olsun.';
 
   try {
-    let data;
-    if (N8N_PROXY) {
-      const res = await fetch(N8N_PROXY, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt })
-      });
-      if (res.status === 429) {
-        clearInterval(ticker);
-        showLoading(false);
-        err.textContent = 'Sunucu tarafında günlük limit doldu. Lütfen yarın tekrar deneyin.';
-        err.style.display = 'block';
-        if (genBtn) { genBtn.disabled = false; genBtn.style.opacity = ''; }
-        return;
+    let text = '';
+    for (let attempt = 0; attempt <= 1; attempt++) {
+      let data;
+      if (N8N_PROXY) {
+        const res = await fetch(N8N_PROXY, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt })
+        });
+        if (res.status === 429) {
+          clearInterval(ticker);
+          showLoading(false);
+          err.textContent = 'Sunucu tarafında günlük limit doldu. Lütfen yarın tekrar deneyin.';
+          err.style.display = 'block';
+          if (genBtn) { genBtn.disabled = false; genBtn.style.opacity = ''; }
+          return;
+        }
+        data = await res.json();
+      } else {
+        const res = await fetch('https://api.minimax.io/v1/chat/completions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer DEV_KEY' },
+          body: JSON.stringify({
+            model: 'MiniMax-M3',
+            max_completion_tokens: 1000,
+            messages: [{ role: 'user', content: prompt }]
+          })
+        });
+        data = await res.json();
       }
-      data = await res.json();
-    } else {
-      const res = await fetch('https://api.minimax.io/v1/chat/completions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer DEV_KEY' },
-        body: JSON.stringify({
-          model: 'MiniMax-M3',
-          max_completion_tokens: 1000,
-          messages: [{ role: 'user', content: prompt }]
-        })
-      });
-      data = await res.json();
+      text = N8N_PROXY
+        ? (data.content || []).map(b => b.text || '').join('')
+        : (data.choices?.[0]?.message?.content || '');
+      if (!hasEncodingCorruption(text)) break;
     }
     clearInterval(ticker);
-    const text = N8N_PROXY
-      ? (data.content || []).map(b => b.text || '').join('')
-      : (data.choices?.[0]?.message?.content || '');
     const thinkEnd = text.lastIndexOf('</think>');
     const searchText = thinkEnd !== -1 ? text.slice(thinkEnd + '</think>'.length) : text;
     const s = searchText.indexOf('{'); const e = searchText.lastIndexOf('}');

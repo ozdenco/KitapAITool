@@ -457,7 +457,15 @@ td:first-child{font-weight:500;color:#6B6963;font-size:12px}
 <script>
 // const N8N_PROXY = null;
 const N8N_PROXY = '/wp-json/kolaykobi/v1/ai/rakip';
-const DAILY_LIMIT = 200;
+
+// MiniMax bazen Türkçe özel karakterleri (ı,ü,ç,ö,ş,ğ) yanlış kod sayfasıyla
+// (CJK/GBK) üretip bozuyor. Çıktıda CJK karakter varsa yanıtı bozuk kabul
+// edip yeniden deniyoruz.
+function hasEncodingCorruption(text) {
+  return /[㐀-鿿]/.test(text);
+}
+
+const DAILY_LIMIT = 5;
 const RATE_KEY = 'kkb_rakip_usage';
 
 const loadingMsgs = [
@@ -733,30 +741,34 @@ SADECE JSON döndür:
 }`;
 
   try {
-    let res;
-    if (N8N_PROXY) {
-      res = await fetch(N8N_PROXY, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt }),
-      });
-      if (res.status === 429) {
-        clearInterval(ticker);
-        showLoading(false);
-        showErr('Çok fazla istek gönderildi. Lütfen biraz bekleyin.');
-        return;
+    let text = '';
+    for (let attempt = 0; attempt <= 1; attempt++) {
+      let res;
+      if (N8N_PROXY) {
+        res = await fetch(N8N_PROXY, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt }),
+        });
+        if (res.status === 429) {
+          clearInterval(ticker);
+          showLoading(false);
+          showErr('Çok fazla istek gönderildi. Lütfen biraz bekleyin.');
+          return;
+        }
+      } else {
+        res = await fetch('https://api.minimax.io/v1/chat/completions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer DEV_KEY' },
+          body: JSON.stringify({ model: 'MiniMax-M3', max_completion_tokens: 1500, messages: [{ role: 'user', content: prompt }] }),
+        });
       }
-    } else {
-      res = await fetch('https://api.minimax.io/v1/chat/completions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer DEV_KEY' },
-        body: JSON.stringify({ model: 'MiniMax-M3', max_completion_tokens: 1500, messages: [{ role: 'user', content: prompt }] }),
-      });
+      const data = await res.json();
+      text = N8N_PROXY
+        ? (data.content || []).map(b => b.text || '').join('')
+        : (data.choices?.[0]?.message?.content || '');
+      if (!hasEncodingCorruption(text)) break;
     }
-    const data = await res.json();
-    const text = N8N_PROXY
-      ? (data.content || []).map(b => b.text || '').join('')
-      : (data.choices?.[0]?.message?.content || '');
     const thinkEnd = text.lastIndexOf('</think>');
     const searchText = thinkEnd !== -1 ? text.slice(thinkEnd + '</think>'.length) : text;
     const s = searchText.indexOf('{'); const e = searchText.lastIndexOf('}'); const clean = [s !== -1, e !== -1].every(Boolean) ? searchText.slice(s, e + 1) : searchText.replace(/```json|```/g, '').trim();
