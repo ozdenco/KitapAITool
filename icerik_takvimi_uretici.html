@@ -476,8 +476,13 @@ function resolveCampaigns(special, postingDays, postingDates) {
     const monthsCovered = new Set(postingDates.map(dt => `${dt.getFullYear()}-${dt.getMonth()}`));
 
     // "ilk/ikinci/üçüncü/dördüncü hafta" veya "2. hafta" gibi ordinal hafta
-    // ifadelerini tespit eder. Haftalar Pazartesi başlangıçlı sayılır — ayın
-    // 1'ini içeren hafta = 1. hafta (önceki aydan taşsa bile).
+    // ifadelerini tespit eder. Haftalar ayın GÜNÜNE göre sayılır (1-7, 8-14,
+    // 15-21, 22-28, 29-ay sonu) — kullanıcıların günlük dilde kastettiği
+    // budur. (Eskiden Pazartesi başlangıçlı hafta kullanılıyordu; bu, ayın
+    // 1'i Pazartesi olmayan aylarda "2. hafta"yı gerçek 8-14 aralığından
+    // kaydırıyordu — örn. Mayıs 2026'da 1 Mayıs Cuma olduğundan eski mantık
+    // "2. hafta"yı 4-10 Mayıs sayıyor, 11 Mayıs'taki paylaşım gününü ise
+    // yanlışlıkla 3. haftaya düşürüp kampanyayı hiç eşleştiremiyordu.)
     const weekWordMap = { ilk: 1, birinci: 1, ikinci: 2, üçüncü: 3, ucuncu: 3, dördüncü: 4, dorduncu: 4, beşinci: 5, besinci: 5 };
     const weekNumMatches = new Set();
     Object.entries(weekWordMap).forEach(([word, num]) => {
@@ -487,18 +492,15 @@ function resolveCampaigns(special, postingDays, postingDates) {
     const lastWeekMatch = /son\s+hafta/i.test(special);
 
     const getWeekRange = (year, month, weekNum) => {
-      const firstOfMonth = new Date(year, month, 1);
-      const daysSinceMonday = (firstOfMonth.getDay() + 6) % 7;
-      const week1Start = new Date(year, month, 1 - daysSinceMonday);
-      const weekStart = new Date(week1Start.getTime() + (weekNum - 1) * 7 * 86400000);
-      const weekEnd = new Date(weekStart.getTime() + 6 * 86400000);
+      const lastOfMonth = new Date(year, month + 1, 0).getDate();
+      const weekStart = new Date(year, month, (weekNum - 1) * 7 + 1);
+      const weekEnd = new Date(year, month, Math.min(weekNum * 7, lastOfMonth));
       return { weekStart, weekEnd };
     };
     const getLastWeekRange = (year, month) => {
-      const lastOfMonth = new Date(year, month + 1, 0);
-      const daysSinceMonday = (lastOfMonth.getDay() + 6) % 7;
-      const weekStart = new Date(year, month, lastOfMonth.getDate() - daysSinceMonday);
-      const weekEnd = new Date(weekStart.getTime() + 6 * 86400000);
+      const lastOfMonth = new Date(year, month + 1, 0).getDate();
+      const weekStart = new Date(year, month, Math.max(1, lastOfMonth - 6));
+      const weekEnd = new Date(year, month, lastOfMonth);
       return { weekStart, weekEnd };
     };
     const getNthWeekdayOfMonth = (year, month, weekday, n) => {
@@ -734,8 +736,9 @@ function buildCalendarPrompt(chunkPostingDays, chunkPostingDates, ctx) {
   const noSpecialFallback = `⚠️ Kullanıcı bu alanı boş bırakmış. Yine de bu parçanın kapsadığı ${chunkRangeStr} tarih aralığına özgü, işletmenin sektörüyle alakalı genel bir dönemsel/mevsimsel fırsatı (örn. sezonluk bir tema, ilgili bir gün) kendi bilgine dayanarak belirle ve bunun için EN AZ 1 paylaşım gününde isSpecial:true yaparak öne çıkan bir içerik üret. Zorlama bir bahane uydurma; gerçekten o tarihlere özgü, akla yatkın bir şey seç.`;
   const otherKnownDaysNote = `⚠️ Yukarıdakilere EK olarak: SADECE ${chunkRangeStr} tarih aralığına denk gelen veya bu aralıktan hemen önce/sonra gelen, kullanıcının YAZMAYI UNUTMUŞ OLABİLECEĞİ bilinen resmi/milli bayramları veya sektörle alakalı önemli günleri (varsa) kendi bilgine dayanarak tespit et ve bunlar için de en az birer paylaşım gününde isSpecial:true yaparak içerik üret. ÖNEMLİ: bu tarih aralığının BAŞLANGICINDAN ÖNCE geçmiş bir günü (ör. aralık ${chunkFirstDate ? chunkFirstDate.getDate() + ' ' + TR_MONTHS[chunkFirstDate.getMonth()] : ''} ile başlıyorken bundan önceki bir tarihi) "bugün/yarın kutlu olsun" gibi güncelmiş gibi ASLA sunma — sadece bu parçanın kendi tarih aralığındaki veya ondan SONRAKİ günleri kullan. Kullanıcının belirttiği kampanyaların yerine geçmesin, onlara ek olsun.`;
 
+  const campaignMechanicsNote = `⚠️ ÖNEMLİ: Kampanyanın sayısal koşullarını (indirim oranı, "X alana Y'si bedava" gibi miktar bazlı fırsatlar, tarih vb.) draft metinlerinde ASLA değiştirme, yuvarlama veya farklı bir kampanya yapısına dönüştürme — özellikle başka bir dile çevirirken. Örnek: "3 alana 1'i bedava" ifadesi "buy 3 get 1 free" anlamına gelir (toplam 4 ürün alınır, 3'ünün parası ödenir) — bunu ASLA "3-for-2" veya farklı bir indirim oranıyla ifade etme; sayıları birebir koru.`;
   const specialNote = special
-    ? `Özel günler/kampanyalar: ${special}\n${chunkCampaignTexts.length ? `KESİN TALİMAT — bu eşleşmeleri birebir uygula:\n${chunkCampaignTexts.join('\n')}` : ``}${movableDateNote}${hasDateAnchoredCampaign ? `` : `⚠️ Bu kampanya belirli bir takvim tarihine/haftasına bağlı değil (örn. sürekli geçerli bir indirim/fırsat). Kampanyayı bu parçadaki 3-4 farklı paylaşım gününe dağıt, her birinde FARKLI bir açıdan işle (ürün faydası, aciliyet, müşteri hikayesi, karşılaştırma vb.) ve o günlerde isSpecial:true yap — aynı mesajı tekrarlama.`}\n⚠️ ÖNEMLİ: "Sıra No" etiketi sadece bu listedeki sıralamadır, ayın kaçıncı günü olduğuyla KARIŞTIRMA — "Sıra No 14" ile "ayın 14'ü" birbirinden tamamen bağımsızdır.\n${otherKnownDaysNote}`
+    ? `Özel günler/kampanyalar: ${special}\n${campaignMechanicsNote}\n${chunkCampaignTexts.length ? `KESİN TALİMAT — bu eşleşmeleri birebir uygula:\n${chunkCampaignTexts.join('\n')}` : ``}${movableDateNote}${hasDateAnchoredCampaign ? `` : `⚠️ Bu kampanya belirli bir takvim tarihine/haftasına bağlı değil (örn. sürekli geçerli bir indirim/fırsat). Kampanyayı bu parçadaki 3-4 farklı paylaşım gününe dağıt, her birinde FARKLI bir açıdan işle (ürün faydası, aciliyet, müşteri hikayesi, karşılaştırma vb.) ve o günlerde isSpecial:true yap — aynı mesajı tekrarlama.`}\n⚠️ ÖNEMLİ: "Sıra No" etiketi sadece bu listedeki sıralamadır, ayın kaçıncı günü olduğuyla KARIŞTIRMA — "Sıra No 14" ile "ayın 14'ü" birbirinden tamamen bağımsızdır.\n${otherKnownDaysNote}`
     : `Özel günler/kampanyalar: Yok\n${noSpecialFallback}`;
 
   return `Sen bir sosyal medya stratejisti ve içerik uzmanısın. Aşağıdaki işletme için sosyal medya içerik takvimi oluştur.
