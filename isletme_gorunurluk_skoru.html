@@ -10,6 +10,7 @@
 body{font-family:system-ui,sans-serif;background:#F7F6F2;min-height:100vh}
 .app{max-width:720px;margin:0 auto;padding:2rem 1rem}
 .brand{display:flex;align-items:center;gap:8px;margin-bottom:2rem}
+.brand-dot{width:9px;height:9px;border-radius:50%;background:#1D9E75}
 .brand-name{font-size:13px;font-weight:500;color:#1D9E75;letter-spacing:.04em}
 
 /* FORM CARD */
@@ -35,7 +36,6 @@ input:focus,select:focus{border-color:#1D9E75;box-shadow:0 0 0 3px rgba(29,158,1
 .spinner{width:44px;height:44px;border:3px solid #E2E0D8;border-top-color:#1D9E75;border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 1.25rem}
 @keyframes spin{to{transform:rotate(360deg)}}
 .loading-txt{font-size:14px;color:#6B6963}
-.loading-note{font-size:12px;color:#9A9792;margin-top:.75rem}
 
 /* RESULTS */
 .results{display:none;margin-top:.5rem}
@@ -91,33 +91,17 @@ input:focus,select:focus{border-color:#1D9E75;box-shadow:0 0 0 3px rgba(29,158,1
   .metrics-grid{grid-template-columns:1fr 1fr 1fr}
   .action-row{flex-direction:column}
 }
-
-/* Form collapse */
-.form-collapsed-bar{display:none;align-items:center;justify-content:space-between;padding:.5rem 0;border-bottom:0.5px solid #F1EFE8;margin-bottom:0}
-.form-card.is-collapsed .form-collapsed-bar{display:flex}
-.form-card.is-collapsed #form-body{display:none}
-.form-collapsed-title{font-size:14px;font-weight:500;color:#1C1B19}
-.form-collapsed-sub{font-size:12px;color:#9A9792;margin-top:2px}
-.form-expand-btn{display:flex;align-items:center;gap:5px;padding:7px 14px;background:#F0FAF6;border:0.5px solid #9FE1CB;border-radius:8px;font-size:13px;font-weight:500;color:#085041;cursor:pointer;white-space:nowrap}
-.form-expand-btn:hover{background:#E1F5EE}
-@media print{body{background:#fff}.app{max-width:100%;padding:0}.form-card,.brand{display:none!important}.results{display:block!important}.loading{display:none!important}.btn-primary,.btn-secondary,.btn-sm,.actions,.cta-box,.reset-link,.action-row{display:none!important}}
 </style>
 </head>
 <body>
 <div class="app">
+  <div class="brand">
+    <div class="brand-dot"></div>
+    <span class="brand-name">Kolay KOBİ</span>
+  </div>
 
   <!-- FORM -->
-  <div class="form-card" id="form-section">
-  <div class="form-collapsed-bar">
-    <div>
-      <div class="form-collapsed-title">İşletme Görünürlük Skoru</div>
-      <div class="form-collapsed-sub">Formu düzenlemek için tıklayın</div>
-    </div>
-    <button class="form-expand-btn" onclick="expandForm()">
-      <i class="ti ti-chevron-down" aria-hidden="true"></i> Formu Aç
-    </button>
-  </div>
-  <div id="form-body">
+  <div class="form-card">
     <h1>İşletme Görünürlük Skoru</h1>
     <p class="subtitle">İşletmenizin Google, sosyal medya ve web'deki varlığını analiz edip 0–100 arası bir görünürlük puanı ve öncelikli aksiyon listesi hazırlıyoruz.</p>
 
@@ -179,32 +163,15 @@ input:focus,select:focus{border-color:#1D9E75;box-shadow:0 0 0 3px rgba(29,158,1
     </div>
 
     <div id="err" class="err">Lütfen işletme adı, sektör ve şehir alanlarını doldurun.</div>
-    
-  <!-- Form kaydet/yükle -->
-  <div style="display:flex;gap:8px;margin-top:1rem;flex-wrap:wrap" id="form-persist-row">
-    <button type="button" onclick="exportFormJSON()" style="display:flex;align-items:center;gap:5px;padding:7px 13px;background:#fff;border:0.5px solid #D3D1C7;border-radius:8px;font-size:12px;color:#6B6963;cursor:pointer">
-      <i class="ti ti-device-floppy" aria-hidden="true"></i> Formu Kaydet
-    </button>
-    <label style="display:flex;align-items:center;gap:5px;padding:7px 13px;background:#fff;border:0.5px solid #D3D1C7;border-radius:8px;font-size:12px;color:#6B6963;cursor:pointer">
-      <i class="ti ti-upload" aria-hidden="true"></i> Form Yükle (.json)
-      <input type="file" accept=".json" style="display:none" onchange="importFormJSON(this)">
-    </label>
-    <span id="import-notice" style="display:none;align-items:center;gap:4px;font-size:12px;color:#1D9E75;padding:7px 0">
-      <i class="ti ti-circle-check" aria-hidden="true"></i> Form yüklendi
-    </span>
-  </div>
-
-  <button type="button" class="btn-primary" id="analyze-btn" onclick="startAnalysis()">
+    <button class="btn-primary" id="analyze-btn" onclick="startAnalysis()">
       <i class="ti ti-chart-bar" aria-hidden="true"></i> Skorumu Hesapla
     </button>
-    </div>
-</div>
+  </div>
 
   <!-- LOADING -->
   <div class="loading" id="loading-section">
     <div class="spinner"></div>
     <p class="loading-txt" id="loading-msg">İşletme bilgileri analiz ediliyor...</p>
-    <p class="loading-note">Yapay zeka düşünüyor — bu işlem 1-2 dakika sürebilir.</p>
   </div>
 
   <!-- RESULTS -->
@@ -240,8 +207,6 @@ input:focus,select:focus{border-color:#1D9E75;box-shadow:0 0 0 3px rgba(29,158,1
         <span class="section-title" style="margin-bottom:0">Öncelikli Aksiyonlar</span>
         <div class="action-row" style="margin-bottom:0">
           <button class="btn-sm" onclick="copyResults()"><i class="ti ti-copy" aria-hidden="true"></i> Kopyala</button>
-          <button class="btn-sm" onclick="window.print()"><i class="ti ti-printer" aria-hidden="true"></i> Yazdır</button>
-          <button class="btn-sm" onclick="downloadTxt()"><i class="ti ti-file-text" aria-hidden="true"></i> TXT İndir</button>
           <button class="btn-sm" onclick="resetForm()"><i class="ti ti-refresh" aria-hidden="true"></i> Formu Boşalt</button>
         </div>
       </div>
@@ -262,9 +227,7 @@ input:focus,select:focus{border-color:#1D9E75;box-shadow:0 0 0 3px rgba(29,158,1
 </div>
 
 <script>
-// Geliştirme/test: null yap (doğrudan Claude API)
 // const N8N_PROXY = null;
-// Production (web sitesi):
 const N8N_PROXY = '/wp-json/kolaykobi/v1/ai/skor';
 
 const loadingMsgs = [
@@ -278,7 +241,7 @@ function showLoading(on) {
   document.getElementById('loading-section').style.display = on ? 'block' : 'none';
 }
 function showResults(on) {
-  document.getElementById('results-section').style.display = on ? 'block' : 'none'; if (on) collapseForm();
+  document.getElementById('results-section').style.display = on ? 'block' : 'none';
 }
 
 async function startAnalysis() {
@@ -297,8 +260,6 @@ async function startAnalysis() {
 
   showResults(false);
   showLoading(true);
-  const genBtn = document.getElementById('gen-btn') || document.getElementById('analyze-btn');
-  if (genBtn) { genBtn.disabled = true; genBtn.style.opacity = '0.6'; }
   document.getElementById('loading-section').scrollIntoView({ behavior:'smooth', block:'start' });
 
   let mi = 0;
@@ -325,25 +286,23 @@ ${name} için 0-100 arası bir görünürlük skoru ve öncelikli aksiyon listes
 - Sosyal medya varlığına göre değerlendir
 - Sektöre özgü değerlendirme yap (${sector})
 
-Tüm metin alanları Türkçe olsun.
-
-SADECE JSON dondur:
+SADECE JSON döndür:
 {
-  "score": [0-100 arasi tam sayi],
-  "level": "[Baslangic|Gelismekte|Orta|Iyi|Mukemmel]",
-  "summary": "[${name} icin 1-2 cumle ozet]",
+  "score": <0-100 arası tam sayı>,
+  "level": "<Başlangıç|Gelişmekte|Orta|İyi|Mükemmel>",
+  "summary": "<${name} için 1-2 cümle özet>",
   "items": [
     {
-      "status": "[red|amber|green]",
-      "icon": "[tabler icon adi, ornek: ti-world]",
-      "name": "[kisa baslik]",
-      "desc": "[somut 1-2 cumle aciklama]",
-      "badge": "[Kritik|Iyilestir|Guclu]"
+      "status": "<red|amber|green>",
+      "icon": "<tabler icon adı, örn: ti-world>",
+      "name": "<kısa başlık>",
+      "desc": "<somut 1-2 cümle açıklama>",
+      "badge": "<Kritik|İyileştir|Güçlü>"
     }
   ],
-  "ctaText": "[${name} icin kisisel 1 cumle]"
+  "ctaText": "<${name} için kişisel 1 cümle>"
 }
-6-8 item olsun. Once red, sonra amber, sonra green. Tum metin alanlari Turkce olsun.`;
+6-8 item olsun. Önce red, sonra amber, sonra green.`;
 
   try {
     let data;
@@ -358,59 +317,56 @@ SADECE JSON dondur:
         showLoading(false);
         err.textContent = 'Sunucu tarafında günlük limit doldu. Lütfen yarın tekrar deneyin.';
         err.style.display = 'block';
-        if (genBtn) { genBtn.disabled = false; genBtn.style.opacity = ''; }
         return;
       }
       data = await res.json();
     } else {
-      const res = await fetch('https://api.minimax.io/v1/chat/completions', {
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer DEV_KEY' },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          model: 'MiniMax-M3',
-          max_completion_tokens: 1000,
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 1000,
           messages: [{ role: 'user', content: prompt }]
         })
       });
       data = await res.json();
     }
     clearInterval(ticker);
-    const text = N8N_PROXY
-      ? (data.content || []).map(b => b.text || '').join('')
-      : (data.choices?.[0]?.message?.content || '');
-    const s = text.indexOf('{'); const e = text.lastIndexOf('}'); const clean = [s !== -1, e !== -1].every(Boolean) ? text.slice(s, e + 1) : text.replace(/```json|```/g, '').trim();
-    if (genBtn) { genBtn.disabled = false; genBtn.style.opacity = ''; }
+    const text = (data.content || []).map(b => b.text || '').join('');
+    const thinkEnd = text.lastIndexOf('</think>');
+    const searchText = thinkEnd !== -1 ? text.slice(thinkEnd + '</think>'.length) : text;
+    const s = searchText.indexOf('{'); const e = searchText.lastIndexOf('}');
+    const clean = [s !== -1, e !== -1].every(Boolean) ? searchText.slice(s, e + 1) : searchText.replace(/```json|```/g, '').trim();
     renderResult(JSON.parse(clean), name, sector, platforms, web);
   } catch(e) {
     clearInterval(ticker);
-    if (genBtn) { genBtn.disabled = false; genBtn.style.opacity = ''; }
     renderResult(generateFallback(name, sector, platforms, web), name, sector, platforms, web);
   }
 }
 
 function generateFallback(name, sector, platforms, web) {
-  var hasWeb = !!web;
-  var hasGbp = platforms.includes("Google Business");
-  var hasSocial = platforms.some(function(p) { return ["Instagram","Facebook","LinkedIn"].includes(p); });
-  var score = 20;
+  const hasWeb = !!web;
+  const hasGbp = platforms.includes('Google Business');
+  const hasSocial = platforms.some(p => ['Instagram','Facebook','LinkedIn'].includes(p));
+  let score = 20;
   if (hasWeb) score += 25;
   if (hasGbp) score += 25;
   if (hasSocial) score += 20;
   score = Math.min(score + Math.floor(Math.random() * 10), 100);
-  var level = score < 30 ? "Baslangic" : score < 50 ? "Gelismekte" : score < 70 ? "Orta" : "Iyi";
-  var items = [];
-  if (!hasGbp) items.push({ status:"red",   icon:"ti-map-pin",        name:"Google Business Profile eksik", desc:"Isletmenizi Google Haritalar'a ekleyin. Yerel aramalarda cok daha fazla gorunurluk saglar.", badge:"Kritik" });
-  if (!hasWeb) items.push({ status:"red",   icon:"ti-world",           name:"Web sitesi yok",                desc:"Basit bir tek sayfali site bile guvenilirligi artirir ve Google aramalarinda bulunmanizi saglar.", badge:"Kritik" });
-  if (!hasSocial) items.push({ status:"amber", icon:"ti-brand-instagram", name:"Sosyal medya varligi zayif",   desc:"Ektorunuze uygun en az bir platformda duzenli paylasim marka bilinirligini artirir.", badge:"Iyilestir" });
-  items.push({ status:"amber", icon:"ti-star",  name:"Musteri yorumlari", desc:"Google ve sosyal medyada yorum toplamak arama siralamasini ve guveni dogrudan etkiler.", badge:"Iyilestir" });
-  if (hasWeb) items.push({ status:"green", icon:"ti-world",   name:"Web sitesi mevcut",     desc:"Dijital varliginizin temeli hazir. SEO optimizasyonu ile siralamay iyilestirin.", badge:"Guclu" });
-  if (hasGbp) items.push({ status:"green", icon:"ti-map-pin", name:"Google Business aktif", desc:"Yerel aramalar icin kritik adimi tamamladiniz. Profil fotograflari ile guclendirin.", badge:"Guclu" });
   return {
-    score: score,
-    level: level,
-    summary: name + " icin dijital gorunurluk analizi tamamlandi.",
-    items: items,
-    ctaText: name + " icin kisilestirilmis bir dijital gorunurluk plani hazirlayin."
+    score,
+    level: score < 30 ? 'Başlangıç' : score < 50 ? 'Gelişmekte' : score < 70 ? 'Orta' : 'İyi',
+    summary: `${name} için dijital görünürlük analizi tamamlandı. Birkaç kritik alanda iyileştirme yapılması durumunda müşteri kazanım hızı önemli ölçüde artabilir.`,
+    items: [
+      !hasGbp ? { status:'red',   icon:'ti-map-pin',        name:'Google Business Profile eksik', desc:'İşletmenizi Google Haritalar\'a ekleyin. Yerel aramalarda %70 daha fazla görünürlük sağlar.', badge:'Kritik' } : null,
+      !hasWeb ? { status:'red',   icon:'ti-world',           name:'Web sitesi yok',                desc:'Basit bir tek sayfalık site bile güvenilirliği artırır ve Google aramalarında bulunmanızı sağlar.', badge:'Kritik' } : null,
+      !hasSocial ? { status:'amber', icon:'ti-brand-instagram', name:'Sosyal medya varlığı zayıf',   desc:'Sektörünüze uygun en az bir platformda düzenli paylaşım marka bilinirliğini artırır.', badge:'İyileştir' } : null,
+      { status:'amber', icon:'ti-star',  name:'Müşteri yorumları', desc:'Google ve sosyal medyada yorum toplamak arama sıralamasını ve güveni doğrudan etkiler.', badge:'İyileştir' },
+      hasWeb ? { status:'green', icon:'ti-world',    name:'Web sitesi mevcut', desc:'Dijital varlığınızın temeli hazır. SEO optimizasyonu ile sıralamayı iyileştirebilirsiniz.', badge:'Güçlü' } : null,
+      hasGbp ? { status:'green', icon:'ti-map-pin',  name:'Google Business aktif', desc:'Yerel aramalar için kritik adımı tamamladınız. Profil fotoğrafları ile güçlendirin.', badge:'Güçlü' } : null,
+    ].filter(Boolean),
+    ctaText: `${name} için kişiselleştirilmiş bir dijital görünürlük planı hazırlayalım.`
   };
 }
 
@@ -458,55 +414,18 @@ function escHtml(s) {
 }
 
 function copyResults() {
-  const name     = document.getElementById('f-name').value.trim();
-  const sector   = document.getElementById('f-sector').value;
-  const city     = document.getElementById('f-city').value.trim();
-  const web      = document.getElementById('f-web').value.trim();
-  const goal     = document.getElementById('f-goal').value;
-  const platforms = ['ch-gbp','ch-ig','ch-fb','ch-li','ch-wa','ch-no']
-    .filter(id => document.getElementById(id).checked)
-    .map(id => document.getElementById(id).value);
-  const score   = document.getElementById('score-num').textContent;
-  const level   = document.getElementById('score-title').textContent;
+  const name   = document.getElementById('f-name').value.trim();
+  const score  = document.getElementById('score-num').textContent;
+  const level  = document.getElementById('score-title').textContent;
   const summary = document.getElementById('score-sub').textContent;
-  const items   = [...document.querySelectorAll('.item-card')].map(c => {
+  const items  = [...document.querySelectorAll('.item-card')].map(c => {
     const n = c.querySelector('.item-name').childNodes[0].textContent.trim();
     const d = c.querySelector('.item-desc').textContent.trim();
     const b = c.querySelector('.badge').textContent.trim();
     return `[${b}] ${n}\n${d}`;
   }).join('\n\n');
-  const formCtx = [
-    `İşletme: ${name}`,
-    sector   ? `Sektör: ${sector}`                       : '',
-    city     ? `Şehir: ${city}`                          : '',
-    web      ? `Web sitesi: ${web}`                      : '',
-    platforms.length ? `Platformlar: ${platforms.join(', ')}` : '',
-    goal     ? `Aylık hedef: ${goal} yeni müşteri`       : '',
-  ].filter(Boolean).join('\n');
-  const text = `İşletme Görünürlük Skoru — ${name}\n${formCtx}\n\nSkor: ${score}/100 (${level})\n${summary}\n\n${'─'.repeat(40)}\n\n${items}`;
+  const text = `İşletme Görünürlük Skoru — ${name}\nSkor: ${score}/100 (${level})\n${summary}\n\n${'─'.repeat(40)}\n\n${items}`;
   navigator.clipboard.writeText(text).then(() => alert('Sonuçlar panoya kopyalandı!'));
-}
-
-function downloadTxt() {
-  const name = document.getElementById('f-name')?.value || '';
-  const sector = document.getElementById('f-sector')?.value || '';
-  const city = document.getElementById('f-city')?.value || '';
-  const scoreEl = document.getElementById('score-num');
-  const score = scoreEl ? scoreEl.textContent : '';
-  const items = [...document.querySelectorAll('#items-list .item-card')].map(card => {
-    const nm = card.querySelector('.item-name')?.textContent?.trim() || '';
-    const desc = card.querySelector('.item-desc')?.textContent?.trim() || '';
-    return `• ${nm}: ${desc}`;
-  }).join('\n');
-  const text = [
-    `İşletme: ${name}`, `Sektör: ${sector}`, `Şehir: ${city}`,
-    '', `Görünürlük Skoru: ${score}/100`, '', 'Aksiyonlar:', items
-  ].join('\n');
-  const blob = new Blob([text], {type:'text/plain;charset=utf-8'});
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = `gorunurluk-skoru-${(name||'isletme').replace(/\s+/g,'-').toLowerCase()}.txt`;
-  a.click();
 }
 
 function resetForm() {
@@ -554,97 +473,12 @@ function resetForm() {
 
     const notice = document.createElement('div');
     notice.style.cssText = 'background:#F0FAF6;border:0.5px solid #9FE1CB;border-radius:8px;padding:10px 14px;font-size:13px;color:#085041;display:flex;align-items:center;gap:8px;margin-bottom:1rem';
-    notice.innerHTML = "<i class=\"ti ti-circle-check\" aria-hidden=\"true\"></i> Form, launcher'dan aktarilan verilerle dolduruldu.";
+    notice.innerHTML = '<i class="ti ti-circle-check" aria-hidden="true"></i> Form, launcher\'dan aktarılan verilerle dolduruldu.';
     const fc = document.querySelector('.form-card');
     fc.insertBefore(notice, fc.querySelector('.subtitle').nextSibling);
     setTimeout(() => notice.remove(), 5000);
   } catch(e) {}
 })();
-
-// ── Form Kalıcılığı (localStorage + JSON export/import) ──────────────────────
-const LS_KEY = 'kkform_' + location.pathname.replace(/\//g,'_');
-
-function saveForm() {
-  const form = document.getElementById('form-section');
-  if (!form) return;
-  const data = {};
-  form.querySelectorAll('input,select,textarea').forEach(el => {
-    if (!el.id) return;
-    data[el.id] = el.type === 'checkbox' ? el.checked : el.value;
-  });
-  try { localStorage.setItem(LS_KEY, JSON.stringify(data)); } catch(e) {}
-}
-
-function restoreForm() {
-  try {
-    const saved = localStorage.getItem(LS_KEY);
-    if (!saved) return;
-    const data = JSON.parse(saved);
-    Object.entries(data).forEach(([id, val]) => {
-      const el = document.getElementById(id);
-      if (!el) return;
-      if (el.type === 'checkbox') el.checked = val;
-      else el.value = val;
-    });
-  } catch(e) {}
-}
-
-function exportFormJSON() {
-  const form = document.getElementById('form-section');
-  if (!form) return;
-  const data = { _tool: document.title, _date: new Date().toISOString() };
-  form.querySelectorAll('input,select,textarea').forEach(el => {
-    if (!el.id) return;
-    data[el.id] = el.type === 'checkbox' ? el.checked : el.value;
-  });
-  const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json;charset=utf-8'});
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'form-' + location.pathname.replace(/\//g,'').replace(/-/g,'_') + '.json';
-  a.click();
-}
-
-function importFormJSON(input) {
-  const file = input.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = e => {
-    try {
-      const data = JSON.parse(e.target.result);
-      Object.entries(data).forEach(([id, val]) => {
-        if (id.startsWith('_')) return;
-        const el = document.getElementById(id);
-        if (!el) return;
-        if (el.type === 'checkbox') el.checked = val;
-        else el.value = val;
-      });
-      saveForm();
-      input.value = '';
-      const notice = document.getElementById('import-notice');
-      if (notice) { notice.style.display='block'; setTimeout(()=>notice.style.display='none', 2500); }
-    } catch(e) { alert('Geçersiz form dosyası.'); }
-  };
-  reader.readAsText(file);
-}
-
-// Auto-save on any change
-document.addEventListener('change', e => { if (document.getElementById('form-section')?.contains(e.target)) saveForm(); });
-document.addEventListener('input',  e => { if (document.getElementById('form-section')?.contains(e.target)) saveForm(); });
-// Restore on load
-restoreForm();
-
-// ── Form Collapse ──────────────────────────────────────────────────────────
-function collapseForm() {
-  const fc = document.getElementById('form-section');
-  if (fc) fc.classList.add('is-collapsed');
-}
-function expandForm() {
-  const fc = document.getElementById('form-section');
-  if (fc) {
-    fc.classList.remove('is-collapsed');
-    if (fc.scrollIntoView) fc.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }
-}
 </script>
 </body>
 </html>
