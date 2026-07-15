@@ -817,34 +817,37 @@ SADECE JSON döndür, açıklama yazma:
 }`;
 }
 
-// Haftada kaç gün paylaşım seçildiğine göre dönemi kaç "FETCH parça"sına
-// böleceğimizi belirler — n8n/PHP-FPM sunucu timeout tavanına (~180sn)
-// çarpmamak için: 1 gün/hafta → tek parça (30 gün, tek istek, timeout
-// riski yok, test edildi). 2 gün/hafta → her zaman haftalık (7 günlük)
-// küçük parçalar kullanılır — canlı testte 15 günlük tek parça, kampanya
-// sayısı arttıkça modelin "düşünme" süresi de arttığından ~180-200sn'ye
-// kadar çıkıp sunucu tavanına yaklaşabiliyordu (bir denemede zaman
-// aşımına bile uğradı); haftalık parçalar ise tutarlı şekilde ~75-90sn'de
-// tamamlanıyor. Bu FETCH parçaları, kullanıcıya gösterilen TAB'lardan
-// (computeViewTabs) farklı bir kavram — bir tab birden fazla fetch
-// parçasını kapsayabilir.
+// Dönemi kaç "FETCH parça"sına böleceğimizi belirler — her zaman ~7
+// günlük haftalık parçalar, weekdayCount'tan (1 veya 2 gün/hafta)
+// BAĞIMSIZ olarak. Daha büyük/birleşik parçalar (30 günlük tek istek,
+// veya 15 günlük ikili paralel istek) canlıda tekrar eden bir hataya yol
+// açtı: n8n tarafında istek 3-4 dakikaya kadar sürüp BAŞARIYLA
+// tamamlanıyordu, ama bu süre boyunca hosting'in ara katmanındaki
+// (PHP'nin kendi zaman aşımından bağımsız, muhtemelen bir ters proxy'nin)
+// bağlantı zaman aşımı devreye girip tarayıcıya hiçbir yanıt ulaşmıyordu.
+// Haftalık (~7 günlük) parçalar tutarlı şekilde çok daha kısa sürüyor.
+// Daha önce 1 gün/hafta modu TÜM ayı (30 gün) TEK istekte topluyordu; bu,
+// kampanya yoğun promptlarda 3-4 dakikaya kadar süren tekli istekler
+// üretip hosting'in ara katmanındaki (PHP/n8n'in kendi zaman aşımından
+// BAĞIMSIZ, muhtemelen bir ters proxy'nin) bağlantı zaman aşımına takılıp
+// n8n'de BAŞARILI tamamlanmasına rağmen tarayıcıya hiç ulaşmamasına yol
+// açıyordu — gerçek, canlıda tekrarlanan bir hataydı bu.
 function computeChunkGroups(weekdayCount) {
-  if (weekdayCount <= 1) return [{ id: 0, dayStart: 1, dayEnd: 30 }];
   return [1, 2, 3, 4, 5].map(w => ({ id: w - 1, dayStart: (w - 1) * 7 + 1, dayEnd: Math.min((w - 1) * 7 + 7, 30) }));
 }
 
-// Kullanıcıya gösterilen SEKMELERİ (tab) belirler — maliyet/basitlik için
-// haftada 1 gün seçilirse hiç sekme yok (tüm ay tek sayfa, tek istek);
-// haftada 2 gün seçilirse yalnızca 2 sekme (1-15. gün / 16-30. gün).
-// Her sekme, arka planda hangi fetch parçalarına ihtiyaç duyduğunu bilir;
-// bir sekmeye ilk kez tıklandığında o parçalar (varsa birden fazla,
-// PARALEL) istenir.
+// Kullanıcıya gösterilen SEKMELER artık fetch parçalarıyla BİREBİR
+// eşleşiyor (eski, hafta hafta gösterilen format) — her sekme SADECE bir
+// haftalık parçayı ister, asla iki parçayı paralel istemez. Bu hem daha
+// güvenilir (her istek küçük ve tek başına) hem de eski davranışa dönüş.
 function computeViewTabs(weekdayCount) {
-  if (weekdayCount <= 1) return [{ label: `Tüm Ay`, dayStart: 1, dayEnd: 30, fetchGroupIds: [0] }];
-  return [
-    { label: `1-15. Gün`, dayStart: 1, dayEnd: 15, fetchGroupIds: [0, 1] },
-    { label: `16-30. Gün`, dayStart: 16, dayEnd: 30, fetchGroupIds: [2, 3, 4] },
-  ];
+  const groups = computeChunkGroups(weekdayCount);
+  return groups.map((g, i) => ({
+    label: `${i + 1}. Hafta`,
+    dayStart: g.dayStart,
+    dayEnd: g.dayEnd,
+    fetchGroupIds: [g.id],
+  }));
 }
 
 function renderTabButtons() {
@@ -981,11 +984,8 @@ async function generate() {
   const ticker = setInterval(() => { mi=(mi+1)%loadingMsgs.length; msgEl.textContent=loadingMsgs[mi]; }, 1800);
 
   try {
-    // İlk sekmenin (Tab 0) ihtiyaç duyduğu tüm fetch parçaları PARALEL
-    // istenir — 1 gün/hafta'da tek parça, 2 gün/hafta'da 1-15. gün için
-    // 2 haftalık parça. Her biri kendi başına hızlı (~75-90sn) olduğu için
-    // toplam bekleme tek büyük istekten uzun sürmez, sunucu timeout riskini
-    // de taşımaz.
+    // İlk sekme (1. Hafta) SADECE kendi tek haftalık fetch parçasını ister
+    // — artık hiçbir sekme birden fazla parçayı paralel istemiyor.
     currentTabIndex = 0;
     const firstTab = viewTabs[0];
     const eagerGroups = firstTab.fetchGroupIds.map(id => chunkGroups.find(g => g.id === id)).filter(Boolean);
@@ -1177,9 +1177,7 @@ function copyDay(dayNum, btn) {
 
 // "Bu bölümü yenile" artık gerçekten yeniden üretim YAPMIYOR (tekrarlanan
 // AI çağrıları maliyeti ve eşzamanlı n8n çalıştırmalarını tetikliyordu) —
-// sadece ücretsiz görüşme CTA'sını gösterir. Buton zaten yalnızca 2
-// gün/hafta modunda (birden fazla sekme olduğunda) görünür; 1 gün/hafta'da
-// tamamen gizlenir çünkü üstteki "Yeniden" ile aynı işi tekrarlar.
+// sadece ücretsiz görüşme CTA'sını gösterir.
 function refreshCurrentTab() {
   showConsultCta(`Bu bölümü yeniden oluşturmak mı istiyorsunuz?`);
 }
