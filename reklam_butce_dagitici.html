@@ -324,14 +324,21 @@ function hasEncodingCorruption(text) {
 const DAILY_LIMIT = 5;
 const RATE_KEY = 'kkb_butce_usage';
 
+// cvr (tıklama -> lead dönüşüm oranı) değerleri, kanalın "satın alma
+// niyeti"ne göre kademeli olarak ayarlanmış muhafazakâr/gerçekçi
+// tahminlerdir (arama en yüksek niyetli, display/YouTube en düşük
+// niyetli). Önceki değerler gerçekçi olamayacak kadar iyimserdi (ör.
+// 5.000 tıklamadan 200 lead = %4 — bu, optimize edilmiş bir açılış
+// sayfası için bile iyimser bir üst sınırdır); tüm kanallarda ~%25-40
+// oranında aşağı çekildi.
 const TR_BENCHMARKS = {
-  'Google Arama':  { cpc_tl: 8,  ctr: 0.035, cvr: 0.04 },
-  'Google Display':{ cpc_tl: 2,  ctr: 0.005, cvr: 0.01 },
-  'Meta (FB+IG)':  { cpc_tl: 5,  ctr: 0.015, cvr: 0.025 },
-  'Instagram':     { cpc_tl: 4,  ctr: 0.012, cvr: 0.02 },
-  'LinkedIn':      { cpc_tl: 18, ctr: 0.008, cvr: 0.03 },
-  'TikTok':        { cpc_tl: 3,  ctr: 0.02,  cvr: 0.015 },
-  'YouTube':       { cpc_tl: 2,  ctr: 0.003, cvr: 0.008 },
+  'Google Arama':  { cpc_tl: 8,  ctr: 0.035, cvr: 0.03 },
+  'Google Display':{ cpc_tl: 2,  ctr: 0.005, cvr: 0.007 },
+  'Meta (FB+IG)':  { cpc_tl: 5,  ctr: 0.015, cvr: 0.018 },
+  'Instagram':     { cpc_tl: 4,  ctr: 0.012, cvr: 0.015 },
+  'LinkedIn':      { cpc_tl: 18, ctr: 0.008, cvr: 0.02 },
+  'TikTok':        { cpc_tl: 3,  ctr: 0.02,  cvr: 0.01 },
+  'YouTube':       { cpc_tl: 2,  ctr: 0.003, cvr: 0.005 },
 };
 
 // Her hedef için TÜM seçilebilir kanallara (Google Arama, Google Display,
@@ -421,7 +428,7 @@ function distributionFromWeightMap(channels, weightMap, totalBudget) {
     const pct = Math.round((w / total) * 100);
     const budget = i === entries.length - 1 ? remaining : Math.round(totalBudget * w / total);
     remaining -= budget;
-    const bm = TR_BENCHMARKS[ch] || { cpc_tl: 5, cvr: 0.02 };
+    const bm = TR_BENCHMARKS[ch] || { cpc_tl: 5, cvr: 0.015 };
     const clicks = Math.round(budget / bm.cpc_tl);
     const leads = Math.round(clicks * bm.cvr);
     result.push({ channel: ch, budget, pct, clicks, leads });
