@@ -303,9 +303,6 @@ input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3p
     </div>
 
     <div class="actions">
-      <button class="btn-secondary" id="copy-btn" onclick="copyAll()">
-        <i class="ti ti-copy" aria-hidden="true"></i> Tümünü Kopyala
-      </button>
       <button class="btn-secondary" onclick="downloadTxt()">
         <i class="ti ti-download" aria-hidden="true"></i> .txt İndir
       </button>
@@ -673,40 +670,6 @@ function resetForm() {
   showLoading(false);
   currentScenario = null;
   window.scrollTo({ top: 0, behavior: 'smooth' });
-}
-
-function copyAll() {
-  if (!currentScenario) return;
-  const fd = lastFormData;
-  const formCtx = [
-    fd.biz         ? `İşletme: ${fd.biz}`                        : '',
-    fd.sector      ? `Sektör: ${fd.sector}`                      : '',
-    fd.services    ? `Hizmetler: ${fd.services}`                  : '',
-    fd.hours       ? `Mesai: ${fd.hours}`                         : '',
-    [fd.faqs, fd.faqs?.length].every(Boolean) ? `SSS: ${fd.faqs.join(' | ')}`     : '',
-    fd.redirectGoal ? `Yönlendirme: ${fd.redirectGoal}${fd.redirectLink ? ' → ' + fd.redirectLink : ''}` : '',
-  ].filter(Boolean).join('\n');
-  const lines = [`=== ${lastBiz} — CHATBOT SENARYOSU ===`, formCtx, ''];
-  lines.push('KARŞILAMA:'); lines.push(currentScenario.welcome); lines.push('');
-  if (currentScenario.faqs) {
-    lines.push('SSS AKIŞLARI:');
-    currentScenario.faqs.forEach((faq, i) => {
-      lines.push(`${i + 1}. Kullanıcı: "${faq.question}"`);
-      lines.push(`   Bot: ${faq.answer}`);
-      if (faq.followup) lines.push(`   Devam: ${faq.followup}`);
-      lines.push('');
-    });
-  }
-  lines.push('BİLİNMEYEN SORU:'); lines.push(currentScenario.fallback); lines.push('');
-  lines.push('KAPANIS:'); lines.push(currentScenario.closing); lines.push('');
-  lines.push('MESAİ DIŞI:'); lines.push(currentScenario.offHours);
-  navigator.clipboard.writeText(lines.join('\n')).then(() => {
-    const btn = document.getElementById('copy-btn');
-    if (btn) {
-      btn.innerHTML = '<i class="ti ti-check" aria-hidden="true"></i> Kopyalandı!';
-      setTimeout(() => { btn.innerHTML = '<i class="ti ti-copy" aria-hidden="true"></i> Tümünü Kopyala'; }, 2000);
-    }
-  });
 }
 
 function downloadTxt() {

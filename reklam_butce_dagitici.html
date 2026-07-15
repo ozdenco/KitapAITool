@@ -291,9 +291,6 @@ tr:last-child td{border-bottom:none}
     </div>
 
     <div class="actions">
-      <button class="btn-secondary" id="copy-btn" onclick="copyAll()">
-        <i class="ti ti-copy" aria-hidden="true"></i> Tümünü Kopyala
-      </button>
       <button class="btn-secondary" onclick="downloadTxt()">
         <i class="ti ti-download" aria-hidden="true"></i> .txt İndir
       </button>
@@ -404,16 +401,17 @@ function getGoal() {
   return el ? el.value : '';
 }
 
-function calculateDistribution(channels, goal, totalBudget) {
-  const weights = GOAL_WEIGHTS[goal] || {};
-  // Seçili her kanal MUTLAKA tabloda görünür — GOAL_WEIGHTS'te o hedef için
-  // ağırlığı tanımlı değilse (ör. ileride eklenecek yeni bir kanal/hedef
-  // kombinasyonu) kanalı sessizce atlamak yerine düşük bir varsayılan
-  // ağırlıkla dahil ediyoruz.
+// Bir ağırlık haritasından (channel -> weight) nihai bütçe tablosunu üretir.
+// calculateDistribution() ve distributionFromWeights() AYNI bu fonksiyonu
+// kullanır — böylece ister statik GOAL_WEIGHTS'ten ister AI'nin kendi
+// önerdiği ağırlıklardan gelsin, tablo her zaman aynı matematikle
+// hesaplanır ve toplam bütçeye tam eşit çıkar.
+function distributionFromWeightMap(channels, weightMap, totalBudget) {
   const DEFAULT_WEIGHT = 5;
   let filtered = {};
   channels.forEach(ch => {
-    filtered[ch] = weights[ch] !== undefined ? weights[ch] : DEFAULT_WEIGHT;
+    const w = weightMap[ch];
+    filtered[ch] = [typeof w === 'number', w > 0].every(Boolean) ? w : DEFAULT_WEIGHT;
   });
   const total = Object.values(filtered).reduce((a, b) => a + b, 0);
   const result = [];
@@ -429,6 +427,14 @@ function calculateDistribution(channels, goal, totalBudget) {
     result.push({ channel: ch, budget, pct, clicks, leads });
   });
   return result;
+}
+
+// Statik GOAL_WEIGHTS'e göre başlangıç/referans dağılımı (AI'ye gönderilen
+// prompt için başlangıç noktası, ve AI'nin ağırlık döndürmediği durumlarda
+// — ör. API hatası — fallback olarak kullanılır).
+function calculateDistribution(channels, goal, totalBudget) {
+  const weights = GOAL_WEIGHTS[goal] || {};
+  return distributionFromWeightMap(channels, weights, totalBudget);
 }
 
 function buildCalcSummary(rows) {
@@ -558,7 +564,7 @@ async function generate() {
   const rows = calculateDistribution(channels, goal, budget);
   const calculatedSummary = buildCalcSummary(rows);
 
-  const prompt = `Sen dijital pazarlama uzmanısın. Aşağıdaki işletme için reklam bütçesi dağılımı analizi yap ve 3 somut öneri sun.
+  const prompt = `Sen dijital pazarlama uzmanısın. Aşağıdaki işletme için reklam bütçesi dağılımını SEN belirle ve 3 somut öneri sun.
 
 ═══ İŞLETME BİLGİLERİ ═══
 İşletme: ${biz}
@@ -568,26 +574,28 @@ Hedef: ${goal}
 Hedef Kitle: ${audience || 'belirtilmemiş'}
 Seçilen Kanallar: ${channels.join(', ')}
 
-═══ HESAPLANAN DAĞILIM ═══
+═══ GENEL (SEKTÖRDEN BAĞIMSIZ) BAŞLANGIÇ REFERANSI ═══
 ${calculatedSummary}
+⚠️ Bu, yalnızca genel bir başlangıç noktasıdır — hedef kitleye/sektöre özgü değildir. Hedef kitle ve sektöre bakarak SEN kendi bütçe dağılımını belirle; gerekirse yukarıdaki referanstan tamamen farklı bir dağılım öner (ör. hedef kitle üst düzey B2B karar vericilerse LinkedIn'e yukarıdakinden çok daha fazla pay ayırman gerekebilir).
 
 ═══ GÖREV ═══
-Bu bütçe dağılımı ve sektöre göre:
-1. Bu bütçeyle ${goal} hedefine ulaşmak için en kritik 3 somut öneri sun
-2. Her öneri işletmeye özel ve uygulanabilir olsun
-3. Türkiye pazarı gerçeklerine göre değerlendir
+1. Seçilen ${channels.length} kanalın HER BİRİ için, kendi belirlediğin bütçe dağılımını "weights" alanında ağırlık (herhangi bir pozitif sayı, sadece birbirine oranı önemli) olarak ver. Ağırlıkları YÜKSEK tut ki oranlar net görünsün (ör. 5-50 arası).
+2. Belirlediğin BU dağılımı gerekçelendiren ve tamamlayan 3 somut, uygulanabilir öneri sun (hedefleme, anahtar kelime, creative, kampanya yapısı gibi TAKTİK konulara odaklan). ⚠️ ÖNEMLİ: Önerilerin, sen zaten "weights" ile uyguladığın bütçe kaydırmasını TEKRAR önermesin (ör. "bütçeyi X'ten Y'ye kaydırın" deme — çünkü tabloda zaten senin önerdiğin dağılım gösterilecek); bunun yerine o dağılımı NASIL en iyi şekilde kullanacağını anlat.
+3. Türkiye pazarı gerçeklerine göre değerlendir.
 
 Tüm metin alanları Türkçe olsun.
 
 SADECE JSON döndür:
 {
+  "weights": { "<kanal adı>": <pozitif sayı>, ... },
   "suggestions": [
     { "title": "...", "desc": "...", "icon": "ti-[tabler-icon]" },
     { "title": "...", "desc": "...", "icon": "ti-[tabler-icon]" },
     { "title": "...", "desc": "...", "icon": "ti-[tabler-icon]" }
   ],
   "ctaText": "..."
-}`;
+}
+"weights" alanında SADECE şu kanallar olsun (hepsi olmalı): ${channels.join(', ')}`;
 
   try {
     let text = '';
@@ -625,11 +633,21 @@ SADECE JSON döndür:
     const s = searchText.indexOf('{'); const e = searchText.lastIndexOf('}'); const clean = [s !== -1, e !== -1].every(Boolean) ? searchText.slice(s, e + 1) : searchText.replace(/```json|```/g, '').trim();
     const aiData = JSON.parse(clean);
 
+    // AI kendi bütçe dağılımını "weights" ile döndürdüyse tabloyu ONUNLA
+    // yeniden hesapla — böylece görüntülenen tablo ile AI'nin metin
+    // önerileri her zaman AYNI dağılımı yansıtır, birbirleriyle çelişmez.
+    // Geçerli/eksiksiz bir "weights" gelmezse statik referans dağılım
+    // (rows) kullanılmaya devam eder.
+    const hasValidWeights = aiData.weights
+      ? channels.every(ch => [typeof aiData.weights[ch] === 'number', aiData.weights[ch] > 0].every(Boolean))
+      : false;
+    const finalRows = hasValidWeights ? distributionFromWeightMap(channels, aiData.weights, budget) : rows;
+
     rateData.count++;
     saveRate(rateData);
     updateRateBar();
     clearInterval(ticker);
-    renderResults(rows, aiData);
+    renderResults(finalRows, aiData);
     if (genBtn) { genBtn.disabled = false; genBtn.style.opacity = ''; }
     if (resetBtn) { resetBtn.disabled = false; resetBtn.style.opacity = ''; }
   } catch(e) {
@@ -664,45 +682,6 @@ function resetForm() {
   clearResults();
   showLoading(false);
   window.scrollTo({ top: 0, behavior: 'smooth' });
-}
-
-function copyAll() {
-  if (!lastRows.length) return;
-  const fd = lastFormData;
-  const formCtx = [
-    `İşletme: ${fd.biz || lastBiz}`,
-    fd.sector   ? `Sektör: ${fd.sector}`                         : '',
-    fd.budget   ? `Aylık Bütçe: ${Number(fd.budget).toLocaleString('tr-TR')} TL` : '',
-    fd.goal     ? `Hedef: ${fd.goal}`                            : '',
-    fd.audience ? `Hedef Kitle: ${fd.audience}`                  : '',
-    [fd.channels, fd.channels?.length].every(Boolean) ? `Kanallar: ${fd.channels.join(', ')}` : '',
-  ].filter(Boolean).join('\n');
-  const lines = ['=== REKLAM BÜTÇE DAĞILIMI ===', formCtx, ''];
-  const totalBudget = lastRows.reduce((a, b) => a + b.budget, 0);
-  const totalClicks = lastRows.reduce((a, b) => a + b.clicks, 0);
-  const totalLeads = lastRows.reduce((a, b) => a + b.leads, 0);
-  lines.push(`Toplam Bütçe: ${totalBudget.toLocaleString('tr-TR')} TL`);
-  lines.push(`Tahmini Tıklama: ${totalClicks.toLocaleString('tr-TR')}`);
-  lines.push(`Tahmini Lead: ${totalLeads.toLocaleString('tr-TR')}`);
-  lines.push('');
-  lines.push('--- KANAL DAĞILIMI ---');
-  lastRows.forEach(r => {
-    lines.push(`${r.channel}: ${r.budget.toLocaleString('tr-TR')} TL (%${r.pct}) | ${r.clicks} tıklama | ${r.leads} lead`);
-  });
-  lines.push('');
-  if (lastSuggestions.length) {
-    lines.push('--- ÖNERİLER ---');
-    lastSuggestions.forEach((s, i) => {
-      lines.push(`${i + 1}. ${s.title}: ${s.desc}`);
-    });
-  }
-  navigator.clipboard.writeText(lines.join('\n')).then(() => {
-    const btn = document.getElementById('copy-btn');
-    if (btn) {
-      btn.innerHTML = '<i class="ti ti-check" aria-hidden="true"></i> Kopyalandı!';
-      setTimeout(() => { btn.innerHTML = '<i class="ti ti-copy" aria-hidden="true"></i> Tümünü Kopyala'; }, 2000);
-    }
-  });
 }
 
 function downloadTxt() {

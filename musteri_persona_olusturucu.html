@@ -251,9 +251,6 @@ input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3p
     </div>
     <div class="personas-grid" id="personas-grid"></div>
     <div class="actions">
-      <button class="btn-secondary" onclick="copyAll()">
-        <i class="ti ti-copy" aria-hidden="true"></i> Tümünü Kopyala
-      </button>
       <button class="btn-secondary" onclick="downloadTxt()">
         <i class="ti ti-download" aria-hidden="true"></i> TXT İndir
       </button>
@@ -605,24 +602,6 @@ function downloadTxt() {
   a.download = `personas-${(fd.biz||'musteri').replace(/\s+/g,'-').toLowerCase()}.txt`;
   a.click();
 }
-function copyAll() {
-  const fd = lastFormData;
-  const header = [
-    '=== Müşteri Persona Raporu ===',
-    fd.biz     ? `İşletme: ${fd.biz}`                          : '',
-    fd.sector  ? `Sektör: ${fd.sector}`                        : '',
-    fd.city    ? `Şehir: ${fd.city}`                           : '',
-    fd.service ? `Hizmet/Ürün: ${fd.service}`                  : '',
-    fd.age     ? `Hedef yaş: ${fd.age}`                        : '',
-    fd.price   ? `Fiyat segmenti: ${fd.price}`                 : '',
-    fd.current ? `Mevcut müşteri özellikleri: ${fd.current}`   : '',
-    [fd.pains, fd.pains?.length].every(Boolean) ? `Müşteri öncelikleri: ${fd.pains.join(', ')}` : '',
-    '',
-  ].filter(Boolean).join('\n');
-  const text = header + '\n' + allPersonasData.map(personaToText).join('\n\n' + '─'.repeat(40) + '\n\n');
-  navigator.clipboard.writeText(text).then(() => alert('Tüm personalar panoya kopyalandı!'));
-}
-
 function restart() {
   document.getElementById('f-biz').value='';
   document.getElementById('f-sector').value='';

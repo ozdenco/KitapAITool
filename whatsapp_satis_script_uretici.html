@@ -222,7 +222,6 @@ input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3p
       <button class="btn-secondary" onclick="window.print()">
         <i class="ti ti-printer" aria-hidden="true"></i> Yazdır
       </button>
-        <button class="btn-sm" onclick="copyAll()"><i class="ti ti-copy" aria-hidden="true"></i> Tümünü Kopyala</button>
         <button class="btn-sm" onclick="resetForm()"><i class="ti ti-refresh" aria-hidden="true"></i> Formu Boşalt</button>
       </div>
     </div>
@@ -602,13 +601,6 @@ function getFormContext() {
     advantage? `Avantajlar  : ${advantage}`: null,
   ].filter(Boolean);
   return lines.join('\n');
-}
-
-function copyAll() {
-  const context = getFormContext();
-  const scripts = allScripts.map((s, i) => `${stepMeta[i].label}\nZamanlama: ${s.timing}\n\n${s.message}`).join('\n\n' + '─'.repeat(40) + '\n\n');
-  const full = context + '\n\n' + '─'.repeat(40) + '\n\n' + scripts;
-  navigator.clipboard.writeText(full).then(() => alert('Form bilgileri + tüm scriptler panoya kopyalandı!'));
 }
 
 function downloadTxt() {

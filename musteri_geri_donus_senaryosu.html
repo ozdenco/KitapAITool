@@ -247,9 +247,6 @@ input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3p
 <div class="steps-list" id="steps-list"></div>
 
     <div class="actions">
-      <button class="btn-secondary" id="copy-btn" onclick="copyAll()">
-        <i class="ti ti-copy" aria-hidden="true"></i> Tümünü Kopyala
-      </button>
       <button class="btn-secondary" onclick="downloadTxt()">
         <i class="ti ti-download" aria-hidden="true"></i> .txt İndir
       </button>
@@ -558,35 +555,6 @@ function resetForm() {
   clearResults();
   showLoading(false);
   window.scrollTo({ top: 0, behavior: 'smooth' });
-}
-
-function copyAll() {
-  if (!lastSteps.length) return;
-  const fd = lastFormData;
-  const formCtx = [
-    fd.biz        ? `İşletme: ${fd.biz}`                         : '',
-    fd.sector     ? `Sektör: ${fd.sector}`                       : '',
-    fd.service    ? `Hizmet: ${fd.service}`                      : '',
-    fd.frequency  ? `Satın alma sıklığı: ${fd.frequency}`        : '',
-    [fd.channels, fd.channels?.length].every(Boolean) ? `Takip kanalları: ${fd.channels.join(', ')}` : '',
-    fd.currentMethod ? `Mevcut yöntem: ${fd.currentMethod}`      : '',
-    fd.note       ? `Not: ${fd.note}`                            : '',
-  ].filter(Boolean).join('\n');
-  const lines = [`=== ${lastBiz} — MÜŞTERİ TAKİP SENARYOSU ===`, formCtx, ''];
-  lastSteps.forEach(s => {
-    lines.push(`ADIM ${s.step} — ${s.day} (${s.channel})`);
-    lines.push(`Başlık: ${s.title}`);
-    lines.push(`Mesaj: ${s.message}`);
-    if (s.tip) lines.push(`Not: ${s.tip}`);
-    lines.push('');
-  });
-  navigator.clipboard.writeText(lines.join('\n')).then(() => {
-    const btn = document.getElementById('copy-btn');
-    if (btn) {
-      btn.innerHTML = '<i class="ti ti-check" aria-hidden="true"></i> Kopyalandı!';
-      setTimeout(() => { btn.innerHTML = '<i class="ti ti-copy" aria-hidden="true"></i> Tümünü Kopyala'; }, 2000);
-    }
-  });
 }
 
 function downloadTxt() {

@@ -441,9 +441,6 @@ td:first-child{font-weight:500;color:#6B6963;font-size:12px}
     </div>
 
     <div class="actions">
-      <button class="btn-secondary" id="copy-btn" onclick="copyAll()">
-        <i class="ti ti-copy" aria-hidden="true"></i> Tümünü Kopyala
-      </button>
       <button class="btn-secondary" onclick="downloadTxt()">
         <i class="ti ti-download" aria-hidden="true"></i> .txt İndir
       </button>
@@ -829,46 +826,6 @@ function resetForm() {
   clearResults();
   showLoading(false);
   window.scrollTo({ top: 0, behavior: 'smooth' });
-}
-
-function copyAll() {
-  if (!lastResult) return;
-  const md = lastMyData;
-  const formCtx = [
-    md.biz        ? `İşletme: ${md.biz}`                            : '',
-    md.sector     ? `Sektör: ${md.sector}`                          : '',
-    md.myWeb      ? `Web sitesi: ${md.myWeb}`                       : '',
-    [md.myPlatforms, md.myPlatforms?.length].every(Boolean) ? `Platformlar: ${md.myPlatforms.join(', ')}` : '',
-    md.myPrice    ? `Fiyat segmenti: ${md.myPrice}`                 : '',
-    md.strengths  ? `Güçlü yönler: ${md.strengths}`                 : '',
-  ].filter(Boolean).join('\n');
-  const compCtx = lastComps.map((c, i) =>
-    `Rakip ${i+1}: ${c.name}${c.platforms.length ? ' (' + c.platforms.join(', ') + ')' : ''}${c.price ? ' · ' + c.price : ''}`
-  ).join('\n');
-  const lines = [`=== ${lastBiz} — RAKİP ANALİZ RAPORU ===`, formCtx, compCtx ? '\n--- RAKİPLER ---\n' + compCtx : '', ''];
-  if (lastResult.summary) { lines.push('ÖZET:'); lines.push(lastResult.summary); lines.push(''); }
-  if (lastResult.competitors) {
-    lines.push('--- RAKİP ANALİZİ ---');
-    lastResult.competitors.forEach(c => {
-      lines.push(`${c.name} (Tehdit: ${c.threat})`);
-      lines.push(`  Güçlü: ${(c.strengths||[]).join(', ')}`);
-      lines.push(`  Zayıf: ${(c.weaknesses||[]).join(', ')}`);
-    });
-    lines.push('');
-  }
-  if (lastResult.opportunities) { lines.push('FIRSATLAR:'); lastResult.opportunities.forEach(o => lines.push(`• ${o}`)); lines.push(''); }
-  if (lastResult.threats) { lines.push('TEHDİTLER:'); lastResult.threats.forEach(t => lines.push(`• ${t}`)); lines.push(''); }
-  if (lastResult.actions) {
-    lines.push('AKSİYON ÖNERİLERİ:');
-    lastResult.actions.forEach((a, i) => lines.push(`${i + 1}. [${a.priority}] ${a.title}: ${a.desc}`));
-  }
-  navigator.clipboard.writeText(lines.join('\n')).then(() => {
-    const btn = document.getElementById('copy-btn');
-    if (btn) {
-      btn.innerHTML = '<i class="ti ti-check" aria-hidden="true"></i> Kopyalandı!';
-      setTimeout(() => { btn.innerHTML = '<i class="ti ti-copy" aria-hidden="true"></i> Tümünü Kopyala'; }, 2000);
-    }
-  });
 }
 
 function downloadTxt() {
