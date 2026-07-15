@@ -584,11 +584,13 @@ function renderResults(result, myData) {
   lastResult = result;
   showLoading(false);
 
-  const { biz, sector, myPlatforms, myPrice, myWeb } = myData;
+  const { biz, sector, myPlatforms, myPrice, myWeb, strengths } = myData;
   document.getElementById('results-sub').textContent = [
     [biz, sector].every(Boolean) ? `${biz} — ${sector}` : '',
     myWeb ? myWeb : '',
     myPlatforms?.length ? `Platformlar: ${myPlatforms.join(', ')}` : '',
+    myPrice ? `Fiyat segmenti: ${myPrice}` : '',
+    strengths ? `Güçlü yönler: ${strengths}` : '',
   ].filter(Boolean).join('\n') || 'Karşılaştırmalı analiz ve aksiyon önerileri hazır';
   const comps = result.competitors || [];
 
@@ -793,7 +795,7 @@ SADECE JSON döndür:
     clearInterval(ticker);
     if (genBtn) { genBtn.disabled = false; genBtn.style.opacity = ''; }
     if (resetBtn) { resetBtn.disabled = false; resetBtn.style.opacity = ''; }
-    renderResults(result, { biz, sector, myPlatforms, myPrice, myWeb });
+    renderResults(result, { biz, sector, myPlatforms, myPrice, myWeb, strengths });
   } catch(e) {
     rateData.count++;
     saveRate(rateData);
@@ -801,7 +803,7 @@ SADECE JSON döndür:
     clearInterval(ticker);
     if (genBtn) { genBtn.disabled = false; genBtn.style.opacity = ''; }
     if (resetBtn) { resetBtn.disabled = false; resetBtn.style.opacity = ''; }
-    renderResults(fallback(biz, comps), { biz, sector, myPlatforms, myPrice, myWeb });
+    renderResults(fallback(biz, comps), { biz, sector, myPlatforms, myPrice, myWeb, strengths });
   }
 }
 
