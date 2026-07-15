@@ -810,39 +810,36 @@ HER GÜN İÇİN ALANLAR
 {"days":[{"day":${chunkPostingDays[0]},"topic":"...","format":"...","platform":"...","draft":"...","isSpecial":false}],"ctaText":"..."}`;
 }
 
-// Dönemi kaç "FETCH parça"sına böleceğimizi belirler — her zaman ~7
-// günlük haftalık parçalar, weekdayCount'tan (1 veya 2 gün/hafta)
-// BAĞIMSIZ olarak. Daha büyük/birleşik parçalar (30 günlük tek istek,
-// veya 15 günlük ikili paralel istek) canlıda tekrar eden bir hataya yol
-// açtı: n8n tarafında istek 3-4 dakikaya kadar sürüp BAŞARIYLA
-// tamamlanıyordu, ama bu süre boyunca hosting'in ara katmanındaki
-// (PHP'nin kendi zaman aşımından bağımsız, muhtemelen bir ters proxy'nin)
-// bağlantı zaman aşımı devreye girip tarayıcıya hiçbir yanıt ulaşmıyordu.
-// Haftalık (~7 günlük) parçalar tutarlı şekilde çok daha kısa sürüyor.
-// Daha önce 1 gün/hafta modu TÜM ayı (30 gün) TEK istekte topluyordu; bu,
-// kampanya yoğun promptlarda 3-4 dakikaya kadar süren tekli istekler
-// üretip hosting'in ara katmanındaki (PHP/n8n'in kendi zaman aşımından
-// BAĞIMSIZ, muhtemelen bir ters proxy'nin) bağlantı zaman aşımına takılıp
-// n8n'de BAŞARILI tamamlanmasına rağmen tarayıcıya hiç ulaşmamasına yol
-// açıyordu — gerçek, canlıda tekrarlanan bir hataydı bu.
-// Canlı testte (10-11 Temmuz, 5 ardışık çalıştırma) tüm ayın TEK istekte
-// istenmesi tutarlı şekilde ~45sn-1dk16sn'de tamamlandı — tek istek/tek
-// workflow yaklaşımı kanıtlanmış şekilde hızlı ve güvenilir. Bu yüzden
-// FETCH parçası her zaman tek bir grup: tüm 30 gün.
+// Dönemi kaç "FETCH parça"sına böleceğimizi belirler — her zaman ~7 günlük
+// haftalık parçalar.
+//
+// KANITLANMIŞ KÖK NEDEN (canlı test, WP proxy hata gövdesi): "cURL error
+// 28: Operation timed out after 180000 milliseconds with 0 bytes
+// received". wp_remote_post'a 320sn timeout versek de, hosting ortamında
+// (muhtemelen php.ini'deki default_socket_timeout veya bir güvenlik
+// eklentisi/WAF) cURL isteklerini SABİT 180 saniyede, HİÇ veri almadan
+// kesiyor — bizim kodumuzun kontrol edemediği bir sunucu seviyesi limit.
+// 180sn'yi aşan HER istek (prompt ne kadar kısa olursa olsun, kampanya
+// yoğun senaryolarda modelin "düşünme" süresi arttıkça) kesin olarak
+// başarısız olur. Bunun kalıcı çözümü hosting sağlayıcısıyla bu limitin
+// yükseltilmesidir; kod tarafında yapabileceğimiz tek şey her isteği bu
+// 180sn tavanının güvenli şekilde altında tutmak — haftalık (~7 günlük)
+// parçalar canlı testte tutarlı şekilde ~75-90sn'de tamamlanıyor.
 function computeChunkGroups(weekdayCount) {
-  return [{ id: 0, dayStart: 1, dayEnd: 30 }];
+  return [1, 2, 3, 4, 5].map(w => ({ id: w - 1, dayStart: (w - 1) * 7 + 1, dayEnd: Math.min((w - 1) * 7 + 7, 30) }));
 }
 
-// Kullanıcıya gösterilen SEKMELER salt GÖSTERİM amaçlı — tek bir AI
-// isteğiyle gelen tüm 30 günlük veri, haftalara göre istemci tarafında
-// dilimlenip sekmelerde gösterilir. Sekmeye tıklamak YENİ bir istek
-// tetiklemez (zaten tüm veri elde).
+// Kullanıcıya gösterilen SEKMELER fetch parçalarıyla birebir eşleşir, ama
+// hepsi generate() içinde "Oluştur" butonuna TEK basışta SIRAYLA (paralel
+// değil) önceden yüklenir — bu yüzden sekmeye tıklamak YENİ bir istek
+// tetiklemez, günlük kullanım hakkı harcamaz; sekmeler salt gösterimdir.
 function computeViewTabs(weekdayCount) {
-  return [1, 2, 3, 4, 5].map(w => ({
-    label: `${w}. Hafta`,
-    dayStart: (w - 1) * 7 + 1,
-    dayEnd: Math.min((w - 1) * 7 + 7, 30),
-    fetchGroupIds: [0],
+  const groups = computeChunkGroups(weekdayCount);
+  return groups.map((g, i) => ({
+    label: `${i + 1}. Hafta`,
+    dayStart: g.dayStart,
+    dayEnd: g.dayEnd,
+    fetchGroupIds: [g.id],
   }));
 }
 
