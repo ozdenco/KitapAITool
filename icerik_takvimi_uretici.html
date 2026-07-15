@@ -762,10 +762,9 @@ function buildCalendarPrompt(chunkPostingDays, chunkPostingDates, ctx) {
   const chunkCampaignTexts = resolvedCampaigns.filter(c => chunkDayNums.has(c.dayNum)).map(c => c.text);
 
   const movableDateNote = matchedMovable.length
-    ? `\n⚠️ Metinde şu hareketli tarihli özel günler geçiyor: ${matchedMovable.map(m => m.label).join(', ')}. Bunlar hicri takvime göre yıldan yıla kayar veya yıl bazında ayrıca belirlenir — kendi bilgine göre bu dönem için (${[...new Set(chunkPostingDates.map(d => d.getFullYear()))].join('/')}) doğru Miladi tarihi/tarih aralığını belirle ve en yakın paylaşım gününde/günlerinde (varsa 1-2 gün öncesinde hatırlatmayla) isSpecial:true yaparak duyur.`
+    ? ` ${matchedMovable.map(m => m.label).join(', ')} bu dönemde geçiyor olabilir (hicri takvim, yıldan yıla kayar) — kendi bilgine göre ${[...new Set(chunkPostingDates.map(d => d.getFullYear()))].join('/')} için doğru tarihi belirleyip en yakın paylaşım gününde isSpecial:true yap.`
     : ``;
 
-  const coveredMonthNames = [...new Set(chunkPostingDates.map(dt => TR_MONTHS[dt.getMonth()]))].join(`, `);
   // Bu parçanın gerçek tarih aralığını (ay adı değil, tam tarih) açıkça
   // veriyoruz ki AI "Mayıs ayına özgü bir gün" ararken, bu parçanın
   // BAŞLANGICINDAN ÖNCE geçmiş bir tarihi (ör. 19 Mayıs'ı 25 Mayıs'ta
@@ -773,48 +772,42 @@ function buildCalendarPrompt(chunkPostingDays, chunkPostingDates, ctx) {
   // sunmasın — gerçekte yaşanan bir hataydı bu.
   const chunkFirstDate = chunkPostingDates[0];
   const chunkLastDate = chunkPostingDates[chunkPostingDates.length - 1];
+  const coveredMonthNames = [...new Set(chunkPostingDates.map(dt => TR_MONTHS[dt.getMonth()]))].join(`, `);
   const chunkRangeStr = [chunkFirstDate, chunkLastDate].every(Boolean)
     ? `${chunkFirstDate.getDate()} ${TR_MONTHS[chunkFirstDate.getMonth()]} – ${chunkLastDate.getDate()} ${TR_MONTHS[chunkLastDate.getMonth()]} ${chunkLastDate.getFullYear()}`
     : coveredMonthNames;
-  const noSpecialFallback = `⚠️ Kullanıcı bu alanı boş bırakmış. Yine de bu parçanın kapsadığı ${chunkRangeStr} tarih aralığına özgü, işletmenin sektörüyle alakalı genel bir dönemsel/mevsimsel fırsatı (örn. sezonluk bir tema, ilgili bir gün) kendi bilgine dayanarak belirle ve bunun için EN AZ 1 paylaşım gününde isSpecial:true yaparak öne çıkan bir içerik üret. Zorlama bir bahane uydurma; gerçekten o tarihlere özgü, akla yatkın bir şey seç.`;
-  const otherKnownDaysNote = `⚠️ Yukarıdakilere EK olarak: SADECE ${chunkRangeStr} tarih aralığına denk gelen veya bu aralıktan hemen önce/sonra gelen, kullanıcının YAZMAYI UNUTMUŞ OLABİLECEĞİ bilinen resmi/milli bayramları veya sektörle alakalı önemli günleri (varsa) kendi bilgine dayanarak tespit et ve bunlar için de en az birer paylaşım gününde isSpecial:true yaparak içerik üret. ÖNEMLİ: bu tarih aralığının BAŞLANGICINDAN ÖNCE geçmiş bir günü (ör. aralık ${chunkFirstDate ? chunkFirstDate.getDate() + ' ' + TR_MONTHS[chunkFirstDate.getMonth()] : ''} ile başlıyorken bundan önceki bir tarihi) "bugün/yarın kutlu olsun" gibi güncelmiş gibi ASLA sunma — sadece bu parçanın kendi tarih aralığındaki veya ondan SONRAKİ günleri kullan. Kullanıcının belirttiği kampanyaların yerine geçmesin, onlara ek olsun.`;
 
-  const campaignMechanicsNote = `⚠️ ÖNEMLİ: Kampanyanın sayısal koşullarını (indirim oranı, "X alana Y'si bedava" gibi miktar bazlı fırsatlar, tarih vb.) draft metinlerinde ASLA değiştirme, yuvarlama veya farklı bir kampanya yapısına dönüştürme — özellikle başka bir dile çevirirken. Örnek: "3 alana 1'i bedava" ifadesi "buy 3 get 1 free" anlamına gelir (toplam 4 ürün alınır, 3'ünün parası ödenir) — bunu ASLA "3-for-2" veya farklı bir indirim oranıyla ifade etme; sayıları birebir koru.`;
-  const specialNote = special
-    ? `Özel günler/kampanyalar: ${special}\n${campaignMechanicsNote}\n${chunkCampaignTexts.length ? `KESİN TALİMAT — bu eşleşmeleri birebir uygula:\n${chunkCampaignTexts.join('\n')}` : ``}${movableDateNote}${hasDateAnchoredCampaign ? `` : `⚠️ Bu kampanya belirli bir takvim tarihine/haftasına bağlı değil (örn. sürekli geçerli bir indirim/fırsat). Kampanyayı bu parçadaki 3-4 farklı paylaşım gününe dağıt, her birinde FARKLI bir açıdan işle (ürün faydası, aciliyet, müşteri hikayesi, karşılaştırma vb.) ve o günlerde isSpecial:true yap — aynı mesajı tekrarlama.`}\n⚠️ ÖNEMLİ: "Sıra No" etiketi sadece bu listedeki sıralamadır, ayın kaçıncı günü olduğuyla KARIŞTIRMA — "Sıra No 14" ile "ayın 14'ü" birbirinden tamamen bağımsızdır.\n${otherKnownDaysNote}`
-    : `Özel günler/kampanyalar: Yok\n${noSpecialFallback}`;
+  const campaignLine = special
+    ? `${special}${chunkCampaignTexts.length ? ` | Eşleşmeler: ${chunkCampaignTexts.join(' / ')}` : ``}${movableDateNote}${hasDateAnchoredCampaign ? `` : ` Bu kampanya belirli bir tarihe bağlı değil (sürekli geçerli) — 3-4 farklı paylaşım gününe FARKLI açılardan dağıt, tekrar etme.`}`
+    : `Yok — ${chunkRangeStr} aralığına özgü, sektörle alakalı genel bir mevsimsel fırsatı kendi bilgine dayanarak seç, en az 1 günde isSpecial:true yap.`;
 
-  return `Sen bir sosyal medya stratejisti ve içerik uzmanısın. Aşağıdaki işletme için sosyal medya içerik takvimi oluştur.
+  return `Sosyal medya stratejistisin. Aşağıdaki bilgilere göre içerik takvimi üret, SADECE JSON döndür.
 
-İşletme Bilgileri:
-- İşletme: ${biz}
-- Sektör: ${sector}
-- Hedef kitle: ${audience || 'Genel hedef kitle'}
-- Platformlar: ${platformList}
-- Marka tonu: ${tone || 'Profesyonel'} — draft metinlerinde bu tonu belirgin şekilde hissettir, jenerik/nötr ifadelerden kaçın
-- Dil: ${lang}
-- ${specialNote}
+İŞLETME
+- Marka: ${biz} | Sektör: ${sector} | Dil: ${lang} | Ton: ${tone || 'Profesyonel'} (jenerik ifade yok)
+- Platform: ${platformList} | Hedef kitle: ${audience || 'Genel'}
+- Kampanyalar: ${campaignLine}
 
-YALNIZCA şu Sıra No'lar için içerik üret (toplam ${chunkPostingDays.length} gün), her Sıra No'nun takvim tarihi aşağıda verilmiştir:
+KESİN KURALLAR
+1. Kampanya sayılarını (%, adet, tarih) birebir koru; farklı yapıya çevirme (örn. "3 alana 1'i bedava" ≠ "3-for-2" — 4 ürün alınır, 3'ü ödenir).
+2. "Sıra No" = takvim sırası, ayın günü DEĞİL — "day" alanına Sıra No yaz, "Sıra No 14" ile "ayın 14'ü" bağımsızdır.
+3. ${chunkRangeStr} aralığına (veya hemen öncesi/sonrasına) denk gelen, kullanıcının yazmayı unutmuş olabileceği resmi/dini bayram ve sektörel özel günleri kendi bilginle tespit et, isSpecial:true ile EK içerik üret (kullanıcı kampanyasının yerine değil). Bu aralığın BAŞLANGICINDAN ÖNCEKİ bir tarihi asla "bugün/yarın" gibi güncelmiş gibi sunma.
+4. Tekrar eden konu/format olmasın, formatlarda dengeli dağılım yap.
+
+Üretilecek Sıra No'lar (tarihleriyle):
 ${dayDateMap}
-Diğer Sıra No'lar için kesinlikle içerik yazma. "days" dizisi tam olarak ${chunkPostingDays.length} eleman içersin. Çıktıdaki "day" alanına yukarıdaki Sıra No değerini yaz (takvim tarihini değil).
+"days" dizisi tam olarak ${chunkPostingDays.length} eleman içersin, başka Sıra No için içerik yazma.
 
-Her gün için şunları üret:
-- topic: Kısa başlık (maks 8 kelime)
-- format: İçerik formatı (Reels, Statik görsel, Hikaye, Carousel, Blog, Video)
-- platform: Hangi platform için (verilen platformlardan seç)
-- draft: 1-2 cümlelik hazır taslak metin (${lang} dilinde, marka tonuna uygun, kullanıma hazır)
-- isSpecial: true/false (özel gün/kampanya ise true)
+HER GÜN İÇİN ALANLAR
+- day: Sıra No (sayı, yukarıdaki listeden — takvim tarihi değil)
+- topic: maks 8 kelime başlık
+- format: Reels | Statik görsel | Hikaye | Carousel | Blog | Video
+- platform: ${platformList} içinden seç
+- draft: 1-2 cümle, ${lang}, marka tonuna uygun, kullanıma hazır
+- isSpecial: özel gün/kampanya ise true
 
-Tekrar eden içeriklerden kaçın, çeşitlilik sağla. Formatlarda dengeli dağılım yap.
-
-SADECE JSON döndür, açıklama yazma:
-{
-  "days": [
-    { "day": ${chunkPostingDays[0]}, "topic": "...", "format": "...", "platform": "...", "draft": "...", "isSpecial": false }
-  ],
-  "ctaText": "..."
-}`;
+ÇIKTI ŞEMASI
+{"days":[{"day":${chunkPostingDays[0]},"topic":"...","format":"...","platform":"...","draft":"...","isSpecial":false}],"ctaText":"..."}`;
 }
 
 // Dönemi kaç "FETCH parça"sına böleceğimizi belirler — her zaman ~7
