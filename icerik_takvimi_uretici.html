@@ -624,8 +624,19 @@ function resolveCampaigns(special, postingDays, postingDates) {
 
     const campaignStageLabels = [`son çağrı/son gün hatırlatması`, `hatırlatma`, `ilk duyuru/teaser`];
 
+    // "Ayın N'i", "ayın N. haftası" ve "ayın son haftası" gibi İFADELER
+    // her ay tekrar eden bir kurala işaret eder — ama kullanıcı sadece TEK
+    // bir kampanyayı tarif etmiştir, otomatik olarak bir SONRAKİ aya
+    // "uydurulmasını" istemez. 30 günlük dönem iki takvim ayına taşarsa
+    // (ör. 6 Mayıs–4 Haziran), bu kalıpları SADECE dönemin İLK/mevcut
+    // ayında eşleştiriyoruz — aksi halde AI, kullanıcının hiç belirtmediği
+    // "Haziran'ın 20'si" gibi bir ikinci tarihi kendiliğinden üretip
+    // gerçekte var olmayan bir kampanyayı duyurmuş oluyordu (canlıda
+    // yaşanan gerçek bir hataydı bu).
+    const firstMonthOnly = [[...monthsCovered][0]];
+
     dayOfMonthMatches.forEach(domNum => {
-      monthsCovered.forEach(key => {
+      firstMonthOnly.forEach(key => {
         const [y, mo] = key.split(`-`).map(Number);
         const target = new Date(y, mo, domNum, 0, 0, 0);
         const matches = findLastNOnOrBefore(target, 3);
@@ -639,7 +650,7 @@ function resolveCampaigns(special, postingDays, postingDates) {
     });
     const weekLabels = { 1: `ilk`, 2: `ikinci`, 3: `üçüncü`, 4: `dördüncü`, 5: `beşinci` };
     weekNumMatches.forEach(weekNum => {
-      monthsCovered.forEach(key => {
+      firstMonthOnly.forEach(key => {
         const [y, mo] = key.split(`-`).map(Number);
         const { weekStart, weekEnd } = getWeekRange(y, mo, weekNum);
         postingDates.forEach((dt, idx) => {
@@ -650,7 +661,7 @@ function resolveCampaigns(special, postingDays, postingDates) {
       });
     });
     if (lastWeekMatch) {
-      monthsCovered.forEach(key => {
+      firstMonthOnly.forEach(key => {
         const [y, mo] = key.split(`-`).map(Number);
         const { weekStart, weekEnd } = getLastWeekRange(y, mo);
         postingDates.forEach((dt, idx) => {
