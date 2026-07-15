@@ -417,6 +417,12 @@ function renderResults(result) {
 
   if (result.ctaText) document.getElementById('cta-sub').textContent = result.ctaText;
   document.getElementById('test-bot-name').textContent = lastBiz + ' Bot';
+  const fd = lastFormData;
+  document.getElementById('results-sub').textContent = [
+    [fd.biz, fd.sector].every(Boolean) ? `${fd.biz} — ${fd.sector}` : '',
+    fd.services ? `Hizmetler: ${fd.services}` : '',
+    fd.hours ? `Mesai: ${fd.hours}` : '',
+  ].filter(Boolean).join(' · ') || 'Hazır mesaj metinleri ve akış diyagramı oluşturuldu';
 
   // Special messages
   const specials = document.getElementById('special-messages');

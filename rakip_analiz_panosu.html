@@ -583,7 +583,12 @@ function renderResults(result, myData) {
   lastResult = result;
   showLoading(false);
 
-  const { biz, myPlatforms, myPrice, myWeb } = myData;
+  const { biz, sector, myPlatforms, myPrice, myWeb } = myData;
+  document.getElementById('results-sub').textContent = [
+    [biz, sector].every(Boolean) ? `${biz} — ${sector}` : '',
+    myWeb ? myWeb : '',
+    myPlatforms?.length ? `Platformlar: ${myPlatforms.join(', ')}` : '',
+  ].filter(Boolean).join(' · ') || 'Karşılaştırmalı analiz ve aksiyon önerileri hazır';
   const comps = result.competitors || [];
 
   // Comparison table header
@@ -787,7 +792,7 @@ SADECE JSON döndür:
     clearInterval(ticker);
     if (genBtn) { genBtn.disabled = false; genBtn.style.opacity = ''; }
     if (resetBtn) { resetBtn.disabled = false; resetBtn.style.opacity = ''; }
-    renderResults(result, { biz, myPlatforms, myPrice, myWeb });
+    renderResults(result, { biz, sector, myPlatforms, myPrice, myWeb });
   } catch(e) {
     rateData.count++;
     saveRate(rateData);
@@ -795,7 +800,7 @@ SADECE JSON döndür:
     clearInterval(ticker);
     if (genBtn) { genBtn.disabled = false; genBtn.style.opacity = ''; }
     if (resetBtn) { resetBtn.disabled = false; resetBtn.style.opacity = ''; }
-    renderResults(fallback(biz, comps), { biz, myPlatforms, myPrice, myWeb });
+    renderResults(fallback(biz, comps), { biz, sector, myPlatforms, myPrice, myWeb });
   }
 }
 

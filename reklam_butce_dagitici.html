@@ -483,6 +483,13 @@ function renderResults(rows, aiData) {
   lastSuggestions = aiData.suggestions || [];
   showLoading(false);
 
+  const fd = lastFormData;
+  document.getElementById('results-sub').textContent = [
+    [fd.biz, fd.sector].every(Boolean) ? `${fd.biz} — ${fd.sector}` : '',
+    fd.budget ? `Bütçe: ${Number(fd.budget).toLocaleString('tr-TR')} TL` : '',
+    fd.goal ? `Hedef: ${fd.goal}` : '',
+  ].filter(Boolean).join(' · ') || 'Kanal bazlı analiz ve öneriler hazır';
+
   const totalBudget = rows.reduce((a, b) => a + b.budget, 0);
   const totalClicks = rows.reduce((a, b) => a + b.clicks, 0);
   const totalLeads = rows.reduce((a, b) => a + b.leads, 0);

@@ -253,6 +253,8 @@ input:focus,select:focus{border-color:#1D9E75;box-shadow:0 0 0 3px rgba(29,158,1
   <!-- RESULTS -->
   <div class="results" id="results-section">
 
+    <p id="results-sub" style="font-size:13px;color:#6B6963;margin-bottom:1rem"></p>
+
     <!-- Skor hero -->
     <div class="score-card">
       <div class="score-ring" id="score-ring">
@@ -477,14 +479,14 @@ async function startAnalysis() {
     saveRate(rateData);
     updateRateBar();
     if (genBtn) { genBtn.disabled = false; genBtn.style.opacity = ''; }
-    renderResult(JSON.parse(clean), name, sector, platforms, web);
+    renderResult(JSON.parse(clean), { name, sector, city, web, platforms, goal, liExists, liActive });
   } catch(e) {
     clearInterval(ticker);
     rateData.count++;
     saveRate(rateData);
     updateRateBar();
     if (genBtn) { genBtn.disabled = false; genBtn.style.opacity = ''; }
-    renderResult(generateFallback(name, sector, platforms, web, liExists, liActive), name, sector, platforms, web);
+    renderResult(generateFallback(name, sector, platforms, web, liExists, liActive), { name, sector, city, web, platforms, goal, liExists, liActive });
   }
 }
 
@@ -521,7 +523,19 @@ function generateFallback(name, sector, platforms, web, liExists, liActive) {
   };
 }
 
-function renderResult(r) {
+let lastFormContext = {};
+
+function renderResult(r, ctx) {
+  lastFormContext = ctx || {};
+  const platformsText = ctx?.platforms?.length ? ctx.platforms.join(', ') : 'hiçbiri';
+  document.getElementById('results-sub').textContent = [
+    [ctx?.name, ctx?.sector].every(Boolean) ? `${ctx.name} — ${ctx.sector}` : '',
+    ctx?.city ? ctx.city : '',
+    ctx?.web ? ctx.web : '',
+    `Platformlar: ${platformsText}`,
+    ctx?.goal ? `Aylık hedef: ${ctx.goal} yeni müşteri` : '',
+  ].filter(Boolean).join(' · ');
+
   const score = Math.round(r.score);
   document.getElementById('score-num').textContent = score;
   document.getElementById('score-title').textContent = r.level + ' seviye';
@@ -561,19 +575,38 @@ function escHtml(s) {
 }
 
 function downloadTxt() {
-  const name = document.getElementById('f-name')?.value || '';
-  const sector = document.getElementById('f-sector')?.value || '';
-  const city = document.getElementById('f-city')?.value || '';
+  const ctx = lastFormContext || {};
+  const name = ctx.name || document.getElementById('f-name')?.value || '';
+  const sector = ctx.sector || document.getElementById('f-sector')?.value || '';
+  const city = ctx.city || document.getElementById('f-city')?.value || '';
+  const web = ctx.web || document.getElementById('f-web')?.value || '';
+  const goal = ctx.goal || document.getElementById('f-goal')?.value || '';
+  const platforms = ctx.platforms || [];
+  const liInfo = ctx.liExists === 'evet'
+    ? 'var' + (ctx.liActive === 'evet' ? ' / düzenli paylaşım yapılıyor' : ctx.liActive === 'hayir' ? ' / aktif değil' : '')
+    : ctx.liExists === 'hayir' ? 'yok' : '';
   const scoreEl = document.getElementById('score-num');
   const score = scoreEl ? scoreEl.textContent : '';
+  const level = document.getElementById('score-title')?.textContent || '';
+  const summary = document.getElementById('score-sub')?.textContent || '';
   const items = [...document.querySelectorAll('#items-list .item-card')].map(card => {
     const nm = card.querySelector('.item-name')?.textContent?.trim() || '';
     const desc = card.querySelector('.item-desc')?.textContent?.trim() || '';
     return '• ' + nm + ': ' + desc;
   }).join('\n');
   const text = [
-    'İşletme: ' + name, 'Sektör: ' + sector, 'Şehir: ' + city,
-    '', 'Görünürlük Skoru: ' + score + '/100', '', 'Aksiyonlar:', items
+    'İşletme: ' + name,
+    'Sektör: ' + sector,
+    'Şehir: ' + city,
+    web ? 'Web sitesi: ' + web : '',
+    platforms.length ? 'Platformlar: ' + platforms.join(', ') : '',
+    liInfo ? 'LinkedIn: ' + liInfo : '',
+    goal ? 'Aylık hedef: ' + goal + ' yeni müşteri' : '',
+    '',
+    'Görünürlük Skoru: ' + score + '/100 (' + level + ')',
+    summary,
+    '',
+    'Aksiyonlar:', items
   ].join('\n');
   const blob = new Blob([text], {type:'text/plain;charset=utf-8'});
   const a = document.createElement('a');

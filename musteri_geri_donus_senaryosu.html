@@ -360,6 +360,13 @@ function renderResults(result) {
   lastSteps = result.steps || [];
   showLoading(false);
 
+  const fd = lastFormData;
+  document.getElementById('results-sub').textContent = [
+    [fd.biz, fd.sector].every(Boolean) ? `${fd.biz} — ${fd.sector}` : '',
+    fd.service ? `Hizmet: ${fd.service}` : '',
+    fd.frequency ? `Satın alma sıklığı: ${fd.frequency}` : '',
+  ].filter(Boolean).join(' · ') || 'Hazır mesaj taslakları ve zamanlama planı oluşturuldu';
+
 const list = document.getElementById('steps-list');
   list.innerHTML = lastSteps.map(s => {
     const icon = s.channelIcon || CHANNEL_ICONS_MAP[s.channel] || 'ti-message';
