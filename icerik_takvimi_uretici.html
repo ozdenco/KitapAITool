@@ -984,18 +984,27 @@ async function generate() {
   const ticker = setInterval(() => { mi=(mi+1)%loadingMsgs.length; msgEl.textContent=loadingMsgs[mi]; }, 1800);
 
   try {
-    // İlk sekme (1. Hafta) SADECE kendi tek haftalık fetch parçasını ister
-    // — artık hiçbir sekme birden fazla parçayı paralel istemiyor.
+    // Tüm haftalık parçalar "Oluştur" butonuna TEK basışta, SIRAYLA (paralel
+    // DEĞİL — aynı anda birden fazla bağlantı hosting'de soruna yol açmıştı)
+    // önceden yüklenir. Böylece sekmeler arasında geçiş yaparken YENİ bir AI
+    // çağrısı tetiklenmez (ne ek bekleme ne de günlük kullanım hakkı
+    // harcanır) — kullanıcı sadece başlangıçta bir kez bekler, sonrasında
+    // tüm haftalar anında görüntülenebilir. Bu, projenin ilk tasarımındaki
+    // davranışa (tek işlemde tüm ay, sekmeler salt gösterim amaçlı) dönüştür.
     currentTabIndex = 0;
-    const firstTab = viewTabs[0];
-    const eagerGroups = firstTab.fetchGroupIds.map(id => chunkGroups.find(g => g.id === id)).filter(Boolean);
-    const results = await Promise.all(eagerGroups.map(g => fetchAndMergeGroup(g, startDate)));
+    clearInterval(ticker);
+    let firstCtaText;
+    for (let i = 0; i < chunkGroups.length; i++) {
+      msgEl.textContent = `${i + 1}. hafta hazırlanıyor (${i + 1}/${chunkGroups.length})...`;
+      const result = await fetchAndMergeGroup(chunkGroups[i], startDate);
+      if (i === 0) firstCtaText = result?.ctaText;
+    }
     rateData.count++;
     saveRate(rateData);
     updateRateBar();
     clearInterval(ticker);
     if (genBtn) { genBtn.disabled = false; genBtn.style.opacity = ``; }
-    renderResultsShell(results[0]?.ctaText);
+    renderResultsShell(firstCtaText);
   } catch(e) {
     rateData.count++;
     saveRate(rateData);
@@ -1029,53 +1038,15 @@ function renderResultsShell(ctaText) {
   renderDays(allDays.filter(d => [d.day >= tab.dayStart, d.day <= tab.dayEnd].every(Boolean)));
 }
 
-function renderLoadingWeek() {
-  const grid = document.getElementById(`days-grid`);
-  grid.innerHTML = `<div style="text-align:center;padding:3rem 1rem"><div class="spinner" style="margin:0 auto 1.25rem"></div><p style="font-size:14px;color:#6B6963">İçerikler hazırlanıyor...</p></div>`;
-}
-function renderWeekLoadError(e) {
-  const grid = document.getElementById(`days-grid`);
-  const msg = e?.message === `RATE_LIMIT`
-    ? `Günlük limit doldu, yarın tekrar deneyin.`
-    : `Bu bölüm yüklenemedi. Yapay zeka meşgul olabilir — sekmeye tekrar tıklayarak deneyin.`;
-  grid.innerHTML = `<div style="text-align:center;padding:3rem 1rem;color:#A32D2D;font-size:14px">${escHtml(msg)}</div>`;
-}
-
-async function showTab(tabIndex, btn) {
+// generate() artık TÜM haftaları önceden sırayla yüklediği için sekme
+// değiştirmek salt bir GÖSTERİM işlemidir — yeni bir AI çağrısı tetiklemez,
+// günlük kullanım hakkı harcamaz.
+function showTab(tabIndex, btn) {
   currentTabIndex = tabIndex;
   document.querySelectorAll(`.wtab`).forEach(t => t.classList.remove(`active`));
   btn.classList.add(`active`);
 
   const tab = viewTabs[tabIndex];
-  const missingGroups = tab.fetchGroupIds.map(id => chunkGroups.find(g => g.id === id)).filter(Boolean).filter(g => !loadedGroupIds.has(g.id));
-  if (missingGroups.length) {
-    const rateData = getRateData();
-    if (rateData.count >= DAILY_LIMIT) {
-      const grid = document.getElementById(`days-grid`);
-      grid.innerHTML = `<div style="text-align:center;padding:3rem 1rem;color:#A32D2D;font-size:14px">Günlük kullanım limitiniz (${DAILY_LIMIT}) doldu. Yarın tekrar deneyin.</div>`;
-      return;
-    }
-    renderLoadingWeek();
-    try {
-      await Promise.all(missingGroups.map(g => fetchAndMergeGroup(g, getStartDate())));
-      rateData.count++;
-      saveRate(rateData);
-      updateRateBar();
-    } catch(e) {
-      rateData.count++;
-      saveRate(rateData);
-      updateRateBar();
-      // Kullanıcı beklerken başka bir sekmeye geçmiş olabilir — o zaman bu
-      // gecikmiş hata mesajını, artık görüntülenmekte olan farklı sekmenin
-      // üzerine YAZMA. Yalnızca hâlâ bu sekmedeysek hata göster.
-      if (currentTabIndex === tabIndex) renderWeekLoadError(e);
-      return;
-    }
-    // Fetch tamamlandı ama bu sırada kullanıcı başka bir sekmeye geçtiyse,
-    // o sekmenin içeriğini bu geç gelen sonuçla EZME.
-    if (currentTabIndex !== tabIndex) return;
-  }
-
   const tabDays = allDays.filter(d => [d.day >= tab.dayStart, d.day <= tab.dayEnd].every(Boolean));
   renderDays(tabDays);
 }
