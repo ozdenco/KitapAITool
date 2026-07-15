@@ -241,7 +241,7 @@ tr:last-child td{border-bottom:none}
   <div class="results" id="results-section">
     <div class="results-header">
       <h2>Reklam Bütçe Dağılımı</h2>
-      <p id="results-sub">Kanal bazlı analiz ve öneriler hazır</p>
+      <p id="results-sub" style="white-space:pre-line">Kanal bazlı analiz ve öneriler hazır</p>
     </div>
 
     <!-- Summary -->
@@ -488,7 +488,7 @@ function renderResults(rows, aiData) {
     [fd.biz, fd.sector].every(Boolean) ? `${fd.biz} — ${fd.sector}` : '',
     fd.budget ? `Bütçe: ${Number(fd.budget).toLocaleString('tr-TR')} TL` : '',
     fd.goal ? `Hedef: ${fd.goal}` : '',
-  ].filter(Boolean).join(' · ') || 'Kanal bazlı analiz ve öneriler hazır';
+  ].filter(Boolean).join('\n') || 'Kanal bazlı analiz ve öneriler hazır';
 
   const totalBudget = rows.reduce((a, b) => a + b.budget, 0);
   const totalClicks = rows.reduce((a, b) => a + b.clicks, 0);

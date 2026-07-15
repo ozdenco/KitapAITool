@@ -215,7 +215,7 @@ input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3p
     <div class="results-top">
       <div>
         <h2 id="results-title">WhatsApp Satış Scriptleri</h2>
-        <p id="results-sub">5 hazır mesaj şablonu</p>
+        <p id="results-sub" style="white-space:pre-line">5 hazır mesaj şablonu</p>
       </div>
       <div class="action-row">
         <button class="btn-sm" onclick="downloadTxt()"><i class="ti ti-download" aria-hidden="true"></i> .txt İndir</button>
@@ -547,7 +547,7 @@ function renderResults(data, biz) {
     fd.service ? `Hizmet/Ürün: ${fd.service}` : '',
     fd.price ? `Fiyat: ${fd.price}` : '',
     fd.target ? `Hedef müşteri: ${fd.target}` : '',
-  ].filter(Boolean).join(' · ') || '5 adımlık hazır satış akışı';
+  ].filter(Boolean).join('\n') || '5 adımlık hazır satış akışı';
   document.getElementById('cta-sub').textContent = data.ctaText || 'Mesajları hangi müşteriye ne zaman atacağınızı birlikte planlayalım.';
 
   const grid = document.getElementById('scripts-grid');

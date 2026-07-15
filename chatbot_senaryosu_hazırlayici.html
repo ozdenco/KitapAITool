@@ -252,7 +252,7 @@ input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3p
   <div class="results" id="results-section">
     <div class="results-header">
       <h2>Chatbot Akış Senaryosu</h2>
-      <p id="results-sub">Hazır mesaj metinleri ve akış diyagramı oluşturuldu</p>
+      <p id="results-sub" style="white-space:pre-line">Hazır mesaj metinleri ve akış diyagramı oluşturuldu</p>
     </div>
 
     <!-- Welcome & Special Messages -->
@@ -422,7 +422,7 @@ function renderResults(result) {
     [fd.biz, fd.sector].every(Boolean) ? `${fd.biz} — ${fd.sector}` : '',
     fd.services ? `Hizmetler: ${fd.services}` : '',
     fd.hours ? `Mesai: ${fd.hours}` : '',
-  ].filter(Boolean).join(' · ') || 'Hazır mesaj metinleri ve akış diyagramı oluşturuldu';
+  ].filter(Boolean).join('\n') || 'Hazır mesaj metinleri ve akış diyagramı oluşturuldu';
 
   // Special messages
   const specials = document.getElementById('special-messages');

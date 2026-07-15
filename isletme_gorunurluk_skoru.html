@@ -253,7 +253,7 @@ input:focus,select:focus{border-color:#1D9E75;box-shadow:0 0 0 3px rgba(29,158,1
   <!-- RESULTS -->
   <div class="results" id="results-section">
 
-    <p id="results-sub" style="font-size:13px;color:#6B6963;margin-bottom:1rem"></p>
+    <p id="results-sub" style="font-size:13px;color:#6B6963;margin-bottom:1rem;white-space:pre-line"></p>
 
     <!-- Skor hero -->
     <div class="score-card">
@@ -534,7 +534,7 @@ function renderResult(r, ctx) {
     ctx?.web ? ctx.web : '',
     `Platformlar: ${platformsText}`,
     ctx?.goal ? `Aylık hedef: ${ctx.goal} yeni müşteri` : '',
-  ].filter(Boolean).join(' · ');
+  ].filter(Boolean).join('\n');
 
   const score = Math.round(r.score);
   document.getElementById('score-num').textContent = score;

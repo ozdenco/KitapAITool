@@ -241,7 +241,7 @@ input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3p
   <div class="results" id="results-section">
     <div class="results-header">
       <h2>5 Adımlı Müşteri Takip Senaryosu</h2>
-      <p id="results-sub">Hazır mesaj taslakları ve zamanlama planı oluşturuldu</p>
+      <p id="results-sub" style="white-space:pre-line">Hazır mesaj taslakları ve zamanlama planı oluşturuldu</p>
     </div>
 
 <div class="steps-list" id="steps-list"></div>
@@ -365,7 +365,7 @@ function renderResults(result) {
     [fd.biz, fd.sector].every(Boolean) ? `${fd.biz} — ${fd.sector}` : '',
     fd.service ? `Hizmet: ${fd.service}` : '',
     fd.frequency ? `Satın alma sıklığı: ${fd.frequency}` : '',
-  ].filter(Boolean).join(' · ') || 'Hazır mesaj taslakları ve zamanlama planı oluşturuldu';
+  ].filter(Boolean).join('\n') || 'Hazır mesaj taslakları ve zamanlama planı oluşturuldu';
 
 const list = document.getElementById('steps-list');
   list.innerHTML = lastSteps.map(s => {
