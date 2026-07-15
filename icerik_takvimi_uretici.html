@@ -832,21 +832,24 @@ SADECE JSON döndür, açıklama yazma:
 // BAĞIMSIZ, muhtemelen bir ters proxy'nin) bağlantı zaman aşımına takılıp
 // n8n'de BAŞARILI tamamlanmasına rağmen tarayıcıya hiç ulaşmamasına yol
 // açıyordu — gerçek, canlıda tekrarlanan bir hataydı bu.
+// Canlı testte (10-11 Temmuz, 5 ardışık çalıştırma) tüm ayın TEK istekte
+// istenmesi tutarlı şekilde ~45sn-1dk16sn'de tamamlandı — tek istek/tek
+// workflow yaklaşımı kanıtlanmış şekilde hızlı ve güvenilir. Bu yüzden
+// FETCH parçası her zaman tek bir grup: tüm 30 gün.
 function computeChunkGroups(weekdayCount) {
-  return [1, 2, 3, 4, 5].map(w => ({ id: w - 1, dayStart: (w - 1) * 7 + 1, dayEnd: Math.min((w - 1) * 7 + 7, 30) }));
+  return [{ id: 0, dayStart: 1, dayEnd: 30 }];
 }
 
-// Kullanıcıya gösterilen SEKMELER artık fetch parçalarıyla BİREBİR
-// eşleşiyor (eski, hafta hafta gösterilen format) — her sekme SADECE bir
-// haftalık parçayı ister, asla iki parçayı paralel istemez. Bu hem daha
-// güvenilir (her istek küçük ve tek başına) hem de eski davranışa dönüş.
+// Kullanıcıya gösterilen SEKMELER salt GÖSTERİM amaçlı — tek bir AI
+// isteğiyle gelen tüm 30 günlük veri, haftalara göre istemci tarafında
+// dilimlenip sekmelerde gösterilir. Sekmeye tıklamak YENİ bir istek
+// tetiklemez (zaten tüm veri elde).
 function computeViewTabs(weekdayCount) {
-  const groups = computeChunkGroups(weekdayCount);
-  return groups.map((g, i) => ({
-    label: `${i + 1}. Hafta`,
-    dayStart: g.dayStart,
-    dayEnd: g.dayEnd,
-    fetchGroupIds: [g.id],
+  return [1, 2, 3, 4, 5].map(w => ({
+    label: `${w}. Hafta`,
+    dayStart: (w - 1) * 7 + 1,
+    dayEnd: Math.min((w - 1) * 7 + 7, 30),
+    fetchGroupIds: [0],
   }));
 }
 
@@ -984,20 +987,16 @@ async function generate() {
   const ticker = setInterval(() => { mi=(mi+1)%loadingMsgs.length; msgEl.textContent=loadingMsgs[mi]; }, 1800);
 
   try {
-    // Tüm haftalık parçalar "Oluştur" butonuna TEK basışta, SIRAYLA (paralel
-    // DEĞİL — aynı anda birden fazla bağlantı hosting'de soruna yol açmıştı)
-    // önceden yüklenir. Böylece sekmeler arasında geçiş yaparken YENİ bir AI
-    // çağrısı tetiklenmez (ne ek bekleme ne de günlük kullanım hakkı
-    // harcanır) — kullanıcı sadece başlangıçta bir kez bekler, sonrasında
-    // tüm haftalar anında görüntülenebilir. Bu, projenin ilk tasarımındaki
-    // davranışa (tek işlemde tüm ay, sekmeler salt gösterim amaçlı) dönüştür.
+    // Tüm ay TEK istekte ("Oluştur" butonuna tek basışta) alınır — canlı
+    // testte kanıtlanmış şekilde hızlı ve güvenilir (~45sn-1dk16sn).
+    // Sekmeler bu tek sonucu istemci tarafında haftalara böler; sekmeye
+    // tıklamak YENİ bir AI çağrısı tetiklemez, günlük kullanım hakkı
+    // harcamaz.
     currentTabIndex = 0;
-    clearInterval(ticker);
     let firstCtaText;
-    for (let i = 0; i < chunkGroups.length; i++) {
-      msgEl.textContent = `${i + 1}. hafta hazırlanıyor (${i + 1}/${chunkGroups.length})...`;
-      const result = await fetchAndMergeGroup(chunkGroups[i], startDate);
-      if (i === 0) firstCtaText = result?.ctaText;
+    for (const group of chunkGroups) {
+      const result = await fetchAndMergeGroup(group, startDate);
+      if (firstCtaText === undefined) firstCtaText = result?.ctaText;
     }
     rateData.count++;
     saveRate(rateData);
