@@ -327,10 +327,16 @@ const TR_BENCHMARKS = {
   'YouTube':       { cpc_tl: 2,  ctr: 0.003, cvr: 0.008 },
 };
 
+// Her hedef için TÜM seçilebilir kanallara (Google Arama, Google Display,
+// Meta, Instagram, LinkedIn, TikTok, YouTube) ağırlık tanımlanmalı — eksik
+// bırakılan bir kanal calculateDistribution() tarafından sessizce
+// tablodan düşürülüyordu (seçili olsa bile 0 TL bile göstermeden yok
+// oluyordu). Bu, kullanıcının seçtiği kanalların bir kısmının hiç
+// görünmemesine yol açan gerçek bir hataydı.
 const GOAL_WEIGHTS = {
-  'Marka Bilinirliği': { 'Google Display': 30, 'YouTube': 25, 'Meta (FB+IG)': 25, 'Instagram': 20 },
-  'Lead Toplama':      { 'Google Arama': 40, 'Meta (FB+IG)': 30, 'LinkedIn': 20, 'Google Display': 10 },
-  'Satış Artırma':     { 'Google Arama': 50, 'Meta (FB+IG)': 30, 'Instagram': 20 },
+  'Marka Bilinirliği': { 'Google Display': 25, 'YouTube': 20, 'Meta (FB+IG)': 20, 'Instagram': 15, 'LinkedIn': 10, 'Google Arama': 5, 'TikTok': 5 },
+  'Lead Toplama':      { 'Google Arama': 30, 'Meta (FB+IG)': 25, 'LinkedIn': 15, 'Google Display': 10, 'Instagram': 10, 'YouTube': 5, 'TikTok': 5 },
+  'Satış Artırma':     { 'Google Arama': 40, 'Meta (FB+IG)': 25, 'Instagram': 15, 'Google Display': 8, 'LinkedIn': 4, 'YouTube': 4, 'TikTok': 4 },
 };
 
 const CHANNEL_ICONS = {
@@ -390,13 +396,15 @@ function getGoal() {
 
 function calculateDistribution(channels, goal, totalBudget) {
   const weights = GOAL_WEIGHTS[goal] || {};
+  // Seçili her kanal MUTLAKA tabloda görünür — GOAL_WEIGHTS'te o hedef için
+  // ağırlığı tanımlı değilse (ör. ileride eklenecek yeni bir kanal/hedef
+  // kombinasyonu) kanalı sessizce atlamak yerine düşük bir varsayılan
+  // ağırlıkla dahil ediyoruz.
+  const DEFAULT_WEIGHT = 5;
   let filtered = {};
   channels.forEach(ch => {
-    if (weights[ch] !== undefined) filtered[ch] = weights[ch];
+    filtered[ch] = weights[ch] !== undefined ? weights[ch] : DEFAULT_WEIGHT;
   });
-  if (Object.keys(filtered).length === 0) {
-    channels.forEach(ch => { filtered[ch] = 1; });
-  }
   const total = Object.values(filtered).reduce((a, b) => a + b, 0);
   const result = [];
   let remaining = totalBudget;
