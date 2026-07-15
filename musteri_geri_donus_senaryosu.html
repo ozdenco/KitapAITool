@@ -366,6 +366,9 @@ function renderResults(result) {
     [fd.biz, fd.sector].every(Boolean) ? `${fd.biz} — ${fd.sector}` : '',
     fd.service ? `Hizmet: ${fd.service}` : '',
     fd.frequency ? `Satın alma sıklığı: ${fd.frequency}` : '',
+    [fd.channels, fd.channels?.length].every(Boolean) ? `Takip kanalları: ${fd.channels.join(', ')}` : '',
+    fd.currentMethod ? `Mevcut yöntem: ${fd.currentMethod}` : '',
+    fd.note ? `Not: ${fd.note}` : '',
   ].filter(Boolean).join('\n') || 'Hazır mesaj taslakları ve zamanlama planı oluşturuldu';
 
 const list = document.getElementById('steps-list');
