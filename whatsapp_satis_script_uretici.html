@@ -345,6 +345,7 @@ const stepMeta = [
 ];
 
 let allScripts = [];
+let lastFormData = {};
 
 function getChecked(groupId) {
   return [...document.querySelectorAll(`#${groupId} input:checked`)].map(el => el.value);
@@ -389,6 +390,7 @@ async function generate() {
   }
   err.style.display = 'none';
 
+  lastFormData = { biz, sector, service, price, target, objections, advantage };
   clearResults();
   showLoading(true);
   const genBtn = document.getElementById('gen-btn') || document.getElementById('analyze-btn') || document.getElementById('generate-btn');
@@ -494,7 +496,7 @@ SADECE JSON döndür, başka hiçbir şey yazma:
     incrementUsage();
     updateRateBar();
     if (genBtn) { genBtn.disabled = false; genBtn.style.opacity = ''; }
-    renderResults(fallback(biz, sector, objections, service, price, target, advantage));
+    renderResults(fallback(biz, sector, objections, service, price, target, advantage), biz);
   }
 }
 
@@ -539,7 +541,13 @@ function fallback(biz, sector, objections, service, price, target, advantage) {
 function renderResults(data, biz) {
   allScripts = data.scripts;
   document.getElementById('results-title').textContent = `${biz} — WhatsApp Satış Scriptleri`;
-  document.getElementById('results-sub').textContent = '5 adımlık hazır satış akışı';
+  const fd = lastFormData;
+  document.getElementById('results-sub').textContent = [
+    fd.sector ? `Sektör: ${fd.sector}` : '',
+    fd.service ? `Hizmet/Ürün: ${fd.service}` : '',
+    fd.price ? `Fiyat: ${fd.price}` : '',
+    fd.target ? `Hedef müşteri: ${fd.target}` : '',
+  ].filter(Boolean).join(' · ') || '5 adımlık hazır satış akışı';
   document.getElementById('cta-sub').textContent = data.ctaText || 'Mesajları hangi müşteriye ne zaman atacağınızı birlikte planlayalım.';
 
   const grid = document.getElementById('scripts-grid');
