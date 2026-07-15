@@ -108,6 +108,7 @@ input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3p
   header,footer,nav,aside,#wpadminbar,#masthead,#colophon,.site-header,.site-footer,.widget-area,.sidebar,.elementor-location-header,.elementor-location-footer{display:none!important}
   .form-card,.brand{display:none!important}
   .results{display:block!important}
+  #results-sub{display:block!important}
   .loading{display:none!important}
   .btn-primary,.btn-secondary,.btn-sm,.actions,.cta-box,.reset-link{display:none!important}
 }
@@ -247,7 +248,7 @@ input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3p
   <div class="results" id="results-section">
     <div class="results-header">
       <h2>Müşteri Persona Kartları</h2>
-      <p id="results-sub">3 farklı hedef müşteri profili oluşturuldu</p>
+      <p id="results-sub" style="white-space:pre-line;display:none">3 farklı hedef müşteri profili oluşturuldu</p>
     </div>
     <div class="personas-grid" id="personas-grid"></div>
     <div class="actions">
@@ -506,7 +507,16 @@ function renderPersonas(data, biz) {
   allPersonasData = data.personas;
   const grid = document.getElementById('personas-grid');
   grid.innerHTML = '';
-  document.getElementById('results-sub').textContent = `${biz} için ${data.personas.length} farklı hedef müşteri profili`;
+  const fd = lastFormData;
+  document.getElementById('results-sub').textContent = [
+    [fd.biz, fd.sector].every(Boolean) ? `${fd.biz} — ${fd.sector}` : '',
+    fd.city ? `Şehir: ${fd.city}` : '',
+    fd.service ? `Hizmet/Ürün: ${fd.service}` : '',
+    fd.age ? `Hedef yaş: ${fd.age}` : '',
+    fd.price ? `Fiyat segmenti: ${fd.price}` : '',
+    fd.current ? `Mevcut müşteri özellikleri: ${fd.current}` : '',
+    [fd.pains, fd.pains?.length].every(Boolean) ? `Müşteri öncelikleri: ${fd.pains.join(', ')}` : '',
+  ].filter(Boolean).join('\n') || `${biz} için ${data.personas.length} farklı hedef müşteri profili`;
   document.getElementById('cta-sub').textContent = data.ctaText;
 
   data.personas.forEach((p, i) => {
