@@ -86,7 +86,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const data = $input.first().json;\nlet text = data.choices?.[0]?.message?.content || '';\nconst jsonStart = text.indexOf('{');\nconst jsonEnd = text.lastIndexOf('}');\nif (jsonStart !== -1 && jsonEnd !== -1) text = text.slice(jsonStart, jsonEnd + 1);\nreturn [{ json: { content: [{ type: 'text', text }], jobId: data.jobId } }];"
+        "jsCode": "// ÖNEMLİ: MiniMax API (httpRequest) düğümünün çıktısı, KENDİ HTTP yanıt\n// gövdesidir — girdi alanlarını (jobId dahil) OTOMATİK TAŞIMAZ. Bu yüzden\n// jobId'yi $input.first().json.jobId ile değil, ismiyle referans vererek\n// (Build Request Body düğümünün çıktısından) alıyoruz — aksi halde jobId\n// undefined olur ve Save Job Result yanlış anahtara (staticData.jobs[undefined])\n// yazar, bu da /status ucunun asla gerçek sonucu bulamamasına yol açardı\n// (canlıda tespit edilen gerçek bir hataydı bu).\nconst data = $input.first().json;\nlet text = data.choices?.[0]?.message?.content || '';\nconst jsonStart = text.indexOf('{');\nconst jsonEnd = text.lastIndexOf('}');\nif (jsonStart !== -1 && jsonEnd !== -1) text = text.slice(jsonStart, jsonEnd + 1);\nconst jobId = $('Build Request Body').item.json.jobId;\nreturn [{ json: { content: [{ type: 'text', text }], jobId } }];"
       },
       "id": "response-transform",
       "name": "Response Transform",
@@ -112,7 +112,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// MiniMax API hata verirse (timeout, 5xx vb.) job kaydını 'error' olarak\n// işaretler. NOT: n8n'in continueErrorOutput hata çıktısı, orijinal girdi\n// alanlarını (jobId dahil) her zaman garanti etmeyebilir — canlıda ilk\n// hatalı çalıştırmadan sonra $json.jobId boş geliyorsa, MiniMax API\n// düğümünün \"Always Output Data\" seçeneğini açıp burada $json içeriğini\n// (n8n execution log'undan) kontrol edip gerekirse eşlemeyi güncelleyin.\nconst data = $input.first().json;\nconst jobId = data.jobId || data.json?.jobId;\nif (jobId) {\n  const staticData = $getWorkflowStaticData('global');\n  if (!staticData.jobs) staticData.jobs = {};\n  staticData.jobs[jobId] = { status: 'error', error: data.error?.message || data.message || 'AI isteği başarısız', completedAt: Date.now() };\n}\nreturn [{ json: { ok: false, jobId } }];"
+        "jsCode": "// MiniMax API hata verirse (timeout, 5xx vb.) job kaydını 'error' olarak\n// işaretler. jobId'yi hata çıktısından DEĞİL, Build Request Body'nin\n// çıktısından ismiyle referans vererek alıyoruz — httpRequest düğümünün\n// hata çıktısı da (tıpkı başarı çıktısı gibi) girdi alanlarını otomatik\n// taşımaz (bkz. Response Transform'daki aynı düzeltme).\nconst data = $input.first().json;\nconst jobId = $('Build Request Body').item.json.jobId;\nif (jobId) {\n  const staticData = $getWorkflowStaticData('global');\n  if (!staticData.jobs) staticData.jobs = {};\n  staticData.jobs[jobId] = { status: 'error', error: data.error?.message || data.message || 'AI isteği başarısız', completedAt: Date.now() };\n}\nreturn [{ json: { ok: false, jobId } }];"
       },
       "id": "save-job-error",
       "name": "Save Job Error",

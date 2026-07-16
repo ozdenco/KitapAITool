@@ -108,6 +108,25 @@ TRIGİĞİNE hiç bağımlı olmayacak şekilde ikiye bölündü:
   koparsa bile, n8n isteği ALDIĞI an bu workflow'un execution'ı başlar ve
   bağımsız şekilde tamamlanana kadar (AI çağrısı dahil) çalışmaya devam eder.
 
+**DÜZELTİLEN BAŞKA BİR HATA (v2, canlı testte bulundu):** İlk versiyonda
+"Respond With Job ID" düğümü `$json.jobId` ifadesini kullanıyordu — ama
+ondan hemen önceki "Trigger Worker" bir HTTP çağrısı olduğu için `$json`
+artık Worker'ın ack yanıtına işaret ediyordu, `Generate Job`'ın ürettiği
+jobId'ye değil. Sonuç: `job_id` alanı yanıttan sessizce düşüyordu
+(`JSON.stringify` `undefined` alanları atar), tarayıcı da anında
+"Takvim oluşturulamadı" hatası veriyordu. AYNI hata deseni Worker
+workflow'unda da vardı ("Response Transform" ve "Save Job Error" düğümleri
+`MiniMax API`'nin YANITINDAN jobId okumaya çalışıyordu, ama o yanıt da
+kendi HTTP gövdesiyle jobId'yi eziyordu — bu, sonucun `staticData.jobs`'a
+YANLIŞ anahtarla [`undefined`] yazılmasına yol açardı). Düzeltme: her
+ikisinde de jobId artık `$('Düğüm Adı').item.json.jobId` şeklinde AÇIKÇA
+isimlendirilmiş bir düğüm referansından okunuyor — n8n'de bir HTTP Request
+düğümünden sonra girdi alanlarının otomatik taşınmadığını unutmayın, her
+zaman `$('NodeName').item.json...` kullanın. **Bu düzeltmeyi içeren
+JSON'ları yeniden import etmeniz gerekiyor** (eski import'ları güncellemek
+için: workflow'u açıp ilgili düğümleri elle düzeltebilir VEYA JSON'u
+yeniden import edip node ID'lerinin eşleştiğinden emin olun).
+
 **Import adımları:**
 1. n8n → Workflows → mevcut `kolay-kobi-takvim.json`'ı **Deactivate** et
    (aynı webhook path'i iki workflow'da aktif olamaz)

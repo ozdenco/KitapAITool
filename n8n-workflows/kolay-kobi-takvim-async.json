@@ -127,7 +127,7 @@
     {
       "parameters": {
         "respondWith": "json",
-        "responseBody": "={{ JSON.stringify({ job_id: $json.jobId, status: 'pending' }) }}",
+        "responseBody": "={{ JSON.stringify({ job_id: $('Generate Job').item.json.jobId, status: 'pending' }) }}",
         "options": {
           "responseCode": 202,
           "responseHeaders": {
