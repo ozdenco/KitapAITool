@@ -88,30 +88,54 @@ aracında MiniMax'ın büyük parçalarda 3-4dk sürebilen üretimi, tek bir
 senkron (bekle-ve-dön) istekte bu gateway timeout'una takılıp
 "Gateway timed out" / "Takvim oluşturulamadı" hatası veriyordu.
 
-**Çözüm:** `kolay-kobi-takvim.json` yerine `kolay-kobi-takvim-async.json`
-import edilmeli. Bu workflow aynı webhook path'ini (`kolay-kobi-takvim`)
-POST için kullanır ama HEMEN (1-2sn) bir `job_id` ile döner; AI çağrısını
-arka planda yapmaya devam eder ve sonucu kendi hafızasında saklar. Ayrıca
-`kolay-kobi-takvim-status` adlı ikinci bir GET webhook'u ekler — tarayıcı
-sonucu buradan periyodik olarak (polling) sorgular.
+**İKİ AYRI WORKFLOW gerekiyor** (v1'deki tek-workflow "erken yanıt ver +
+arka planda devam et" tasarımı canlıda başarısız oldu — muhtemelen n8n'in
+Hostinger'daki reverse proxy'si bu erken yanıtı tüm execution bitene kadar
+buffer'lıyor, yani tarayıcıya/WordPress'e hiç ulaşmıyordu; execution log'da
+tek bir 4dk'lık çalıştırma görülüyordu, WordPress ise kendi 15sn'lik
+timeout'unda vazgeçip hata veriyordu). Bu yüzden mimari, ERKEN-YANIT
+TRIGİĞİNE hiç bağımlı olmayacak şekilde ikiye bölündü:
+
+- **`kolay-kobi-takvim-async.json` ("Job Başlat")** — tarayıcının/WordPress'in
+  konuştuğu tek workflow. Rate-limit kontrolü yapar, job_id üretir, Worker
+  workflow'unu **fire-and-forget** (5sn kısa timeout, sonucunu beklemeden)
+  tetikler, ve normal/senkron şekilde `{job_id, status:'pending'}` döner.
+  Bu workflow'un TAMAMI birkaç saniye içinde biter — "erken yanıt" numarasına
+  hiç ihtiyaç duymaz, dolayısıyla proxy buffering sorunu ondan tamamen bağımsızdır.
+- **`kolay-kobi-takvim-worker.json` ("Worker + Durum")** — AI çağrısını
+  gerçekten yapan ve `kolay-kobi-takvim-status` (GET) polling ucunu barındıran
+  workflow. Job Başlat'tan gelen tetikleme isteği zaman aşımına uğrasa/
+  koparsa bile, n8n isteği ALDIĞI an bu workflow'un execution'ı başlar ve
+  bağımsız şekilde tamamlanana kadar (AI çağrısı dahil) çalışmaya devam eder.
 
 **Import adımları:**
 1. n8n → Workflows → mevcut `kolay-kobi-takvim.json`'ı **Deactivate** et
    (aynı webhook path'i iki workflow'da aktif olamaz)
-2. `kolay-kobi-takvim-async.json`'ı Import et
-3. "MiniMax API" node'unu aç → Authorization header'ına key'i yaz
-4. Workflow'u **Activate** et
+2. `kolay-kobi-takvim-async.json`'ı ("Job Başlat") Import et → Activate et
+3. `kolay-kobi-takvim-worker.json`'ı ("Worker + Durum") Import et →
+   "MiniMax API" node'unu aç → Authorization header'ına key'i yaz → Activate et
+4. Her iki workflow da AYNI ANDA aktif olmalı (birbirini tetikliyorlar)
 
-**WordPress tarafı:** `wordpress-ai-proxy.php` güncellendi — artık iki yeni
-REST ucu var:
-- `POST /wp-json/kolaykobi/v1/ai/{tool}/start` → n8n'in job-başlatma
-  webhook'unu tetikler, `{job_id, status}` döner (kısa timeout, 15sn yeterli)
-- `GET /wp-json/kolaykobi/v1/ai/{tool}/status/{job_id}` → n8n'in
-  `-status` webhook'undan job durumunu okur
+**Test (her iki workflow da aktifken):**
+```bash
+# 1) Job başlat — birkaç SANİYE içinde dönmeli (job_id ile)
+curl -X POST https://n8n.srv1492396.hstgr.cloud/webhook/kolay-kobi-takvim \
+  -H "Content-Type: application/json" \
+  -d '{"prompt": "Sadece JSON olarak {\"test\": true} döndür."}'
+# → {"job_id":"...", "status":"pending"}   (HIZLI dönmeli, 1-2sn)
 
-Bu iki yeni fonksiyonu içeren güncel `wordpress-ai-proxy.php`'yi Code
-Snippets'e (veya functions.php'ye) yeniden yükleyin — eski senkron uç
-(`POST /ai/{tool}`) da geriye dönük uyumluluk için hâlâ duruyor.
+# 2) Durumu sorgula (job_id'yi yukarıdan al) — birkaç saniye sonra 'pending',
+#    AI bitince 'completed' görmelisiniz
+curl "https://n8n.srv1492396.hstgr.cloud/webhook/kolay-kobi-takvim-status?jobId=JOB_ID_BURAYA"
+```
+Eğer adım 1 hâlâ dakikalarca sürüyorsa, sorun WordPress/tarayıcı katmanında
+değil — n8n'in kendisinde (Worker workflow'u aktif değil veya Trigger Worker
+çağrısı n8n içinde bir sebeple bloklanıyor) demektir.
+
+**WordPress tarafı:** `wordpress-ai-proxy.php`'de değişiklik GEREKMİYOR —
+`/ai/{tool}/start` ve `/ai/{tool}/status/{job_id}` uçları zaten aynı webhook
+path adlarını (`kolay-kobi-takvim`, `kolay-kobi-takvim-status`) hedefliyor,
+bu adlar iki workflow'a bölünse de değişmedi.
 
 **HTML tarafı:** `icerik_takvimi_uretici.html` artık `/start` + `/status`
 polling akışını kullanıyor (`fetchJsonAsyncJob`, 4sn'de bir sorgular, en

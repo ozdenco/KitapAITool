@@ -1,0 +1,275 @@
+{
+  "name": "Kolay KOBİ — 30 Günlük İçerik Takvimi (Worker + Durum)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "kolay-kobi-takvim-worker",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "webhook-worker-node",
+      "name": "Webhook Worker Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        240,
+        280
+      ],
+      "webhookId": "kolay-kobi-takvim-worker",
+      "notesInFlow": true,
+      "notes": "responseMode=onReceived: n8n isteği alır almaz genel bir ack döner ve iş burada BİTMEZ — workflow arka planda çalışmaya devam eder. Bu düğümün kendi yanıtının ağda ne zaman/nasıl teslim edildiği ÖNEMLİ DEĞİL çünkü onu çağıran Job Başlat workflow'u zaten cevabı beklemiyor (fire-and-forget)."
+    },
+    {
+      "parameters": {
+        "jsCode": "// Job'u HEMEN 'pending' olarak kaydeder — Job Başlat workflow'u job_id'yi\n// döndürdükten hemen sonra tarayıcı polling'e başlayabilir, bu kayıt o an\n// zaten hazır olmalı.\nconst body = $input.first().json.body || $input.first().json;\nconst jobId = body.jobId;\nconst staticData = $getWorkflowStaticData('global');\nif (!staticData.jobs) staticData.jobs = {};\n// Eski job kayıtlarını temizle (24 saatten eski) — staticData sınırsız\n// büyümesin diye.\nconst cutoff = Date.now() - 24*60*60*1000;\nObject.keys(staticData.jobs).forEach(id => { if ((staticData.jobs[id].createdAt||0) < cutoff) delete staticData.jobs[id]; });\nstaticData.jobs[jobId] = { status: 'pending', createdAt: Date.now() };\nreturn [{ json: { jobId, prompt: body.prompt } }];"
+      },
+      "id": "save-pending-node",
+      "name": "Save Pending Status",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        460,
+        280
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\nconst apiBody = {\n  model: 'MiniMax-M3',\n  max_completion_tokens: 24000,\n  messages: [{ role: 'user', content: data.prompt || '' }]\n};\nreturn [{ json: { ...data, apiBody } }];"
+      },
+      "id": "build-body-node",
+      "name": "Build Request Body",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        680,
+        280
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.minimax.io/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer YOUR_MINIMAX_API_KEY"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Accept-Charset",
+              "value": "utf-8"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "options": {
+          "timeout": 300000
+        },
+        "jsonBody": "={{ $json.apiBody }}"
+      },
+      "id": "minimax-api-node",
+      "name": "MiniMax API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "onError": "continueErrorOutput",
+      "position": [
+        900,
+        280
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\nlet text = data.choices?.[0]?.message?.content || '';\nconst jsonStart = text.indexOf('{');\nconst jsonEnd = text.lastIndexOf('}');\nif (jsonStart !== -1 && jsonEnd !== -1) text = text.slice(jsonStart, jsonEnd + 1);\nreturn [{ json: { content: [{ type: 'text', text }], jobId: data.jobId } }];"
+      },
+      "id": "response-transform",
+      "name": "Response Transform",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\nconst staticData = $getWorkflowStaticData('global');\nif (!staticData.jobs) staticData.jobs = {};\nstaticData.jobs[data.jobId] = { status: 'completed', result: { content: data.content }, completedAt: Date.now() };\nreturn [{ json: { ok: true } }];"
+      },
+      "id": "save-job-result",
+      "name": "Save Job Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1340,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// MiniMax API hata verirse (timeout, 5xx vb.) job kaydını 'error' olarak\n// işaretler. NOT: n8n'in continueErrorOutput hata çıktısı, orijinal girdi\n// alanlarını (jobId dahil) her zaman garanti etmeyebilir — canlıda ilk\n// hatalı çalıştırmadan sonra $json.jobId boş geliyorsa, MiniMax API\n// düğümünün \"Always Output Data\" seçeneğini açıp burada $json içeriğini\n// (n8n execution log'undan) kontrol edip gerekirse eşlemeyi güncelleyin.\nconst data = $input.first().json;\nconst jobId = data.jobId || data.json?.jobId;\nif (jobId) {\n  const staticData = $getWorkflowStaticData('global');\n  if (!staticData.jobs) staticData.jobs = {};\n  staticData.jobs[jobId] = { status: 'error', error: data.error?.message || data.message || 'AI isteği başarısız', completedAt: Date.now() };\n}\nreturn [{ json: { ok: false, jobId } }];"
+      },
+      "id": "save-job-error",
+      "name": "Save Job Error",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        360
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "kolay-kobi-takvim-status",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-status-node",
+      "name": "Webhook Status",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        240,
+        560
+      ],
+      "webhookId": "kolay-kobi-takvim-status"
+    },
+    {
+      "parameters": {
+        "jsCode": "const jobId = $input.first().json.query?.jobId || '';\nconst staticData = $getWorkflowStaticData('global');\nconst job = (staticData.jobs || {})[jobId];\nif (!job) return [{ json: { status: 'not_found' } }];\nreturn [{ json: job }];"
+      },
+      "id": "get-job-status",
+      "name": "Get Job Status",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        460,
+        560
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json; charset=utf-8"
+              }
+            ]
+          }
+        }
+      },
+      "id": "respond-status",
+      "name": "Respond Status",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        680,
+        560
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook Worker Trigger": {
+      "main": [
+        [
+          {
+            "node": "Save Pending Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Pending Status": {
+      "main": [
+        [
+          {
+            "node": "Build Request Body",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Request Body": {
+      "main": [
+        [
+          {
+            "node": "MiniMax API",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MiniMax API": {
+      "main": [
+        [
+          {
+            "node": "Response Transform",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Save Job Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Response Transform": {
+      "main": [
+        [
+          {
+            "node": "Save Job Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook Status": {
+      "main": [
+        [
+          {
+            "node": "Get Job Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Job Status": {
+      "main": [
+        [
+          {
+            "node": "Respond Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": [
+    "kolay-kobi",
+    "minimax",
+    "async"
+  ]
+}

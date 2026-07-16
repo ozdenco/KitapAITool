@@ -1,5 +1,5 @@
 {
-  "name": "Kolay KOBİ — 30 Günlük İçerik Takvimi (Asenkron)",
+  "name": "Kolay KOBİ — 30 Günlük İçerik Takvimi (Job Başlat)",
   "nodes": [
     {
       "parameters": {
@@ -14,7 +14,7 @@
       "typeVersion": 2,
       "position": [
         240,
-        280
+        300
       ],
       "webhookId": "kolay-kobi-takvim"
     },
@@ -28,7 +28,7 @@
       "typeVersion": 2,
       "position": [
         460,
-        280
+        300
       ]
     },
     {
@@ -59,7 +59,7 @@
       "typeVersion": 2,
       "position": [
         680,
-        280
+        300
       ]
     },
     {
@@ -76,12 +76,12 @@
       "typeVersion": 1,
       "position": [
         900,
-        140
+        180
       ]
     },
     {
       "parameters": {
-        "jsCode": "// job_id üretir ve staticData'da 'pending' durumuyla kaydeder — bu kayıt,\n// aşağıdaki Webhook Status ucundan polling ile sorgulanacak. staticData\n// workflow'a bağlı, tüm execution'lar arasında paylaşılır (rate-limit'te\n// zaten aynı mekanizma kullanılıyor).\nconst jobId = [...Array(24)].map(() => Math.floor(Math.random()*36).toString(36)).join('');\nconst staticData = $getWorkflowStaticData('global');\nif (!staticData.jobs) staticData.jobs = {};\n// Eski job kayıtlarını temizle (24 saatten eski) — staticData sınırsız\n// büyümesin diye.\nconst cutoff = Date.now() - 24*60*60*1000;\nObject.keys(staticData.jobs).forEach(id => { if ((staticData.jobs[id].createdAt||0) < cutoff) delete staticData.jobs[id]; });\nstaticData.jobs[jobId] = { status: 'pending', createdAt: Date.now() };\nconst data = $input.first().json;\nreturn [{ json: { ...data, jobId } }];"
+        "jsCode": "// job_id üretir. NOT: Bu workflow'un staticData'sı Worker workflow'unun\n// staticData'sından AYRI (n8n'de her workflow'un kendi static data'sı var)\n// — bu yüzden burada job kaydı YAZMIYORUZ, sadece kimliği üretip Worker'a\n// iletiyoruz. İlk 'pending' kaydını Worker, kendi ilk adımında yazacak.\nconst jobId = [...Array(24)].map(() => Math.floor(Math.random()*36).toString(36)).join('');\nconst data = $input.first().json;\nreturn [{ json: { ...data, jobId } }];"
       },
       "id": "generate-job-node",
       "name": "Generate Job",
@@ -91,6 +91,38 @@
         900,
         320
       ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://n8n.srv1492396.hstgr.cloud/webhook/kolay-kobi-takvim-worker",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { jobId: $json.jobId, prompt: $json.prompt } }}",
+        "options": {
+          "timeout": 5000
+        }
+      },
+      "id": "trigger-worker-node",
+      "name": "Trigger Worker",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "onError": "continueRegularOutput",
+      "position": [
+        1120,
+        320
+      ],
+      "notesInFlow": true,
+      "notes": "Fire-and-forget: Worker'ın webhook'unu tetikler, kısa timeout (5sn) ile. n8n isteği ALDIĞI an execution'ı başlatır — bu node'un kendi yanıtını bekleyip beklememesi Worker'ın çalışmaya devam etmesini etkilemez. onError=continueRegularOutput: bu çağrı zaman aşımına uğrasa/hata verse bile Job Başlat akışı BAŞARISIZ olmaz, kullanıcıya yine de job_id döneriz."
     },
     {
       "parameters": {
@@ -113,152 +145,8 @@
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1,
       "position": [
-        1120,
-        320
-      ]
-    },
-    {
-      "parameters": {
-        "jsCode": "const data = $input.first().json;\nconst apiBody = {\n  model: 'MiniMax-M3',\n  max_completion_tokens: 24000,\n  messages: [{ role: 'user', content: data.prompt || '' }]\n};\nreturn [{ json: { ...data, apiBody } }];"
-      },
-      "id": "build-body-node",
-      "name": "Build Request Body",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
         1340,
         320
-      ]
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "https://api.minimax.io/v1/chat/completions",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "Bearer YOUR_MINIMAX_API_KEY"
-            },
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            },
-            {
-              "name": "Accept-Charset",
-              "value": "utf-8"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "options": {
-          "timeout": 300000
-        },
-        "jsonBody": "={{ $json.apiBody }}"
-      },
-      "id": "minimax-api-node",
-      "name": "MiniMax API",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "onError": "continueErrorOutput",
-      "position": [
-        1560,
-        320
-      ]
-    },
-    {
-      "parameters": {
-        "jsCode": "const data = $input.first().json;\nlet text = data.choices?.[0]?.message?.content || '';\nconst jsonStart = text.indexOf('{');\nconst jsonEnd = text.lastIndexOf('}');\nif (jsonStart !== -1 && jsonEnd !== -1) text = text.slice(jsonStart, jsonEnd + 1);\nreturn [{ json: { content: [{ type: 'text', text }], jobId: data.jobId } }];"
-      },
-      "id": "response-transform",
-      "name": "Response Transform",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        1780,
-        260
-      ]
-    },
-    {
-      "parameters": {
-        "jsCode": "// Başarılı sonucu job kaydına yazar — polling ucunda bu okunacak.\nconst data = $input.first().json;\nconst staticData = $getWorkflowStaticData('global');\nif (!staticData.jobs) staticData.jobs = {};\nstaticData.jobs[data.jobId] = { status: 'completed', result: { content: data.content }, completedAt: Date.now() };\nreturn [{ json: { ok: true } }];"
-      },
-      "id": "save-job-result",
-      "name": "Save Job Result",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        2000,
-        260
-      ]
-    },
-    {
-      "parameters": {
-        "jsCode": "// MiniMax API hata verirse (timeout, 5xx vb.) job kaydını 'error' olarak\n// işaretler. NOT: n8n'in continueErrorOutput hata çıktısı, orijinal girdi\n// alanlarını (jobId dahil) her zaman garanti etmeyebilir — canlıda ilk\n// hatalı çalıştırmadan sonra $json.jobId boş geliyorsa, MiniMax API\n// düğümünün \"Always Output Data\" seçeneğini açıp burada $json içeriğini\n// (n8n execution log'undan) kontrol edip gerekirse eşlemeyi güncelleyin.\nconst data = $input.first().json;\nconst jobId = data.jobId || data.json?.jobId;\nif (jobId) {\n  const staticData = $getWorkflowStaticData('global');\n  if (!staticData.jobs) staticData.jobs = {};\n  staticData.jobs[jobId] = { status: 'error', error: data.error?.message || data.message || 'AI isteği başarısız', completedAt: Date.now() };\n}\nreturn [{ json: { ok: false, jobId } }];"
-      },
-      "id": "save-job-error",
-      "name": "Save Job Error",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        1780,
-        420
-      ]
-    },
-    {
-      "parameters": {
-        "httpMethod": "GET",
-        "path": "kolay-kobi-takvim-status",
-        "responseMode": "responseNode",
-        "options": {}
-      },
-      "id": "webhook-status-node",
-      "name": "Webhook Status",
-      "type": "n8n-nodes-base.webhook",
-      "typeVersion": 2,
-      "position": [
-        240,
-        560
-      ],
-      "webhookId": "kolay-kobi-takvim-status"
-    },
-    {
-      "parameters": {
-        "jsCode": "const jobId = $input.first().json.query?.jobId || '';\nconst staticData = $getWorkflowStaticData('global');\nconst job = (staticData.jobs || {})[jobId];\nif (!job) return [{ json: { status: 'not_found' } }];\nreturn [{ json: job }];"
-      },
-      "id": "get-job-status",
-      "name": "Get Job Status",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        460,
-        560
-      ]
-    },
-    {
-      "parameters": {
-        "respondWith": "json",
-        "responseBody": "={{ JSON.stringify($json) }}",
-        "options": {
-          "responseHeaders": {
-            "entries": [
-              {
-                "name": "Content-Type",
-                "value": "application/json; charset=utf-8"
-              }
-            ]
-          }
-        }
-      },
-      "id": "respond-status",
-      "name": "Respond Status",
-      "type": "n8n-nodes-base.respondToWebhook",
-      "typeVersion": 1,
-      "position": [
-        680,
-        560
       ]
     }
   ],
@@ -307,80 +195,18 @@
       "main": [
         [
           {
+            "node": "Trigger Worker",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Trigger Worker": {
+      "main": [
+        [
+          {
             "node": "Respond With Job ID",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Respond With Job ID": {
-      "main": [
-        [
-          {
-            "node": "Build Request Body",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Build Request Body": {
-      "main": [
-        [
-          {
-            "node": "MiniMax API",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "MiniMax API": {
-      "main": [
-        [
-          {
-            "node": "Response Transform",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Save Job Error",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Response Transform": {
-      "main": [
-        [
-          {
-            "node": "Save Job Result",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Webhook Status": {
-      "main": [
-        [
-          {
-            "node": "Get Job Status",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Get Job Status": {
-      "main": [
-        [
-          {
-            "node": "Respond Status",
             "type": "main",
             "index": 0
           }
