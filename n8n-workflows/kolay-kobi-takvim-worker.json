@@ -79,6 +79,11 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "onError": "continueErrorOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000,
+      "notesInFlow": true,
+      "notes": "Canlıda tespit edildi: api.minimax.io da Akamai arkasında ve MiniMax'ın kendi origin sunucusu yavaş yanıt verdiğinde Akamai kendi gateway timeout'unu (errors.edgesuite.net üzerinden 504) uyguluyor — bu bizim kontrol edemediğimiz, MiniMax'ın altyapısındaki bir sorun. retryOnFail: aynı istek otomatik olarak tekrar denenir (job kullanıcıya hiç görünmeden, sadece biraz daha uzun 'pending' kalır); yalnızca TÜM denemeler tükenirse job 'error' olarak işaretlenir.",
       "position": [
         900,
         280

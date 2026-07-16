@@ -199,6 +199,29 @@ curl https://kolaykobi.com/wp-json/kolaykobi/v1/ai/takvim/status/JOB_ID_BURAYA
 # → {"status":"pending"} veya {"status":"completed","result":{...}}
 ```
 
+**DÜZELTİLEN 4. HATA (v4, canlı testte bulundu — MiniMax'ın KENDİ Akamai
+sorunu):** Bir job'un son durumu şuydu:
+```json
+{"status":"error","error":"504 - ... errors.edgesuite.net ..."}
+```
+`edgesuite.net`, Akamai'nin hata sayfası domain'i — yani `api.minimax.io`
+(MiniMax'ın kendi API'si) DA Akamai arkasında, ve MiniMax'ın origin
+sunucusu yavaş yanıt verdiğinde Akamai KENDİ gateway timeout'unu
+uyguluyor. Bu, kolaykobi.com'un önündeki Akamai'den TAMAMEN AYRI, MiniMax
+tarafında yaşanan ve bizim kontrol edemeyeceğimiz bir sorun.
+
+Düzeltme (mitigasyon, kalıcı çözüm değil): "MiniMax API" düğümüne
+`retryOnFail: true, maxTries: 3, waitBetweenTries: 2000` eklendi — geçici
+bir 504 alındığında n8n otomatik olarak 2sn arayla 3 kere tekrar dener,
+kullanıcı hiçbir şey fark etmez (job sadece biraz daha uzun 'pending'
+kalır). Yalnızca TÜM denemeler tükenirse job gerçekten 'error' olur.
+
+Bu hatayı görmeye devam ederseniz (retry'lere rağmen), tek gerçek kalıcı
+çözüm MiniMax destek ekibiyle iletişime geçip API endpoint'lerindeki bu
+Akamai gateway timeout'unun sizin kullanım paterniniz (uzun/karmaşık
+promptlar) için yükseltilmesini istemektir — bu bizim kod tarafımızdan
+etkileyemeyeceğimiz bir üçüncü taraf altyapı sınırı.
+
 ---
 
 ## 5. Uygulama Durumu
