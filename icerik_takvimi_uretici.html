@@ -407,7 +407,31 @@ const POLL_INTERVAL_MS = 4000;
 // takılma olursa kullanıcıyı sonsuza kadar bekletmemek için.
 const POLL_TIMEOUT_MS = 6 * 60 * 1000;
 
-async function fetchJsonAsyncJob(baseUrl, promptBody, lang, onProgress) {
+// Canlıda tespit edildi: model bazen şemadaki "day" alanına gerçek Sıra
+// No yerine yer tutucu metni (ör. "SIRA_NO") olduğu gibi kopyalayıp
+// JSON'u bozuyordu — bu, pahalı (tek istekte tüm ay) bir üretimin TAMAMEN
+// boşa gitmesi demekti. Bu onarım denemesi, "day" alanındaki sayısal
+// olmayan değerleri, expectedDays listesindeki sırayla eşleştirerek
+// düzeltmeyi dener — başarılı olursa yeniden (kredi harcayan) bir AI
+// çağrısı yapmadan mevcut yanıt kurtarılır.
+function repairPlaceholderDayFields(text, expectedDays) {
+  // "day" alanlarının SIRASI, "days" dizisindeki eleman sırasıyla aynıdır —
+  // bu yüzden hem sayısal hem yer tutucu değerleri aynı sayaçla (idx)
+  // takip ediyoruz; SADECE sayısal olmayanları expectedDays[idx] ile
+  // değiştiriyoruz. Sayaç, zaten doğru olan alanları da saymazsa (yalnız
+  // yer tutucuları sayarsa) dizideki konum kayar ve yanlış güne eşlenir.
+  let idx = 0;
+  const repaired = text.replace(/"day"\s*:\s*([A-Za-z0-9_]+)/g, (match, token) => {
+    const i = idx;
+    idx++;
+    if (/^\d+$/.test(token)) return match; // zaten geçerli sayı, dokunma
+    const real = expectedDays[i];
+    return real !== undefined ? `"day":${real}` : match;
+  });
+  return repaired;
+}
+
+async function fetchJsonAsyncJob(baseUrl, promptBody, lang, onProgress, expectedDays) {
   const startRes = await fetch(`${baseUrl}/start`, {
     method: `POST`,
     headers: { 'Content-Type': `application/json` },
@@ -448,8 +472,21 @@ async function fetchJsonAsyncJob(baseUrl, promptBody, lang, onProgress) {
       const text = (job.result?.content || []).map(b => b.text || ``).join(``);
       if (hasEncodingCorruption(text, lang)) throw new Error(`ENCODING_CORRUPTION`);
       const clean = extractJson(text);
-      const result = JSON.parse(clean);
-      return { status: 200, result };
+      try {
+        const result = JSON.parse(clean);
+        return { status: 200, result };
+      } catch (parseErr) {
+        // İlk deneme başarısız — yer tutucu "day" alanı onarımını dene
+        // (yukarıdaki repairPlaceholderDayFields yorumu). Bu, pahalı bir
+        // AI çağrısının sonucunu yeniden üretmeden kurtarma şansı verir.
+        if (expectedDays?.length) {
+          try {
+            const result = JSON.parse(repairPlaceholderDayFields(clean, expectedDays));
+            return { status: 200, result };
+          } catch (repairErr) { /* onarım da başarısız — orijinal hatayı fırlat */ }
+        }
+        throw parseErr;
+      }
     }
     if (job.status === `error`) throw new Error(job.error || `AI_JOB_FAILED`);
     // 'pending' veya 'not_found' -> döngü devam eder (yukarıdaki yorum)
@@ -839,9 +876,9 @@ ${special ? `` : `Kampanya belirtilmedi — ${chunkRangeStr} aralığına özgü
 Kurallar: Kampanya sayıları (%, adet) birebir korunur ("3 alana 1 bedava"≠"3-for-2", 4 ürün alınır 3'ü ödenir). day alanı listedeki Sıra No (No6 → day:6), ayın günü değil. ${chunkRangeStr} aralığına (veya hemen öncesi/sonrasına) denk gelen, kullanıcının yazmayı unutmuş olabileceği resmi/dini bayram ve sektörel özel günleri uzmanlığınla tespit edip isSpecial:true ile EKLE (kullanıcınınkilerin yerine değil). Bu aralığın başlangıcından önceki bir tarihi asla "bugün/yarın" gibi güncelmiş sunma. Konu/format tekrarı yok, formatlarda dengeli dağılım.
 
 Sıra No ve tarih: ${dayDateMap}
-Yalnızca bu ${chunkPostingDays.length} Sıra No için üret, "days" dizisi tam ${chunkPostingDays.length} eleman içersin.
+Yalnızca bu ${chunkPostingDays.length} Sıra No için üret, "days" dizisi tam ${chunkPostingDays.length} eleman içersin. ÖNEMLİ: "day" alanına yukarıdaki listeden GERÇEK Sıra No sayısını yaz (örn. ${chunkPostingDays[0]}), asla bir yer tutucu/etiket metni yazma.
 
-Şema: {"days":[{"day":SIRA_NO,"topic":"maks 8 kelime","format":"Reels|Statik görsel|Hikaye|Carousel|Blog|Video","platform":"${platformList} içinden","draft":"1-2 cümle ${lang}","isSpecial":bool}],"ctaText":"..."}`;
+Şema (örnek, ilk Sıra No ile): {"days":[{"day":${chunkPostingDays[0]},"topic":"maks 8 kelime","format":"Reels|Statik görsel|Hikaye|Carousel|Blog|Video","platform":"${platformList} içinden","draft":"1-2 cümle ${lang}","isSpecial":bool}, ...diğer ${chunkPostingDays.length - 1} Sıra No için de aynı şekilde],"ctaText":"..."}`;
 }
 
 // Dönemi kaç "FETCH parça"sına (= kaç ayrı MiniMax API çağrısına)
@@ -925,7 +962,7 @@ function fetchAndMergeGroup(group, startDate) {
 
     let res;
     if (N8N_PROXY) {
-      res = await fetchJsonAsyncJob(N8N_PROXY, { prompt }, campaignCtx.lang, onProgress);
+      res = await fetchJsonAsyncJob(N8N_PROXY, { prompt }, campaignCtx.lang, onProgress, chunkPostingDays);
       if (res.status === 429) { const e = new Error(`RATE_LIMIT`); throw e; }
     } else {
       const rawRes = await fetch(`https://api.minimax.io/v1/chat/completions`, {
