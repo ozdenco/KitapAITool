@@ -231,7 +231,38 @@ olarak gereksiz yavaş. Bir parça en fazla ~3 paylaşım günü içeriyor (her
 biri kısa bir topic/format/platform/draft alanı) — `6000` bu çıktı boyutu
 için (reasoning payı dahil) rahatça yeterli. Hem `kolay-kobi-takvim-worker.json`
 hem de (tutarlılık için) deaktif `kolay-kobi-takvim.json`'da düzeltildi.
-**`kolay-kobi-takvim-worker.json`'ı tekrar import etmeniz gerekiyor.**
+
+**DÜZELTİLEN 6. SORUN (v6): PARÇALAMA (chunking) KALDIRILDI —
+5-10 KAT KREDİ İSRAFI.** Canlı kredi takibiyle kesin olarak tespit
+edildi: tek bir "Oluştur" tıklaması ~250 kredi harcıyordu (sabah 3800
+krediden birkaç saatte ~1200'e düştü). Kök neden: `computeChunkGroups`
+30 günü (weekdayCount'a göre) 1-5 parçaya bölüyordu, HER PARÇA AYRI BİR
+MiniMax API ÇAĞRISI demekti — 2 gün/hafta seçiminde 3 parça = 3 ayrı
+çağrı = 3 kat kredi.
+
+Bu parçalamanın ORİJİNAL gerekçesi (kolaykobi.com'un önündeki Akamai'nin
+~180sn'lik gateway timeout'u) artık **geçerli değil**: asenkron job/
+polling mimarisi (yukarıdaki "İKİ AYRI WORKFLOW" bölümü) zaten tarayıcının
+tek bir uzun isteği beklemesini gerektirmiyor, kısa /start + kısa /status
+sorgularıyla çalışıyor. Yani parçalama artık SADECE gereksiz kredi
+harcıyordu, hiçbir timeout riskini azaltmıyordu.
+
+Düzeltme: `computeChunkGroups` artık HER ZAMAN TEK bir grup döner (tüm 30
+gün, TEK MiniMax çağrısı). `computeViewTabs` ise fetch'ten TAMAMEN
+BAĞIMSIZ hale getirildi — kullanıcıya hâlâ 5 haftalık gösterim sekmesi
+sunuluyor (okunabilirlik için), ama hepsi aynı tek fetch sonucunu
+(istemci tarafında haftalara bölerek) gösteriyor, ek AI çağrısı yok.
+`max_completion_tokens` de `16000`'e çıkarıldı (artık tek istekte 30 günün
+tamamı — en fazla ~8-9 paylaşım günü — isteniyor; `6000` bu boyut için
+riskli derecede düşük olurdu, yarım kalan JSON = başarısız + tekrar
+deneme = ekstra kredi).
+
+**Beklenen tasarruf:** 1 "Oluştur" tıklaması artık 3-5 değil, TEK bir
+MiniMax çağrısı yapıyor — yaklaşık %75-80 kredi tasarrufu.
+
+**Yapmanız gerekenler:**
+1. `icerik_takvimi_uretici.html`'i yeniden WordPress'e yükleyin
+2. `kolay-kobi-takvim-worker.json`'ı n8n'e tekrar import edin
 
 ---
 

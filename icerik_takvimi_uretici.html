@@ -844,52 +844,47 @@ Yalnızca bu ${chunkPostingDays.length} Sıra No için üret, "days" dizisi tam 
 Şema: {"days":[{"day":SIRA_NO,"topic":"maks 8 kelime","format":"Reels|Statik görsel|Hikaye|Carousel|Blog|Video","platform":"${platformList} içinden","draft":"1-2 cümle ${lang}","isSpecial":bool}],"ctaText":"..."}`;
 }
 
-// Dönemi kaç "FETCH parça"sına böleceğimizi belirler.
+// Dönemi kaç "FETCH parça"sına (= kaç ayrı MiniMax API çağrısına)
+// böleceğimizi belirler.
 //
-// KANITLANMIŞ KÖK NEDEN (canlı test, WP proxy hata gövdesi): "cURL error
-// 28: Operation timed out after 180000 milliseconds with 0 bytes
-// received". wp_remote_post'a 320sn timeout versek de, hosting ortamında
-// (muhtemelen php.ini'deki default_socket_timeout veya bir güvenlik
-// eklentisi/WAF) cURL isteklerini SABİT 180 saniyede, HİÇ veri almadan
-// kesiyor — bizim kodumuzun kontrol edemediği bir sunucu seviyesi limit.
-// Bunun kalıcı çözümü hosting sağlayıcısıyla bu limitin yükseltilmesidir;
-// kod tarafında yapabileceğimiz tek şey her isteği bu 180sn tavanının
-// güvenli şekilde altında tutmak.
+// GEÇMİŞ (artık geçerli değil): Önceki mimaride WordPress↔n8n arası TEK
+// senkron HTTP isteği vardı ve bu, kanıtlanmış 180sn'lik cURL/Akamai
+// gateway tavanının altında kalmak için 30 günü birden fazla küçük
+// parçaya bölmeyi gerektiriyordu (her parça ayrı bir MiniMax çağrısı).
 //
-// Sabit 7 GÜNLÜK (haftalık) parçalama, 2 gün/hafta seçildiğinde 1
-// gün/hafta'ya göre parça başına 2 KAT paylaşım günü (dolayısıyla 2 kat
-// üretim yükü) demekti — canlı testte 2 gün/hafta senaryosunda 18dk'lık
-// bir zaman aşımı zincirine yol açan asıl sebep buydu. Artık parça
-// başına PAYLAŞIM GÜNÜ sayısını sabit (~3) tutuyoruz; parça sayısı ve
-// aralığı seçilen gün sıklığına göre dinamik ayarlanıyor — böylece her
-// parçanın gerçek iş yükü (ve dolayısıyla yanıt süresi) weekdayCount'tan
-// bağımsız, tutarlı şekilde düşük kalıyor.
+// ARTIK ASENKRON JOB/POLLING mimarisi var (bkz. fetchJsonAsyncJob):
+// tarayıcı artık MiniMax'ın yanıtını TEK bir uzun istekte beklemiyor,
+// kısa /start + kısa /status sorgularıyla polling yapıyor — bu yüzden
+// WordPress-tarafı Akamai timeout'u ARTIK BİR SORUN DEĞİL, parçalamanın
+// asıl gerekçesi ortadan kalktı.
+//
+// CANLIDA TESPİT EDİLEN GERÇEK MALİYET SORUNU: parçalama MiniMax'a giden
+// ÇAĞRI SAYISINI çarpıyordu — 2 gün/hafta seçiminde 3 parça = 3 ayrı
+// MiniMax çağrısı = tek bir "Oluştur" tıklaması ~250 kredi harcıyordu.
+// Artık TEK parça (tüm 30 gün TEK MiniMax çağrısında) kullanılıyor —
+// aynı işi ~5-10 kat daha az kredi ile yapıyor. Görüntüleme sekmeleri
+// (computeViewTabs) bu tek fetch'ten BAĞIMSIZ, saf istemci tarafı bölme
+// ile hâlâ haftalık gösteriliyor — okunabilirlik için, ek maliyetsiz.
 function computeChunkGroups(weekdayCount) {
-  const targetDaysPerChunk = 3;
-  const approxPostingDays = Math.max(1, Math.round(30 / 7 * weekdayCount));
-  const numChunks = Math.max(1, Math.ceil(approxPostingDays / targetDaysPerChunk));
-  const chunkDaySpan = Math.ceil(30 / numChunks);
-
-  const groups = [];
-  for (let dayStart = 1; dayStart <= 30; dayStart += chunkDaySpan) {
-    const dayEnd = Math.min(dayStart + chunkDaySpan - 1, 30);
-    groups.push({ id: groups.length, dayStart, dayEnd });
-  }
-  return groups;
+  return [{ id: 0, dayStart: 1, dayEnd: 30 }];
 }
 
-// Kullanıcıya gösterilen SEKMELER fetch parçalarıyla birebir eşleşir, ama
-// hepsi generate() içinde "Oluştur" butonuna TEK basışta SIRAYLA (paralel
-// değil) önceden yüklenir — bu yüzden sekmeye tıklamak YENİ bir istek
-// tetiklemez, günlük kullanım hakkı harcamaz; sekmeler salt gösterimdir.
+// Kullanıcıya gösterilen SEKMELER artık FETCH parçalarından BAĞIMSIZ: tek
+// bir MiniMax çağrısıyla gelen 30 günlük veri, okunabilirlik için
+// istemci tarafında haftalık sekmelere bölünüyor (ek AI çağrısı YOK,
+// hepsi zaten computeChunkGroups'un tek grubuna (id:0) işaret ediyor).
 function computeViewTabs(weekdayCount) {
-  const groups = computeChunkGroups(weekdayCount);
-  return groups.map((g, i) => ({
-    label: `${i + 1}. Bölüm`,
-    dayStart: g.dayStart,
-    dayEnd: g.dayEnd,
-    fetchGroupIds: [g.id],
-  }));
+  const tabs = [];
+  for (let dayStart = 1; dayStart <= 30; dayStart += 7) {
+    const dayEnd = Math.min(dayStart + 6, 30);
+    tabs.push({
+      label: `${tabs.length + 1}. Hafta`,
+      dayStart,
+      dayEnd,
+      fetchGroupIds: [0],
+    });
+  }
+  return tabs;
 }
 
 function renderTabButtons() {
