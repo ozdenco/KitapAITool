@@ -79,9 +79,21 @@ function kolaykobi_ai_job_start(WP_REST_Request $request) {
         return new WP_REST_Response(array('error' => 'Bilinmeyen araç'), 404);
     }
 
-    $prompt = $request->get_json_params()['prompt'] ?? '';
+    $params = $request->get_json_params();
+    $prompt = $params['prompt'] ?? '';
     if (!is_string($prompt) || $prompt === '' || strlen($prompt) > 20000) {
         return new WP_REST_Response(array('error' => 'Geçersiz prompt'), 400);
+    }
+
+    // dayCount: n8n'in Worker workflow'unda max_completion_tokens'ı bu
+    // isteğin gerçek boyutuna göre dinamik hesaplaması için iletilir
+    // (opsiyonel — bu alanı göndermeyen araçlar için davranış değişmez).
+    $day_count = isset($params['dayCount']) && is_numeric($params['dayCount'])
+        ? max(1, min(31, (int) $params['dayCount']))
+        : null;
+    $forward_body = array('prompt' => $prompt);
+    if ($day_count !== null) {
+        $forward_body['dayCount'] = $day_count;
     }
 
     $response = wp_remote_post(
@@ -89,7 +101,7 @@ function kolaykobi_ai_job_start(WP_REST_Request $request) {
         array(
             'timeout' => 15,
             'headers' => array('Content-Type' => 'application/json'),
-            'body'    => wp_json_encode(array('prompt' => $prompt)),
+            'body'    => wp_json_encode($forward_body),
         )
     );
 

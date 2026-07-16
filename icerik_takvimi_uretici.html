@@ -962,7 +962,12 @@ function fetchAndMergeGroup(group, startDate) {
 
     let res;
     if (N8N_PROXY) {
-      res = await fetchJsonAsyncJob(N8N_PROXY, { prompt }, campaignCtx.lang, onProgress, chunkPostingDays);
+      // dayCount: n8n'in Worker workflow'unda max_completion_tokens'ı
+      // bu isteğin gerçek gün sayısına göre DİNAMİK hesaplaması için
+      // gönderilir — sabit bir tahmin (çok düşük: kesilme/kayıp kredi,
+      // çok yüksek: gereksiz risk) yerine isteğin büyüklüğüne göre
+      // ölçeklenir.
+      res = await fetchJsonAsyncJob(N8N_PROXY, { prompt, dayCount: chunkPostingDays.length }, campaignCtx.lang, onProgress, chunkPostingDays);
       if (res.status === 429) { const e = new Error(`RATE_LIMIT`); throw e; }
     } else {
       const rawRes = await fetch(`https://api.minimax.io/v1/chat/completions`, {

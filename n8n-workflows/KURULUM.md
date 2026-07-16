@@ -264,6 +264,42 @@ MiniMax çağrısı yapıyor — yaklaşık %75-80 kredi tasarrufu.
 1. `icerik_takvimi_uretici.html`'i yeniden WordPress'e yükleyin
 2. `kolay-kobi-takvim-worker.json`'ı n8n'e tekrar import edin
 
+**DÜZELTİLEN 7. SORUN (v7): `"day":SIRA_NO` placeholder kopyalama +
+`max_completion_tokens` artık DİNAMİK.** Canlı testte konsol hatası:
+`SyntaxError: Unexpected token 'S', ... "day": SIRA_NO,` — model, şemadaki
+soyut yer tutucuyu ("SIRA_NO") gerçek bir sayıyla değiştirmek yerine
+olduğu gibi kopyalamış, JSON'u bozup 203 kredilik bir üretimi boşa
+çıkarmış.
+
+İki katmanlı düzeltme (`icerik_takvimi_uretici.html`):
+1. **Önleme:** `buildCalendarPrompt`'taki şema artık soyut "SIRA_NO"
+   yerine bu isteğin gerçek ilk Sıra No'sunu somut örnek olarak gösteriyor
+   (`"day":6` gibi) + "asla yer tutucu yazma" talimatı.
+2. **Kurtarma:** JSON.parse başarısız olursa `repairPlaceholderDayFields()`
+   "day" alanlarının dizideki sırasını (sayısal olsun olmasın) takip
+   ederek sayısal olmayan değerleri doğru gerçek Sıra No ile değiştirip
+   yeniden dener — başarılı olursa PAHALI bir yeniden üretime gerek
+   kalmadan mevcut (zaten ödenmiş) yanıt kurtarılır.
+
+Ayrıca `max_completion_tokens` artık SABİT bir sayı değil — HTML, isteğin
+gerçek gün sayısını (`dayCount`) `/start` çağrısıyla iletiyor, bu değer
+WordPress proxy → Job Başlat → Worker zincirinde taşınıyor, ve Worker'ın
+"Build Request Body" düğümü `Math.min(20000, Math.max(6000, 2500 +
+dayCount*1800))` formülüyle isteğin boyutuna göre bir tavan hesaplıyor.
+Gerekçe: MiniMax faturalaması GERÇEKTE üretilen token sayısına göre
+yapılıyor, cap'in kendisi maliyeti artırmaz — cap'i ihtiyaçtan düşük
+tutmanın (kesilme/kayıp kredi) riski, yüksek tutmanın riskinden çok daha
+büyük. Sabit bir tahmin (6000 veya 8000 gibi) hem küçük istekler için
+gereksiz büyük hem de büyük istekler (8-9 gün) için tehlikeli derecede
+düşük olabilirdi.
+
+**Yapmanız gerekenler:** `icerik_takvimi_uretici.html`, `wordpress-ai-proxy.php`,
+`kolay-kobi-takvim-async.json` VE `kolay-kobi-takvim-worker.json`'ın
+HEPSİNİ güncel haliyle yeniden yükleyin/import edin — dayCount alanı bu
+dört dosyanın hepsinden geçerek taşınıyor, biri eski kalırsa zincir kopar
+(dayCount `undefined` gelir, Worker varsayılan `dayCount=9` değerine
+düşer — hata vermez ama dinamik hesaplamanın faydasını kaybedersiniz).
+
 ---
 
 ## 5. Uygulama Durumu

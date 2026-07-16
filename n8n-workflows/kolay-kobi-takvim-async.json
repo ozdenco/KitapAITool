@@ -20,7 +20,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const ip = $input.first().json.headers?.['x-forwarded-for']?.split(',')[0]?.trim() || $input.first().json.headers?.['x-real-ip'] || 'unknown';\nconst today = new Date().toISOString().slice(0, 10);\nconst key = 'rl_takvim_' + ip + '_' + today;\nconst staticData = $getWorkflowStaticData('global');\nif (!staticData.rateLimits) staticData.rateLimits = {};\nconst current = staticData.rateLimits[key] || 0;\nif (current >= 50) {\n  return [{ json: { rateLimitExceeded: true } }];\n}\nstaticData.rateLimits[key] = current + 1;\nconst body = $input.first().json.body || $input.first().json;\nreturn [{ json: { rateLimitExceeded: false, prompt: body.prompt } }];"
+        "jsCode": "const ip = $input.first().json.headers?.['x-forwarded-for']?.split(',')[0]?.trim() || $input.first().json.headers?.['x-real-ip'] || 'unknown';\nconst today = new Date().toISOString().slice(0, 10);\nconst key = 'rl_takvim_' + ip + '_' + today;\nconst staticData = $getWorkflowStaticData('global');\nif (!staticData.rateLimits) staticData.rateLimits = {};\nconst current = staticData.rateLimits[key] || 0;\nif (current >= 50) {\n  return [{ json: { rateLimitExceeded: true } }];\n}\nstaticData.rateLimits[key] = current + 1;\nconst body = $input.first().json.body || $input.first().json;\nreturn [{ json: { rateLimitExceeded: false, prompt: body.prompt, dayCount: body.dayCount } }];"
       },
       "id": "rate-limit-node",
       "name": "Rate Limit Check",
@@ -107,7 +107,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ { jobId: $json.jobId, prompt: $json.prompt } }}",
+        "jsonBody": "={{ { jobId: $json.jobId, prompt: $json.prompt, dayCount: $json.dayCount } }}",
         "options": {
           "timeout": 5000
         }

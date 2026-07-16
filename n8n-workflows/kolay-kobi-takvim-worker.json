@@ -22,7 +22,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Job'u HEMEN 'pending' olarak kaydeder — Job Başlat workflow'u job_id'yi\n// döndürdükten hemen sonra tarayıcı polling'e başlayabilir, bu kayıt o an\n// zaten hazır olmalı.\nconst body = $input.first().json.body || $input.first().json;\nconst jobId = body.jobId;\nconst staticData = $getWorkflowStaticData('global');\nif (!staticData.jobs) staticData.jobs = {};\n// Eski job kayıtlarını temizle (24 saatten eski) — staticData sınırsız\n// büyümesin diye.\nconst cutoff = Date.now() - 24*60*60*1000;\nObject.keys(staticData.jobs).forEach(id => { if ((staticData.jobs[id].createdAt||0) < cutoff) delete staticData.jobs[id]; });\nstaticData.jobs[jobId] = { status: 'pending', createdAt: Date.now() };\nreturn [{ json: { jobId, prompt: body.prompt } }];"
+        "jsCode": "// Job'u HEMEN 'pending' olarak kaydeder — Job Başlat workflow'u job_id'yi\n// döndürdükten hemen sonra tarayıcı polling'e başlayabilir, bu kayıt o an\n// zaten hazır olmalı.\nconst body = $input.first().json.body || $input.first().json;\nconst jobId = body.jobId;\nconst staticData = $getWorkflowStaticData('global');\nif (!staticData.jobs) staticData.jobs = {};\n// Eski job kayıtlarını temizle (24 saatten eski) — staticData sınırsız\n// büyümesin diye.\nconst cutoff = Date.now() - 24*60*60*1000;\nObject.keys(staticData.jobs).forEach(id => { if ((staticData.jobs[id].createdAt||0) < cutoff) delete staticData.jobs[id]; });\nstaticData.jobs[jobId] = { status: 'pending', createdAt: Date.now() };\nreturn [{ json: { jobId, prompt: body.prompt, dayCount: body.dayCount } }];"
       },
       "id": "save-pending-node",
       "name": "Save Pending Status",
@@ -35,7 +35,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// max_completion_tokens: 16000. HTML tarafında parçalama (chunking)\n// KALDIRILDI — artık 30 günün tamamı (en fazla ~8-9 paylaşım günü, 2\n// gün/hafta seçiminde) TEK bir MiniMax çağrısında isteniyor (bkz.\n// icerik_takvimi_uretici.html'deki computeChunkGroups yorumu — canlıda\n// tespit edildi: parçalama MiniMax çağrı sayısını 3-5 katına çıkarıp tek\n// bir 'Oluştur' tıklamasının ~250 kredi harcamasına yol açıyordu, oysa\n// asenkron job/polling mimarisi zaten uzun süren TEK bir çağrıyı\n// güvenle destekliyor). 16000, reasoning payı dahil daha fazla gün için\n// yeterli headroom bırakır (3 günlük bir parça için 6000 bile bazen\n// sınırdaydı) — çok düşük tutmak yarım kalan JSON'a, dolayısıyla\n// yeniden denemeye (ek kredi maliyeti) yol açabilir.\nconst data = $input.first().json;\nconst apiBody = {\n  model: 'MiniMax-M3',\n  max_completion_tokens: 16000,\n  messages: [{ role: 'user', content: data.prompt || '' }]\n};\nreturn [{ json: { ...data, apiBody } }];"
+        "jsCode": "// max_completion_tokens artık GÜN SAYISINA göre DİNAMİK hesaplanıyor —\n// sabit bir tahmin iki yönde de risklidir: çok DÜŞÜK tutulursa çıktı\n// yarım kesilir (JSON tamamen kullanılmaz hale gelir — bu, kredi\n// tasarrufu yerine kredi kaybı demektir, çünkü üretim zaten cap'e kadar\n// çalışıp faturalanır ama sonuç kullanılamaz); çok YÜKSEK tutulursa\n// gereksiz risk taşınır (fatura zaten GERÇEKTE üretilen token sayısına\n// göre kesiliyor, cap'in kendisi maliyeti artırmaz — bu yüzden cap'i\n// ihtiyaçtan fazla YÜKSEK tutmanın ekstra maliyeti yok, ama DÜŞÜK\n// tutmanın kesilme riski var).\n//\n// Gün başına ~1800 token (reasoning payı dahil, canlı testlerde 3\n// günlük bir parçanın ~6000 tokene yakın kullandığı gözlemlendi) ve\n// sabit bir taban (kampanya/kural metni gibi gün sayısından bağımsız\n// prompt maliyetini karşılamak için) ile hesaplanıyor, güvenlik için\n// [6000, 20000] aralığında sınırlanıyor.\nconst data = $input.first().json;\nconst dayCount = Number(data.dayCount) || 9;\nconst maxTokens = Math.min(20000, Math.max(6000, 2500 + dayCount * 1800));\nconst apiBody = {\n  model: 'MiniMax-M3',\n  max_completion_tokens: maxTokens,\n  messages: [{ role: 'user', content: data.prompt || '' }]\n};\nreturn [{ json: { ...data, apiBody } }];"
       },
       "id": "build-body-node",
       "name": "Build Request Body",
@@ -81,7 +81,7 @@
       "onError": "continueErrorOutput",
       "retryOnFail": true,
       "maxTries": 3,
-      "waitBetweenTries": 2000,
+      "waitBetweenTries": 3000,
       "notesInFlow": true,
       "notes": "Canlıda tespit edildi: api.minimax.io da Akamai arkasında ve MiniMax'ın kendi origin sunucusu yavaş yanıt verdiğinde Akamai kendi gateway timeout'unu (errors.edgesuite.net üzerinden 504) uyguluyor — bu bizim kontrol edemediğimiz, MiniMax'ın altyapısındaki bir sorun. retryOnFail: aynı istek otomatik olarak tekrar denenir (job kullanıcıya hiç görünmeden, sadece biraz daha uzun 'pending' kalır); yalnızca TÜM denemeler tükenirse job 'error' olarak işaretlenir.",
       "position": [
