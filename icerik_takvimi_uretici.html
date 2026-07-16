@@ -259,7 +259,7 @@ input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3p
   <div class="loading" id="loading-section">
     <div class="spinner"></div>
     <p class="loading-txt" id="loading-msg">İçerik fikirleri üretiliyor...</p>
-    <p class="loading-note">Yapay zeka düşünüyor — bu işlem 1-2 dakika sürebilir.</p>
+    <p class="loading-note">Yapay zeka düşünüyor — bu işlem birkaç dakika sürebilir, sayfayı kapatmayın.</p>
   </div>
 
   <!-- RESULTS -->
@@ -385,55 +385,61 @@ function updateRateBar() {
   }
 }
 
-// AI çağrısını yapar, yanıtı ayrıştırır ve JSON.parse eder — TAMAMI yeniden
-// deneme döngüsünün İÇİNDE. Eskiden JSON.parse bu döngünün DIŞINDAydı: ağ
-// hatası veya karakter bozulması otomatik tekrar deneniyordu ama AI'nin
-// döndürdüğü JSON eksik/kesik/bozuk gelirse (özellikle kampanya sayısı
-// yüksek, dolayısıyla modelin daha uzun "düşündüğü" haftalarda daha olası)
-// HİÇ yeniden denenmeden anında hata veriliyordu — gerçekte yaşanan bir
-// hataydı bu (bir hafta tutarlı şekilde başarısız oluyordu).
+// ASENKRON JOB/POLLING AKIŞI (kalıcı çözüm — canlıda tekrar tekrar görülen
+// "Gateway timed out" hatasının kök nedeni buydu): kolaykobi.com Akamai/CDN
+// arkasında, ve Akamai kendi gateway timeout'unu (gözlemlenen: ~60-120sn
+// aralığı, senkron istekte MiniMax'ın 3-4dk sürebilen üretimini WordPress'in
+// 150-320sn'lik kendi timeout ayarlarından TAMAMEN BAĞIMSIZ olarak kesiyor)
+// uyguluyor — yani istemci veya WordPress tarafında ne kadar timeout
+// yükseltilirse yükseltilsin, tek bir HTTP isteği MiniMax'ın tam yanıt
+// süresi kadar açık kaldığı sürece Akamai bunu er ya geç kesecek.
 //
-// retries=1: 150sn İSTEMCİ TARAFINDA erken vazgeçme (AbortController) —
-// sunucu tarafı limitlerinden ÖNCE dönmek için. Gerçek üst sınırlar
-// (kanıtlanmış): Hostinger 400sn, MiniMax 300sn. 150sn istemci timeout'u
-// bu tavanların ALTINDA ama gerçek başarılı yanıt sürelerinin (~80-120sn)
-// ÜZERİNDE — canlı testte 3 paylaşım günlük bir parça 2dk'da (120sn)
-// başarıyla tamamlandı; 90sn gibi daha agresif bir değer bu normal
-// yanıtı bile erken keserdi. Retry gecikmeleri kısa tutuldu (1.5sn ağ,
-// 0.8sn parse, 0.5sn encoding) — sunucu zaten yavaşken ek beklemeler
-// eklemenin faydası yok, hızlıca tekrar denemek daha iyi.
-const CLIENT_TIMEOUT_MS = 150000;
-async function fetchJsonWithRetry(url, opts, lang, onRetry, retries = 1) {
-  let lastParseError = null;
-  for (let attempt = 0; attempt <= retries; attempt++) {
-    let res;
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), CLIENT_TIMEOUT_MS);
+// Çözüm: TEK uzun istek yerine iki KISA istek. POST .../start n8n'i
+// tetikler ve n8n HEMEN (1-2sn) bir job_id ile döner (n8n arka planda AI
+// çağrısını yapmaya devam eder, kendi sonucunu staticData'da job_id'ye
+// göre saklar — bkz. n8n-workflows/kolay-kobi-takvim-async.json). Tarayıcı
+// bu job_id ile GET .../status/{job_id} ucunu POLL_INTERVAL_MS'te bir
+// sorgular; her poll isteği de kısa sürdüğü için Akamai'nin gateway
+// timeout'una hiç yaklaşmaz.
+const POLL_INTERVAL_MS = 4000;
+// POLL_TIMEOUT_MS: canlıda ölçülen en büyük parçanın (3 paylaşım günü)
+// süresinin (~2dk) güvenli katı — n8n/MiniMax tarafında gerçek bir
+// takılma olursa kullanıcıyı sonsuza kadar bekletmemek için.
+const POLL_TIMEOUT_MS = 6 * 60 * 1000;
+
+async function fetchJsonAsyncJob(baseUrl, promptBody, lang, onProgress) {
+  const startRes = await fetch(`${baseUrl}/start`, {
+    method: `POST`,
+    headers: { 'Content-Type': `application/json` },
+    body: JSON.stringify(promptBody)
+  });
+  if (startRes.status === 429) return { status: 429 };
+  const startData = await startRes.json();
+  if (!startData.job_id) throw new Error(`JOB_START_FAILED`);
+  const jobId = startData.job_id;
+
+  const deadline = Date.now() + POLL_TIMEOUT_MS;
+  while (Date.now() < deadline) {
+    await new Promise(r => setTimeout(r, POLL_INTERVAL_MS));
+    let statusRes;
     try {
-      res = await fetch(url, { ...opts, signal: controller.signal });
-    } catch (err) {
-      clearTimeout(timeoutId);
-      const reason = err.name === `AbortError` ? `timeout` : `network`;
-      if (attempt < retries) { onRetry?.(attempt, reason); await new Promise(r => setTimeout(r, 1500)); continue; }
-      throw err;
-    }
-    clearTimeout(timeoutId);
-    if (res.status === 429) return { status: 429 };
-    const data = await res.json();
-    const text = (data.content || []).map(b => b.text || ``).join(``) || (data.choices?.[0]?.message?.content || ``);
-    if (hasEncodingCorruption(text, lang)) {
-      if (attempt < retries) { onRetry?.(attempt, `encoding`); await new Promise(r => setTimeout(r, 500)); continue; }
-    }
-    try {
+      statusRes = await fetch(`${baseUrl}/status/${jobId}`);
+    } catch (e) { continue; } // ağ hatası — bir sonraki poll'da tekrar dene
+    if (!statusRes.ok) continue;
+    const job = await statusRes.json();
+    onProgress?.(job.status);
+    if (job.status === `completed`) {
+      const text = (job.result?.content || []).map(b => b.text || ``).join(``);
+      if (hasEncodingCorruption(text, lang)) throw new Error(`ENCODING_CORRUPTION`);
       const clean = extractJson(text);
       const result = JSON.parse(clean);
-      return { status: res.status, result };
-    } catch (parseErr) {
-      lastParseError = parseErr;
-      if (attempt < retries) { onRetry?.(attempt, `parse`); await new Promise(r => setTimeout(r, 800)); continue; }
-      throw lastParseError;
+      return { status: 200, result };
     }
+    if (job.status === `error`) throw new Error(job.error || `AI_JOB_FAILED`);
+    if (job.status === `not_found`) throw new Error(`JOB_NOT_FOUND`);
+    // 'pending' -> döngü devam eder
   }
+  throw new Error(`JOB_TIMEOUT`);
 }
 
 const loadingMsgs = [
@@ -900,20 +906,16 @@ function fetchAndMergeGroup(group, startDate) {
     const chunkPostingDates = chunkPostingDays.map(d => new Date(startMs + (d - 1) * 86400000));
     const prompt = buildCalendarPrompt(chunkPostingDays, chunkPostingDates, campaignCtx);
 
-    const onRetry = (attempt, reason) => {
+    let pollCount = 0;
+    const onProgress = () => {
+      pollCount++;
       const msgEl = document.getElementById(`loading-msg`);
-      if (msgEl) msgEl.textContent = reason === `encoding`
-        ? `Yanıtta karakter bozulması tespit edildi, tekrar deneniyor...`
-        : `Yapay zeka meşgul, tekrar deneniyor...`;
+      if (msgEl) msgEl.textContent = `Yapay zeka içerik üretiyor... (${pollCount * POLL_INTERVAL_MS / 1000}sn)`;
     };
 
     let res;
     if (N8N_PROXY) {
-      res = await fetchJsonWithRetry(N8N_PROXY, {
-        method: `POST`,
-        headers: { 'Content-Type': `application/json` },
-        body: JSON.stringify({ prompt })
-      }, campaignCtx.lang, onRetry);
+      res = await fetchJsonAsyncJob(N8N_PROXY, { prompt }, campaignCtx.lang, onProgress);
       if (res.status === 429) { const e = new Error(`RATE_LIMIT`); throw e; }
     } else {
       const rawRes = await fetch(`https://api.minimax.io/v1/chat/completions`, {
@@ -1033,6 +1035,8 @@ async function generate() {
     err.style.display = `block`;
     err.textContent = e?.message === `RATE_LIMIT`
       ? `Sunucu tarafında günlük limit doldu. Lütfen yarın tekrar deneyin.`
+      : e?.message === `JOB_TIMEOUT`
+      ? `Yapay zeka beklenenden uzun sürdü ve zaman aşımına uğradı. Lütfen tekrar deneyin.`
       : `Takvim oluşturulamadı. Yapay zeka meşgul olabilir veya sunucuya bağlanılamadı — lütfen tekrar deneyin.`;
   }
 }
