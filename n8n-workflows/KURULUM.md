@@ -222,6 +222,17 @@ Akamai gateway timeout'unun sizin kullanım paterniniz (uzun/karmaşık
 promptlar) için yükseltilmesini istemektir — bu bizim kod tarafımızdan
 etkileyemeyeceğimiz bir üçüncü taraf altyapı sınırı.
 
+**DÜZELTİLEN 5. HATA (v5): `max_completion_tokens` 24000'de kalmıştı.**
+"Build Request Body" düğümü hâlâ `max_completion_tokens: 24000`
+gönderiyordu — reasoning modelinin gizli "düşünme" tokenleri dahil 24K
+token üretmek 5+ dakika sürebiliyor, bu da hem MiniMax'ın kendi Akamai
+timeout'una (yukarıdaki 4. hata) yakalanma riskini artırıyor hem de genel
+olarak gereksiz yavaş. Bir parça en fazla ~3 paylaşım günü içeriyor (her
+biri kısa bir topic/format/platform/draft alanı) — `6000` bu çıktı boyutu
+için (reasoning payı dahil) rahatça yeterli. Hem `kolay-kobi-takvim-worker.json`
+hem de (tutarlılık için) deaktif `kolay-kobi-takvim.json`'da düzeltildi.
+**`kolay-kobi-takvim-worker.json`'ı tekrar import etmeniz gerekiyor.**
+
 ---
 
 ## 5. Uygulama Durumu

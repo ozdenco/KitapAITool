@@ -35,7 +35,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const data = $input.first().json;\nconst apiBody = {\n  model: 'MiniMax-M3',\n  max_completion_tokens: 24000,\n  messages: [{ role: 'user', content: data.prompt || '' }]\n};\nreturn [{ json: { ...data, apiBody } }];"
+        "jsCode": "// max_completion_tokens: 24000 -> 6000. 24K token üretmek (reasoning\n// modelinin gizli 'düşünme' tokenleri dahil) 5+ dakika sürebiliyor — bu da\n// MiniMax'ın kendi Akamai gateway timeout'una (bkz. KURULUM.md v4 notu)\n// yakalanma riskini artırıyor. Bir parça en fazla ~3 paylaşım günü içeriyor\n// (her biri kısa bir topic/format/platform/draft alanı) — 6000 token bu\n// çıktı boyutu için (reasoning payı dahil) rahatça yeterli, ve üretim\n// süresini kısaltarak Akamai timeout riskini azaltır.\nconst data = $input.first().json;\nconst apiBody = {\n  model: 'MiniMax-M3',\n  max_completion_tokens: 6000,\n  messages: [{ role: 'user', content: data.prompt || '' }]\n};\nreturn [{ json: { ...data, apiBody } }];"
       },
       "id": "build-body-node",
       "name": "Build Request Body",
