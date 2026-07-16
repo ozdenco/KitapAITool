@@ -300,6 +300,37 @@ ayarlayın..." mesajını gösteriyor.
 hâlâ geçerli bir başlangıç noktası — hangisinin seçileceği, o zamanki
 maliyet toleransına bağlı.
 
+### v9: Sayfa yenileme/kapatma → sessiz kredi kaybı
+**FAIL — kanıt:** 1 gün/hafta testinde hata almadan kredi düştü (4802→4781,
+21 kredi) ama sonuç ekrana hiç gelmedi. Kullanıcı sayfayı yanlışlıkla
+yenilemiş/kapatmış olabileceğinden şüphelendi, testi tekrarladı (4781→4759,
+22 kredi) — bu sefer başarıyla sonuç geldi.
+
+**Analiz:** n8n Worker, tarayıcı bağlantısından TAMAMEN BAĞIMSIZ çalışır
+(bu, mimarinin bilinçli bir özelliği — asenkron tasarımın amacı budur).
+Kullanıcı üretim sürerken sayfayı yenilerse/kapatırsa, n8n arka planda
+çalışmaya devam edip krediyi harcar, ama tarayıcı JS context'i tamamen
+sıfırlandığı için (polling döngüsü, `try/catch`, her şey) ne sonuç
+gösterilir ne de bir hata mesajı yazılır — kredi sessizce boşa gider.
+
+**Düzeltme:** `generate()` artık AI çağrısı sürerken `beforeunload`
+event'ine bir tarayıcı onay istemi bağlıyor ("Bu sayfadan ayrılmak
+istediğinizden emin misiniz?" tarzı native diyalog) — kullanıcı yanlışlıkla
+sekmeyi kapatmaya/yenilemeye çalışırsa uyarılır. Başarı ve hata
+yollarının ikisinde de listener temizleniyor (kalıcı/gereksiz uyarı
+kalmaz).
+
+**NOT — bu düzeltme sınırlı bir koruma:** `beforeunload` sadece
+kullanıcının TARAYICI İÇİNDEN (sekme kapatma, yenileme, geri gitme)
+ayrılmasını yakalar — bilgisayarın uyku moduna geçmesi, ağ bağlantısının
+kopması, veya sekmenin arka planda tarayıcı tarafından askıya alınması
+gibi durumları YAKALAMAZ. Bu senaryolarda da job n8n'de bağımsız
+tamamlanmaya devam eder (staticData'da saklanır), ama kullanıcı sonucu
+görmek için aynı `job_id` ile tekrar `/status` sorgulamadıkça (şu an
+frontend'de böyle bir "kaldığı yerden devam et" mekanizması YOK) sonucu
+kaybeder. İleride istenirse: son `job_id`'yi `localStorage`'a yazıp sayfa
+açılışında "yarım kalan bir işlem var, devam edilsin mi?" diye sorulabilir.
+
 ---
 
 ## Tespit Edilen Ve Düzeltilen Tüm Hatalar (Özet Tablo)
@@ -319,6 +350,7 @@ maliyet toleransına bağlı.
 | 11 | max_completion_tokens sabit tahmin (24000/6000/16000/8000 tartışması) | 3 günlük parça ~6250 token kullanmış (ölçüldü) | dayCount'a göre dinamik formül |
 | 12 | Gerçek tarihten uzak özel günler "kutlu olsun" deniyor | PDF: "Babalar Günü kutlu olsun" (2 Haz, gerçek tarih 21 Haz) | isCloseToTarget() kontrolü |
 | 13 | 2 gün/hafta 35+ dakika + 185 kredi (sonuçsuz) | Kullanıcı manuel iptal, kredi 4987→4802 | Haftalık üst sınır 2→1 |
+| 14 | Sayfa yenileme/kapatma → sessiz kredi kaybı (hata bile yok) | Kredi 4802→4781, sonuç hiç gelmedi | `beforeunload` onay istemi |
 
 ---
 
