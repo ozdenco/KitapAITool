@@ -1074,6 +1074,16 @@ async function generate() {
   const msgEl = document.getElementById(`loading-msg`);
   const ticker = setInterval(() => { mi=(mi+1)%loadingMsgs.length; msgEl.textContent=loadingMsgs[mi]; }, 1800);
 
+  // Canlıda tespit edildi: kullanıcı üretim devam ederken sayfayı
+  // yanlışlıkla yenileyip/kapatırsa, n8n arka planda çalışmaya devam edip
+  // krediyi harcıyor ama tarayıcı context'i tamamen sıfırlandığı için
+  // sonuç HİÇ görüntülenemiyor (hata da yazılmıyor, çünkü sayfa zaten
+  // yeniden yüklenmiş oluyor) — kredi sessizce boşa gidiyor. Üretim
+  // sürerken sayfadan ayrılmaya çalışılırsa tarayıcının onay istemesini
+  // sağlıyoruz.
+  const warnBeforeUnload = (e) => { e.preventDefault(); e.returnValue = ``; };
+  window.addEventListener(`beforeunload`, warnBeforeUnload);
+
   try {
     // Tüm ay TEK istekte ("Oluştur" butonuna tek basışta) alınır — canlı
     // testte kanıtlanmış şekilde hızlı ve güvenilir (~45sn-1dk16sn).
@@ -1090,6 +1100,7 @@ async function generate() {
     saveRate(rateData);
     updateRateBar();
     clearInterval(ticker);
+    window.removeEventListener(`beforeunload`, warnBeforeUnload);
     if (genBtn) { genBtn.disabled = false; genBtn.style.opacity = ``; }
     renderResultsShell(firstCtaText);
   } catch(e) {
@@ -1097,6 +1108,7 @@ async function generate() {
     saveRate(rateData);
     updateRateBar();
     clearInterval(ticker);
+    window.removeEventListener(`beforeunload`, warnBeforeUnload);
     if (genBtn) { genBtn.disabled = false; genBtn.style.opacity = ``; }
     show(`form-section`);
     err.style.display = `block`;
