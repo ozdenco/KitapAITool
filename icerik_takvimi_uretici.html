@@ -747,6 +747,17 @@ function resolveCampaigns(special, postingDays, postingDates) {
     // talimat üretmesini önlemek için çözülen tarihleri burada takip ederiz.
     const resolvedDayMonthKeys = new Set();
 
+    // "gün mesajı" ("kutlu olsun" gibi O GÜNMÜŞ gibi konuşan bir ton)
+    // etiketi, SADECE seçilen paylaşım günü gerçek tarihe yeterince YAKINSA
+    // (≤3 gün) kullanılmalı. 30 günlük dönem gerçek tarihten önce biterse
+    // (ör. dönem 2 Haziran'da bitiyor ama Babalar Günü 21 Haziran'sa),
+    // findLastNOnOrBefore dönemdeki EN SON günü döndürür — bu gün gerçek
+    // tarihten haftalarca uzak olabilir, yine de "gün mesajı" denirse AI
+    // olmamış bir günü "kutlu olsun" diye kutlar (canlıda tespit edilen
+    // gerçek bir hataydı bu). Bu durumda TÜM aşamalar hazırlık/duyuru
+    // niteliğinde kalmalı, hiçbiri "bugün o gün" gibi konuşmamalı.
+    const isCloseToTarget = (matchDt, targetDt) => (targetDt.getTime() - matchDt.getTime()) / 86400000 <= 3;
+
     namedDateMatches.forEach(({ day, month }) => {
       resolvedDayMonthKeys.add(`${day}-${month}`);
       monthsCovered.forEach(key => {
@@ -755,9 +766,10 @@ function resolveCampaigns(special, postingDays, postingDates) {
         const target = new Date(y, mo, day, 0, 0, 0);
         const matches = findLastNOnOrBefore(target, 2);
         const reversed = [...matches].reverse();
+        const canUseDayOfStage = reversed.length ? isCloseToTarget(reversed[0].dt, target) : false;
         reversed.forEach((match, i) => {
-          const stage = i === 0 ? `gün mesajı` : `öncesi hatırlatma`;
-          resolvedCampaigns.push({ dayNum: match.dayNum, text: `"${day} ${TR_MONTHS[month]}" özel günü → Sıra No ${match.dayNum} (${match.dt.getDate()} ${TR_MONTHS[match.dt.getMonth()]}) için isSpecial:true yap; bu gün "${stage}" niteliğinde bir mesaj yaz.` });
+          const stage = [i === 0, canUseDayOfStage].every(Boolean) ? `gün mesajı` : `öncesi hatırlatma/hazırlık (asıl tarihe henüz gelinmedi, "bugün/kutlu olsun" gibi konuşma)`;
+          resolvedCampaigns.push({ dayNum: match.dayNum, text: `"${day} ${TR_MONTHS[month]}" özel günü (asıl tarih ${target.getDate()} ${TR_MONTHS[target.getMonth()]}) → Sıra No ${match.dayNum} (${match.dt.getDate()} ${TR_MONTHS[match.dt.getMonth()]}) için isSpecial:true yap; bu gün "${stage}" niteliğinde bir mesaj yaz.` });
         });
       });
     });
@@ -773,9 +785,10 @@ function resolveCampaigns(special, postingDays, postingDates) {
         if (resolvedDayMonthKeys.has(`${target.getDate()}-${target.getMonth()}`)) return;
         const matches = findLastNOnOrBefore(target, 2);
         const reversed = [...matches].reverse();
+        const canUseDayOfStage = reversed.length ? isCloseToTarget(reversed[0].dt, target) : false;
         reversed.forEach((match, i) => {
-          const stage = i === 0 ? `gün mesajı` : `öncesi hatırlatma`;
-          resolvedCampaigns.push({ dayNum: match.dayNum, text: `"${holiday.label}" (${target.getDate()} ${TR_MONTHS[target.getMonth()]}) → Sıra No ${match.dayNum} (${match.dt.getDate()} ${TR_MONTHS[match.dt.getMonth()]}) için isSpecial:true yap; bu gün "${stage}" niteliğinde, "${holiday.label}" temalı bir mesaj yaz.` });
+          const stage = [i === 0, canUseDayOfStage].every(Boolean) ? `gün mesajı` : `öncesi hatırlatma/hazırlık (asıl tarihe henüz gelinmedi, "bugün/kutlu olsun" gibi konuşma)`;
+          resolvedCampaigns.push({ dayNum: match.dayNum, text: `"${holiday.label}" (asıl tarih ${target.getDate()} ${TR_MONTHS[target.getMonth()]}) → Sıra No ${match.dayNum} (${match.dt.getDate()} ${TR_MONTHS[match.dt.getMonth()]}) için isSpecial:true yap; bu gün "${stage}" niteliğinde, "${holiday.label}" temalı bir mesaj yaz.` });
         });
       });
     });
