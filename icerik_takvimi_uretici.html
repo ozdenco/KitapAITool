@@ -393,26 +393,37 @@ function updateRateBar() {
 // HİÇ yeniden denenmeden anında hata veriliyordu — gerçekte yaşanan bir
 // hataydı bu (bir hafta tutarlı şekilde başarısız oluyordu).
 //
-// retries=1: MiniMax bazen n8n'in 300s node timeout'una çarpıp ağ hatası
-// olarak dönüyor — her deneme kendi başına ~5 dakikaya kadar sürebiliyor
-// (n8n tarafında yeni bir workflow çalıştırması olarak görünür). retries=2
-// iken en kötü durumda 3 deneme x ~5dk = ~15dk gibi kabul edilemez bir
-// bekleme oluyordu; retries=1 bunu en kötü durumda 2 denemeye (~10dk) indirir.
+// retries=1: kanıtlanmış sunucu seviyesi 180sn cURL tavanına takılan bir
+// istek ağ hatası olarak dönüyor — her deneme kendi başına 180sn'ye kadar
+// sürebiliyor. Bunu daha da azaltmak için CLIENT_TIMEOUT_MS ile 180sn'yi
+// beklemeden, 90sn'de İSTEMCİ TARAFINDA erken vazgeçip (AbortController)
+// daha hızlı yeniden deniyoruz — bu, tek bir isteğin toplam bekleme
+// süresini neredeyse yarıya indirir ve kullanıcının daha erken bir hata/
+// yeniden deneme mesajı görmesini sağlar. Retry gecikmeleri de kısaltıldı
+// (4sn→1.5sn ağ, 2sn→0.8sn parse, 1.5sn→0.5sn encoding) — sunucu zaten
+// yavaşken ek beklemeler eklemenin faydası yok, hızlıca tekrar denemek
+// daha iyi.
+const CLIENT_TIMEOUT_MS = 90000;
 async function fetchJsonWithRetry(url, opts, lang, onRetry, retries = 1) {
   let lastParseError = null;
   for (let attempt = 0; attempt <= retries; attempt++) {
     let res;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), CLIENT_TIMEOUT_MS);
     try {
-      res = await fetch(url, opts);
+      res = await fetch(url, { ...opts, signal: controller.signal });
     } catch (err) {
-      if (attempt < retries) { onRetry?.(attempt, `network`); await new Promise(r => setTimeout(r, 4000)); continue; }
+      clearTimeout(timeoutId);
+      const reason = err.name === `AbortError` ? `timeout` : `network`;
+      if (attempt < retries) { onRetry?.(attempt, reason); await new Promise(r => setTimeout(r, 1500)); continue; }
       throw err;
     }
+    clearTimeout(timeoutId);
     if (res.status === 429) return { status: 429 };
     const data = await res.json();
     const text = (data.content || []).map(b => b.text || ``).join(``) || (data.choices?.[0]?.message?.content || ``);
     if (hasEncodingCorruption(text, lang)) {
-      if (attempt < retries) { onRetry?.(attempt, `encoding`); await new Promise(r => setTimeout(r, 1500)); continue; }
+      if (attempt < retries) { onRetry?.(attempt, `encoding`); await new Promise(r => setTimeout(r, 500)); continue; }
     }
     try {
       const clean = extractJson(text);
@@ -420,7 +431,7 @@ async function fetchJsonWithRetry(url, opts, lang, onRetry, retries = 1) {
       return { status: res.status, result };
     } catch (parseErr) {
       lastParseError = parseErr;
-      if (attempt < retries) { onRetry?.(attempt, `parse`); await new Promise(r => setTimeout(r, 2000)); continue; }
+      if (attempt < retries) { onRetry?.(attempt, `parse`); await new Promise(r => setTimeout(r, 800)); continue; }
       throw lastParseError;
     }
   }
@@ -762,19 +773,23 @@ function resolveCampaigns(special, postingDays, postingDates) {
 // resolvedCampaigns (tüm dönem için önceden hesaplanmış) bu parçanın Sıra
 // No'larına göre filtrelenir; böylece hangi parça ne zaman istenirse
 // istensin özel günler doğru yerde çıkar.
+//
+// Prompt, giden token sayısını (dolayısıyla modelin "düşünme"/yanıt
+// süresini) azaltmak için mümkün olduğunca kompakt tutulur: tek satırlık
+// Sıra No/tarih eşlemesi, madde numarası yerine tek paragraf kural metni,
+// virgülle ayrılmış alan tanımları. Bu, 180sn sunucu tavanına yaklaşma
+// riskini azaltır — özellikle parça başına birden fazla Sıra No olan
+// (2 gün/hafta) senaryolarda.
 function buildCalendarPrompt(chunkPostingDays, chunkPostingDates, ctx) {
   const { biz, sector, audience, platformList, tone, lang, special, resolvedCampaigns, matchedMovable, hasDateAnchoredCampaign } = ctx;
   const dayDateMap = chunkPostingDays.map((dayNum, idx) => {
     const dt = chunkPostingDates[idx];
-    return `Sıra No ${dayNum} → ${dt.getDate()} ${TR_MONTHS[dt.getMonth()]} ${dt.getFullYear()} (${TR_DAYS[dt.getDay()]})`;
-  }).join(`\n`);
+    return `No${dayNum}=${dt.getDate()} ${TR_MONTHS[dt.getMonth()]}(${TR_DAYS[dt.getDay()]})`;
+  }).join(`, `);
 
   const chunkDayNums = new Set(chunkPostingDays);
   const chunkCampaignTexts = resolvedCampaigns.filter(c => chunkDayNums.has(c.dayNum)).map(c => c.text);
-
-  const movableDateNote = matchedMovable.length
-    ? ` ${matchedMovable.map(m => m.label).join(', ')} bu dönemde geçiyor olabilir (hicri takvim, yıldan yıla kayar) — kendi bilgine göre ${[...new Set(chunkPostingDates.map(d => d.getFullYear()))].join('/')} için doğru tarihi belirleyip en yakın paylaşım gününde isSpecial:true yap.`
-    : ``;
+  const years = [...new Set(chunkPostingDates.map(d => d.getFullYear()))].join(`/`);
 
   // Bu parçanın gerçek tarih aralığını (ay adı değil, tam tarih) açıkça
   // veriyoruz ki AI "Mayıs ayına özgü bir gün" ararken, bu parçanın
@@ -788,41 +803,28 @@ function buildCalendarPrompt(chunkPostingDays, chunkPostingDates, ctx) {
     ? `${chunkFirstDate.getDate()} ${TR_MONTHS[chunkFirstDate.getMonth()]} – ${chunkLastDate.getDate()} ${TR_MONTHS[chunkLastDate.getMonth()]} ${chunkLastDate.getFullYear()}`
     : coveredMonthNames;
 
-  const campaignLine = special
-    ? `${special}${chunkCampaignTexts.length ? ` | Eşleşmeler: ${chunkCampaignTexts.join(' / ')}` : ``}${movableDateNote}${hasDateAnchoredCampaign ? `` : ` Bu kampanya belirli bir tarihe bağlı değil (sürekli geçerli) — 3-4 farklı paylaşım gününe FARKLI açılardan dağıt, tekrar etme.`}`
-    : `Yok — ${chunkRangeStr} aralığına özgü, sektörle alakalı genel bir mevsimsel fırsatı kendi bilgine dayanarak seç, en az 1 günde isSpecial:true yap.`;
+  const campaignBit = special
+    ? `${special}${chunkCampaignTexts.length ? ` | Eşleşme: ${chunkCampaignTexts.join(` / `)}` : ``}`
+    : ``;
+  const movableBit = matchedMovable.length
+    ? ` | Kayan: ${matchedMovable.map(m => m.label).join(`,`)} (${years})`
+    : ``;
+  const noDateBit = hasDateAnchoredCampaign ? `` : ` | Tarihe bağlı değil, 3-4 güne FARKLI açı`;
 
-  return `Sosyal medya stratejistisin. Aşağıdaki bilgilere göre içerik takvimi üret, SADECE JSON döndür.
+  return `${biz} için ${lang} ${tone || `profesyonel`} tonunda, ${sector} sektörü, ${platformList} platformlarına uygun, ${audience || `genel`} hedef kitleye yönelik ${chunkPostingDays.length} günlük içerik takvimi üret. SADECE JSON döndür.
 
-İŞLETME
-- Marka: ${biz} | Sektör: ${sector} | Dil: ${lang} | Ton: ${tone || 'Profesyonel'} (jenerik ifade yok)
-- Platform: ${platformList} | Hedef kitle: ${audience || 'Genel'}
-- Kampanyalar: ${campaignLine}
+Kampanyalar: ${campaignBit}${movableBit}${noDateBit}
+${special ? `` : `Kampanya belirtilmedi — ${chunkRangeStr} aralığına özgü, sektörle alakalı genel bir mevsimsel fırsatı kendi bilgine dayanarak seç, en az 1 günde isSpecial:true yap.`}
 
-KESİN KURALLAR
-1. Kampanya sayılarını (%, adet, tarih) birebir koru; farklı yapıya çevirme (örn. "3 alana 1'i bedava" ≠ "3-for-2" — 4 ürün alınır, 3'ü ödenir).
-2. "Sıra No" = takvim sırası, ayın günü DEĞİL — "day" alanına Sıra No yaz, "Sıra No 14" ile "ayın 14'ü" bağımsızdır.
-3. ${chunkRangeStr} aralığına (veya hemen öncesi/sonrasına) denk gelen, kullanıcının yazmayı unutmuş olabileceği resmi/dini bayram ve sektörel özel günleri kendi bilginle tespit et, isSpecial:true ile EK içerik üret (kullanıcı kampanyasının yerine değil). Bu aralığın BAŞLANGICINDAN ÖNCEKİ bir tarihi asla "bugün/yarın" gibi güncelmiş gibi sunma.
-4. Tekrar eden konu/format olmasın, formatlarda dengeli dağılım yap.
+Kurallar: Kampanya sayıları (%, adet) birebir korunur ("3 alana 1 bedava"≠"3-for-2", 4 ürün alınır 3'ü ödenir). day alanı listedeki Sıra No (No6 → day:6), ayın günü değil. ${chunkRangeStr} aralığına (veya hemen öncesi/sonrasına) denk gelen, kullanıcının yazmayı unutmuş olabileceği resmi/dini bayram ve sektörel özel günleri uzmanlığınla tespit edip isSpecial:true ile EKLE (kullanıcınınkilerin yerine değil). Bu aralığın başlangıcından önceki bir tarihi asla "bugün/yarın" gibi güncelmiş sunma. Konu/format tekrarı yok, formatlarda dengeli dağılım.
 
-Üretilecek Sıra No'lar (tarihleriyle):
-${dayDateMap}
-"days" dizisi tam olarak ${chunkPostingDays.length} eleman içersin, başka Sıra No için içerik yazma.
+Sıra No ve tarih: ${dayDateMap}
+Yalnızca bu ${chunkPostingDays.length} Sıra No için üret, "days" dizisi tam ${chunkPostingDays.length} eleman içersin.
 
-HER GÜN İÇİN ALANLAR
-- day: Sıra No (sayı, yukarıdaki listeden — takvim tarihi değil)
-- topic: maks 8 kelime başlık
-- format: Reels | Statik görsel | Hikaye | Carousel | Blog | Video
-- platform: ${platformList} içinden seç
-- draft: 1-2 cümle, ${lang}, marka tonuna uygun, kullanıma hazır
-- isSpecial: özel gün/kampanya ise true
-
-ÇIKTI ŞEMASI
-{"days":[{"day":${chunkPostingDays[0]},"topic":"...","format":"...","platform":"...","draft":"...","isSpecial":false}],"ctaText":"..."}`;
+Şema: {"days":[{"day":SIRA_NO,"topic":"maks 8 kelime","format":"Reels|Statik görsel|Hikaye|Carousel|Blog|Video","platform":"${platformList} içinden","draft":"1-2 cümle ${lang}","isSpecial":bool}],"ctaText":"..."}`;
 }
 
-// Dönemi kaç "FETCH parça"sına böleceğimizi belirler — her zaman ~7 günlük
-// haftalık parçalar.
+// Dönemi kaç "FETCH parça"sına böleceğimizi belirler.
 //
 // KANITLANMIŞ KÖK NEDEN (canlı test, WP proxy hata gövdesi): "cURL error
 // 28: Operation timed out after 180000 milliseconds with 0 bytes
@@ -830,14 +832,30 @@ HER GÜN İÇİN ALANLAR
 // (muhtemelen php.ini'deki default_socket_timeout veya bir güvenlik
 // eklentisi/WAF) cURL isteklerini SABİT 180 saniyede, HİÇ veri almadan
 // kesiyor — bizim kodumuzun kontrol edemediği bir sunucu seviyesi limit.
-// 180sn'yi aşan HER istek (prompt ne kadar kısa olursa olsun, kampanya
-// yoğun senaryolarda modelin "düşünme" süresi arttıkça) kesin olarak
-// başarısız olur. Bunun kalıcı çözümü hosting sağlayıcısıyla bu limitin
-// yükseltilmesidir; kod tarafında yapabileceğimiz tek şey her isteği bu
-// 180sn tavanının güvenli şekilde altında tutmak — haftalık (~7 günlük)
-// parçalar canlı testte tutarlı şekilde ~75-90sn'de tamamlanıyor.
+// Bunun kalıcı çözümü hosting sağlayıcısıyla bu limitin yükseltilmesidir;
+// kod tarafında yapabileceğimiz tek şey her isteği bu 180sn tavanının
+// güvenli şekilde altında tutmak.
+//
+// Sabit 7 GÜNLÜK (haftalık) parçalama, 2 gün/hafta seçildiğinde 1
+// gün/hafta'ya göre parça başına 2 KAT paylaşım günü (dolayısıyla 2 kat
+// üretim yükü) demekti — canlı testte 2 gün/hafta senaryosunda 18dk'lık
+// bir zaman aşımı zincirine yol açan asıl sebep buydu. Artık parça
+// başına PAYLAŞIM GÜNÜ sayısını sabit (~3) tutuyoruz; parça sayısı ve
+// aralığı seçilen gün sıklığına göre dinamik ayarlanıyor — böylece her
+// parçanın gerçek iş yükü (ve dolayısıyla yanıt süresi) weekdayCount'tan
+// bağımsız, tutarlı şekilde düşük kalıyor.
 function computeChunkGroups(weekdayCount) {
-  return [1, 2, 3, 4, 5].map(w => ({ id: w - 1, dayStart: (w - 1) * 7 + 1, dayEnd: Math.min((w - 1) * 7 + 7, 30) }));
+  const targetDaysPerChunk = 3;
+  const approxPostingDays = Math.max(1, Math.round(30 / 7 * weekdayCount));
+  const numChunks = Math.max(1, Math.ceil(approxPostingDays / targetDaysPerChunk));
+  const chunkDaySpan = Math.ceil(30 / numChunks);
+
+  const groups = [];
+  for (let dayStart = 1; dayStart <= 30; dayStart += chunkDaySpan) {
+    const dayEnd = Math.min(dayStart + chunkDaySpan - 1, 30);
+    groups.push({ id: groups.length, dayStart, dayEnd });
+  }
+  return groups;
 }
 
 // Kullanıcıya gösterilen SEKMELER fetch parçalarıyla birebir eşleşir, ama
@@ -847,7 +865,7 @@ function computeChunkGroups(weekdayCount) {
 function computeViewTabs(weekdayCount) {
   const groups = computeChunkGroups(weekdayCount);
   return groups.map((g, i) => ({
-    label: `${i + 1}. Hafta`,
+    label: `${i + 1}. Bölüm`,
     dayStart: g.dayStart,
     dayEnd: g.dayEnd,
     fetchGroupIds: [g.id],
