@@ -418,14 +418,14 @@ async function fetchJsonAsyncJob(baseUrl, promptBody, lang, onProgress) {
   if (!startData.job_id) throw new Error(`JOB_START_FAILED`);
   const jobId = startData.job_id;
 
-  // "not_found" bir süre TOLERE edilir: Worker'ın "pending" kaydını
-  // staticData'ya yazması ile tarayıcının ilk poll'u arasında kısa bir
-  // yarış durumu (race condition) olabilir — canlıda gözlemlendi (job_id
-  // /start'tan geldi ama ilk /status sorgusu "not_found" döndü). Art arda
-  // birkaç "not_found" TOLERANCE_LIMIT'i geçerse gerçekten kayıp bir job
-  // olduğu kabul edilip hata verilir.
-  const NOT_FOUND_TOLERANCE = 5;
-  let notFoundCount = 0;
+  // "not_found" ayrı bir hata dalı DEĞİL, 'pending' ile AYNI şekilde ele
+  // alınır (basitçe döngüye devam edilir). Canlıda görüldü: Worker'ın
+  // "pending" kaydını staticData'ya yazması, n8n'in eşzamanlı execution
+  // sınırına takılıp beklenenden çok daha uzun sürebiliyor (ör. bir önceki
+  // parçanın AI çağrısı hâlâ bir slot işgal ediyorsa) — sabit bir "N kere
+  // dene, sonra hata ver" toleransı bu durumda yetersiz kalıyordu. Genel
+  // POLL_TIMEOUT_MS (6dk) zaten tek ve yeterli üst sınır: job GERÇEKTEN
+  // kaybolmuşsa kullanıcı en geç 6dk'da JOB_TIMEOUT hatası görür.
   const deadline = Date.now() + POLL_TIMEOUT_MS;
   while (Date.now() < deadline) {
     await new Promise(r => setTimeout(r, POLL_INTERVAL_MS));
@@ -452,13 +452,7 @@ async function fetchJsonAsyncJob(baseUrl, promptBody, lang, onProgress) {
       return { status: 200, result };
     }
     if (job.status === `error`) throw new Error(job.error || `AI_JOB_FAILED`);
-    if (job.status === `not_found`) {
-      notFoundCount++;
-      if (notFoundCount >= NOT_FOUND_TOLERANCE) throw new Error(`JOB_NOT_FOUND`);
-      continue;
-    }
-    notFoundCount = 0;
-    // 'pending' -> döngü devam eder
+    // 'pending' veya 'not_found' -> döngü devam eder (yukarıdaki yorum)
   }
   throw new Error(`JOB_TIMEOUT`);
 }
@@ -1058,8 +1052,6 @@ async function generate() {
       ? `Sunucu tarafında günlük limit doldu. Lütfen yarın tekrar deneyin.`
       : e?.message === `JOB_TIMEOUT`
       ? `Yapay zeka beklenenden uzun sürdü ve zaman aşımına uğradı. Lütfen tekrar deneyin.`
-      : e?.message === `JOB_NOT_FOUND`
-      ? `İşlem sunucuda bulunamadı, muhtemelen sistem bakımdaydı. Lütfen tekrar deneyin.`
       : `Takvim oluşturulamadı. Yapay zeka meşgul olabilir veya sunucuya bağlanılamadı — lütfen tekrar deneyin.`;
   }
 }
