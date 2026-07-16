@@ -431,7 +431,15 @@ async function fetchJsonAsyncJob(baseUrl, promptBody, lang, onProgress) {
     await new Promise(r => setTimeout(r, POLL_INTERVAL_MS));
     let statusRes;
     try {
-      statusRes = await fetch(`${baseUrl}/status/${jobId}`);
+      // cache-busting sorgu parametresi + cache:'no-store': canlıda
+      // WordPress'in LiteSpeed Cache eklentisinin bu GET ucunu önbelleğe
+      // aldığı tespit edildi (2. ve sonraki aynı URL sorguları n8n'e hiç
+      // gitmeden ilk yanıtı tekrar tekrar döndürüyordu — DevTools'ta
+      // "304 Not Modified" olarak görünüyordu). Her poll'a benzersiz bir
+      // zaman damgası eklemek, URL'yi her seferinde farklı kılarak
+      // herhangi bir URL-tabanlı önbellekleme katmanını (LiteSpeed, CDN,
+      // tarayıcı) tamamen atlatır.
+      statusRes = await fetch(`${baseUrl}/status/${jobId}?_=${Date.now()}`, { cache: `no-store` });
     } catch (e) { continue; } // ağ hatası — bir sonraki poll'da tekrar dene
     if (!statusRes.ok) continue;
     const job = await statusRes.json();

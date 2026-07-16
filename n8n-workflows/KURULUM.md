@@ -135,6 +135,30 @@ yeniden import edip node ID'lerinin eşleştiğinden emin olun).
    "MiniMax API" node'unu aç → Authorization header'ına key'i yaz → Activate et
 4. Her iki workflow da AYNI ANDA aktif olmalı (birbirini tetikliyorlar)
 
+**DÜZELTİLEN 3. HATA (v3, canlı testte bulundu — LiteSpeed Cache):**
+Tarayıcı DevTools Network sekmesinde, `/status/{job_id}` sorgularının
+İLKİ `200`, sonrakiler ise hepsi `304 Not Modified` dönüyordu — yani
+WordPress'in LiteSpeed Cache eklentisi bu GET ucunu önbelleğe alıyor,
+2. ve sonraki sorgular n8n'e HİÇ gitmeden ilk yanıtı (o an "not_found"
+veya "pending" ise onu) tekrar tekrar döndürüyordu. Sonuç: durum asla
+"completed"a geçemiyor, tarayıcı sonunda "İşlem sunucuda bulunamadı"
+hatası veriyordu.
+
+İki katmanlı düzeltme yapıldı:
+1. `wordpress-ai-proxy.php`'de `kolaykobi_ai_job_status()` artık
+   `nocache_headers()` + açık `Cache-Control: no-store` header'ları
+   gönderiyor.
+2. `icerik_takvimi_uretici.html`'de her `/status` sorgusuna benzersiz bir
+   zaman damgası (`?_=timestamp`) ekleniyor ve `cache: 'no-store'`
+   kullanılıyor — bu, URL'yi her seferinde farklı kıldığı için LiteSpeed
+   dahil HERHANGİ bir URL-tabanlı önbellekleme katmanını tamamen atlatır
+   (WordPress panelinde ayrı bir ayar yapmanıza GEREK KALMADAN).
+
+Ek güvence isterseniz (opsiyonel): LiteSpeed Cache eklentisi ayarlarından
+(**LiteSpeed Cache → Cache → Excludes** veya **Advanced**) `/wp-json/kolaykobi/v1/*`
+için bir "Do Not Cache" kuralı ekleyebilirsiniz — ama yukarıdaki
+cache-busting sorgu parametresi sayesinde bu artık ZORUNLU değil.
+
 **Test (her iki workflow da aktifken):**
 ```bash
 # 1) Job başlat — birkaç SANİYE içinde dönmeli (job_id ile)

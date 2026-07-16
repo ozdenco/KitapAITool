@@ -106,7 +106,25 @@ function kolaykobi_ai_job_start(WP_REST_Request $request) {
 // Asenkron akışın 2. adımı: tarayıcı bunu her birkaç saniyede bir çağırıp
 // job'un durumunu sorar. n8n'in durum webhook'u da hızlı yanıt verdiği için
 // (staticData'dan okuma, AI çağrısı yok) kısa timeout yeterli.
+//
+// ÖNEMLİ — CANLIDA TESPİT EDİLEN GERÇEK BİR HATA: Bu uç bir GET isteği
+// olduğu için LiteSpeed Cache (veya benzeri sayfa/REST önbellekleme
+// eklentileri) bunu varsayılan olarak ÖNBELLEĞE alabiliyor — aynı URL'ye
+// (aynı job_id ile) yapılan İKİNCİ ve sonraki sorgular n8n'e HİÇ gitmeden
+// önbellekteki İLK yanıtı tekrar tekrar döndürüyor (tarayıcı Network
+// sekmesinde "304 Not Modified" olarak görünür). Bu, tarayıcının job
+// durumundaki gerçek değişikliği (pending → completed) HİÇBİR ZAMAN
+// görememesine yol açıyordu. nocache_headers() + açık Cache-Control
+// header'ları bunu PHP seviyesinde engeller — ama LiteSpeed'in SUNUCU/
+// EDGE seviyesindeki önbelleklemesi PHP'yi hiç çalıştırmadan devreye
+// girebildiği için, LiteSpeed Cache eklenti panelinden de
+// "/wp-json/kolaykobi/v1/*" için bir "Do Not Cache" / hariç tutma kuralı
+// eklenmesi gerekebilir (bkz. n8n-workflows/KURULUM.md).
 function kolaykobi_ai_job_status(WP_REST_Request $request) {
+    nocache_headers();
+    header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+    header('Pragma: no-cache');
+
     $tools = kolaykobi_ai_tool_map();
     $tool = $request->get_param('tool');
     $job_id = $request->get_param('job_id');
@@ -119,7 +137,7 @@ function kolaykobi_ai_job_status(WP_REST_Request $request) {
     }
 
     $response = wp_remote_get(
-        'https://n8n.srv1492396.hstgr.cloud/webhook/' . $tools[$tool] . '-status?jobId=' . rawurlencode($job_id),
+        'https://n8n.srv1492396.hstgr.cloud/webhook/' . $tools[$tool] . '-status?jobId=' . rawurlencode($job_id) . '&_=' . time(),
         array('timeout' => 15)
     );
 
