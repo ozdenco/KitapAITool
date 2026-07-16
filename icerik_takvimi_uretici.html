@@ -393,17 +393,16 @@ function updateRateBar() {
 // HİÇ yeniden denenmeden anında hata veriliyordu — gerçekte yaşanan bir
 // hataydı bu (bir hafta tutarlı şekilde başarısız oluyordu).
 //
-// retries=1: kanıtlanmış sunucu seviyesi 180sn cURL tavanına takılan bir
-// istek ağ hatası olarak dönüyor — her deneme kendi başına 180sn'ye kadar
-// sürebiliyor. Bunu daha da azaltmak için CLIENT_TIMEOUT_MS ile 180sn'yi
-// beklemeden, 90sn'de İSTEMCİ TARAFINDA erken vazgeçip (AbortController)
-// daha hızlı yeniden deniyoruz — bu, tek bir isteğin toplam bekleme
-// süresini neredeyse yarıya indirir ve kullanıcının daha erken bir hata/
-// yeniden deneme mesajı görmesini sağlar. Retry gecikmeleri de kısaltıldı
-// (4sn→1.5sn ağ, 2sn→0.8sn parse, 1.5sn→0.5sn encoding) — sunucu zaten
-// yavaşken ek beklemeler eklemenin faydası yok, hızlıca tekrar denemek
-// daha iyi.
-const CLIENT_TIMEOUT_MS = 90000;
+// retries=1: 150sn İSTEMCİ TARAFINDA erken vazgeçme (AbortController) —
+// sunucu tarafı limitlerinden ÖNCE dönmek için. Gerçek üst sınırlar
+// (kanıtlanmış): Hostinger 400sn, MiniMax 300sn. 150sn istemci timeout'u
+// bu tavanların ALTINDA ama gerçek başarılı yanıt sürelerinin (~80-120sn)
+// ÜZERİNDE — canlı testte 3 paylaşım günlük bir parça 2dk'da (120sn)
+// başarıyla tamamlandı; 90sn gibi daha agresif bir değer bu normal
+// yanıtı bile erken keserdi. Retry gecikmeleri kısa tutuldu (1.5sn ağ,
+// 0.8sn parse, 0.5sn encoding) — sunucu zaten yavaşken ek beklemeler
+// eklemenin faydası yok, hızlıca tekrar denemek daha iyi.
+const CLIENT_TIMEOUT_MS = 150000;
 async function fetchJsonWithRetry(url, opts, lang, onRetry, retries = 1) {
   let lastParseError = null;
   for (let attempt = 0; attempt <= retries; attempt++) {
@@ -996,6 +995,7 @@ async function generate() {
   viewTabs = computeViewTabs(weekdays.length);
   loadedGroupIds = new Set();
   allDays = [];
+  printFullCalendar._cache = null;
 
   const genBtn = document.getElementById(`gen-btn`) || document.getElementById(`analyze-btn`);
   if (genBtn) { genBtn.disabled = true; genBtn.style.opacity = `0.6`; }
@@ -1069,41 +1069,57 @@ function showTab(tabIndex, btn) {
   renderDays(tabDays);
 }
 
+// Tek-kez yazılan gün kartı HTML şablonu — önceden bu template hem
+// renderDays() içinde hem printFullCalendar() içinde kopyaydı (iki yerde
+// tekrar). Şimdi tek fonksiyondan üretilir. includeCopy=false yazdırma
+// için (yazdırılan sayfada buton gereksiz).
+function dayCardHtml(d, opts) {
+  const includeCopy = !opts || opts.includeCopy !== false;
+  const dt = d.date;
+  const dayName = TR_DAYS[dt.getDay()];
+  const specialBorder = d.isSpecial ? `border-left:3px solid #EF9F27;border-radius:0 12px 12px 0;` : ``;
+  const specialDate = d.isSpecial ? `color:#BA7517` : ``;
+  const specialTag = d.isSpecial ? `<span class="tag tag-special">Özel gün</span>` : ``;
+  const copyBtn = includeCopy
+    ? `<button class="day-copy" onclick="copyDay(${d.day}, this)" title="Kopyala"><i class="ti ti-copy" style="font-size:14px" aria-hidden="true"></i></button>`
+    : ``;
+  return `<div class="day-card" style="${specialBorder}">
+    <div>
+      <div class="day-num">Gün ${d.day}</div>
+      <div class="day-date" style="${specialDate}">${dt.getDate()}</div>
+      <div class="day-weekday">${dayName} ${TR_MONTHS[dt.getMonth()]}</div>
+    </div>
+    <div class="day-content">
+      <div class="day-topic">${escHtml(d.topic)}</div>
+      <div class="day-draft">${escHtml(d.draft)}</div>
+      <div class="day-tags">
+        <span class="tag tag-format">${escHtml(d.format)}</span>
+        <span class="tag tag-platform">${escHtml(d.platform)}</span>
+        ${specialTag}
+      </div>
+    </div>
+    ${copyBtn}
+  </div>`;
+}
+
 function renderDays(days) {
   const grid = document.getElementById(`days-grid`);
-  grid.innerHTML = ``;
-  days.forEach((d, idx) => {
-    const dt = d.date;
-    const dayName = TR_DAYS[dt.getDay()];
-    const dateStr = `${dt.getDate()} ${TR_MONTHS[dt.getMonth()]}`;
-
-    grid.innerHTML += `
-      <div class="day-card" style="${d.isSpecial ? 'border-left:3px solid #EF9F27;border-radius:0 12px 12px 0;' : ''}">
-        <div>
-          <div class="day-num">Gün ${d.day}</div>
-          <div class="day-date" style="${d.isSpecial ? 'color:#BA7517' : ''}">${dt.getDate()}</div>
-          <div class="day-weekday">${dayName} ${TR_MONTHS[dt.getMonth()]}</div>
-        </div>
-        <div class="day-content">
-          <div class="day-topic">${escHtml(d.topic)}</div>
-          <div class="day-draft">${escHtml(d.draft)}</div>
-          <div class="day-tags">
-            <span class="tag tag-format">${escHtml(d.format)}</span>
-            <span class="tag tag-platform">${escHtml(d.platform)}</span>
-            ${d.isSpecial ? '<span class="tag tag-special">Özel gün</span>' : ''}
-          </div>
-        </div>
-        <button class="day-copy" onclick="copyDay(${d.day}, this)" title="Kopyala">
-          <i class="ti ti-copy" style="font-size:14px" aria-hidden="true"></i>
-        </button>
-      </div>`;
-  });
+  // Önceden her gün için `grid.innerHTML += ...` yapılıyordu → 30 gün ×
+  // tarayıcı reflow = 30 kez layout yeniden hesaplanıyordu. Şimdi tüm
+  // HTML'i tek seferde birleştirip TEK innerHTML atamasıyla yazıyoruz → 1
+  // reflow. Sekme değiştirmede gözle görülür hız kazancı.
+  grid.innerHTML = days.map(d => dayCardHtml(d, { includeCopy: true })).join(``);
 }
 
 // "Yazdır" butonu yalnızca ekranda o an görünen haftayı (days-grid) yazdırırdı,
 // çünkü hafta sekmeleri aynı konteynerin içeriğini değiştirip diğer haftaların
 // DOM'dan tamamen silinmesine yol açıyordu. Bunun yerine form bilgilerini ve
 // TÜM günleri ayrı, sadece yazdırmada görünen bir konteynere basıyoruz.
+//
+// Yazdırma HTML'i allDays değişmediği sürece CACHE'leniyor — önceden her
+// "Yazdır" tıklamasında 30 günlük DOM yeniden kuruluyordu (30 reflow).
+// allDays uzunluğu ve gün listesi aynıysa cache'den dön, sadece yeni
+// takvim/yenilemede yeniden kur (generate() içinde cache sıfırlanır).
 async function printFullCalendar() {
   if (!allDays.length) return;
   const btn = document.getElementById(`print-btn`);
@@ -1113,40 +1129,29 @@ async function printFullCalendar() {
   if (!ok) return;
   const fd = formData || {};
   const container = document.getElementById(`print-all-days`);
-  const metaRows = [
-    [`İşletme`, fd.biz],
-    [`Sektör`, fd.sector],
-    [`Hedef Kitle`, fd.audience],
-    [`Platformlar`, fd.platforms?.length ? fd.platforms.join(`, `) : ``],
-    [`Marka Tonu`, fd.tone],
-    [`Dil`, fd.lang],
-    [`Paylaşım Günleri`, fd.weekdays?.length ? fd.weekdays.map(w => TR_DAYS[w]).join(`, `) : ``],
-    [`Özel Gün/Kampanya`, fd.special],
-  ].filter(([, v]) => v);
-  const metaHtml = `<div style="margin-bottom:1.5rem;font-size:13px;color:#1C1B19;line-height:1.7">` +
-    metaRows.map(([k, v]) => `<div><strong>${escHtml(k)}:</strong> ${escHtml(v)}</div>`).join(``) +
-    `</div>`;
-  const daysHtml = allDays.map(d => {
-    const dt = d.date;
-    return `
-      <div class="day-card" style="${d.isSpecial ? `border-left:3px solid #EF9F27;border-radius:0 12px 12px 0;` : ``}">
-        <div>
-          <div class="day-num">Gün ${d.day}</div>
-          <div class="day-date" style="${d.isSpecial ? `color:#BA7517` : ``}">${dt.getDate()}</div>
-          <div class="day-weekday">${TR_DAYS[dt.getDay()]} ${TR_MONTHS[dt.getMonth()]}</div>
-        </div>
-        <div class="day-content">
-          <div class="day-topic">${escHtml(d.topic)}</div>
-          <div class="day-draft">${escHtml(d.draft)}</div>
-          <div class="day-tags">
-            <span class="tag tag-format">${escHtml(d.format)}</span>
-            <span class="tag tag-platform">${escHtml(d.platform)}</span>
-            ${d.isSpecial ? `<span class="tag tag-special">Özel gün</span>` : ``}
-          </div>
-        </div>
-      </div>`;
-  }).join(``);
-  container.innerHTML = `<h1 style="font-size:20px;margin-bottom:1rem">${escHtml(document.getElementById('results-title')?.textContent || '30 Günlük İçerik Takvimi')}</h1>` + metaHtml + `<div class="days-grid" style="display:grid!important">${daysHtml}</div>`;
+  const title = escHtml(document.getElementById('results-title')?.textContent || '30 Günlük İçerik Takvimi');
+  const cacheKey = `${title}|${allDays.length}|${allDays.map(d => d.day).join(`,`)}`;
+  if ([printFullCalendar._cache, printFullCalendar._cache?.key === cacheKey].every(Boolean)) {
+    container.innerHTML = printFullCalendar._cache.html;
+  } else {
+    const metaRows = [
+      [`İşletme`, fd.biz],
+      [`Sektör`, fd.sector],
+      [`Hedef Kitle`, fd.audience],
+      [`Platformlar`, fd.platforms?.length ? fd.platforms.join(`, `) : ``],
+      [`Marka Tonu`, fd.tone],
+      [`Dil`, fd.lang],
+      [`Paylaşım Günleri`, fd.weekdays?.length ? fd.weekdays.map(w => TR_DAYS[w]).join(`, `) : ``],
+      [`Özel Gün/Kampanya`, fd.special],
+    ].filter(([, v]) => v);
+    const metaHtml = `<div style="margin-bottom:1.5rem;font-size:13px;color:#1C1B19;line-height:1.7">` +
+      metaRows.map(([k, v]) => `<div><strong>${escHtml(k)}:</strong> ${escHtml(v)}</div>`).join(``) +
+      `</div>`;
+    const daysHtml = allDays.map(d => dayCardHtml(d, { includeCopy: false })).join(``);
+    const html = `<h1 style="font-size:20px;margin-bottom:1rem">${title}</h1>${metaHtml}<div class="days-grid" style="display:grid!important">${daysHtml}</div>`;
+    printFullCalendar._cache = { key: cacheKey, html };
+    container.innerHTML = html;
+  }
   window.print();
 }
 
