@@ -12,23 +12,32 @@ sorularına baştan deney yapmadan cevap bulunabilsin.
 
 ---
 
-## TL;DR — Şu anki durum (2026-07-16 sonu itibarıyla)
+## TL;DR — Şu anki durum (2026-07-17 itibarıyla, v11 sonrası)
 
 - **Mimari:** Asenkron job/polling (2 ayrı n8n workflow'u: "Job Başlat" +
   "Worker + Durum"). Tarayıcı kısa `/start` + kısa `/status` sorgularıyla
   çalışır, tek bir uzun HTTP isteğine hiç bağımlı değildir.
-- **Parçalama (chunking) YOK** — 30 günün tamamı TEK bir MiniMax çağrısında
-  isteniyor. Görüntüleme hâlâ 5 haftalık sekmeye bölünüyor ama bu saf
-  istemci-tarafı bölme, ek AI çağrısı yok.
-- **`max_completion_tokens` dinamik** — isteğin gerçek gün sayısına
-  (`dayCount`) göre hesaplanıyor: `Math.min(20000, Math.max(6000, 2500 +
-  dayCount*1800))`.
-- **Haftalık paylaşım günü üst sınırı: 1 gün** (önceden 2'ydi — 2 günün
-  35+ dakika sürüp 185 kredi tükettiği canlı testte görüldü, geri 1'e
-  düşürüldü — bkz. "Deneme 9" aşağıda).
+- **Parçalama (chunking) BOYUTA DUYARLI** — `MAX_POSTING_DAYS_PER_CHUNK=5`.
+  1 gün/hafta (~4-5 gün) TEK MiniMax çağrısı (hızlı/ucuz: 10-25 kredi).
+  2 gün/hafta (~8-9 gün) 2 çağrıya bölünür — her biri güvenli boyutta
+  kalır. Görüntüleme hâlâ 5 haftalık sekmeye bölünüyor (bir sekme birden
+  fazla fetch grubuna denk gelebilir), bu saf istemci-tarafı bölme.
+- **`max_completion_tokens` dinamik, GÜVENLİ ARALIKTA** —
+  `Math.min(9000, Math.max(6000, 2000 + dayCount*1200))`. MiniMax'ın
+  kendi teknik analizine göre kalibre edildi (bkz. v11) — reasoning
+  modellerinde 10000-20000 token aralığı "riskli bölge" (üssel süre
+  artışı), 6000-8000 "sweet spot".
+- **Haftalık paylaşım günü üst sınırı: 2 gün** (v8'de 1'e düşürülmüştü,
+  v11'deki boyuta-duyarlı-parçalama + güvenli token aralığı düzeltmesi
+  sonrası 2'ye geri açıldı — artık 2 gün seçimi de 2 küçük parçaya
+  bölünerek güvenli boyutta kalıyor).
+- **KRİTİK — `dayCount` özelliği 4 AYRI DOSYAYA yayılmış** (HTML → PHP →
+  Job Başlat → Worker). Biri eski kalırsa SESSİZCE yanlış (büyük) bir
+  varsayılana düşer, hata vermez — sadece maliyet/süre kötüleşir. Her
+  değişiklikte 4 dosyanın da deploy edildiğinden emin olun (bkz. v11).
 - **Bilinen, kod tarafında ÇÖZÜLEMEYEN kısıtlamalar** (3. taraf altyapı):
   - kolaykobi.com Akamai/CDN arkasında (~60-120sn gateway timeout) — ASENKRON mimari bunu bypass eder.
-  - `api.minimax.io` (MiniMax'ın kendi API'si) DA Akamai arkasında — MiniMax'ın kendi origin sunucusu yavaşsa Akamai onu da 504'ler. Kod tarafında sadece retry ile mitigasyon yapılabiliyor, kalıcı çözüm MiniMax destek/altyapı meselesi.
+  - `api.minimax.io` (MiniMax'ın kendi API'si) DA Akamai arkasında — MiniMax'ın kendi origin sunucusu yavaşsa Akamai onu da 504'ler. MiniMax'ın kendisi bunu, kendi origin-retry mekanizmasının (birden fazla × 300sn) toplam 12dk'ya kadar sürebildiği şeklinde açıkladı. Kod tarafında sadece token tavanını düşük tutarak (reasoning süresini kısaltarak) risk azaltılabiliyor, kalıcı çözüm MiniMax destek/altyapı meselesi.
 - **Diğer 7 araç** (whatsapp, persona, chatbot, geri-dönüş, rakip, bütçe,
   görünürlük skoru) hâlâ ESKİ senkron mimaride — bu dokümandaki sorunların
   hiçbiri onları etkilemedi, çünkü onlar hiç bu ölçekte (30 günlük, çok
@@ -356,6 +365,58 @@ yerine ASIL SORUNUN (neden bazı istekler 10+ dakika sürüyor — MiniMax'ın
 kendi yavaşlığı mı, retry'lerin kümülatif etkisi mi) araştırılması daha
 sağlıklı olur. Sürekli "timeout'u artır" döngüsüne girmemek gerekir.
 
+### v11: ASIL SORU çözüldü — dayCount routing eksikliği + MiniMax'ın kendi teknik onayı
+v10'daki "açık soru" (10+ dakika neden sürüyor) bu adımda netleşti, İKİ
+ayrı gerçek neden bulundu:
+
+**1) dayCount routing eksikliği (deployment sorunu, kod sorunu değil):**
+Canlı execution incelemesinde: prompt metni doğru şekilde "4 günlük"
+diyordu (1 gün/hafta ile tutarlı), ama `max_completion_tokens: 18700`
+geliyordu — bu değer sadece `dayCount=9` (2 gün/hafta boyutu) ile
+üretilir. Kök neden: `wordpress-ai-proxy.php` ve/veya
+`kolay-kobi-takvim-async.json`'ın güncel (dayCount'u ileten) hali henüz
+deploy edilmemişti — Worker'daki eski varsayılan (`|| 9`, 2 gün/hafta
+döneminden kalma) devreye giriyordu. **Ders: `dayCount` özelliği 4 ayrı
+dosyaya (HTML, PHP, Job Başlat, Worker) yayılmış durumda — biri eksik
+kalırsa sessizce yanlış (ve büyük) bir değere düşüyor.** Worker'daki
+varsayılan 9'dan 5'e düşürüldü (bkz. tablo #16), ama gerçek çözüm hepsinin
+deploy edilmesiydi.
+
+**2) MiniMax'ın kendi teknik onayı — reasoning modellerinde token/süre
+ilişkisi doğrusal değil:** Kullanıcı, canlı kanıtları (35dk/185 kredi
+sonuçsuz + 12dk6sn'de 504) içeren detaylı bir teknik rapor hazırlattı
+(`minimax_rapor.md`) ve MiniMax'a sordu. MiniMax'ın yanıtı:
+- `max_completion_tokens`'ı ~10000'den ~18700'e çıkarmak süreyi
+  doğrusal değil, **üssel/orantısız** artırıyor — reasoning modelleri
+  10000-20000 token aralığında "sürekli düşün, doğrula, alternatif
+  üret" döngüsüne girme eğiliminde.
+- Akamai'nin 504'ü muhtemelen kendi origin-retry mekanizmasından
+  (birden fazla deneme × 300sn = toplam 12dk'ya ulaşabiliyor) kaynaklanıyor.
+- 185 kredinin en olası açıklaması: MiniMax backend'i gerçekten 35dk
+  boyunca token üretmeye devam etti (kredi gerçek), ama Akamai zaman
+  aşımına uğrayınca cevap kullanıcıya hiç ulaşmadı.
+- Önerilen "sweet spot": 6000-8000 token. Önerilen çözüm: büyük
+  istekleri (8-9 gün) 2 parçaya bölmek (MiniMax'ın kendi önerisi, benim
+  daha önce sunduğum "Seçenek B" ile örtüşüyor).
+
+**Düzeltme:** `computeChunkGroups` yeniden boyuta duyarlı hale getirildi
+— `MAX_POSTING_DAYS_PER_CHUNK = 5`. 1 gün/hafta (~4-5 gün) tek parça
+kalır, 2 gün/hafta (~8-9 gün) artık 2 parçaya bölünür — her parça
+MiniMax'ın önerdiği güvenli bölgede kalır. `computeViewTabs` bir hafta
+sekmesinin birden fazla fetch grubuna denk gelebileceği (grup sınırları
+7'nin katı olmayabilir) durumu doğru ele alacak şekilde güncellendi. n8n
+Worker'daki token formülü `Math.min(9000, Math.max(6000, 2000 +
+dayCount*1200))` — MiniMax'ın önerdiği 6000-8000 aralığına çekildi.
+
+**Kalıcı ders — dörtlü dosya senkronizasyonu:** `dayCount` gibi özellikler
+4 dosyaya (HTML → PHP → Job Başlat → Worker) yayıldığında, deployment
+sırası/eksikliği KOLAYCA gözden kaçıyor ve SESSİZCE yanlış davranışa yol
+açıyor (hata vermiyor, sadece performans/maliyet kötüleşiyor). İleride
+böyle çok-dosyalı bir özellik eklenirse, her dosyada "bu alan X'ten
+geliyor, gelmezse Y varsayılanına düşer" şeklinde açık loglama/uyarı
+eklemek, bu tür sessiz bozulmaları çok daha hızlı teşhis edilebilir hale
+getirir.
+
 ---
 
 ## Tespit Edilen Ve Düzeltilen Tüm Hatalar (Özet Tablo)
@@ -377,6 +438,8 @@ sağlıklı olur. Sürekli "timeout'u artır" döngüsüne girmemek gerekir.
 | 13 | 2 gün/hafta 35+ dakika + 185 kredi (sonuçsuz) | Kullanıcı manuel iptal, kredi 4987→4802 | Haftalık üst sınır 2→1 |
 | 14 | Sayfa yenileme/kapatma → sessiz kredi kaybı (hata bile yok) | Kredi 4802→4781, sonuç hiç gelmedi | `beforeunload` onay istemi |
 | 15 | POLL_TIMEOUT_MS (6dk) başarılı ama uzun süren işleri erken kesiyordu | n8n "Succeeded in 12dk6.375s", tarayıcı JOB_TIMEOUT verdi | POLL_TIMEOUT_MS 6dk→15dk, maxTries 3→2 |
+| 16 | dayCount routing eksik → varsayılan 9'a düşüp gereksiz büyük istek | prompt "4 günlük" derken max_completion_tokens=18700 geldi | Worker varsayılanı 9→5, deployment eksikliği teşhis edildi |
+| 17 | 2+ gün/hafta (~8-9 gün, 18700 token) 12-35dk sürüp bazen 504 | 35dk/185 kredi sonuçsuz + 12dk6sn'de Akamai 504 (MiniMax onaylı analiz) | Boyuta duyarlı parçalama (MAX_POSTING_DAYS_PER_CHUNK=5) + token tavanı 9000'e çekildi |
 
 ---
 
