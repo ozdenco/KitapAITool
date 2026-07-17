@@ -512,6 +512,7 @@ testler olmadan "sorun çözüldü" sonucuna varmaktan kaçının.
 | 19 | extractJson, JSON-sonrası fazladan metindeki tesadüfi '}' yüzünden geçersiz dilim üretiyordu | "Unexpected non-whitespace character after JSON at position 1630" | Parantez derinliği sayarak JSON'un gerçek sonunu bulma |
 | 20 | 2 gün/hafta TEKRARLANAN kanıtla (v11'deki tek başarılı testten sonra) yine 6+dk sürdü | 2 ayrı günde 2 ayrı test, biri 29 kredi diğeri 6+dk'da iptal | Haftalık üst sınır kalıcı olarak 1'e düşürüldü |
 | 21 | 1 gün/hafta seçiminde bile bazı testler beklenenden uzun sürdü, çoklu platform şüpheli | Kullanıcı gözlemi (kesin kanıtlanmadı) | Platform seçimi de 1'e sınırlandı (enforcePlatformCap) |
+| 22 | Kesilmiş (max_completion_tokens tavanına takılan) yanıtlar tamamen boşa gidiyordu | "Unexpected end of JSON input", 5dk17sn/43KB yanıt | extractJson artık son TAM biten günü bulup kısmi sonucu kurtarıyor |
 
 ---
 
