@@ -27,10 +27,12 @@ sorularına baştan deney yapmadan cevap bulunabilsin.
   kendi teknik analizine göre kalibre edildi (bkz. v11) — reasoning
   modellerinde 10000-20000 token aralığı "riskli bölge" (üssel süre
   artışı), 6000-8000 "sweet spot".
-- **Haftalık paylaşım günü üst sınırı: 2 gün** (v8'de 1'e düşürülmüştü,
-  v11'deki boyuta-duyarlı-parçalama + güvenli token aralığı düzeltmesi
-  sonrası 2'ye geri açıldı — artık 2 gün seçimi de 2 küçük parçaya
-  bölünerek güvenli boyutta kalıyor).
+- **Haftalık paylaşım günü üst sınırı: 1 gün** (v8'de 1'e düşürülmüş,
+  v11'de boyuta-duyarlı-parçalama sonrası 2'ye geri açılmış, ama v13'te
+  TEKRARLANAN kanıtla — 2 gün/hafta'nın MiniMax'ın kendi değişken yanıt
+  süresi yüzünden bazı testlerde 6+ dakika sürüp iptal edilmek zorunda
+  kalması — kalıcı olarak tekrar 1'e düşürüldü. 1 gün/hafta tek
+  kanıtlanmış tutarlı-güvenilir konfigürasyon).
 - **KRİTİK — `dayCount` özelliği 4 AYRI DOSYAYA yayılmış** (HTML → PHP →
   Job Başlat → Worker). Biri eski kalırsa SESSİZCE yanlış (büyük) bir
   varsayılana düşer, hata vermez — sadece maliyet/süre kötüleşir. Her
@@ -452,6 +454,37 @@ yönü (hedef geçmişte mi gelecekte mi) ayrı ayrı düşünün — tek yönl�
 "yakınlık" testi (`Math.abs()` olmadan) neredeyse her zaman bir yönde
 sessizce yanlış davranır.
 
+### v13: 2 gün/hafta TEKRARLANAN kanıtla kalıcı olarak 1'e düşürüldü
+v11'de 2 gün/hafta boyuta duyarlı parçalama (`MAX_POSTING_DAYS_PER_CHUNK=5`)
++ güvenli token tavanıyla (6000-9000) tekrar açılmış ve o anki canlı
+testte başarılı olmuştu (~2.5dk, 16 kredi). Ama v13'te, AYRI bir günde
+yapılan yeni testlerde 2 gün/hafta yeniden sorun çıkardı:
+
+- Bir testte ilk parça 5m42s'de tamamlanamayıp iptal edildi (~29 kredi
+  boşa gitti).
+- Hemen ardından yapılan başka bir testte ilk parça 6dk'yı AŞIP hâlâ
+  bitmemişken kullanıcı iptal etti (2. parça hiç başlamadan; başlasaydı
+  toplam süre kat kat artacaktı).
+
+**Sonuç:** v11'deki tek başarılı test, "sorun kalıcı olarak çözüldü"
+anlamına gelmiyormuş — MiniMax'ın kendi yanıt süresi o kadar değişken ki
+AYNI boyuttaki istekler bazen 1-2 dakikada, bazen 6+ dakikada
+tamamlanabiliyor (veya hiç tamamlanmıyor). Bu, kod tarafında
+öngörülemeyen/kontrol edilemeyen bir 3. taraf davranışı.
+
+**Karar:** Haftalık paylaşım günü üst sınırı tekrar 2'den 1'e düşürüldü.
+1 gün/hafta, onlarca ayrı testte TUTARLI şekilde hızlı (dakikalar) ve
+ucuz (9-25 kredi) kaldı — tek gerçekten güvenilir kanıtlanmış konfigürasyon
+bu. 2 gün/hafta özelliği, MiniMax'ın kendi altyapısı daha öngörülebilir
+hale gelene kadar (ya da gerçek müşteri talebiyle bu riski bilinçli
+olarak almaya karar verilene kadar) askıya alındı.
+
+**Genel ders:** TEK bir başarılı canlı test, bir düzeltmenin "kalıcı
+olarak çalıştığı" anlamına gelmez — özellikle davranışı büyük ölçüde 3.
+taraf bir sistemin (burada: MiniMax'ın kendi yanıt süresi değişkenliği)
+belirlediği senaryolarda. Birden fazla ayrı günde/zamanda tekrarlanan
+testler olmadan "sorun çözüldü" sonucuna varmaktan kaçının.
+
 ---
 
 ## Tespit Edilen Ve Düzeltilen Tüm Hatalar (Özet Tablo)
@@ -477,6 +510,7 @@ sessizce yanlış davranır.
 | 17 | 2+ gün/hafta (~8-9 gün, 18700 token) 12-35dk sürüp bazen 504 | 35dk/185 kredi sonuçsuz + 12dk6sn'de Akamai 504 (MiniMax onaylı analiz) | Boyuta duyarlı parçalama (MAX_POSTING_DAYS_PER_CHUNK=5) + token tavanı 9000'e çekildi |
 | 18 | Dönem başlangıcından ÖNCE kalan tarihler "son çağrı"/"gün mesajı" (hâlâ güncelmiş gibi) etiketleniyordu | Ham MiniMax çıktısı: "15 Temmuz'u anıyoruz" mesajı 23 Temmuz'da (8 gün sonra) üretildi | isBelatedFallback() + Math.abs() ile her iki yönlü tarih kontrolü |
 | 19 | extractJson, JSON-sonrası fazladan metindeki tesadüfi '}' yüzünden geçersiz dilim üretiyordu | "Unexpected non-whitespace character after JSON at position 1630" | Parantez derinliği sayarak JSON'un gerçek sonunu bulma |
+| 20 | 2 gün/hafta TEKRARLANAN kanıtla (v11'deki tek başarılı testten sonra) yine 6+dk sürdü | 2 ayrı günde 2 ayrı test, biri 29 kredi diğeri 6+dk'da iptal | Haftalık üst sınır kalıcı olarak 1'e düşürüldü |
 
 ---
 
