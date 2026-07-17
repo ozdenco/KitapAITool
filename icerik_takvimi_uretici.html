@@ -259,7 +259,7 @@ input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3p
   <div class="loading" id="loading-section">
     <div class="spinner"></div>
     <p class="loading-txt" id="loading-msg">İçerik fikirleri üretiliyor...</p>
-    <p class="loading-note">Yapay zeka düşünüyor — bu işlem birkaç dakika sürebilir, sayfayı kapatmayın.</p>
+    <p class="loading-note">Yapay zeka düşünüyor — bu işlem nadiren 10+ dakika sürebilir, lütfen sayfayı kapatmayın.</p>
   </div>
 
   <!-- RESULTS -->
@@ -404,10 +404,16 @@ function updateRateBar() {
 // sorgular; her poll isteği de kısa sürdüğü için Akamai'nin gateway
 // timeout'una hiç yaklaşmaz.
 const POLL_INTERVAL_MS = 4000;
-// POLL_TIMEOUT_MS: canlıda ölçülen en büyük parçanın (3 paylaşım günü)
-// süresinin (~2dk) güvenli katı — n8n/MiniMax tarafında gerçek bir
-// takılma olursa kullanıcıyı sonsuza kadar bekletmemek için.
-const POLL_TIMEOUT_MS = 6 * 60 * 1000;
+// POLL_TIMEOUT_MS: canlıda tespit edildi — 1 gün/hafta gibi "küçük"
+// görünen bir istek bile (2 platform + karmaşık kampanya metni + mizahi
+// ton kombinasyonuyla) n8n'de 12dk6sn sürüp BAŞARIYLA tamamlanabiliyor.
+// Eski 6dk'lık sınır bu job'u zaman aşımına uğratıp krediyi (170 kredi)
+// boşa harcamıştı — n8n zaten işi bitirmişken tarayıcı çok erken vazgeçti.
+// 15dk, gözlemlenen en uzun başarılı sürenin (12dk6sn) güvenli bir
+// katıdır; n8n/MiniMax tarafında GERÇEK bir takılma olursa kullanıcıyı
+// sonsuza kadar bekletmemek için hâlâ bir üst sınır var, sadece daha
+// gerçekçi.
+const POLL_TIMEOUT_MS = 15 * 60 * 1000;
 
 // Canlıda tespit edildi: model bazen şemadaki "day" alanına gerçek Sıra
 // No yerine yer tutucu metni (ör. "SIRA_NO") olduğu gibi kopyalayıp
@@ -450,8 +456,8 @@ async function fetchJsonAsyncJob(baseUrl, promptBody, lang, onProgress, expected
   // sınırına takılıp beklenenden çok daha uzun sürebiliyor (ör. bir önceki
   // parçanın AI çağrısı hâlâ bir slot işgal ediyorsa) — sabit bir "N kere
   // dene, sonra hata ver" toleransı bu durumda yetersiz kalıyordu. Genel
-  // POLL_TIMEOUT_MS (6dk) zaten tek ve yeterli üst sınır: job GERÇEKTEN
-  // kaybolmuşsa kullanıcı en geç 6dk'da JOB_TIMEOUT hatası görür.
+  // POLL_TIMEOUT_MS (15dk) zaten tek ve yeterli üst sınır: job GERÇEKTEN
+  // kaybolmuşsa kullanıcı en geç 15dk'da JOB_TIMEOUT hatası görür.
   const deadline = Date.now() + POLL_TIMEOUT_MS;
   while (Date.now() < deadline) {
     await new Promise(r => setTimeout(r, POLL_INTERVAL_MS));
