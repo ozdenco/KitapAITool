@@ -1135,7 +1135,16 @@ function fetchAndMergeGroup(group, startDate) {
     return result;
   })();
   pendingGroupFetches.set(group.id, p);
-  p.finally(() => pendingGroupFetches.delete(group.id));
+  // ÖNEMLİ: promise.finally(fn), orijinal promise REDDEDİLİRSE kendi
+  // türetilmiş bir promise'ı da reddeder. `p` zaten generate()'in
+  // try/catch'i tarafından düzgün şekilde await edilip yakalanıyor, ama bu
+  // .finally()'den türeyen AYRI promise hiç yakalanmazsa tarayıcı bunu
+  // "Uncaught (in promise)" olarak konsola yazıyordu (canlıda tespit
+  // edildi) — asıl hata kullanıcıya zaten doğru mesajla gösterilmiş
+  // olsa bile. .catch(()=>{}) ile bu türetilmiş promise'ın reddi
+  // sessizce yutuluyor (asıl hatayı gizlemiyor, sadece bu ikinci/gölge
+  // promise zincirini temizliyor).
+  p.finally(() => pendingGroupFetches.delete(group.id)).catch(() => {});
   return p;
 }
 
