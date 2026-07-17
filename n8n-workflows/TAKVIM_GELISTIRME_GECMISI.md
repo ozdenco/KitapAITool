@@ -476,6 +476,7 @@ sessizce yanlış davranır.
 | 16 | dayCount routing eksik → varsayılan 9'a düşüp gereksiz büyük istek | prompt "4 günlük" derken max_completion_tokens=18700 geldi | Worker varsayılanı 9→5, deployment eksikliği teşhis edildi |
 | 17 | 2+ gün/hafta (~8-9 gün, 18700 token) 12-35dk sürüp bazen 504 | 35dk/185 kredi sonuçsuz + 12dk6sn'de Akamai 504 (MiniMax onaylı analiz) | Boyuta duyarlı parçalama (MAX_POSTING_DAYS_PER_CHUNK=5) + token tavanı 9000'e çekildi |
 | 18 | Dönem başlangıcından ÖNCE kalan tarihler "son çağrı"/"gün mesajı" (hâlâ güncelmiş gibi) etiketleniyordu | Ham MiniMax çıktısı: "15 Temmuz'u anıyoruz" mesajı 23 Temmuz'da (8 gün sonra) üretildi | isBelatedFallback() + Math.abs() ile her iki yönlü tarih kontrolü |
+| 19 | extractJson, JSON-sonrası fazladan metindeki tesadüfi '}' yüzünden geçersiz dilim üretiyordu | "Unexpected non-whitespace character after JSON at position 1630" | Parantez derinliği sayarak JSON'un gerçek sonunu bulma |
 
 ---
 
