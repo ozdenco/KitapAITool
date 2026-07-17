@@ -80,10 +80,10 @@
       "typeVersion": 4.2,
       "onError": "continueErrorOutput",
       "retryOnFail": true,
-      "maxTries": 3,
+      "maxTries": 2,
       "waitBetweenTries": 3000,
       "notesInFlow": true,
-      "notes": "Canlıda tespit edildi: api.minimax.io da Akamai arkasında ve MiniMax'ın kendi origin sunucusu yavaş yanıt verdiğinde Akamai kendi gateway timeout'unu (errors.edgesuite.net üzerinden 504) uyguluyor — bu bizim kontrol edemediğimiz, MiniMax'ın altyapısındaki bir sorun. retryOnFail: aynı istek otomatik olarak tekrar denenir (job kullanıcıya hiç görünmeden, sadece biraz daha uzun 'pending' kalır); yalnızca TÜM denemeler tükenirse job 'error' olarak işaretlenir.",
+      "notes": "Canlıda tespit edildi: api.minimax.io da Akamai arkasında ve MiniMax'ın kendi origin sunucusu yavaş yanıt verdiğinde Akamai kendi gateway timeout'unu (errors.edgesuite.net üzerinden 504) uyguluyor — bu bizim kontrol edemediğimiz, MiniMax'ın altyapısındaki bir sorun. retryOnFail: aynı istek otomatik olarak tekrar denenir (job kullanıcıya hiç görünmeden, sadece biraz daha uzun 'pending' kalır); yalnızca TÜM denemeler tükenirse job 'error' olarak işaretlenir. maxTries 3->2: canlıda 12dk6sn süren bir çağrı gözlemlendi — retry'lerin üst üste binip süreyi/maliyeti katlamasını sınırlamak için deneme sayısı azaltıldı (bkz. TAKVIM_GELISTIRME_GECMISI.md v10).",
       "position": [
         900,
         280

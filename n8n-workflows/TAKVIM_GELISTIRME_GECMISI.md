@@ -331,6 +331,31 @@ frontend'de böyle bir "kaldığı yerden devam et" mekanizması YOK) sonucu
 kaybeder. İleride istenirse: son `job_id`'yi `localStorage`'a yazıp sayfa
 açılışında "yarım kalan bir işlem var, devam edilsin mi?" diye sorulabilir.
 
+### v10: POLL_TIMEOUT_MS (6dk) gerçek başarılı süreleri karşılamıyordu
+**FAIL — kanıt:** 1 gün/hafta seçimiyle (2 platform: Instagram+LinkedIn,
+2 kampanya, mizahi ton) yapılan bir test, n8n execution log'unda "Succeeded
+in 12dk6.375s" olarak görünüyordu — yani AI çağrısı BAŞARIYLA tamamlandı.
+Ama tarayıcı, 6dk'lık `POLL_TIMEOUT_MS`'ye takılıp çok daha önce
+`JOB_TIMEOUT` hatası vermişti. Kredi: 4759→4589 (170 kredi, sonuçsuz).
+
+**Analiz:** "1 gün/hafta = küçük/hızlı istek" varsayımı her zaman doğru
+değil — platform sayısı, kampanya karmaşıklığı, ve modelin o anki
+davranışı (mizahi ton gibi daha "yaratıcı" istekler daha uzun reasoning
+gerektirebilir) süreyi ciddi şekilde uzatabiliyor. 6dk'lık sınır, önceki
+test verilerine (3 günlük parça ~2dk) dayanarak konmuştu ama tek-parça
+(v7) mimarisine geçildikten sonra yeniden kalibre edilmemişti.
+
+**Düzeltme:** `POLL_TIMEOUT_MS` 6dk'dan 15dk'ya çıkarıldı (gözlemlenen en
+uzun başarılı sürenin — 12dk6sn — güvenli bir katı). Yükleniyor
+ekranındaki bekleme mesajı da ("nadiren 10+ dakika sürebilir") bu
+gerçekçi beklentiyi yansıtacak şekilde güncellendi.
+
+**Açık soru (izlenmeli):** 15dk de yetersiz kalırsa (ör. gelecekte daha
+karmaşık promptlar/kampanyalar denenirse), bu sınırı tekrar artırmak
+yerine ASIL SORUNUN (neden bazı istekler 10+ dakika sürüyor — MiniMax'ın
+kendi yavaşlığı mı, retry'lerin kümülatif etkisi mi) araştırılması daha
+sağlıklı olur. Sürekli "timeout'u artır" döngüsüne girmemek gerekir.
+
 ---
 
 ## Tespit Edilen Ve Düzeltilen Tüm Hatalar (Özet Tablo)
@@ -351,6 +376,7 @@ açılışında "yarım kalan bir işlem var, devam edilsin mi?" diye sorulabili
 | 12 | Gerçek tarihten uzak özel günler "kutlu olsun" deniyor | PDF: "Babalar Günü kutlu olsun" (2 Haz, gerçek tarih 21 Haz) | isCloseToTarget() kontrolü |
 | 13 | 2 gün/hafta 35+ dakika + 185 kredi (sonuçsuz) | Kullanıcı manuel iptal, kredi 4987→4802 | Haftalık üst sınır 2→1 |
 | 14 | Sayfa yenileme/kapatma → sessiz kredi kaybı (hata bile yok) | Kredi 4802→4781, sonuç hiç gelmedi | `beforeunload` onay istemi |
+| 15 | POLL_TIMEOUT_MS (6dk) başarılı ama uzun süren işleri erken kesiyordu | n8n "Succeeded in 12dk6.375s", tarayıcı JOB_TIMEOUT verdi | POLL_TIMEOUT_MS 6dk→15dk, maxTries 3→2 |
 
 ---
 
