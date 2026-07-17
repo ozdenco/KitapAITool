@@ -549,8 +549,18 @@ async function fetchJsonAsyncJob(baseUrl, promptBody, lang, onProgress, expected
       const text = (job.result?.content || []).map(b => b.text || ``).join(``);
       if (hasEncodingCorruption(text, lang)) throw new Error(`ENCODING_CORRUPTION`);
       const clean = extractJson(text);
+      // Canlıda tespit edildi: JSON.parse BAŞARILI olsa bile sonuçta "days"
+      // dizisi hiç olmayabilir (ör. yanıt "days" anahtarına hiç
+      // ulaşamadan kesilmişse, extractJson'ın kurtarma mekanizması devreye
+      // giremez ve rastgele bir kapanışa düşer) — bu durumda
+      // fetchAndMergeGroup'taki `result.days.map(...)` çağrısı yakalanmamış
+      // bir TypeError ile çöküyordu. Artık "days" gerçek, dolu bir dizi
+      // değilse açıkça hata fırlatılıyor, bu da normal parse-hatası/retry
+      // akışına giriyor (çökme yerine kullanıcıya anlaşılır bir mesaj).
+      const isValidResult = r => [Array.isArray(r?.days), r?.days?.length > 0].every(Boolean);
       try {
         const result = JSON.parse(clean);
+        if (!isValidResult(result)) throw new Error(`MISSING_DAYS_FIELD`);
         return { status: 200, result };
       } catch (parseErr) {
         // İlk deneme başarısız — yer tutucu "day" alanı onarımını dene
@@ -559,6 +569,7 @@ async function fetchJsonAsyncJob(baseUrl, promptBody, lang, onProgress, expected
         if (expectedDays?.length) {
           try {
             const result = JSON.parse(repairPlaceholderDayFields(clean, expectedDays));
+            if (!isValidResult(result)) throw new Error(`MISSING_DAYS_FIELD`);
             return { status: 200, result };
           } catch (repairErr) { /* onarım da başarısız — orijinal hatayı fırlat */ }
         }
@@ -1542,6 +1553,16 @@ function saveForm() {
   try { localStorage.setItem(LS_KEY, JSON.stringify(data)); } catch(e) {}
 }
 
+// restoreForm/importFormJSON eski (2 gün/2 platform dönemi) verilerini geri
+// yükleyebilir — bu, mevcut 1-gün/1-platform sınırlarını
+// (enforceWeekdayCap/enforcePlatformCap) ATLAR çünkü checkbox durumu
+// doğrudan JS ile ayarlanıyor, onchange hiç tetiklenmiyor. Geri yükleme
+// sonrası her iki grupta da ilk işaretliden fazlasını temizliyoruz.
+function trimExcessCheckboxSelections(groupId, max) {
+  const checked = [...document.querySelectorAll(`#${groupId} input:checked`)];
+  checked.slice(max).forEach(el => { el.checked = false; });
+}
+
 function restoreForm() {
   try {
     const saved = localStorage.getItem(LS_KEY);
@@ -1553,6 +1574,8 @@ function restoreForm() {
       if (el.type === `checkbox`) el.checked = val;
       else el.value = val;
     });
+    trimExcessCheckboxSelections(`weekday-group`, 1);
+    trimExcessCheckboxSelections(`platform-group`, 1);
   } catch(e) {}
 }
 
@@ -1593,6 +1616,8 @@ function importFormJSON(input) {
         if (el.type === `checkbox`) el.checked = val;
         else el.value = val;
       });
+      trimExcessCheckboxSelections(`weekday-group`, 1);
+      trimExcessCheckboxSelections(`platform-group`, 1);
       saveForm();
       input.value = ``;
       const notice = document.getElementById(`import-notice`);
