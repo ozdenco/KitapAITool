@@ -417,6 +417,41 @@ geliyor, gelmezse Y varsayılanına düşer" şeklinde açık loglama/uyarı
 eklemek, bu tür sessiz bozulmaları çok daha hızlı teşhis edilebilir hale
 getirir.
 
+### v12: Dönem başlangıcından ÖNCE kalan tarihler yanlış etiketleniyordu
+**FAIL — kanıt:** v11 doğrulaması sırasında ham MiniMax çıktısı (raw
+`<think>` içeriği) incelendi. 23 Temmuz'da başlayan bir dönemde:
+- "Ayın 20'si" kampanyası (20 Temmuz, dönem başlamadan önce) Sıra No 1'e
+  (23 Temmuz) "son çağrı/son gün hatırlatması" olarak eşlendi — model
+  "bugün son gün!" tarzı bir aciliyet mesajı yazdı, oysa kampanya zaten
+  3 gün önce bitmişti.
+- "Demokrasi ve Millî Birlik Günü (15 Temmuz)" (dönem başlamadan önce)
+  aynı Sıra No'ya "gün mesajı" olarak eşlendi — model "15 Temmuz'u
+  saygıyla anıyoruz" yazdı, ama bu mesaj gerçek tarihten 8 gün SONRA
+  üretildi (geçmiş bir günü güncelmiş gibi sundu).
+
+**Kök neden:** Bu, v10'daki "Babalar Günü erken kutlama" hatasının TERS
+YÖNLÜ hali. `findLastNOnOrBefore`, hedef tarihten önce hiç paylaşım günü
+yoksa en yakın SONRAKİ güne düşer (fallback) — ama:
+1. `dayOfMonthMatches` döngüsü bu fallback durumunu HİÇ kontrol etmiyordu,
+   `campaignStageLabels[i]` dizisini (günlerin hedeften ÖNCE olduğunu
+   varsayan) koşulsuz uyguluyordu.
+2. `isCloseToTarget` (v10'da eklenen) sadece TEK yönü doğru
+   hesaplıyordu — `(targetDt - matchDt) <= 3`, hedef GEÇMİŞTE kalınca
+   bu fark NEGATİF çıkıyor ve `<= 3` negatifi de "yakın" sayıyordu
+   (`Math.abs()` eksikti).
+
+**Düzeltme:** `isBelatedFallback()` (dayOfMonthMatches için) ve
+`Math.abs()` + `farFromTargetStage()` (namedDateMatches/matchedHolidays
+için) eklendi — hedef HANGİ yönde uzaksa (gelecekte "henüz gelmedi",
+geçmişte "geçti") ona uygun geçmiş/gelecek zamanlı ifade seçiliyor,
+"bugün/son gün/kutlu olsun" gibi ifadeler sadece gerçekten ≤3 gün
+yakınlıkta kullanılıyor.
+
+**Genel ders:** Tarih-yakınlığı kontrolleri yazarken HER ZAMAN her iki
+yönü (hedef geçmişte mi gelecekte mi) ayrı ayrı düşünün — tek yönlü bir
+"yakınlık" testi (`Math.abs()` olmadan) neredeyse her zaman bir yönde
+sessizce yanlış davranır.
+
 ---
 
 ## Tespit Edilen Ve Düzeltilen Tüm Hatalar (Özet Tablo)
@@ -440,6 +475,7 @@ getirir.
 | 15 | POLL_TIMEOUT_MS (6dk) başarılı ama uzun süren işleri erken kesiyordu | n8n "Succeeded in 12dk6.375s", tarayıcı JOB_TIMEOUT verdi | POLL_TIMEOUT_MS 6dk→15dk, maxTries 3→2 |
 | 16 | dayCount routing eksik → varsayılan 9'a düşüp gereksiz büyük istek | prompt "4 günlük" derken max_completion_tokens=18700 geldi | Worker varsayılanı 9→5, deployment eksikliği teşhis edildi |
 | 17 | 2+ gün/hafta (~8-9 gün, 18700 token) 12-35dk sürüp bazen 504 | 35dk/185 kredi sonuçsuz + 12dk6sn'de Akamai 504 (MiniMax onaylı analiz) | Boyuta duyarlı parçalama (MAX_POSTING_DAYS_PER_CHUNK=5) + token tavanı 9000'e çekildi |
+| 18 | Dönem başlangıcından ÖNCE kalan tarihler "son çağrı"/"gün mesajı" (hâlâ güncelmiş gibi) etiketleniyordu | Ham MiniMax çıktısı: "15 Temmuz'u anıyoruz" mesajı 23 Temmuz'da (8 gün sonra) üretildi | isBelatedFallback() + Math.abs() ile her iki yönlü tarih kontrolü |
 
 ---
 
