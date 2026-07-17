@@ -167,15 +167,16 @@ input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3p
     </div>
 
     <div class="field">
-      <label>Hangi platformlar için içerik üretilsin?</label>
+      <label>Hangi platform için içerik üretilsin?</label>
       <div class="check-group" id="platform-group">
-        <label class="check-item"><input id="f-instagram" type="checkbox" value="Instagram"> Instagram</label>
-        <label class="check-item"><input id="f-facebook" type="checkbox" value="Facebook"> Facebook</label>
-        <label class="check-item"><input id="f-linkedin" type="checkbox" value="LinkedIn"> LinkedIn</label>
-        <label class="check-item"><input id="f-tiktok" type="checkbox" value="TikTok"> TikTok</label>
-        <label class="check-item"><input id="f-twitter-x" type="checkbox" value="Twitter/X"> Twitter/X</label>
-        <label class="check-item"><input id="f-youtube-shorts" type="checkbox" value="YouTube Shorts"> YouTube Shorts</label>
+        <label class="check-item"><input id="f-instagram" type="checkbox" value="Instagram" onchange="enforcePlatformCap(this)"> Instagram</label>
+        <label class="check-item"><input id="f-facebook" type="checkbox" value="Facebook" onchange="enforcePlatformCap(this)"> Facebook</label>
+        <label class="check-item"><input id="f-linkedin" type="checkbox" value="LinkedIn" onchange="enforcePlatformCap(this)"> LinkedIn</label>
+        <label class="check-item"><input id="f-tiktok" type="checkbox" value="TikTok" onchange="enforcePlatformCap(this)"> TikTok</label>
+        <label class="check-item"><input id="f-twitter-x" type="checkbox" value="Twitter/X" onchange="enforcePlatformCap(this)"> Twitter/X</label>
+        <label class="check-item"><input id="f-youtube-shorts" type="checkbox" value="YouTube Shorts" onchange="enforcePlatformCap(this)"> YouTube Shorts</label>
       </div>
+      <p style="font-size:12px;color:#9A9792;margin-top:6px">En fazla 1 platform seçebilirsiniz (yapay zeka yanıt süresi ve maliyeti nedeniyle).</p>
     </div>
 
     <div class="field">
@@ -341,6 +342,23 @@ function enforceWeekdayCap(changedEl) {
     changedEl.checked = false;
     const err = document.getElementById(`err`);
     if (err) { err.style.display = `block`; err.innerHTML = `En fazla 1 gün seçebilirsiniz. Daha sık paylaşım ve size özel bir yapay zeka çözümü mü istiyorsunuz? <a href="https://kolaykobi.com/iletisim" target="_blank" rel="noopener noreferrer" style="color:#1D9E75;font-weight:500">Ücretsiz görüşme ayarlayın</a>, size özel yapay zeka uygulamaları tasarlayalım.`; }
+  }
+}
+
+// Haftada 1'den fazla platform seçilmesini engeller. Canlıda tespit
+// edildi: 1 gün/hafta seçiminde bile (tek parça olması gereken bir
+// istekte) bazı testler beklenenden çok uzun sürdü — kullanıcı bunun
+// birden fazla platform seçilmesinden (üslup farklılaştırma talimatı +
+// modelin her gün için platform seçme/ayırt etme yükü) kaynaklanabileceğini
+// düşündü. Kesin kanıtlanmasa da (asıl neden büyük ihtimalle MiniMax'ın
+// kendi değişken yanıt süresi), riski daha da azaltmak için platform
+// seçimi de 1'e sınırlandı.
+function enforcePlatformCap(changedEl) {
+  const checked = [...document.querySelectorAll(`#platform-group input:checked`)];
+  if (checked.length > 1) {
+    changedEl.checked = false;
+    const err = document.getElementById(`err`);
+    if (err) { err.style.display = `block`; err.innerHTML = `En fazla 1 platform seçebilirsiniz. Daha fazla platform ve size özel bir yapay zeka çözümü mü istiyorsunuz? <a href="https://kolaykobi.com/iletisim" target="_blank" rel="noopener noreferrer" style="color:#1D9E75;font-weight:500">Ücretsiz görüşme ayarlayın</a>, size özel yapay zeka uygulamaları tasarlayalım.`; }
   }
 }
 
@@ -1126,6 +1144,7 @@ async function generate() {
   const weekdays = [...document.querySelectorAll(`#weekday-group input:checked`)].map(el => parseInt(el.value));
   if (!biz || !sector || platforms.length === 0 || weekdays.length === 0) { err.style.display=`block`; err.textContent=`Lütfen işletme adı, sektör, en az bir platform ve en az bir gün seçin.`; return; }
   if (weekdays.length > 1) { err.style.display=`block`; err.innerHTML=`En fazla 1 gün seçebilirsiniz. Daha sık paylaşım ve size özel bir yapay zeka çözümü mü istiyorsunuz? <a href="https://kolaykobi.com/iletisim" target="_blank" rel="noopener noreferrer" style="color:#1D9E75;font-weight:500">Ücretsiz görüşme ayarlayın</a>, size özel yapay zeka uygulamaları tasarlayalım.`; return; }
+  if (platforms.length > 1) { err.style.display=`block`; err.innerHTML=`En fazla 1 platform seçebilirsiniz. Daha fazla platform ve size özel bir yapay zeka çözümü mü istiyorsunuz? <a href="https://kolaykobi.com/iletisim" target="_blank" rel="noopener noreferrer" style="color:#1D9E75;font-weight:500">Ücretsiz görüşme ayarlayın</a>, size özel yapay zeka uygulamaları tasarlayalım.`; return; }
   err.style.display = `none`;
 
   // Seçilen haftanın günlerine göre 30 gün içindeki paylaşım günlerini hesapla
