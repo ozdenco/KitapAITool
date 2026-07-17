@@ -189,7 +189,7 @@ input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3p
         <label class="check-item"><input type="checkbox" value="6" onchange="enforceWeekdayCap(this)"> Cmt</label>
         <label class="check-item"><input type="checkbox" value="0" onchange="enforceWeekdayCap(this)"> Paz</label>
       </div>
-      <p style="font-size:12px;color:#9A9792;margin-top:6px">En fazla 1 gün seçebilirsiniz (yapay zeka yanıt süresi ve maliyeti nedeniyle).</p>
+      <p style="font-size:12px;color:#9A9792;margin-top:6px">En fazla 2 gün seçebilirsiniz (yapay zeka yanıt süresi ve maliyeti nedeniyle).</p>
     </div>
 
     <div class="row2">
@@ -325,16 +325,18 @@ function requestNewVersionCta() {
   showConsultCta(`Farklı bir versiyon mu istiyorsunuz?`);
 }
 
-// Haftada 1'den fazla paylaşım günü seçilmesini engeller — canlıda 2
-// gün/hafta seçiminde tek bir üretimin 35+ dakika sürüp (manuel iptal
-// edilene kadar) 185 kredi tükettiği gözlemlendi. Maliyet/süre riskini
-// sınırlamak için üst sınır 1 güne düşürüldü.
+// Haftada 2'den fazla paylaşım günü seçilmesini engeller. GEÇİCİ OLARAK
+// 1'den 2'ye geri çıkarıldı (kontrollü tek bir test için — dayCount
+// zincirindeki routing hatası düzeltildi, ama MiniMax'ın kendi Akamai
+// sorunu/12+dk riski büyük istekler için hâlâ geçerli, bkz.
+// TAKVIM_GELISTIRME_GECMISI.md v8/v10). Test sonucuna göre kalıcı olarak
+// 1'e mi dönülecek yoksa 2'de mi kalınacak karar verilecek.
 function enforceWeekdayCap(changedEl) {
   const checked = [...document.querySelectorAll(`#weekday-group input:checked`)];
-  if (checked.length > 1) {
+  if (checked.length > 2) {
     changedEl.checked = false;
     const err = document.getElementById(`err`);
-    if (err) { err.style.display = `block`; err.innerHTML = `En fazla 1 gün seçebilirsiniz. Daha sık paylaşım ve size özel bir yapay zeka çözümü mü istiyorsunuz? <a href="https://kolaykobi.com/iletisim" target="_blank" rel="noopener noreferrer" style="color:#1D9E75;font-weight:500">Ücretsiz görüşme ayarlayın</a>, size özel yapay zeka uygulamaları tasarlayalım.`; }
+    if (err) { err.style.display = `block`; err.innerHTML = `En fazla 2 gün seçebilirsiniz. Daha sık paylaşım ve size özel bir yapay zeka çözümü mü istiyorsunuz? <a href="https://kolaykobi.com/iletisim" target="_blank" rel="noopener noreferrer" style="color:#1D9E75;font-weight:500">Ücretsiz görüşme ayarlayın</a>, size özel yapay zeka uygulamaları tasarlayalım.`; }
   }
 }
 
@@ -1046,7 +1048,7 @@ async function generate() {
 
   const weekdays = [...document.querySelectorAll(`#weekday-group input:checked`)].map(el => parseInt(el.value));
   if (!biz || !sector || platforms.length === 0 || weekdays.length === 0) { err.style.display=`block`; err.textContent=`Lütfen işletme adı, sektör, en az bir platform ve en az bir gün seçin.`; return; }
-  if (weekdays.length > 1) { err.style.display=`block`; err.innerHTML=`En fazla 1 gün seçebilirsiniz. Daha sık paylaşım ve size özel bir yapay zeka çözümü mü istiyorsunuz? <a href="https://kolaykobi.com/iletisim" target="_blank" rel="noopener noreferrer" style="color:#1D9E75;font-weight:500">Ücretsiz görüşme ayarlayın</a>, size özel yapay zeka uygulamaları tasarlayalım.`; return; }
+  if (weekdays.length > 2) { err.style.display=`block`; err.innerHTML=`En fazla 2 gün seçebilirsiniz. Daha sık paylaşım ve size özel bir yapay zeka çözümü mü istiyorsunuz? <a href="https://kolaykobi.com/iletisim" target="_blank" rel="noopener noreferrer" style="color:#1D9E75;font-weight:500">Ücretsiz görüşme ayarlayın</a>, size özel yapay zeka uygulamaları tasarlayalım.`; return; }
   err.style.display = `none`;
 
   // Seçilen haftanın günlerine göre 30 gün içindeki paylaşım günlerini hesapla
