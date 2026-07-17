@@ -515,6 +515,7 @@ testler olmadan "sorun çözüldü" sonucuna varmaktan kaçının.
 | 22 | Kesilmiş (max_completion_tokens tavanına takılan) yanıtlar tamamen boşa gidiyordu | "Unexpected end of JSON input", 5dk17sn/43KB yanıt | extractJson artık son TAM biten günü bulup kısmi sonucu kurtarıyor |
 | 23 | JSON.parse başarılı olsa da "days" hiç yoksa çökme | "Cannot read properties of undefined (reading 'map')" | Parse sonrası days dizisi doğrulaması eklendi |
 | 24 | Eski form JSON/localStorage kayıtları yeni 1-gün/1-platform sınırını atlıyordu | Paylaşılan form JSON'unda 2 platform işaretliydi | trimExcessCheckboxSelections() restoreForm/importFormJSON sonrası |
+| 25 | `.finally()` reddedilen promise'ta kendi türetilmiş promise'ını da reddedip yakalanmamış "Uncaught" hatası oluşturuyordu | Konsolda "Uncaught (in promise)" — asıl hata generate()'de zaten doğru yakalanmıştı | `.finally(...).catch(()=>{})` eklendi |
 
 ---
 
