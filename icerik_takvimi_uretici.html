@@ -386,6 +386,10 @@ function extractJson(text) {
   let depth = 0;
   let inString = false;
   let escaped = false;
+  // "days" dizisindeki EN SON TAM tamamlanmış gün objesinin bittiği konum
+  // (depth 2'den 1'e döndüğü an) — yanıt kesilirse (max_completion_tokens
+  // tavanına takılırsa) bu konuma kadar olan kısmı kurtarmak için tutulur.
+  let lastCompleteDayEnd = -1;
   for (let i = start; i < searchText.length; i++) {
     const ch = searchText[i];
     if (inString) {
@@ -399,10 +403,19 @@ function extractJson(text) {
     else if (ch === `}`) {
       depth--;
       if (depth === 0) return searchText.slice(start, i + 1);
+      if (depth === 1) lastCompleteDayEnd = i;
     }
   }
-  // Dengelenmiş bir kapanış bulunamadı (yanıt kesilmiş olabilir) — eski
-  // davranışa (son '}' ne ise oraya kadar) düş, en azından bir şans ver.
+  // Dengelenmiş bir kapanış bulunamadı — yanıt gerçekten KESİLMİŞ demektir
+  // (canlıda tespit edildi: "Unexpected end of JSON input", 5dk+ süren ve
+  // max_completion_tokens tavanına takılan bir üretimde). Bu, pahalı bir
+  // AI çağrısının TAMAMEN boşa gitmesi demek — bunun yerine "days"
+  // dizisindeki son TAM biten güne kadar olan kısmı alıp, diziyi ve dış
+  // objeyi elle kapatarak KISMİ bir sonucu kurtarmayı deniyoruz (tüm
+  // günler yerine bir kısmı bile, hiç günden iyidir).
+  if (lastCompleteDayEnd !== -1) {
+    return searchText.slice(start, lastCompleteDayEnd + 1) + `]}`;
+  }
   const e = searchText.lastIndexOf(`}`);
   return e !== -1 ? searchText.slice(start, e + 1) : searchText.replace(/```json|```/g, ``).trim();
 }
