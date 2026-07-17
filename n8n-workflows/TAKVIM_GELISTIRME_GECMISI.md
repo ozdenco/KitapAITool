@@ -462,6 +462,22 @@ getirir.
    düşürmek "tasarruf" değil, sadece kesilme (ve dolayısıyla tam kayıp)
    riski demek.
 
+### v11 doğrulaması — canlı test sonuçları (2026-07-17)
+v11 düzeltmeleri (boyuta duyarlı parçalama + güvenli token aralığı) 4
+dosyanın hepsi deploy edildikten sonra doğrudan production endpoint'ine
+(`curl` ile) canlı test edildi:
+
+| Test | Süre | Sonuç | Kredi |
+|---|---|---|---|
+| 1 gün/hafta (dayCount=5) | ~65sn | ✅ Başarılı | 9 |
+| 2 gün/hafta — Grup 0 (dayCount=4) | ~76sn | ✅ Başarılı | ~8 |
+| 2 gün/hafta — Grup 1 (dayCount=4) | ~64sn | ✅ Başarılı | ~8 |
+
+2 gün/hafta artık toplamda ~2.5 dakikada, 2 küçük çağrıyla ve öngörülebilir
+kredi (16 toplam) ile tamamlanıyor — önceki 12-35 dakikalık/504 hatalı
+denemelerle (185 kredi sonuçsuz) kıyaslanamayacak kadar iyi. **v11 sorunu
+kalıcı olarak çözüldü.**
+
 ---
 
 ## Uygulama Genelinde Kalıcı İyileştirme Kalıpları
