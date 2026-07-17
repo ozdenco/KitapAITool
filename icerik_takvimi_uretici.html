@@ -907,41 +907,54 @@ Yalnızca bu ${chunkPostingDays.length} Sıra No için üret, "days" dizisi tam 
 // Dönemi kaç "FETCH parça"sına (= kaç ayrı MiniMax API çağrısına)
 // böleceğimizi belirler.
 //
-// GEÇMİŞ (artık geçerli değil): Önceki mimaride WordPress↔n8n arası TEK
-// senkron HTTP isteği vardı ve bu, kanıtlanmış 180sn'lik cURL/Akamai
-// gateway tavanının altında kalmak için 30 günü birden fazla küçük
-// parçaya bölmeyi gerektiriyordu (her parça ayrı bir MiniMax çağrısı).
+// TARİHÇE: Önce WordPress-tarafı Akamai timeout'undan kaçınmak için
+// parçalanıyordu (artık asenkron mimariyle gerekmiyor) — sonra "TEK
+// parça, tüm 30 gün" mimarisine geçildi (kredi tasarrufu için). Ama bu,
+// 2 gün/hafta gibi büyük seçimlerde (~8-9 paylaşım günü) tek bir MiniMax
+// çağrısının max_completion_tokens'ı ~18700'e çıkarmasına yol açtı —
+// canlıda bu boyuttaki istekler 12-35+ dakika sürüp bazen MiniMax'ın
+// kendi Akamai 504'üne yakalandı (bkz. TAKVIM_GELISTIRME_GECMISI.md v8).
+// MiniMax'ın kendi analizi de reasoning modellerinde token tavanı ile
+// sürenin DOĞRUSAL DEĞİL (üssel/orantısız) arttığını, ~10000-20000 token
+// aralığının "riskli bölge" olduğunu doğruladı.
 //
-// ARTIK ASENKRON JOB/POLLING mimarisi var (bkz. fetchJsonAsyncJob):
-// tarayıcı artık MiniMax'ın yanıtını TEK bir uzun istekte beklemiyor,
-// kısa /start + kısa /status sorgularıyla polling yapıyor — bu yüzden
-// WordPress-tarafı Akamai timeout'u ARTIK BİR SORUN DEĞİL, parçalamanın
-// asıl gerekçesi ortadan kalktı.
-//
-// CANLIDA TESPİT EDİLEN GERÇEK MALİYET SORUNU: parçalama MiniMax'a giden
-// ÇAĞRI SAYISINI çarpıyordu — 2 gün/hafta seçiminde 3 parça = 3 ayrı
-// MiniMax çağrısı = tek bir "Oluştur" tıklaması ~250 kredi harcıyordu.
-// Artık TEK parça (tüm 30 gün TEK MiniMax çağrısında) kullanılıyor —
-// aynı işi ~5-10 kat daha az kredi ile yapıyor. Görüntüleme sekmeleri
-// (computeViewTabs) bu tek fetch'ten BAĞIMSIZ, saf istemci tarafı bölme
-// ile hâlâ haftalık gösteriliyor — okunabilirlik için, ek maliyetsiz.
+// Artık parça başına PAYLAŞIM GÜNÜ sayısı MAX_POSTING_DAYS_PER_CHUNK ile
+// sınırlanıyor — 1 gün/hafta (~4-5 gün) canlıda kanıtlanmış güvenli/hızlı/
+// ucuz (10-25 kredi, saniyeler) olduğu için bu boyut TEK parça olarak
+// kalıyor, ama 2 gün/hafta (~8-9 gün) artık 2 parçaya bölünüyor — her
+// parça yine ~4-5 günlük "güvenli bölge"de kalıyor.
+const MAX_POSTING_DAYS_PER_CHUNK = 5;
 function computeChunkGroups(weekdayCount) {
-  return [{ id: 0, dayStart: 1, dayEnd: 30 }];
+  const approxPostingDays = Math.max(1, Math.round(30 / 7 * weekdayCount));
+  const numChunks = Math.max(1, Math.ceil(approxPostingDays / MAX_POSTING_DAYS_PER_CHUNK));
+  const chunkDaySpan = Math.ceil(30 / numChunks);
+
+  const groups = [];
+  for (let dayStart = 1; dayStart <= 30; dayStart += chunkDaySpan) {
+    const dayEnd = Math.min(dayStart + chunkDaySpan - 1, 30);
+    groups.push({ id: groups.length, dayStart, dayEnd });
+  }
+  return groups;
 }
 
-// Kullanıcıya gösterilen SEKMELER artık FETCH parçalarından BAĞIMSIZ: tek
-// bir MiniMax çağrısıyla gelen 30 günlük veri, okunabilirlik için
-// istemci tarafında haftalık sekmelere bölünüyor (ek AI çağrısı YOK,
-// hepsi zaten computeChunkGroups'un tek grubuna (id:0) işaret ediyor).
+// Kullanıcıya gösterilen SEKMELER haftalık kalır (okunabilirlik için),
+// ama artık FETCH gruplarıyla birebir eşleşmeyebilir — bir hafta sekmesi
+// birden fazla fetch parçasının sınırına denk gelebilir (ör. chunkDaySpan
+// 15 ise 3. hafta, gün 15-21, hem grup0 hem grup1'e taşabilir). Bu yüzden
+// her sekme, gün aralığıyla ÇAKIŞAN tüm fetch gruplarının id'lerini taşır.
 function computeViewTabs(weekdayCount) {
+  const groups = computeChunkGroups(weekdayCount);
   const tabs = [];
   for (let dayStart = 1; dayStart <= 30; dayStart += 7) {
     const dayEnd = Math.min(dayStart + 6, 30);
+    const fetchGroupIds = groups
+      .filter(g => [g.dayStart <= dayEnd, g.dayEnd >= dayStart].every(Boolean))
+      .map(g => g.id);
     tabs.push({
       label: `${tabs.length + 1}. Hafta`,
       dayStart,
       dayEnd,
-      fetchGroupIds: [0],
+      fetchGroupIds,
     });
   }
   return tabs;
@@ -1093,11 +1106,12 @@ async function generate() {
   window.addEventListener(`beforeunload`, warnBeforeUnload);
 
   try {
-    // Tüm ay TEK istekte ("Oluştur" butonuna tek basışta) alınır — canlı
-    // testte kanıtlanmış şekilde hızlı ve güvenilir (~45sn-1dk16sn).
-    // Sekmeler bu tek sonucu istemci tarafında haftalara böler; sekmeye
-    // tıklamak YENİ bir AI çağrısı tetiklemez, günlük kullanım hakkı
-    // harcamaz.
+    // 1 gün/hafta için TEK istek (canlıda kanıtlanmış hızlı/ucuz: 10-25
+    // kredi, saniyeler-birkaç dk). 2 gün/hafta için 2 parçaya bölünür
+    // (bkz. computeChunkGroups) — her parça yine güvenli boyutta kalır.
+    // Parçalar SIRAYLA istenir (paralel değil). Sekmeler bu sonuçları
+    // istemci tarafında haftalara böler; sekmeye tıklamak YENİ bir AI
+    // çağrısı tetiklemez.
     currentTabIndex = 0;
     let firstCtaText;
     for (const group of chunkGroups) {
