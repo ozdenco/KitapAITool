@@ -150,37 +150,31 @@ input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3p
     <p class="subtitle">Sektörünüze uygun Instagram ve Facebook'ta trend olan video fikirlerini bulun; markanıza uyarlayın, otomatik mail ile her sabah alın.</p>
 
     <div class="field">
-      <label>İşletme / hizmet adı <span style="color:#A32D2D">*</span></label>
+      <label>İşletme / hizmet adı <span style="color:#9A9792;font-weight:400">(opsiyonel)</span></label>
       <input type="text" id="f-biz" placeholder="Örn: Hızlı Kargo Lojistik">
     </div>
 
-    <div class="row2">
-      <div class="field">
-        <label>Sektör <span style="color:#A32D2D">*</span></label>
-        <select id="f-sector">
-          <option value="">Seçin...</option>
-          <option value="ALL">✨ Tüm Sektörler (genel tarama)</option>
-          <option>Lojistik / Taşımacılık</option>
-          <option>E-ticaret / Online Mağaza</option>
-          <option>Yiyecek / İçecek</option>
-          <option>Güzellik / Estetik</option>
-          <option>Sağlık / Klinik</option>
-          <option>Eğitim / Kurs</option>
-          <option>Muhasebe / Finans</option>
-          <option>Hukuk / Danışmanlık</option>
-          <option>İnşaat / Mühendislik</option>
-          <option>Perakende / Mağaza</option>
-          <option>Teknoloji / Yazılım</option>
-          <option>Otomotiv / Tamir</option>
-          <option>Turizm / Otelcilik</option>
-          <option>Eğlence / Etkinlik</option>
-          <option>Diğer</option>
-        </select>
-      </div>
-      <div class="field">
-        <label>Sonuç mail adresi <span style="color:#A32D2D">*</span></label>
-        <input type="email" id="f-email" placeholder="info@firmaniz.com">
-      </div>
+    <div class="field">
+      <label>Sektör <span style="color:#A32D2D">*</span></label>
+      <select id="f-sector">
+        <option value="">Seçin...</option>
+        <option value="ALL">✨ Tüm Sektörler (genel tarama)</option>
+        <option>Lojistik / Taşımacılık</option>
+        <option>E-ticaret / Online Mağaza</option>
+        <option>Yiyecek / İçecek</option>
+        <option>Güzellik / Estetik</option>
+        <option>Sağlık / Klinik</option>
+        <option>Eğitim / Kurs</option>
+        <option>Muhasebe / Finans</option>
+        <option>Hukuk / Danışmanlık</option>
+        <option>İnşaat / Mühendislik</option>
+        <option>Perakende / Mağaza</option>
+        <option>Teknoloji / Yazılım</option>
+        <option>Otomotiv / Tamir</option>
+        <option>Turizm / Otelcilik</option>
+        <option>Eğlence / Etkinlik</option>
+        <option>Diğer</option>
+      </select>
     </div>
 
     <div class="field">
@@ -202,24 +196,30 @@ input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3p
           <input type="radio" name="f-mode" value="instant" checked>
           <div>
             <div class="radio-item-title"><i class="ti ti-player-play" aria-hidden="true"></i> Şimdi çalıştır (anlık sonuç)</div>
-            <div class="radio-item-desc">Formu doldurur doldurmaz trendleri ekranda görürsünüz. Mail gönderilmez.</div>
+            <div class="radio-item-desc">Formu doldurur doldurmaz trendleri ekranda görürsünüz. Mail gönderilmez, mail adresi gerektirmez.</div>
           </div>
         </label>
         <label class="radio-item">
           <input type="radio" name="f-mode" value="once">
           <div>
             <div class="radio-item-title"><i class="ti ti-send" aria-hidden="true"></i> Bir kez mail at</div>
-            <div class="radio-item-desc">Hemen çalıştırır, sonuçları yukarıdaki mail adresine tek seferlik gönderir.</div>
+            <div class="radio-item-desc">Hemen çalıştırır, sonuçları aşağıdaki mail adresine tek seferlik gönderir.</div>
           </div>
         </label>
         <label class="radio-item">
           <input type="radio" name="f-mode" value="schedule">
           <div>
-            <div class="radio-item-title"><i class="ti ti-calendar-repeat" aria-hidden="true"></i> Haftalık sabah schedule</div>
+            <div class="radio-item-title"><i class="ti ti-calendar-repeat" aria-hidden="true"></i> Haftalık Schedule</div>
             <div class="radio-item-desc">Seçtiğiniz gün ve saatte otomatik çalışır, mail atar. Örn: her Pazartesi 09:00.</div>
           </div>
         </label>
       </div>
+    </div>
+
+    <div class="field" id="mail-field" style="display:none">
+      <label>Sonuç mail adresi <span style="color:#A32D2D">*</span></label>
+      <input type="email" id="f-email" placeholder="info@firmaniz.com">
+      <div style="font-size:12px;color:#9A9792;margin-top:4px">Mail modu seçtiğiniz için zorunludur. Şimdi çalıştır modunda mail gönderilmez.</div>
     </div>
 
     <div class="schedule-fields" id="schedule-fields">
@@ -528,11 +528,12 @@ async function generate() {
   const hour = document.getElementById('f-hour').value;
   const days = getCheckedDays();
 
-  if (!biz) { showErr('İşletme adı zorunludur.'); return; }
   if (!sector) { showErr('Lütfen sektör seçin.'); return; }
-  if (!email) { showErr('Mail adresi zorunludur.'); return; }
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { showErr('Geçerli bir mail adresi girin.'); return; }
   if (tones.length === 0) { showErr('En az bir video tonu seçin.'); return; }
+  if (mode !== 'instant') {
+    if (!email) { showErr('Mail gönderimi için mail adresi zorunludur.'); return; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { showErr('Geçerli bir mail adresi girin.'); return; }
+  }
   if (mode === 'schedule' && days.length === 0) { showErr('Schedule için en az bir gün seçin.'); return; }
 
   hideErr();
@@ -622,13 +623,10 @@ Sektöre uygun 7 adet trend video fikri üret. Her biri:
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ prompt, biz, sector, email, tones, audience, note, mode, hour, days }),
         });
-        if (res.status === 429) {
-          clearInterval(ticker);
-          showLoading(false);
-          if (genBtn) { genBtn.disabled = false; genBtn.style.opacity = ''; }
-          if (resetBtn) { resetBtn.disabled = false; resetBtn.style.opacity = ''; }
-          showErr('Çok fazla istek gönderildi. Lütfen biraz bekleyin.');
-          return;
+        if (!res.ok) {
+          if (res.status === 404) throw new Error('404: WordPress proxy endpoint tanımlı değil');
+          if (res.status === 429) throw new Error('429: Rate limit aşıldı');
+          throw new Error('HTTP ' + res.status + ' ' + res.statusText);
         }
       } else {
         res = await fetch('https://api.minimax.io/v1/chat/completions', {
@@ -671,7 +669,16 @@ Sektöre uygun 7 adet trend video fikri üret. Her biri:
     if (genBtn) { genBtn.disabled = false; genBtn.style.opacity = ''; }
     if (resetBtn) { resetBtn.disabled = false; resetBtn.style.opacity = ''; }
     showLoading(false);
-    showErr('Sunucuya bağlanılamadı. Yapay zeka meşgul olabilir — lütfen 30 saniye sonra tekrar deneyin.');
+    const msg = (e && e.message) ? e.message : String(e);
+    if (msg.includes('404') || msg.includes('proxy endpoint')) {
+      showErr('WordPress proxy endpoint tanımlı değil (404). README\'deki PHP kodu (wordpress-ai-proxy.php) henüz eklenmemiş. n8n workflow\'u aktif mi kontrol edin.');
+    } else if (msg.includes('Failed to fetch') || msg.includes('NetworkError')) {
+      showErr('İnternet bağlantınız kesilmiş olabilir. Kontrol edip tekrar deneyin.');
+    } else if (msg.includes('429') || msg.includes('rate')) {
+      showErr('Çok fazla istek gönderildi. Lütfen 1-2 dakika bekleyin.');
+    } else {
+      showErr('Sunucuya bağlanılamadı. Yapay zeka meşgul olabilir — lütfen 30 saniye sonra tekrar deneyin. (' + msg.slice(0, 80) + ')');
+    }
   }
 }
 
@@ -696,6 +703,7 @@ function resetForm() {
   document.querySelector('input[name="f-mode"][value="instant"]').checked = true;
   document.getElementById('f-hour').value = '9';
   document.getElementById('schedule-fields').classList.remove('is-visible');
+  document.getElementById('mail-field').style.display = 'none';
   hideErr();
   clearResults();
   showLoading(false);
@@ -839,12 +847,20 @@ function importFormJSON(input) {
   reader.readAsText(file);
 }
 
-// Schedule fields toggle
+// Schedule + mail fields toggle
 function toggleScheduleFields() {
   const mode = getMode();
   const sf = document.getElementById('schedule-fields');
+  const mf = document.getElementById('mail-field');
   if (mode === 'schedule') sf.classList.add('is-visible');
   else sf.classList.remove('is-visible');
+  if (mode === 'once' || mode === 'schedule') {
+    mf.style.display = 'block';
+    document.getElementById('f-email').required = true;
+  } else {
+    mf.style.display = 'none';
+    document.getElementById('f-email').required = false;
+  }
 }
 
 document.querySelectorAll('input[name="f-mode"]').forEach(r => r.addEventListener('change', toggleScheduleFields));
