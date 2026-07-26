@@ -1,0 +1,889 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Trend Video Bulucu — Kolay KOBİ</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,sans-serif;background:#F7F6F2;min-height:100vh}
+.app{max-width:720px;margin:0 auto;padding:2rem 1rem}
+.brand{display:flex;align-items:center;gap:8px;margin-bottom:2rem}
+.brand-name{font-size:13px;font-weight:500;color:#1D9E75;letter-spacing:.04em}
+
+.form-card{background:#fff;border-radius:16px;border:0.5px solid #E2E0D8;padding:2rem}
+h1{font-size:22px;font-weight:500;color:#1C1B19;margin-bottom:.4rem}
+.subtitle{font-size:14px;color:#6B6963;line-height:1.6;margin-bottom:2rem}
+.field{margin-bottom:1.25rem}
+label{display:block;font-size:13px;font-weight:500;color:#6B6963;margin-bottom:6px}
+input,select,textarea{width:100%;padding:10px 12px;font-size:14px;border:0.5px solid #D3D1C7;border-radius:8px;background:#fff;color:#1C1B19;outline:none;font-family:inherit}
+textarea{resize:vertical;min-height:80px;line-height:1.5}
+input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3px rgba(29,158,117,.1)}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+
+.check-group{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px}
+.check-group-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:6px}
+.check-item{display:flex;align-items:center;gap:8px;padding:9px 11px;border:0.5px solid #D3D1C7;border-radius:8px;cursor:pointer;font-size:13px;color:#1C1B19;background:#fff;user-select:none}
+.check-item input[type=checkbox]{width:auto;padding:0;box-shadow:none}
+.check-item:has(input:checked){border-color:#1D9E75;background:#F0FAF6}
+
+.radio-group{display:flex;flex-direction:column;gap:8px;margin-top:6px}
+.radio-item{display:flex;align-items:flex-start;gap:10px;padding:12px 14px;border:0.5px solid #D3D1C7;border-radius:8px;cursor:pointer;font-size:13px;color:#1C1B19;background:#fff;user-select:none}
+.radio-item input[type=radio]{width:auto;padding:0;box-shadow:none;margin-top:2px}
+.radio-item:has(input:checked){border-color:#1D9E75;background:#F0FAF6}
+.radio-item-title{font-weight:500;margin-bottom:2px}
+.radio-item-desc{font-size:12px;color:#6B6963;line-height:1.5}
+
+.schedule-fields{display:none;margin-top:1rem;padding:1rem;background:#F7F6F2;border-radius:10px;border:0.5px solid #E2E0D8}
+.schedule-fields.is-visible{display:block}
+.section-title{font-size:13px;font-weight:500;color:#1C1B19;margin-bottom:.75rem;display:flex;align-items:center;gap:6px}
+.section-title i{color:#1D9E75}
+
+.rate-bar-wrap{margin-bottom:1rem}
+.rate-bar-label{display:flex;justify-content:space-between;font-size:12px;color:#6B6963;margin-bottom:5px}
+.rate-bar-track{height:5px;background:#E2E0D8;border-radius:4px;overflow:hidden}
+.rate-bar-fill{height:100%;background:#1D9E75;border-radius:4px;transition:width .3s}
+
+.btn-primary{width:100%;padding:13px;background:#1D9E75;color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:500;cursor:pointer;margin-top:.5rem;display:flex;align-items:center;justify-content:center;gap:8px}
+.btn-primary:hover{background:#0F6E56}
+.btn-primary:disabled{background:#B4B2A9;cursor:not-allowed}
+.err{font-size:13px;color:#A32D2D;background:#FCEBEB;border-radius:8px;padding:10px 12px;margin-top:.75rem;display:none}
+
+.loading{text-align:center;padding:4rem 1rem;display:none}
+.spinner{width:44px;height:44px;border:3px solid #E2E0D8;border-top-color:#1D9E75;border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 1.25rem}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-txt{font-size:14px;color:#6B6963}
+.loading-note{font-size:12px;color:#9A9792;margin-top:.75rem}
+
+.results{display:none;margin-top:1.5rem}
+.results-header{margin-bottom:1.5rem}
+.results-header h2{font-size:18px;font-weight:500;color:#1C1B19;margin-bottom:.25rem}
+.results-header p{font-size:13px;color:#6B6963}
+
+/* Video cards */
+.videos-list{display:flex;flex-direction:column;gap:12px;margin-bottom:1rem}
+.video-card{background:#fff;border:0.5px solid #E2E0D8;border-radius:16px;overflow:hidden}
+.video-header{padding:1rem 1.5rem .75rem;display:flex;align-items:flex-start;gap:14px;border-bottom:0.5px solid #F1EFE8}
+.video-rank{width:34px;height:34px;border-radius:50%;background:#1D9E75;color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;flex-shrink:0}
+.video-meta{flex:1;min-width:0}
+.video-title{font-size:14px;font-weight:500;color:#1C1B19;margin-bottom:4px;line-height:1.4}
+.video-platform{font-size:12px;color:#6B6963;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.video-platform i{color:#1D9E75;font-size:14px}
+.platform-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;background:#F0FAF6;border-radius:6px;font-size:11px;color:#085041;font-weight:500}
+.video-body{padding:1rem 1.5rem}
+
+.balloon{background:#DCF8C6;border-radius:0 12px 12px 12px;padding:12px 14px;font-size:13px;color:#1C1B19;line-height:1.6;position:relative;margin-bottom:.75rem;max-width:480px;white-space:pre-wrap;word-break:break-word}
+.balloon::before{content:'';position:absolute;left:-8px;top:0;width:0;height:0;border-top:8px solid #DCF8C6;border-left:8px solid transparent}
+.video-tip{font-size:12px;color:#6B6963;background:#F7F6F2;border-radius:8px;padding:8px 10px;display:flex;align-items:flex-start;gap:7px;margin-top:.5rem}
+.video-tip i{color:#1D9E75;font-size:14px;flex-shrink:0;margin-top:1px}
+
+.video-tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:.75rem}
+.video-tag{font-size:11px;padding:3px 8px;background:#F0FAF6;border:0.5px solid #9FE1CB;border-radius:6px;color:#085041;font-weight:500}
+
+/* Success box */
+.success-box{background:#F0FAF6;border:0.5px solid #9FE1CB;border-radius:10px;padding:12px 14px;font-size:13px;color:#085041;display:flex;gap:10px;align-items:flex-start;margin-bottom:1rem}
+.success-box i{font-size:16px;color:#1D9E75;flex-shrink:0;margin-top:1px}
+
+/* Warning box */
+.warn-box{background:#FEF9EC;border:0.5px solid #F5D76E;border-radius:10px;padding:12px 14px;font-size:13px;color:#7A5C00;display:flex;gap:10px;align-items:flex-start;margin-bottom:1rem}
+.warn-box i{font-size:16px;color:#C98F00;flex-shrink:0;margin-top:1px}
+
+.actions{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:1rem}
+.btn-secondary{flex:1;padding:11px;background:#fff;color:#1C1B19;border:0.5px solid #D3D1C7;border-radius:8px;font-size:14px;font-weight:500;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;min-width:140px}
+.btn-secondary:hover{background:#F7F6F2}
+
+.cta-box{background:#F0FAF6;border:0.5px solid #9FE1CB;border-radius:12px;padding:1.5rem;text-align:center;margin-top:.5rem}
+.cta-title{font-size:15px;font-weight:500;color:#085041;margin-bottom:.4rem}
+.cta-sub{font-size:13px;color:#0F6E56;margin-bottom:1rem;line-height:1.6}
+.cta-btn{display:inline-block;background:#1D9E75;color:#fff;padding:10px 24px;border-radius:8px;font-size:14px;font-weight:500;text-decoration:none}
+.cta-btn:hover{background:#0F6E56}
+
+.reset-link{text-align:center;margin-top:1rem}
+.reset-link button{background:none;border:none;font-size:13px;color:#888780;cursor:pointer;text-decoration:underline}
+
+@media(max-width:520px){
+  .row2,.row3{grid-template-columns:1fr}
+  .check-group,.check-group-3{grid-template-columns:1fr}
+  .video-header{flex-direction:column;align-items:flex-start;gap:8px}
+}
+
+/* Form collapse */
+.form-collapsed-bar{display:none;align-items:center;justify-content:space-between;padding:.5rem 0;border-bottom:0.5px solid #F1EFE8;margin-bottom:0}
+.form-card.is-collapsed .form-collapsed-bar{display:flex}
+.form-card.is-collapsed #form-body{display:none}
+.form-collapsed-title{font-size:14px;font-weight:500;color:#1C1B19}
+.form-collapsed-sub{font-size:12px;color:#9A9792;margin-top:2px}
+.form-expand-btn{display:flex;align-items:center;gap:5px;padding:7px 14px;background:#F0FAF6;border:0.5px solid #9FE1CB;border-radius:8px;font-size:13px;font-weight:500;color:#085041;cursor:pointer;white-space:nowrap}
+.form-expand-btn:hover{background:#E1F5EE}
+@media print{
+  html,body{width:100%!important;background:#fff}
+  body *{visibility:hidden}
+  .app,.app *{visibility:visible}
+  .app{position:absolute;left:0;top:0;max-width:100%!important;width:100%!important;padding:0;margin:0}
+  header,footer,nav,aside,#wpadminbar,#masthead,#colophon,.site-header,.site-footer,.widget-area,.sidebar,.elementor-location-header,.elementor-location-footer{display:none!important}
+  .form-card,.brand{display:none!important}
+  .results{display:block!important}
+  #results-sub{display:block!important}
+  .loading{display:none!important}
+  .btn-primary,.btn-secondary,.btn-sm,.actions,.cta-box,.reset-link{display:none!important}
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- FORM -->
+  <div class="form-card" id="form-section">
+  <div class="form-collapsed-bar">
+    <div>
+      <div class="form-collapsed-title">Trend Video Bulucu</div>
+      <div class="form-collapsed-sub">Formu düzenlemek için tıklayın</div>
+    </div>
+    <button class="form-expand-btn" onclick="expandForm()">
+      <i class="ti ti-chevron-down" aria-hidden="true"></i> Formu Aç
+    </button>
+  </div>
+  <div id="form-body">
+    <h1>Trend Video Bulucu</h1>
+    <p class="subtitle">Sektörünüze uygun Instagram ve Facebook'ta trend olan video fikirlerini bulun; markanıza uyarlayın, otomatik mail ile her sabah alın.</p>
+
+    <div class="field">
+      <label>İşletme / hizmet adı <span style="color:#9A9792;font-weight:400">(opsiyonel)</span></label>
+      <input type="text" id="f-biz" placeholder="Örn: Hızlı Kargo Lojistik">
+    </div>
+
+    <div class="field">
+      <label>Sektör <span style="color:#A32D2D">*</span></label>
+      <select id="f-sector">
+        <option value="">Seçin...</option>
+        <option value="ALL">✨ Tüm Sektörler (genel tarama)</option>
+        <option>Lojistik / Taşımacılık</option>
+        <option>E-ticaret / Online Mağaza</option>
+        <option>Yiyecek / İçecek</option>
+        <option>Güzellik / Estetik</option>
+        <option>Sağlık / Klinik</option>
+        <option>Eğitim / Kurs</option>
+        <option>Muhasebe / Finans</option>
+        <option>Hukuk / Danışmanlık</option>
+        <option>İnşaat / Mühendislik</option>
+        <option>Perakende / Mağaza</option>
+        <option>Teknoloji / Yazılım</option>
+        <option>Otomotiv / Tamir</option>
+        <option>Turizm / Otelcilik</option>
+        <option>Eğlence / Etkinlik</option>
+        <option>Diğer</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label>Video Tonu (en az 1, çoklu seçim) <span style="color:#A32D2D">*</span></label>
+      <div class="check-group" id="tone-group">
+        <label class="check-item"><input type="checkbox" value="Eğlendirici"> <i class="ti ti-confetti" aria-hidden="true"></i> Eğlendirici</label>
+        <label class="check-item"><input type="checkbox" value="Eğitici"> <i class="ti ti-school" aria-hidden="true"></i> Eğitici</label>
+        <label class="check-item"><input type="checkbox" value="Bilgilendirici"> <i class="ti ti-info-circle" aria-hidden="true"></i> Bilgilendirici</label>
+        <label class="check-item"><input type="checkbox" value="Samimi ve yakın"> <i class="ti ti-heart" aria-hidden="true"></i> Samimi ve yakın</label>
+        <label class="check-item"><input type="checkbox" value="Enerjik ve motive edici"> <i class="ti ti-bolt" aria-hidden="true"></i> Enerjik ve motive edici</label>
+        <label class="check-item"><input type="checkbox" value="Mizahi ve eğlenceli"> <i class="ti ti-mood-happy" aria-hidden="true"></i> Mizahi ve eğlenceli</label>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Çalıştırma modu <span style="color:#A32D2D">*</span></label>
+      <div class="radio-group" id="mode-group">
+        <label class="radio-item">
+          <input type="radio" name="f-mode" value="instant" checked>
+          <div>
+            <div class="radio-item-title"><i class="ti ti-player-play" aria-hidden="true"></i> Şimdi çalıştır (anlık sonuç)</div>
+            <div class="radio-item-desc">Formu doldurur doldurmaz trendleri ekranda görürsünüz. Mail gönderilmez, mail adresi gerektirmez.</div>
+          </div>
+        </label>
+        <label class="radio-item">
+          <input type="radio" name="f-mode" value="once">
+          <div>
+            <div class="radio-item-title"><i class="ti ti-send" aria-hidden="true"></i> Bir kez mail at</div>
+            <div class="radio-item-desc">Hemen çalıştırır, sonuçları aşağıdaki mail adresine tek seferlik gönderir.</div>
+          </div>
+        </label>
+        <label class="radio-item">
+          <input type="radio" name="f-mode" value="schedule">
+          <div>
+            <div class="radio-item-title"><i class="ti ti-calendar-repeat" aria-hidden="true"></i> Haftalık Schedule</div>
+            <div class="radio-item-desc">Seçtiğiniz gün ve saatte otomatik çalışır, mail atar. Örn: her Pazartesi 09:00.</div>
+          </div>
+        </label>
+      </div>
+    </div>
+
+    <div class="field" id="mail-field" style="display:none">
+      <label>Sonuç mail adresi <span style="color:#A32D2D">*</span></label>
+      <input type="email" id="f-email" placeholder="info@firmaniz.com">
+      <div style="font-size:12px;color:#9A9792;margin-top:4px">Mail modu seçtiğiniz için zorunludur. Şimdi çalıştır modunda mail gönderilmez.</div>
+    </div>
+
+    <div class="schedule-fields" id="schedule-fields">
+      <div class="section-title"><i class="ti ti-clock" aria-hidden="true"></i> Schedule ayarları</div>
+      <div class="field">
+        <label>Saat (1-24)</label>
+        <select id="f-hour">
+          <option value="6">06:00 — Şafak</option>
+          <option value="7">07:00</option>
+          <option value="8">08:00</option>
+          <option value="9" selected>09:00 — Sabah rutini</option>
+          <option value="10">10:00</option>
+          <option value="11">11:00</option>
+          <option value="12">12:00 — Öğle</option>
+          <option value="13">13:00</option>
+          <option value="14">14:00</option>
+          <option value="15">15:00</option>
+          <option value="16">16:00</option>
+          <option value="17">17:00</option>
+          <option value="18">18:00 — Akşam</option>
+          <option value="19">19:00</option>
+          <option value="20">20:00</option>
+          <option value="21">21:00</option>
+          <option value="22">22:00</option>
+          <option value="23">23:00</option>
+          <option value="24">24:00 — Gece yarısı</option>
+          <option value="1">01:00</option>
+          <option value="2">02:00</option>
+          <option value="3">03:00</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Çalışılacak günler (en az 1)</label>
+        <div class="check-group-3" id="days-group">
+          <label class="check-item"><input type="checkbox" value="mon"> Pzt</label>
+          <label class="check-item"><input type="checkbox" value="tue"> Sal</label>
+          <label class="check-item"><input type="checkbox" value="wed"> Çar</label>
+          <label class="check-item"><input type="checkbox" value="thu"> Per</label>
+          <label class="check-item"><input type="checkbox" value="fri"> Cuma</label>
+          <label class="check-item"><input type="checkbox" value="sat"> Cmt</label>
+          <label class="check-item"><input type="checkbox" value="sun"> Pazar</label>
+        </div>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Hedef kitle (opsiyonel)</label>
+      <input type="text" id="f-audience" placeholder="Örn: 25-45 yaş, B2B, E-ticaret müşterileri">
+    </div>
+
+    <div class="field">
+      <label>Ek not (opsiyonel)</label>
+      <textarea id="f-note" placeholder="Örn: Penguen videosunu lojistik müşteriye uyarladık, benzer absürt/şaşırtıcı içerikler istiyoruz."></textarea>
+    </div>
+
+    <div id="err" class="err"></div>
+
+    <div class="rate-bar-wrap">
+      <div class="rate-bar-label">
+        <span>Günlük kullanım</span>
+        <span id="rate-text">0 / 5</span>
+      </div>
+      <div class="rate-bar-track">
+        <div class="rate-bar-fill" id="rate-fill" style="width:0%"></div>
+      </div>
+    </div>
+
+    
+  <!-- Form kaydet/yükle -->
+  <div style="display:flex;gap:8px;margin-top:1rem;flex-wrap:wrap" id="form-persist-row">
+    <button type="button" onclick="exportFormJSON()" style="display:flex;align-items:center;gap:5px;padding:7px 13px;background:#fff;border:0.5px solid #D3D1C7;border-radius:8px;font-size:12px;color:#6B6963;cursor:pointer">
+      <i class="ti ti-device-floppy" aria-hidden="true"></i> Formu Kaydet
+    </button>
+    <label style="display:flex;align-items:center;gap:5px;padding:7px 13px;background:#fff;border:0.5px solid #D3D1C7;border-radius:8px;font-size:12px;color:#6B6963;cursor:pointer">
+      <i class="ti ti-upload" aria-hidden="true"></i> Form Yükle (.json)
+      <input type="file" accept=".json" style="display:none" onchange="importFormJSON(this)">
+    </label>
+    <span id="import-notice" style="display:none;align-items:center;gap:4px;font-size:12px;color:#1D9E75;padding:7px 0">
+      <i class="ti ti-circle-check" aria-hidden="true"></i> Form yüklendi
+    </span>
+  </div>
+
+  <button type="button" class="btn-primary" id="gen-btn" onclick="generate()">
+      <i class="ti ti-flame" aria-hidden="true"></i> Trendleri Bul
+    </button>
+
+    <button type="button" class="btn-secondary" id="reset-btn" onclick="resetForm()" style="margin-top:10px;width:100%">
+      <i class="ti ti-eraser" aria-hidden="true"></i> Formu Boşalt
+    </button>
+    </div>
+</div>
+
+  <!-- LOADING -->
+  <div class="loading" id="loading-section">
+    <div class="spinner"></div>
+    <p class="loading-txt" id="loading-msg">Trend videolar taranıyor...</p>
+    <p class="loading-note" id="loading-note">Yapay zeka düşünüyor — bu işlem 1-2 dakika sürebilir.</p>
+  </div>
+
+  <!-- RESULTS -->
+  <div class="results" id="results-section">
+    <div class="results-header">
+      <h2 id="results-title">Trend Video Fikirleri</h2>
+      <p id="results-sub" style="white-space:pre-line;display:none"></p>
+    </div>
+
+<div class="success-box" id="schedule-success" style="display:none">
+      <i class="ti ti-circle-check" aria-hidden="true"></i>
+      <div id="schedule-success-msg">Schedule kaydedildi.</div>
+    </div>
+
+<div class="videos-list" id="videos-list"></div>
+
+    <div class="actions">
+      <button class="btn-secondary" onclick="downloadTxt()">
+        <i class="ti ti-download" aria-hidden="true"></i> .txt İndir
+      </button>
+      <button class="btn-secondary" onclick="downloadCsv()">
+        <i class="ti ti-file-spreadsheet" aria-hidden="true"></i> .csv İndir
+      </button>
+      <button class="btn-secondary" onclick="window.print()">
+        <i class="ti ti-printer" aria-hidden="true"></i> Yazdır
+      </button>
+    </div>
+
+    <div class="cta-box">
+      <div class="cta-title">Bu işi otomasyona bağlayalım</div>
+      <div class="cta-sub" id="cta-sub">Her sabah mailinize trend içerik fikirleri gelsin — ekibiniz içerik üretmeye odaklansın.</div>
+      <a href="https://kolaykobi.com/iletisim" class="cta-btn" target="_blank" rel="noopener noreferrer">Ücretsiz Görüşme Ayarla</a>
+    </div>
+
+    <div class="reset-link">
+      <button onclick="resetForm()">Formu Boşalt ve Yeniden Başla</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// const N8N_PROXY = null;
+const N8N_PROXY = '/wp-json/kolaykobi/v1/ai/trend-video';
+
+function hasEncodingCorruption(text) {
+  return /[㐀-鿿]/.test(text);
+}
+const DAILY_LIMIT = 5;
+const RATE_KEY = 'kkb_tv_usage';
+
+const loadingMsgs = [
+  'Trend videolar taranıyor...',
+  'Sektörel içerikler araştırılıyor...',
+  'Viral potansiyel analiz ediliyor...',
+  'Markanıza uyarlama önerileri hazırlanıyor...',
+  'Son rötuşlar yapılıyor...',
+];
+
+const TONE_EMOJI = {
+  'Eğlendirici': '🎉',
+  'Eğitici': '📚',
+  'Bilgilendirici': '💡',
+  'Samimi ve yakın': '💛',
+  'Enerjik ve motive edici': '⚡',
+  'Mizahi ve eğlenceli': '😄',
+};
+
+const PLATFORM_ICONS = {
+  'Instagram Reels': 'ti-brand-instagram',
+  'Instagram': 'ti-brand-instagram',
+  'Facebook Reels': 'ti-brand-facebook',
+  'Facebook': 'ti-brand-facebook',
+  'TikTok': 'ti-brand-tiktok',
+  'YouTube Shorts': 'ti-brand-youtube',
+  'YouTube': 'ti-brand-youtube',
+};
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+function getRateData() {
+  try {
+    const d = JSON.parse(localStorage.getItem(RATE_KEY) || '{}');
+    const today = new Date().toDateString();
+    if (d.date !== today) return { count: 0, date: today };
+    return d;
+  } catch(e) { return { count: 0, date: new Date().toDateString() }; }
+}
+
+function saveRate(d) {
+  localStorage.setItem(RATE_KEY, JSON.stringify(d));
+}
+
+function updateRateBar() {
+  const d = getRateData();
+  const pct = Math.min(100, (d.count / DAILY_LIMIT) * 100);
+  document.getElementById('rate-fill').style.width = pct + '%';
+  document.getElementById('rate-text').textContent = d.count + ' / ' + DAILY_LIMIT;
+  const btn = document.getElementById('gen-btn');
+  if (d.count >= DAILY_LIMIT) {
+    btn.disabled = true;
+    btn.innerHTML = '<i class="ti ti-lock" aria-hidden="true"></i> Günlük limit doldu';
+  }
+}
+
+function getCheckedTones() {
+  return [...document.querySelectorAll('#tone-group input:checked')].map(el => el.value);
+}
+
+function getCheckedDays() {
+  return [...document.querySelectorAll('#days-group input:checked')].map(el => el.value);
+}
+
+function getMode() {
+  const r = document.querySelector('input[name="f-mode"]:checked');
+  return r ? r.value : 'instant';
+}
+
+function clearResults() {
+  document.getElementById('results-section').style.display = 'none';
+  document.getElementById('videos-list').innerHTML = '';
+  document.getElementById('schedule-success').style.display = 'none';
+}
+
+function showLoading(v) {
+  document.getElementById('loading-section').style.display = v ? 'block' : 'none';
+}
+
+let lastVideos = [];
+let lastBiz = '';
+let lastFormData = {};
+
+function renderResults(result) {
+  clearResults();
+  lastVideos = result.videos || [];
+  showLoading(false);
+
+  const fd = lastFormData;
+  const toneStr = (fd.tones || []).join(' + ');
+  document.getElementById('results-title').textContent = `${toneStr ? toneStr + ' — ' : ''}Trend Video Fikirleri`;
+  document.getElementById('results-sub').textContent = [
+    [fd.biz, fd.sector].every(Boolean) ? `${fd.biz} — ${fd.sector === 'ALL' ? 'Tüm Sektörler' : fd.sector}` : '',
+    toneStr ? `Ton: ${toneStr}` : '',
+    fd.audience ? `Hedef kitle: ${fd.audience}` : '',
+    fd.mode === 'once' ? '✓ Mail gönderilecek: ' + fd.email : '',
+    fd.mode === 'schedule' ? '✓ Schedule: ' + (fd.days||[]).map(d => ({mon:'Pzt',tue:'Sal',wed:'Çar',thu:'Per',fri:'Cum',sat:'Cmt',sun:'Paz'}[d])).join(', ') + ' ' + (fd.hour||'') + ':00' : '',
+  ].filter(Boolean).join('\n') || 'Trend video fikirleri ve markanıza uyarlama önerileri';
+
+  // Mode-specific success
+  if (fd.mode === 'once') {
+    const sb = document.getElementById('schedule-success');
+    sb.style.display = 'flex';
+    document.getElementById('schedule-success-msg').textContent = 'Sonuçlar ' + fd.email + ' adresine gönderildi.';
+  } else if (fd.mode === 'schedule') {
+    const sb = document.getElementById('schedule-success');
+    sb.style.display = 'flex';
+    const dayNames = (fd.days||[]).map(d => ({mon:'Pazartesi',tue:'Salı',wed:'Çarşamba',thu:'Perşembe',fri:'Cuma',sat:'Cumartesi',sun:'Pazar'}[d])).join(', ');
+    document.getElementById('schedule-success-msg').textContent = `Schedule kaydedildi: ${dayNames} günleri saat ${fd.hour}:00'de ${fd.email} adresine gönderilecek.`;
+  }
+
+  const list = document.getElementById('videos-list');
+  list.innerHTML = lastVideos.map(v => {
+    const platformIcon = PLATFORM_ICONS[v.platform] || 'ti-video';
+    const tags = (v.tags || []).map(t => `<span class="video-tag">${escHtml(t)}</span>`).join('');
+    return `
+      <div class="video-card">
+        <div class="video-header">
+          <div class="video-rank">${v.rank}</div>
+          <div class="video-meta">
+            <div class="video-title">${escHtml(v.title)}</div>
+            <div class="video-platform">
+              <span class="platform-badge"><i class="ti ${escHtml(platformIcon)}" aria-hidden="true"></i> ${escHtml(v.platform || 'Instagram/Facebook')}</span>
+              ${v.trendScore ? `<span class="platform-badge" style="background:#FEF9EC;border-color:#F5D76E;color:#7A5C00"><i class="ti ti-flame" aria-hidden="true"></i> Trend: ${escHtml(v.trendScore)}</span>` : ''}
+            </div>
+          </div>
+        </div>
+        <div class="video-body">
+          <div class="balloon">${escHtml(v.whyTrending || '')}</div>
+          ${v.adaptation ? `<div class="video-tip"><i class="ti ti-bulb" aria-hidden="true"></i> <span><strong>Markanıza uyarlama:</strong> ${escHtml(v.adaptation)}</span></div>` : ''}
+          ${v.tags && v.tags.length ? `<div class="video-tags">${tags}</div>` : ''}
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  if (result.ctaText) {
+    document.getElementById('cta-sub').textContent = result.ctaText;
+  }
+
+  document.getElementById('results-section').style.display = 'block'; collapseForm();
+  document.getElementById('results-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+async function generate() {
+  const rateData = getRateData();
+  if (rateData.count >= DAILY_LIMIT) {
+    showErr('Günlük kullanım limitiniz (5) doldu. Yarın tekrar deneyin.');
+    return;
+  }
+
+  const biz = document.getElementById('f-biz').value.trim();
+  const sector = document.getElementById('f-sector').value;
+  const email = document.getElementById('f-email').value.trim();
+  const tones = getCheckedTones();
+  const audience = document.getElementById('f-audience').value.trim();
+  const note = document.getElementById('f-note').value.trim();
+  const mode = getMode();
+  const hour = document.getElementById('f-hour').value;
+  const days = getCheckedDays();
+
+  if (!sector) { showErr('Lütfen sektör seçin.'); return; }
+  if (tones.length === 0) { showErr('En az bir video tonu seçin.'); return; }
+  if (mode !== 'instant') {
+    if (!email) { showErr('Mail gönderimi için mail adresi zorunludur.'); return; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { showErr('Geçerli bir mail adresi girin.'); return; }
+  }
+  if (mode === 'schedule' && days.length === 0) { showErr('Schedule için en az bir gün seçin.'); return; }
+
+  hideErr();
+  lastBiz = biz;
+  lastFormData = { biz, sector, email, tones, audience, note, mode, hour, days };
+  clearResults();
+  showLoading(true);
+  document.getElementById('loading-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  const genBtn = document.getElementById('gen-btn');
+  if (genBtn) { genBtn.disabled = true; genBtn.style.opacity = '0.6'; }
+  const resetBtn = document.getElementById('reset-btn');
+  if (resetBtn) { resetBtn.disabled = true; resetBtn.style.opacity = '0.6'; }
+
+  let mi = 0;
+  const msgEl = document.getElementById('loading-msg');
+  const ticker = setInterval(() => { mi = (mi + 1) % loadingMsgs.length; msgEl.textContent = loadingMsgs[mi]; }, 1800);
+
+  const sectorText = sector === 'ALL' ? 'TÜM SEKTÖRLER (genel tarama — sektör bağımsız viral içerikler)' : sector;
+  const daysText = days.length ? days.join(', ') : 'N/A (anlık mod)';
+
+  const prompt = `Sen sosyal medya trend analisti ve içerik stratejistisin. Aşağıdaki işletme için Instagram ve Facebook'ta (Reels, Story, Post) trend olan video format/fikirlerini araştır ve markaya uyarlanmış şekilde listele.
+
+═══ İŞLETME BİLGİLERİ ═══
+İşletme adı: ${biz}
+Sektör: ${sectorText}
+Hedef kitle: ${audience || 'belirtilmemiş'}
+${note ? `Özel talimatlar (MUTLAKA dikkate al): ${note}` : ''}
+
+═══ TON KOMBİNASYONU ═══
+Seçilen tonlar: ${tones.join(' + ')}
+Yani her video fikri bu tonların KARışımıyla yazılmalı. Ton tutarlılığı çok önemli.
+
+═══ GÖREV ═══
+Sektöre uygun 7 adet trend video fikri üret. Her biri:
+1. Gerçekten Instagram/Facebook'ta trend olan bir formattan esinlenmeli (POV, absürt hayvan, before/after, day in the life, relatable pain point, "nasıl yaparım" mini-tutorial, behind the scenes, vs.)
+2. Bu işletmeye UYARLANMIŞ somut bir senaryo içermeli
+3. Neden trend olduğu 1-2 cümleyle açıklanmalı
+4. Markaya nasıl uyarlanacağı net önerilmeli (somut, kopyala-yapıştır yapılabilir)
+
+═══ YAZIM KURALLARI ═══
+- "Genel içerik üret" gibi kalıplardan KAÇIN. Her fikir başka hiçbir markada kullanılamayacak kadar özgün olsun.
+- ${sector === 'ALL' ? 'Tüm sektörlere uyabilecek evrensel viral formatlar seç (penguen yürüyor, kahve dökülüyor, vs.).' : 'Sektöre özgü terminoloji ve değer önerileri içersin.'}
+- Ton: ${tones.join(' + ')} — mesajların dili bu tonlara uygun olsun.
+- "platform" alanı için: Instagram Reels, Facebook Reels, Instagram Story, Facebook Story, Instagram Post, Facebook Post, YouTube Shorts, TikTok (sadece uygunsa) kullan.
+- "tags" alanı 2-4 etiket içersin (örn: ["#POV", "#behindthescenes", "#B2B"])
+- "trendScore" 1-10 arası olsun (10 = en yüksek viral potansiyel)
+
+═══ ÇIKTI FORMATI (SADECE JSON, Türkçe karakterleri koru) ═══
+{
+  "videos": [
+    {
+      "rank": 1,
+      "title": "...",
+      "platform": "...",
+      "trendScore": "8/10",
+      "whyTrending": "...",
+      "adaptation": "...",
+      "tags": ["...", "..."]
+    }
+  ],
+  "ctaText": "..."
+}`;
+
+  const fetchWithRetry = async (url, opts, retries = 2) => {
+    for (let attempt = 0; attempt <= retries; attempt++) {
+      try {
+        const r = await fetch(url, opts);
+        return r;
+      } catch (err) {
+        if (attempt < retries) {
+          document.getElementById('loading-msg').textContent = `Yapay zeka meşgul, tekrar deneniyor (${attempt + 1}/${retries})...`;
+          await new Promise(res => setTimeout(res, 4000));
+        } else {
+          throw err;
+        }
+      }
+    }
+  };
+
+  try {
+    let text = '';
+    for (let attempt = 0; attempt <= 1; attempt++) {
+      let res;
+      if (N8N_PROXY) {
+        res = await fetchWithRetry(N8N_PROXY, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt, biz, sector, email, tones, audience, note, mode, hour, days }),
+        });
+        if (!res.ok) {
+          if (res.status === 404) throw new Error('404: WordPress proxy endpoint tanımlı değil');
+          if (res.status === 429) throw new Error('429: Rate limit aşıldı');
+          throw new Error('HTTP ' + res.status + ' ' + res.statusText);
+        }
+      } else {
+        res = await fetch('https://api.minimax.io/v1/chat/completions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer DEV_KEY' },
+          body: JSON.stringify({ model: 'MiniMax-M3', max_completion_tokens: 4000, messages: [{ role: 'user', content: prompt }] }),
+        });
+      }
+      const data = await res.json();
+      text = N8N_PROXY
+        ? (data.content || []).map(b => b.text || '').join('')
+        : (data.choices?.[0]?.message?.content || '');
+      if (!hasEncodingCorruption(text)) break;
+    }
+    const thinkEnd = text.lastIndexOf('</think>');
+    const searchText = thinkEnd !== -1 ? text.slice(thinkEnd + '</think>'.length) : text;
+    const s = searchText.indexOf('{'); const e = searchText.lastIndexOf('}'); const clean = [s !== -1, e !== -1].every(Boolean) ? searchText.slice(s, e + 1) : searchText.replace(/```json|```/g, '').trim();
+    const result = JSON.parse(clean);
+
+    // Schedule mode: also send the schedule config to n8n for storage
+    if (mode === 'schedule') {
+      try {
+        await fetch('/wp-json/kolaykobi/v1/ai/trend-video-schedule', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ biz, sector, email, tones, audience, note, hour, days }),
+        });
+      } catch(e) { console.warn('Schedule kaydı başarısız:', e); }
+    }
+
+    rateData.count++;
+    saveRate(rateData);
+    updateRateBar();
+    clearInterval(ticker);
+    if (genBtn) { genBtn.disabled = false; genBtn.style.opacity = ''; }
+    if (resetBtn) { resetBtn.disabled = false; resetBtn.style.opacity = ''; }
+    renderResults(result);
+  } catch(e) {
+    clearInterval(ticker);
+    if (genBtn) { genBtn.disabled = false; genBtn.style.opacity = ''; }
+    if (resetBtn) { resetBtn.disabled = false; resetBtn.style.opacity = ''; }
+    showLoading(false);
+    const msg = (e && e.message) ? e.message : String(e);
+    if (msg.includes('404') || msg.includes('proxy endpoint')) {
+      showErr('WordPress proxy endpoint tanımlı değil (404). README\'deki PHP kodu (wordpress-ai-proxy.php) henüz eklenmemiş. n8n workflow\'u aktif mi kontrol edin.');
+    } else if (msg.includes('Failed to fetch') || msg.includes('NetworkError')) {
+      showErr('İnternet bağlantınız kesilmiş olabilir. Kontrol edip tekrar deneyin.');
+    } else if (msg.includes('429') || msg.includes('rate')) {
+      showErr('Çok fazla istek gönderildi. Lütfen 1-2 dakika bekleyin.');
+    } else {
+      showErr('Sunucuya bağlanılamadı. Yapay zeka meşgul olabilir — lütfen 30 saniye sonra tekrar deneyin. (' + msg.slice(0, 80) + ')');
+    }
+  }
+}
+
+function showErr(msg) {
+  const el = document.getElementById('err');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+
+function hideErr() {
+  document.getElementById('err').style.display = 'none';
+}
+
+function resetForm() {
+  document.getElementById('f-biz').value = '';
+  document.getElementById('f-sector').value = '';
+  document.getElementById('f-email').value = '';
+  document.querySelectorAll('#tone-group input').forEach(el => el.checked = false);
+  document.getElementById('f-audience').value = '';
+  document.getElementById('f-note').value = '';
+  document.querySelectorAll('#days-group input').forEach(el => el.checked = false);
+  document.querySelector('input[name="f-mode"][value="instant"]').checked = true;
+  document.getElementById('f-hour').value = '9';
+  document.getElementById('schedule-fields').classList.remove('is-visible');
+  document.getElementById('mail-field').style.display = 'none';
+  hideErr();
+  clearResults();
+  showLoading(false);
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function downloadTxt() {
+  if (!lastVideos.length) return;
+  const fd = lastFormData;
+  const formCtx = [
+    fd.sector ? `Sektör: ${fd.sector === 'ALL' ? 'Tüm Sektörler' : fd.sector}` : '',
+    fd.email ? `Mail: ${fd.email}` : '',
+    (fd.tones || []).length ? `Ton: ${fd.tones.join(' + ')}` : '',
+    fd.audience ? `Hedef kitle: ${fd.audience}` : '',
+    fd.note ? `Not: ${fd.note}` : '',
+  ].filter(Boolean).join('\n');
+  const lines = [`=== ${lastBiz} — TREND VİDEO FİKİRLERİ ===`, formCtx, ''];
+  lastVideos.forEach(v => {
+    lines.push(`#${v.rank} — ${v.title}`);
+    lines.push(`Platform: ${v.platform} | Trend: ${v.trendScore || 'N/A'}`);
+    lines.push(`Etiketler: ${(v.tags || []).join(', ')}`);
+    lines.push(`Neden trend: ${v.whyTrending || ''}`);
+    lines.push(`Markanıza uyarlama: ${v.adaptation || ''}`);
+    lines.push('---');
+  });
+  const blob = new Blob([lines.join('\n')], { type: 'text/plain;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'trend-video-fikirleri.txt';
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function downloadCsv() {
+  if (!lastVideos.length) return;
+  const headers = ['Sıra', 'Başlık', 'Platform', 'Trend Skoru', 'Neden Trend', 'Markanıza Uyarlama', 'Etiketler'];
+  const rows = lastVideos.map(v => [
+    v.rank,
+    v.title,
+    v.platform,
+    v.trendScore,
+    (v.whyTrending || '').replace(/"/g, '""'),
+    (v.adaptation || '').replace(/"/g, '""'),
+    (v.tags || []).join('; '),
+  ]);
+  const csv = [headers, ...rows].map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
+  const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'trend-video-fikirleri.csv';
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+updateRateBar();
+
+// ── Form Kalıcılığı (localStorage + JSON export/import) ──────────────────────
+const LS_KEY = 'kkform_' + location.pathname.replace(/\//g,'_');
+
+function saveForm() {
+  const form = document.getElementById('form-section');
+  if (!form) return;
+  const data = {};
+  form.querySelectorAll('input,select,textarea').forEach(el => {
+    if (!el.id) return;
+    if (el.type === 'radio') {
+      if (el.checked) data[el.id || el.name] = el.value;
+    } else {
+      data[el.id] = el.type === 'checkbox' ? el.checked : el.value;
+    }
+  });
+  try { localStorage.setItem(LS_KEY, JSON.stringify(data)); } catch(e) {}
+}
+
+function restoreForm() {
+  try {
+    const saved = localStorage.getItem(LS_KEY);
+    if (!saved) return;
+    const data = JSON.parse(saved);
+    Object.entries(data).forEach(([id, val]) => {
+      const el = document.getElementById(id) || document.querySelector(`input[name="${id}"]:checked`);
+      if (!el) return;
+      if (el.type === 'checkbox') el.checked = val;
+      else if (el.type === 'radio') {
+        document.querySelectorAll(`input[name="${el.name}"]`).forEach(r => r.checked = (r.value === val));
+      } else {
+        el.value = val;
+      }
+    });
+    toggleScheduleFields();
+  } catch(e) {}
+}
+
+function exportFormJSON() {
+  const form = document.getElementById('form-section');
+  if (!form) return;
+  const data = { _tool: document.title, _date: new Date().toISOString() };
+  form.querySelectorAll('input,select,textarea').forEach(el => {
+    if (!el.id && !el.name) return;
+    const key = el.id || el.name;
+    if (el.type === 'radio') {
+      if (el.checked) data[key] = el.value;
+    } else {
+      data[key] = el.type === 'checkbox' ? el.checked : el.value;
+    }
+  });
+  const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'form-' + location.pathname.replace(/\//g,'').replace(/-/g,'_') + '.json';
+  a.click();
+}
+
+function importFormJSON(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const data = JSON.parse(e.target.result);
+      Object.entries(data).forEach(([id, val]) => {
+        if (id.startsWith('_')) return;
+        const el = document.getElementById(id);
+        if (el) {
+          if (el.type === 'checkbox') el.checked = val;
+          else el.value = val;
+        } else {
+          const radio = document.querySelector(`input[name="${id}"]`);
+          if (radio) {
+            document.querySelectorAll(`input[name="${id}"]`).forEach(r => r.checked = (r.value === val));
+          }
+        }
+      });
+      saveForm();
+      toggleScheduleFields();
+      input.value = '';
+      const notice = document.getElementById('import-notice');
+      if (notice) { notice.style.display='flex'; setTimeout(()=>notice.style.display='none', 2500); }
+    } catch(e) { alert('Geçersiz form dosyası.'); }
+  };
+  reader.readAsText(file);
+}
+
+// Schedule + mail fields toggle
+function toggleScheduleFields() {
+  const mode = getMode();
+  const sf = document.getElementById('schedule-fields');
+  const mf = document.getElementById('mail-field');
+  if (mode === 'schedule') sf.classList.add('is-visible');
+  else sf.classList.remove('is-visible');
+  if (mode === 'once' || mode === 'schedule') {
+    mf.style.display = 'block';
+    document.getElementById('f-email').required = true;
+  } else {
+    mf.style.display = 'none';
+    document.getElementById('f-email').required = false;
+  }
+}
+
+document.querySelectorAll('input[name="f-mode"]').forEach(r => r.addEventListener('change', toggleScheduleFields));
+
+// Auto-save on any change
+document.addEventListener('change', e => { if (document.getElementById('form-section')?.contains(e.target)) saveForm(); });
+document.addEventListener('input',  e => { if (document.getElementById('form-section')?.contains(e.target)) saveForm(); });
+// Restore on load
+restoreForm();
+toggleScheduleFields();
+
+// ── Form Collapse ──────────────────────────────────────────────────────────
+function collapseForm() {
+  const fc = document.getElementById('form-section');
+  if (fc) fc.classList.add('is-collapsed');
+}
+function expandForm() {
+  const fc = document.getElementById('form-section');
+  if (fc) {
+    fc.classList.remove('is-collapsed');
+    if (fc.scrollIntoView) fc.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+}
+</script>
+</body>
+</html>
