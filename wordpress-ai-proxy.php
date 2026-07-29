@@ -59,7 +59,8 @@ function kolaykobi_ai_tool_map() {
         'wa'          => 'kolay-kobi-wa',
         'persona'     => 'kolay-kobi-persona',
         'skor'        => 'kolay-kobi-skor',
-        'trend-video' => 'kolay-kobi-trend-video',
+        'trend-video'      => 'kolay-kobi-trend-video',
+        'viral-uyarlayici' => 'kolay-kobi-viral-uyarlayici',
     );
 }
 

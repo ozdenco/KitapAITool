@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Viral Video Uyarlayıcı — Kolay KOBİ</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,sans-serif;background:#F7F6F2;min-height:100vh}
+.app{max-width:720px;margin:0 auto;padding:2rem 1rem}
+.brand{display:flex;align-items:center;gap:8px;margin-bottom:2rem}
+.brand-name{font-size:13px;font-weight:500;color:#1D9E75;letter-spacing:.04em}
+
+.form-card{background:#fff;border-radius:16px;border:0.5px solid #E2E0D8;padding:2rem}
+h1{font-size:22px;font-weight:500;color:#1C1B19;margin-bottom:.4rem}
+.subtitle{font-size:14px;color:#6B6963;line-height:1.6;margin-bottom:2rem}
+.field{margin-bottom:1.25rem}
+label{display:block;font-size:13px;font-weight:500;color:#6B6963;margin-bottom:6px}
+input,select,textarea{width:100%;padding:10px 12px;font-size:14px;border:0.5px solid #D3D1C7;border-radius:8px;background:#fff;color:#1C1B19;outline:none;font-family:inherit}
+textarea{resize:vertical;min-height:80px;line-height:1.5}
+input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3px rgba(29,158,117,.1)}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+
+.check-group{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px}
+.check-item{display:flex;align-items:center;gap:8px;padding:9px 11px;border:0.5px solid #D3D1C7;border-radius:8px;cursor:pointer;font-size:13px;color:#1C1B19;background:#fff;user-select:none}
+.check-item input[type=checkbox]{width:auto;padding:0;box-shadow:none}
+.check-item:has(input:checked){border-color:#1D9E75;background:#F0FAF6}
+
+.rate-bar-wrap{margin-bottom:1rem}
+.rate-bar-label{display:flex;justify-content:space-between;font-size:12px;color:#6B6963;margin-bottom:5px}
+.rate-bar-track{height:5px;background:#E2E0D8;border-radius:4px;overflow:hidden}
+.rate-bar-fill{height:100%;background:#1D9E75;border-radius:4px;transition:width .3s}
+
+.btn-primary{width:100%;padding:13px;background:#1D9E75;color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:500;cursor:pointer;margin-top:.5rem;display:flex;align-items:center;justify-content:center;gap:8px}
+.btn-primary:hover{background:#0F6E56}
+.btn-primary:disabled{background:#B4B2A9;cursor:not-allowed}
+.err{font-size:13px;color:#A32D2D;background:#FCEBEB;border-radius:8px;padding:10px 12px;margin-top:.75rem;display:none}
+
+.loading{text-align:center;padding:4rem 1rem;display:none}
+.spinner{width:44px;height:44px;border:3px solid #E2E0D8;border-top-color:#1D9E75;border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 1.25rem}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-txt{font-size:14px;color:#6B6963}
+.loading-note{font-size:12px;color:#9A9792;margin-top:.75rem}
+
+.results{display:none;margin-top:1.5rem}
+.results-header{margin-bottom:1.5rem}
+.results-header h2{font-size:18px;font-weight:500;color:#1C1B19;margin-bottom:.25rem}
+.results-header p{font-size:13px;color:#6B6963}
+
+.source-card{background:#fff;border:0.5px solid #E2E0D8;border-radius:12px;padding:1rem 1.25rem;margin-bottom:1rem;display:flex;align-items:flex-start;gap:12px}
+.source-icon{width:36px;height:36px;border-radius:8px;background:#F0FAF6;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.source-icon i{color:#1D9E75;font-size:18px}
+.source-info{flex:1;min-width:0}
+.source-label{font-size:11px;font-weight:500;color:#6B6963;letter-spacing:.04em;text-transform:uppercase;margin-bottom:3px}
+.source-url{font-size:13px;color:#1C1B19;word-break:break-all;white-space:pre-wrap}
+.source-analysis{font-size:13px;color:#444441;line-height:1.6;margin-top:.5rem;padding-top:.5rem;border-top:0.5px solid #F1EFE8}
+
+.adaptations-list{display:flex;flex-direction:column;gap:10px;margin-bottom:1rem}
+.adapt-card{background:#fff;border:0.5px solid #E2E0D8;border-radius:14px;overflow:hidden}
+.adapt-header{padding:.875rem 1.25rem .75rem;display:flex;align-items:flex-start;gap:12px;border-bottom:0.5px solid #F1EFE8}
+.adapt-num{width:30px;height:30px;border-radius:50%;background:#1D9E75;color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;flex-shrink:0}
+.adapt-title{font-size:14px;font-weight:500;color:#1C1B19;line-height:1.4}
+.adapt-body{padding:.875rem 1.25rem}
+.balloon{background:#DCF8C6;border-radius:0 12px 12px 12px;padding:10px 13px;font-size:13px;color:#1C1B19;line-height:1.6;position:relative;margin-bottom:.75rem;white-space:pre-wrap;word-break:break-word}
+.balloon::before{content:'';position:absolute;left:-8px;top:0;width:0;height:0;border-top:8px solid #DCF8C6;border-left:8px solid transparent}
+.adapt-tip{font-size:12px;color:#6B6963;background:#F7F6F2;border-radius:8px;padding:8px 10px;display:flex;align-items:flex-start;gap:7px}
+.adapt-tip i{color:#1D9E75;font-size:14px;flex-shrink:0;margin-top:1px}
+.adapt-hook{font-size:13px;color:#1C1B19;background:#FFF8ED;border:0.5px solid #F2D8A0;border-radius:8px;padding:9px 12px;margin-top:.6rem}
+.adapt-hook strong{color:#633806;font-size:12px;display:block;margin-bottom:3px}
+.adapt-tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:.75rem}
+.tag{display:inline-block;font-size:11px;padding:3px 9px;border-radius:20px}
+.tag-platform{background:#E1F5EE;color:#085041;font-weight:500}
+.tag-format{background:#E6F1FB;color:#0C447C;font-weight:500}
+
+.copy-row{display:flex;gap:8px;margin-top:1.25rem;flex-wrap:wrap}
+.btn-sm{display:flex;align-items:center;gap:6px;padding:8px 14px;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;border:0.5px solid #D3D1C7;background:#fff;color:#1C1B19}
+.btn-sm:hover{background:#F7F6F2}
+.btn-sm.primary{background:#1D9E75;color:#fff;border-color:#1D9E75}
+.btn-sm.primary:hover{background:#0F6E56}
+
+.cta-box{background:#F0FAF6;border:0.5px solid #9FE1CB;border-radius:12px;padding:1.5rem;text-align:center;margin-top:1.5rem}
+.cta-title{font-size:15px;font-weight:500;color:#085041;margin-bottom:.4rem}
+.cta-sub{font-size:13px;color:#0F6E56;margin-bottom:1rem;line-height:1.6}
+.cta-btn{display:inline-block;background:#1D9E75;color:#fff;padding:10px 24px;border-radius:8px;font-size:14px;font-weight:500;text-decoration:none}
+.cta-btn:hover{background:#0F6E56}
+
+@media(max-width:540px){
+  .row2{grid-template-columns:1fr}
+  .check-group{grid-template-columns:1fr 1fr}
+  .copy-row{flex-direction:column}
+  .btn-sm{justify-content:center}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="brand">
+    <span class="brand-name">KOLAY KOBİ — VİRAL VİDEO UYARLAYICI</span>
+  </div>
+
+  <div class="form-card">
+    <h1>Viral Videoyu İşletmene Uyarla</h1>
+    <p class="subtitle">Sosyal medyada gördüğün viral bir videoyu yapıştır. Yapay zeka videonun formatını analiz edip işletmene özel uyarlama fikirleri üretir.</p>
+
+    <div class="rate-bar-wrap">
+      <div class="rate-bar-label">
+        <span>Günlük kullanım</span>
+        <span id="rate-text">0 / 5</span>
+      </div>
+      <div class="rate-bar-track"><div class="rate-bar-fill" id="rate-fill" style="width:0%"></div></div>
+    </div>
+
+    <div class="field">
+      <label>Video Linki <span style="color:#A32D2D">*</span></label>
+      <input type="url" id="video-url" placeholder="https://www.tiktok.com/@... veya https://www.instagram.com/reel/...">
+    </div>
+
+    <div class="field">
+      <label>Video Ne Hakkında? <span style="color:#A32D2D">*</span></label>
+      <textarea id="video-desc" placeholder="Videonun konusunu kısaca açıkla. Örn: Bir penguen tuhaf şekilde yürüyor, üzerine komik müzik eklenmiş ve sonunda bir iş yerinde çalışıyormuş gibi sahne geliyor."></textarea>
+    </div>
+
+    <div class="row2">
+      <div class="field">
+        <label>İşletme Adı</label>
+        <input type="text" id="biz-name" placeholder="Logvance Lojistik">
+      </div>
+      <div class="field">
+        <label>Sektör <span style="color:#A32D2D">*</span></label>
+        <select id="sector">
+          <option value="">Seçin…</option>
+          <option value="Lojistik / Taşımacılık">Lojistik / Taşımacılık</option>
+          <option value="E-ticaret / Perakende">E-ticaret / Perakende</option>
+          <option value="Restoran / Kafe / Yiyecek">Restoran / Kafe / Yiyecek</option>
+          <option value="Güzellik / Kuaför / Estetik">Güzellik / Kuaför / Estetik</option>
+          <option value="Sağlık / Klinik / Eczane">Sağlık / Klinik / Eczane</option>
+          <option value="İnşaat / Gayrimenkul">İnşaat / Gayrimenkul</option>
+          <option value="Muhasebe / Finans / Danışmanlık">Muhasebe / Finans / Danışmanlık</option>
+          <option value="Eğitim / Kurs / Koçluk">Eğitim / Kurs / Koçluk</option>
+          <option value="Teknoloji / Yazılım">Teknoloji / Yazılım</option>
+          <option value="Turizm / Otel / Seyahat">Turizm / Otel / Seyahat</option>
+          <option value="Hukuk / Avukatlık">Hukuk / Avukatlık</option>
+          <option value="Temizlik / Hizmet">Temizlik / Hizmet</option>
+          <option value="Diğer">Diğer</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Video Tonu</label>
+      <div class="check-group">
+        <label class="check-item"><input type="checkbox" name="tone" value="Eğlenceli / Komik"> Eğlenceli / Komik</label>
+        <label class="check-item"><input type="checkbox" name="tone" value="Bilgilendirici"> Bilgilendirici</label>
+        <label class="check-item"><input type="checkbox" name="tone" value="İlham Verici"> İlham Verici</label>
+        <label class="check-item"><input type="checkbox" name="tone" value="Duygusal / Samimi"> Duygusal / Samimi</label>
+        <label class="check-item"><input type="checkbox" name="tone" value="Profesyonel / Kurumsal"> Profesyonel / Kurumsal</label>
+        <label class="check-item"><input type="checkbox" name="tone" value="Merak Uyandıran"> Merak Uyandıran</label>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Ek Bağlam <span style="color:#9A9792">(isteğe bağlı)</span></label>
+      <textarea id="extra-ctx" placeholder="Hedef kitlen, öne çıkarmak istediğin ürün/hizmet, ya da özellikle değinmek istediğin bir konu varsa yaz." style="min-height:56px"></textarea>
+    </div>
+
+    <div id="err" class="err"></div>
+    <button class="btn-primary" id="btn-generate" onclick="generate()">
+      <i class="ti ti-wand"></i> Uyarlama Fikirlerini Üret
+    </button>
+  </div>
+
+  <div class="loading" id="loading">
+    <div class="spinner"></div>
+    <div class="loading-txt">Format analiz ediliyor, uyarlama fikirleri üretiliyor…</div>
+    <div class="loading-note">Genellikle 10–30 saniye sürer.</div>
+  </div>
+
+  <div class="results" id="results">
+    <div class="results-header">
+      <h2 id="results-title">Uyarlama Fikirleri</h2>
+      <p id="results-sub"></p>
+    </div>
+
+    <div class="source-card" id="source-card">
+      <div class="source-icon"><i class="ti ti-movie"></i></div>
+      <div class="source-info">
+        <div class="source-label">Kaynak Video</div>
+        <div class="source-url" id="source-url-display"></div>
+        <div class="source-analysis" id="format-analysis"></div>
+      </div>
+    </div>
+
+    <div class="adaptations-list" id="adaptations-list"></div>
+
+    <div class="copy-row">
+      <button class="btn-sm primary" onclick="copyAll()"><i class="ti ti-copy"></i> Tümünü Kopyala</button>
+      <button class="btn-sm" onclick="resetForm()"><i class="ti ti-refresh"></i> Yeni Video Dene</button>
+    </div>
+
+    <div class="cta-box">
+      <div class="cta-title">Bu fikirleri düzenli almak ister misin?</div>
+      <div class="cta-sub">Trend Video Bulucu ile her gün otomatik video fikirleri al<br>ve belirlediğin saatte e-postana gelsin.</div>
+      <a href="/trend-video-bulucu/" class="cta-btn">Trend Video Bulucu'yu Aç</a>
+    </div>
+  </div>
+</div>
+
+<script>
+const N8N_PROXY = '/wp-json/kolaykobi/v1/ai/viral-uyarlayici';
+const DAILY_LIMIT = 5;
+const RATE_KEY = 'kkb_vu_usage';
+
+function getRateData() {
+  try {
+    const raw = localStorage.getItem(RATE_KEY);
+    const d = raw ? JSON.parse(raw) : null;
+    const today = new Date().toISOString().slice(0, 10);
+    if (!d || d.date !== today) return { date: today, count: 0 };
+    return d;
+  } catch { return { date: new Date().toISOString().slice(0, 10), count: 0 }; }
+}
+
+function saveRateData(d) {
+  try { localStorage.setItem(RATE_KEY, JSON.stringify(d)); } catch {}
+}
+
+function updateRateBar() {
+  const d = getRateData();
+  const pct = Math.min(100, (d.count / DAILY_LIMIT) * 100);
+  const fill = document.getElementById('rate-fill');
+  const txt = document.getElementById('rate-text');
+  if (fill) fill.style.width = pct + '%';
+  if (txt) txt.textContent = d.count + ' / ' + DAILY_LIMIT;
+}
+
+function showErr(msg) {
+  const el = document.getElementById('err');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+
+function hideErr() {
+  document.getElementById('err').style.display = 'none';
+}
+
+function setLoading(on) {
+  document.getElementById('loading').style.display = on ? 'block' : 'none';
+  document.getElementById('btn-generate').disabled = on;
+  if (on) {
+    document.getElementById('results').style.display = 'none';
+    document.querySelector('.form-card').style.display = on ? 'none' : 'block';
+  } else {
+    document.querySelector('.form-card').style.display = 'block';
+  }
+}
+
+function getTones() {
+  return Array.from(document.querySelectorAll('input[name="tone"]:checked')).map(el => el.value);
+}
+
+async function generate() {
+  hideErr();
+
+  const videoUrl = document.getElementById('video-url').value.trim();
+  const videoDesc = document.getElementById('video-desc').value.trim();
+  const sector = document.getElementById('sector').value;
+  const biz = document.getElementById('biz-name').value.trim();
+  const extraCtx = document.getElementById('extra-ctx').value.trim();
+  const tones = getTones();
+
+  if (!videoUrl) return showErr('Video linkini girin.');
+  if (!videoDesc) return showErr('Videonun ne hakkında olduğunu açıklayın.');
+  if (!sector) return showErr('Sektör seçin.');
+
+  const rd = getRateData();
+  if (rd.count >= DAILY_LIMIT) return showErr('Günlük kullanım limitine ulaştınız (5/5). Yarın tekrar deneyin.');
+
+  const bizText = biz || 'İşletmeniz';
+  const tonesText = tones.length ? tones.join(', ') : 'belirtilmedi';
+
+  const prompt = `Sen bir sosyal medya içerik stratejisti ve viral içerik analistisin.
+
+Bir kullanıcı aşağıdaki viral videoyu kendi işletmesi için uyarlamak istiyor.
+
+=== VİRAL VİDEO BİLGİSİ ===
+Link: ${videoUrl}
+Açıklama: ${videoDesc}${extraCtx ? '\nEk bağlam: ' + extraCtx : ''}
+
+=== İŞLETME BİLGİSİ ===
+İşletme adı: ${bizText}
+Sektör: ${sector}
+Ton tercihi: ${tonesText}
+
+=== GÖREVIN ===
+1. Önce videonun FORMAT/KONSEPTINI analiz et — ne tür bir yapı bu? (challenge, before/after, gün içi vlog, myth-busting, POV, storytime, reveal vb.) Bu formatın neden viral olduğunu kısaca açıkla.
+
+2. Bu formatı "${bizText}" isimli ${sector} sektöründeki işletme için 3 farklı şekilde uyarla. Her uyarlama:
+   - Orijinal formatın ruhunu korusun ama içerik tamamen ${sector} sektörüne özgü olsun
+   - Gerçekten çekilebilir, pratik bir video fikri olsun — hayali değil
+   - Hook (ilk 3 saniye): izleyiciyi durduracak açılış cümlesi/sahnesi
+   - Açıklama metni: video boyunca izleyiciye ne göstereceğini/söyleyeceğini
+   - Platform önerisi: TikTok / Instagram Reels / YouTube Shorts (hangisi daha uygun)
+   - Hashtag önerileri: 5-7 adet
+
+Yanıtı MUTLAKA şu JSON formatında ver:
+
+{
+  "formatAnalysis": "Videonun formatı ve neden viral olduğunun kısa açıklaması (2-4 cümle)",
+  "formatName": "Format adı (örn: 'Day-in-the-life vlog', 'Myth-busting', 'POV challenge')",
+  "adaptations": [
+    {
+      "rank": 1,
+      "title": "Uyarlama başlığı",
+      "hook": "İlk 3 saniyedeki açılış — izleyiciyi durduracak cümle veya sahne",
+      "description": "Videonun geri kalanında ne gösterileceği, nasıl çekileceği",
+      "platform": "TikTok",
+      "hashtags": ["#etiket1", "#etiket2", "#etiket3", "#etiket4", "#etiket5"],
+      "whyItWorks": "Bu uyarlamanın neden işe yarayacağını 1-2 cümlede açıkla"
+    }
+  ]
+}`;
+
+  setLoading(true);
+
+  try {
+    const res = await fetch(N8N_PROXY, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt, videoUrl, sector, biz: bizText, tones })
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Sunucu hatası (' + res.status + ')');
+    }
+
+    const data = await res.json();
+    const content = data.choices?.[0]?.message?.content || '';
+
+    const thinkEnd = content.lastIndexOf('</think>');
+    let text = thinkEnd !== -1 ? content.slice(thinkEnd + 8) : content;
+    const js = text.indexOf('{');
+    const je = text.lastIndexOf('}');
+    if ([js !== -1, je !== -1].every(Boolean)) text = text.slice(js, je + 1);
+
+    let parsed;
+    try { parsed = JSON.parse(text); } catch {
+      const repaired = text.replace(/,\s*([\]}])/g, '$1').replace(/[ --]/g, '');
+      try { parsed = JSON.parse(repaired); } catch { throw new Error('Yanıt ayrıştırılamadı. Lütfen tekrar deneyin.'); }
+    }
+
+    rd.count++;
+    saveRateData(rd);
+    updateRateBar();
+
+    renderResults(parsed, videoUrl, bizText, sector);
+  } catch (e) {
+    showErr([e, e.message].every(Boolean) ? e.message : String(e));
+    setLoading(false);
+    document.querySelector('.form-card').style.display = 'block';
+    return;
+  }
+
+  setLoading(false);
+}
+
+function renderResults(data, videoUrl, biz, sector) {
+  document.getElementById('results-title').textContent = 'Uyarlama Fikirleri';
+  document.getElementById('results-sub').textContent = biz + ' — ' + sector;
+  document.getElementById('source-url-display').textContent = videoUrl;
+  document.getElementById('format-analysis').textContent =
+    (data.formatName ? '📌 Format: ' + data.formatName + '\n' : '') + (data.formatAnalysis || '');
+
+  const list = document.getElementById('adaptations-list');
+  list.innerHTML = '';
+
+  const adaptations = data.adaptations || [];
+  adaptations.forEach(a => {
+    const tags = (a.hashtags || []).map(t =>
+      '<span class="tag tag-platform">' + t + '</span>'
+    ).join('');
+
+    const card = document.createElement('div');
+    card.className = 'adapt-card';
+    card.innerHTML = `
+      <div class="adapt-header">
+        <div class="adapt-num">${a.rank || ''}</div>
+        <div class="adapt-title">${a.title || ''}</div>
+      </div>
+      <div class="adapt-body">
+        <div class="adapt-hook">
+          <strong>🎬 İlk 3 saniye (hook):</strong>
+          ${a.hook || ''}
+        </div>
+        <div class="balloon" style="margin-top:.75rem">${a.description || ''}</div>
+        ${a.whyItWorks ? '<div class="adapt-tip"><i class="ti ti-bulb"></i><span>' + a.whyItWorks + '</span></div>' : ''}
+        <div class="adapt-tags">
+          <span class="tag tag-format">${a.platform || ''}</span>
+          ${tags}
+        </div>
+      </div>`;
+    list.appendChild(card);
+  });
+
+  document.getElementById('results').style.display = 'block';
+}
+
+function copyAll() {
+  const url = document.getElementById('source-url-display').textContent;
+  const analysis = document.getElementById('format-analysis').textContent;
+  const cards = document.querySelectorAll('.adapt-card');
+  let txt = 'VİRAL VİDEO UYARLAMA FİKİRLERİ\n\nKaynak: ' + url + '\n' + analysis + '\n\n';
+  cards.forEach(c => {
+    const title = c.querySelector('.adapt-title')?.textContent || '';
+    const hook = c.querySelector('.adapt-hook')?.textContent?.replace(/\s+/g, ' ').trim() || '';
+    const desc = c.querySelector('.balloon')?.textContent || '';
+    const why = c.querySelector('.adapt-tip span')?.textContent || '';
+    const tags = Array.from(c.querySelectorAll('.tag')).map(t => t.textContent).join(' ');
+    txt += '--- ' + title + ' ---\n' + hook + '\n' + desc + '\n' + (why ? why + '\n' : '') + tags + '\n\n';
+  });
+  navigator.clipboard.writeText(txt).catch(() => {});
+}
+
+function resetForm() {
+  document.getElementById('results').style.display = 'none';
+  document.querySelector('.form-card').style.display = 'block';
+  document.getElementById('video-url').value = '';
+  document.getElementById('video-desc').value = '';
+  document.getElementById('extra-ctx').value = '';
+  document.querySelectorAll('input[name="tone"]').forEach(el => { el.checked = false; });
+}
+
+updateRateBar();
+</script>
+</body>
+</html>

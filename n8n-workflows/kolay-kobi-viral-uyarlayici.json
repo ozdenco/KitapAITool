@@ -1,0 +1,114 @@
+{
+  "name": "Kolay KOBİ — Viral Video Uyarlayıcı",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "kolay-kobi-viral-uyarlayici",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "webhook-node",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.1,
+      "position": [240, 300],
+      "webhookId": "kolay-kobi-viral-uyarlayici"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body || $input.first().json;\nconst prompt = body.prompt || '';\nif (!prompt || prompt.length < 20) {\n  return [{ json: { error: 'Geçersiz istek: prompt eksik.' } }];\n}\nconst apiBody = {\n  model: 'MiniMax-M1',\n  max_completion_tokens: 4000,\n  messages: [{ role: 'user', content: prompt }]\n};\nreturn [{ json: { ...body, apiBody } }];"
+      },
+      "id": "build-request-node",
+      "name": "Build Request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.minimax.io/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer BURAYA_GERCEK_MINIMAX_API_KEY_YAZ"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "options": {
+          "timeout": 120000
+        },
+        "jsonBody": "={{ $json.apiBody }}"
+      },
+      "id": "minimax-api-node",
+      "name": "MiniMax API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [680, 300],
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// MiniMax-M1 (veya M3) reasoning modeli <think>...</think> blogu dondurur;\n// gercek JSON bundan sonra gelir. Think blogunu atlayip JSON'u cikartiyoruz.\nconst apiData = $input.first().json;\nlet text = apiData.choices?.[0]?.message?.content || '';\n\nconst thinkEnd = text.lastIndexOf('</think>');\nif (thinkEnd !== -1) text = text.slice(thinkEnd + '</think>'.length);\n\nconst jsonStart = text.indexOf('{');\nconst jsonEnd = text.lastIndexOf('}');\nif (jsonStart !== -1 && jsonEnd !== -1) text = text.slice(jsonStart, jsonEnd + 1);\n\nfunction tryParseJson(raw) {\n  try { return JSON.parse(raw); } catch {\n    const repaired = raw.replace(/,\\s*([\\]}])/g, '$1').replace(/[\\u0000-\\u0008\\u000B\\u000C\\u000E-\\u001F]/g, '');\n    try { return JSON.parse(repaired); } catch { return null; }\n  }\n}\n\nconst result = tryParseJson(text);\nif (!result) {\n  return [{ json: {\n    choices: [{ message: { content: text } }],\n    _parseError: true\n  }}];\n}\n\n// Dogrudan MiniMax'in ham yanitini choices formatinda donduruyoruz\n// (HTML tarafinda choices[0].message.content olarak okunuyor).\nreturn [{ json: {\n  choices: [{ message: { content: JSON.stringify(result) } }]\n}}];"
+      },
+      "id": "response-transform-node",
+      "name": "Response Transform",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "const err = $input.first().json;\nconst msg = err?.error?.message || err?.message || JSON.stringify(err).slice(0, 200);\nreturn [{ json: { error: 'MiniMax API hatası: ' + msg } }];"
+      },
+      "id": "api-error-node",
+      "name": "API Error",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 400]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          { "node": "Build Request", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Build Request": {
+      "main": [
+        [
+          { "node": "MiniMax API", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "MiniMax API": {
+      "main": [
+        [
+          { "node": "Response Transform", "type": "main", "index": 0 }
+        ],
+        [
+          { "node": "API Error", "type": "main", "index": 0 }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": [
+    "kolay-kobi",
+    "minimax",
+    "viral-uyarlayici"
+  ]
+}
