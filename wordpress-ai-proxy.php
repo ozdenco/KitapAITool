@@ -14,7 +14,7 @@
  *   POST https://kolaykobi.com/wp-json/kolaykobi/v1/ai/{tool}
  *   body: {"prompt": "..."}
  *
- * ASENKRON kullanım (job/polling — uzun süren araçlar için, ör. takvim):
+ * ASENKRON kullanım (job/polling — uzun süren araçlar için, ör. takvim, trend-video):
  *   POST https://kolaykobi.com/wp-json/kolaykobi/v1/ai/{tool}/start
  *     body: {"prompt": "..."}  →  {"job_id": "...", "status": "pending"}
  *   GET  https://kolaykobi.com/wp-json/kolaykobi/v1/ai/{tool}/status/{job_id}
@@ -51,14 +51,15 @@ add_action('rest_api_init', function () {
 // kendisi (responseMode + arka planda devam eden node zinciri) belirler.
 function kolaykobi_ai_tool_map() {
     return array(
-        'geri-donus' => 'kolay-kobi-geri-donus',
-        'chatbot'    => 'kolay-kobi-chatbot',
-        'takvim'     => 'kolay-kobi-takvim',
-        'rakip'      => 'kolay-kobi-rakip',
-        'butce'      => 'kolay-kobi-butce',
-        'wa'         => 'kolay-kobi-wa',
-        'persona'    => 'kolay-kobi-persona',
-        'skor'       => 'kolay-kobi-skor',
+        'geri-donus'  => 'kolay-kobi-geri-donus',
+        'chatbot'     => 'kolay-kobi-chatbot',
+        'takvim'      => 'kolay-kobi-takvim',
+        'rakip'       => 'kolay-kobi-rakip',
+        'butce'       => 'kolay-kobi-butce',
+        'wa'          => 'kolay-kobi-wa',
+        'persona'     => 'kolay-kobi-persona',
+        'skor'        => 'kolay-kobi-skor',
+        'trend-video' => 'kolay-kobi-trend-video',
     );
 }
 
@@ -91,7 +92,13 @@ function kolaykobi_ai_job_start(WP_REST_Request $request) {
     $day_count = isset($params['dayCount']) && is_numeric($params['dayCount'])
         ? max(1, min(31, (int) $params['dayCount']))
         : null;
-    $forward_body = array('prompt' => $prompt);
+    // DÜZELTME: Senkron uçtaki ile aynı hata burada da vardı — sadece prompt
+    // (+ dayCount) iletiliyor, formdan gelen diğer alanlar (mode, email, biz,
+    // sector, tones, hour, days vb.) düşüyordu. Artık tüm alanları iletiyoruz
+    // (Trend Video Bulucu gibi araçlar bu alanları n8n tarafında mode-routing
+    // ve mail gönderimi için kullanıyor).
+    $forward_body = is_array($params) ? $params : array();
+    $forward_body['prompt'] = $prompt;
     if ($day_count !== null) {
         $forward_body['dayCount'] = $day_count;
     }
@@ -171,26 +178,32 @@ function kolaykobi_ai_proxy(WP_REST_Request $request) {
         @set_time_limit(340);
     }
 
-    // İzin verilen n8n webhook'ları — tool adı → webhook path
-    $tools = array(
-        'geri-donus' => 'kolay-kobi-geri-donus',
-        'chatbot'    => 'kolay-kobi-chatbot',
-        'takvim'     => 'kolay-kobi-takvim',
-        'rakip'      => 'kolay-kobi-rakip',
-        'butce'      => 'kolay-kobi-butce',
-        'wa'         => 'kolay-kobi-wa',
-        'persona'    => 'kolay-kobi-persona',
-        'skor'       => 'kolay-kobi-skor',
-    );
+    $tools = kolaykobi_ai_tool_map();
 
     $tool = $request->get_param('tool');
     if (!isset($tools[$tool])) {
         return new WP_REST_Response(array('error' => 'Bilinmeyen araç'), 404);
     }
 
-    $prompt = $request->get_json_params()['prompt'] ?? '';
+    $params = $request->get_json_params();
+    $prompt = $params['prompt'] ?? '';
     if (!is_string($prompt) || $prompt === '' || strlen($prompt) > 20000) {
         return new WP_REST_Response(array('error' => 'Geçersiz prompt'), 400);
+    }
+
+    // DÜZELTME: Önceden sadece {"prompt": "..."} iletiliyordu; formdan gelen
+    // diğer tüm alanlar (mode, email, biz, sector, tones, hour, days, audience,
+    // note vb.) burada sessizce düşüyordu. Trend Video Bulucu gibi araçlar bu
+    // alanları n8n tarafında mode-routing ve mail gönderimi için kullanıyor —
+    // bu yüzden artık PROMPT DIŞINDAKİ tüm alanları da olduğu gibi iletiyoruz.
+    $forward_body = is_array($params) ? $params : array();
+    $forward_body['prompt'] = $prompt;
+
+    // Aşırı büyük/şüpheli body'lerin n8n'e taşınmasını engellemek için
+    // basit bir üst sınır (n8n tarafında ayrıca da doğrulanmalı).
+    $encoded = wp_json_encode($forward_body);
+    if ($encoded === false || strlen($encoded) > 50000) {
+        return new WP_REST_Response(array('error' => 'Geçersiz istek gövdesi'), 400);
     }
 
     $response = wp_remote_post(
@@ -198,7 +211,7 @@ function kolaykobi_ai_proxy(WP_REST_Request $request) {
         array(
             'timeout' => 320,
             'headers' => array('Content-Type' => 'application/json'),
-            'body'    => wp_json_encode(array('prompt' => $prompt)),
+            'body'    => $encoded,
         )
     );
 

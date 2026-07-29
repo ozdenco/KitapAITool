@@ -1,0 +1,204 @@
+{
+  "name": "Kolay KOBİ — Trend Video Scheduler",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 1
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "Schedule Trigger (Hourly)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const now = new Date();\nconst currentHour = now.getHours() === 0 ? 24 : now.getHours();\nconst dayNames = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];\nconst currentDay = dayNames[now.getDay()];\nconst staticData = $getWorkflowStaticData('global');\nif (!staticData.schedules) return [{ json: { matches: [], hour: currentHour, day: currentDay } }];\nconst matches = Object.values(staticData.schedules).filter(s => {\n  if (!s.active) return false;\n  const hourMatch = parseInt(s.hour, 10) === currentHour;\n  const dayMatch = (s.days || []).includes(currentDay);\n  return hourMatch && dayMatch;\n});\nreturn [{ json: { matches, hour: currentHour, day: currentDay, currentDate: now.toISOString() } }];"
+      },
+      "id": "filter-schedules",
+      "name": "Filter Today's Schedules",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.matches.length }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "if-has-matches",
+      "name": "Has Matches?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "matches",
+        "options": {}
+      },
+      "id": "split-out",
+      "name": "Split Out (Loop)",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [900, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\nconst dateStr = new Date().toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' });\nconst enhancedPrompt = (data.prompt || '') + `\\n\\n=== ÖNEMLİ: BU BİR SCHEDULED ÇALIŞTIRMA ===\\nTarih: ${dateStr}\\nBu trend önerileri bugünün güncel trendlerini yansıtmalı. Her öneride 'güncellik' vurgusu yap. (örn: 'Bu hafta patlayan format', 'Son 24 saatte viral olan', vs.)\\n===`;\nconst apiBody = {\n  model: 'MiniMax-M3',\n  max_completion_tokens: 8000,\n  messages: [{ role: 'user', content: enhancedPrompt }]\n};\nreturn [{ json: { ...data, apiBody } }];"
+      },
+      "id": "build-scheduled-body",
+      "name": "Build Scheduled Body",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1120, 400]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.minimax.io/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer BURAYA_GERCEK_MINIMAX_API_KEY_YAZ"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Accept-Charset",
+              "value": "utf-8"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "options": {
+          "timeout": 590000
+        },
+        "jsonBody": "={{ $json.apiBody }}"
+      },
+      "id": "minimax-scheduled-api",
+      "name": "MiniMax API (Scheduled)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1340, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "// DÜZELTME: MiniMax-M3 reasoning modeli <think>...</think> içinde düşünce\n// süreci döndürür; gerçek JSON bundan SONRA gelir. Bunu atlamadan ilk \"{\" /\n// son \"}\" aramak, düşünce metnindeki rastgele parantezleri yakalayıp\n// JSON.parse'ı patlatıyordu (her seferinde videos: [] boş dönüyordu).\nconst apiData = $input.first().json;\nlet text = apiData.choices?.[0]?.message?.content || '';\n\nconst thinkEnd = text.lastIndexOf('</think>');\nif (thinkEnd !== -1) text = text.slice(thinkEnd + '</think>'.length);\n\nconst jsonStart = text.indexOf('{');\nconst jsonEnd = text.lastIndexOf('}');\nif (jsonStart !== -1 && jsonEnd !== -1) text = text.slice(jsonStart, jsonEnd + 1);\n\nfunction tryParseJson(raw) {\n  try { return JSON.parse(raw); } catch (e1) {\n    const repaired = raw.replace(/,\\s*([\\]}])/g, '$1').replace(/[\\u0000-\\u0008\\u000B\\u000C\\u000E-\\u001F]/g, '');\n    try { return JSON.parse(repaired); } catch (e2) { return null; }\n  }\n}\nlet result = tryParseJson(text) || { videos: [] };\nconst data = $('Split Out (Loop)').first().json;\nconst videos = result.videos || [];\nconst dateStr = new Date().toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' });\nconst sectorText = (data.sector === 'ALL' || !data.sector) ? 'Tüm Sektörler' : data.sector;\nconst tonesText = (data.tones || []).join(' + ');\nconst bizText = data.biz || 'İşletmeniz';\nlet emailContent = `Merhaba! ${bizText} için ${dateStr} tarihli trend video fikirleri:\\n\\n`;\nvideos.forEach(v => {\n  emailContent += `#${v.rank} — ${v.title}\\n`;\n  emailContent += `Platform: ${v.platform} | Trend: ${v.trendScore || 'N/A'}\\n`;\n  emailContent += `Etiketler: ${(v.tags || []).join(', ')}\\n`;\n  emailContent += `Neden trend: ${v.whyTrending || ''}\\n`;\n  emailContent += `Markanıza uyarlama: ${v.adaptation || ''}\\n\\n---\\n\\n`;\n});\nconst htmlBody = `<!DOCTYPE html><html lang=\"tr\"><head><meta charset=\"UTF-8\"></head><body style=\"font-family:system-ui,sans-serif;background:#F7F6F2;padding:2rem\"><div style=\"max-width:680px;margin:0 auto;background:#fff;border-radius:16px;padding:2rem;border:0.5px solid #E2E0D8\"><div style=\"color:#1D9E75;font-size:13px;font-weight:500;letter-spacing:.04em;margin-bottom:1.5rem\">KOLAY KOBI — TREND VIDEO BULTENI</div><h1 style=\"font-size:22px;color:#1C1B19;margin-bottom:.4rem\">Gunun Trend Video Fikirleri</h1><p style=\"font-size:14px;color:#6B6963;margin-bottom:2rem\"><strong>${bizText}</strong> — ${sectorText}<br/>Ton: ${tonesText}<br/>Tarih: ${dateStr}</p>` + videos.map(v => `<div style=\"border:0.5px solid #E2E0D8;border-radius:12px;padding:1rem;margin-bottom:1rem\"><div style=\"display:flex;align-items:center;gap:10px;margin-bottom:.75rem\"><div style=\"width:32px;height:32px;border-radius:50%;background:#1D9E75;color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600\">${v.rank}</div><div style=\"font-size:15px;font-weight:500;color:#1C1B19\">${v.title}</div></div><div style=\"font-size:12px;color:#6B6963;margin-bottom:.5rem\">${v.platform} | Trend: ${v.trendScore || 'N/A'}</div><div style=\"background:#DCF8C6;border-radius:0 12px 12px 12px;padding:10px 12px;font-size:13px;color:#1C1B19;line-height:1.6;margin-bottom:.5rem\">${v.whyTrending || ''}</div><div style=\"background:#F7F6F2;border-radius:8px;padding:8px 10px;font-size:12px;color:#6B6963\"><strong style=\"color:#1D9E75\">Markaniza uyarlama:</strong> ${v.adaptation || ''}</div>${(v.tags && v.tags.length) ? `<div style=\"margin-top:.5rem\">${v.tags.map(t => `<span style=\"font-size:11px;padding:2px 8px;background:#F0FAF6;border:0.5px solid #9FE1CB;border-radius:6px;color:#085041;margin-right:4px\">${t}</span>`).join('')}</div>` : ''}</div>`).join('') + `<div style=\"background:#F0FAF6;border-radius:8px;padding:1rem;margin-top:1.5rem;text-align:center\"><p style=\"font-size:13px;color:#0F6E56;margin:0\">Bu rapor Kolay KOBİ Trend Video Bulucu tarafindan otomatik olusturuldu.</p><a href=\"https://kolaykobi.com\" style=\"display:inline-block;background:#1D9E75;color:#fff;padding:10px 24px;border-radius:8px;text-decoration:none;font-size:14px;margin-top:.75rem\">Kolay KOBİ'yi Ac</a></div></div></body></html>`;\nreturn [{ json: { ...data, emailContent, htmlBody, videos } }];"
+      },
+      "id": "format-email",
+      "name": "Format Email Body",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1560, 400]
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "sendTo": "={{ $json.email }}",
+        "subject": "={{ $json.biz }} — Günün Trend Video Fikirleri ({{ new Date().toLocaleDateString('tr-TR') }})",
+        "message": "={{ $json.emailContent }}",
+        "html": "={{ $json.htmlBody }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "send-scheduled-email",
+      "name": "Send Scheduled Email",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [1780, 400],
+      "webhookId": "send-scheduled-email"
+    }
+  ],
+  "connections": {
+    "Schedule Trigger (Hourly)": {
+      "main": [
+        [
+          { "node": "Filter Today's Schedules", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Filter Today's Schedules": {
+      "main": [
+        [
+          { "node": "Has Matches?", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Has Matches?": {
+      "main": [
+        [
+          { "node": "Split Out (Loop)", "type": "main", "index": 0 }
+        ],
+        []
+      ]
+    },
+    "Split Out (Loop)": {
+      "main": [
+        [
+          { "node": "Build Scheduled Body", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Build Scheduled Body": {
+      "main": [
+        [
+          { "node": "MiniMax API (Scheduled)", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "MiniMax API (Scheduled)": {
+      "main": [
+        [
+          { "node": "Format Email Body", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Format Email Body": {
+      "main": [
+        [
+          { "node": "Send Scheduled Email", "type": "main", "index": 0 }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": [
+    "kolay-kobi",
+    "minimax",
+    "trend-video",
+    "scheduler"
+  ]
+}

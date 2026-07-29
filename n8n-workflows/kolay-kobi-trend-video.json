@@ -1,0 +1,516 @@
+{
+  "name": "Kolay KOBİ — Trend Video Bulucu",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "kolay-kobi-trend-video",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-node",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300],
+      "webhookId": "kolay-kobi-trend-video"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ─── IKI KATMANLI LIMIT ─────────────────────────────────────────────────\n// 1) IP basina GUNLUK limit: tek kullanicinin sistemi spam'lemesini engeller.\n// 2) GLOBAL AYLIK limit: SerpApi ucretsiz kotasini (250/ay) TUM kullanicilar\n//    arasinda paylasilan gercek butceyi korur. IP limiti bunu KORUMAZ --\n//    50 farkli kullanici gunde 1'er istek atsa bile toplam kota hizla biter.\n//    Pay birakmak icin 250 degil 230'da kesiyoruz.\nconst PER_IP_DAILY_LIMIT = 50;\nconst GLOBAL_MONTHLY_SEARCH_LIMIT = 230;\n\nconst ip = $input.first().json.headers?.['x-forwarded-for']?.split(',')[0]?.trim() || $input.first().json.headers?.['x-real-ip'] || 'unknown';\nconst today = new Date().toISOString().slice(0, 10);\nconst monthKey = today.slice(0, 7); // 'YYYY-MM'\nconst ipKey = 'rl_trend_' + ip + '_' + today;\nconst globalKey = 'rl_trend_global_' + monthKey;\n\nconst staticData = $getWorkflowStaticData('global');\nif (!staticData.rateLimits) staticData.rateLimits = {};\n\nconst ipCount = staticData.rateLimits[ipKey] || 0;\nconst globalCount = staticData.rateLimits[globalKey] || 0;\n\nif (ipCount >= PER_IP_DAILY_LIMIT) {\n  return [{ json: { rateLimitExceeded: true, reason: 'ip_daily' } }];\n}\nif (globalCount >= GLOBAL_MONTHLY_SEARCH_LIMIT) {\n  return [{ json: { rateLimitExceeded: true, reason: 'global_monthly' } }];\n}\n\nstaticData.rateLimits[ipKey] = ipCount + 1;\nstaticData.rateLimits[globalKey] = globalCount + 1;\n\nconst body = $input.first().json.body || $input.first().json;\nreturn [{ json: { rateLimitExceeded: false, ...body } }];"
+      },
+      "id": "rate-limit-node",
+      "name": "Rate Limit Check",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.rateLimitExceeded }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equal"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "if-rate-limited",
+      "name": "Rate Limited?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ error: \"rate_limit\", reason: $json.reason || \"unknown\" }) }}",
+        "options": {
+          "responseCode": 429
+        }
+      },
+      "id": "respond-rate-limit",
+      "name": "429 Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [900, 180]
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\nconst apiBody = {\n  model: 'MiniMax-M3',\n  max_completion_tokens: 8000,\n  messages: [{ role: 'user', content: data.prompt || '' }]\n};\nreturn [{ json: { ...data, apiBody } }];"
+      },
+      "id": "build-body-node",
+      "name": "Build Request Body",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 400]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.minimax.io/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer BURAYA_GERCEK_MINIMAX_API_KEY_YAZ"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Accept-Charset",
+              "value": "utf-8"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "options": {
+          "timeout": 590000
+        },
+        "jsonBody": "={{ $json.apiBody }}"
+      },
+      "id": "minimax-api-node",
+      "name": "MiniMax API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1120, 400],
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ─── DÜZELTME NOTLARI ────────────────────────────────────────────────────\n// 1) \"MiniMax API\" (HTTP Request) node'u SADECE ham API cevabını döndürür;\n//    mode/email/biz/sector/tones/hour/days gibi orijinal form alanlarını\n//    kendiliğinden taşımaz. Bu yüzden context'i \"Build Request Body\"\n//    node'undan referansla ($('Build Request Body')) geri çekiyoruz.\n// 2) MiniMax-M3 reasoning modeli olduğu için cevap önce bir düşünce süreci\n//    (<think>...</think>) içerir, gerçek JSON bundan SONRA gelir.\n// 3) \"mode\" alanı sadece 3 geçerli değerden biri olabilir; güvenli varsayılan.\n// 4) YENİ: JSON.parse basarisiz olursa artik SESSIZCE videos:[] dondurmuyoruz.\n//    Once yaygin LLM JSON hatalarini (trailing comma, kontrol karakteri)\n//    onarmayi deniyoruz; hala basarisizsa bunu ACIK BIR HATA olarak\n//    isaretliyoruz (parseError=true) ki \"Store Job Result\" bunu job'a\n//    status:'error' olarak yazsin — kullanici sessizce bos sonuc gormesin.\n\nconst ctx = $('Build Request Body').first().json;\nconst apiData = $input.first().json;\n\nlet text = apiData.choices?.[0]?.message?.content || '';\n\nconst thinkEnd = text.lastIndexOf('</think>');\nif (thinkEnd !== -1) text = text.slice(thinkEnd + '</think>'.length);\n\nconst jsonStart = text.indexOf('{');\nconst jsonEnd = text.lastIndexOf('}');\nif (jsonStart !== -1 && jsonEnd !== -1) text = text.slice(jsonStart, jsonEnd + 1);\n\nfunction tryParseJson(raw) {\n  try {\n    return { ok: true, value: JSON.parse(raw) };\n  } catch (e1) {\n    // Yaygin LLM JSON hatalarini onarmayi dene: trailing comma, kontrol karakterleri\n    const repaired = raw\n      .replace(/,\\s*([\\]}])/g, '$1')\n      .replace(/[\\u0000-\\u0008\\u000B\\u000C\\u000E-\\u001F]/g, '');\n    try {\n      return { ok: true, value: JSON.parse(repaired) };\n    } catch (e2) {\n      return { ok: false, error: e1.message || String(e1) };\n    }\n  }\n}\n\nfunction extractErrorPosition(msg) {\n  const m = /position (\\d+)/.exec(msg || '');\n  return m ? parseInt(m[1], 10) : null;\n}\n\nfunction buildDebugSnippet(raw, errMsg) {\n  const pos = extractErrorPosition(errMsg);\n  if (pos !== null) {\n    const start = Math.max(0, pos - 350);\n    const end = Math.min(raw.length, pos + 150);\n    // >>> <<< isaretleri tam hata konumunu gosterir\n    const marker = Math.min(pos, raw.length) - start;\n    return raw.slice(start, start + marker) + ' >>>HATA_BURADA<<< ' + raw.slice(start + marker, end);\n  }\n  return raw.slice(0, 800);\n}\n\nconst parsed = tryParseJson(text);\nlet result;\nlet parseError = null;\nlet debugSnippet = null;\nif (parsed.ok) {\n  result = parsed.value;\n} else {\n  result = { videos: [], ctaText: '' };\n  parseError = parsed.error;\n  debugSnippet = buildDebugSnippet(text, parsed.error);\n}\n\nconst videos = result.videos || [];\nconst dateStr = new Date().toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' });\nconst sectorText = (ctx.sector === 'ALL' || !ctx.sector) ? 'Tüm Sektörler' : ctx.sector;\nconst tonesText = (ctx.tones || []).join(' + ');\nconst bizText = ctx.biz || 'İşletmeniz';\n\nlet emailContent = `Merhaba! ${bizText} için ${dateStr} tarihli trend video fikirleri:\\n\\n`;\nvideos.forEach(v => {\n  emailContent += `#${v.rank} — ${v.title}\\n`;\n  emailContent += `Platform: ${v.platform} | Trend: ${v.trendScore || 'N/A'}\\n`;\n  emailContent += `Etiketler: ${(v.tags || []).join(', ')}\\n`;\n  emailContent += `Neden trend: ${v.whyTrending || ''}\\n`;\n  emailContent += `Markanıza uyarlama: ${v.adaptation || ''}\\n\\n---\\n\\n`;\n});\n\nconst realSourcesHtml = (ctx.searchResultsRaw && ctx.searchResultsRaw.length)\n  ? `<div style=\"margin-top:1.5rem;padding-top:1rem;border-top:1px dashed #E2E0D8\"><div style=\"font-size:12px;color:#6B6963;font-weight:500;margin-bottom:.5rem\">Bulunan gercek kaynaklar (ilham icin):</div>` +\n    [...ctx.searchResultsRaw].sort((a,b) => (b.playCount||0)-(a.playCount||0)).slice(0, 6).map(r => `<div style=\"font-size:12px;margin-bottom:.35rem\"><a href=\"${r.webVideoUrl}\" style=\"color:#1D9E75;text-decoration:none\" target=\"_blank\">@${(r.authorMeta && r.authorMeta.name) || 'bilinmiyor'} — ${(r.playCount||0).toLocaleString('tr-TR')} izlenme</a></div>`).join('') +\n    `</div>`\n  : '';\n\nconst htmlBody = `<!DOCTYPE html><html lang=\"tr\"><head><meta charset=\"UTF-8\"></head><body style=\"font-family:system-ui,sans-serif;background:#F7F6F2;padding:2rem\"><div style=\"max-width:680px;margin:0 auto;background:#fff;border-radius:16px;padding:2rem;border:0.5px solid #E2E0D8\"><div style=\"color:#1D9E75;font-size:13px;font-weight:500;letter-spacing:.04em;margin-bottom:1.5rem\">KOLAY KOBI — TREND VIDEO BULTENI</div><h1 style=\"font-size:22px;color:#1C1B19;margin-bottom:.4rem\">Gunun Trend Video Fikirleri</h1><p style=\"font-size:14px;color:#6B6963;margin-bottom:2rem\"><strong>${bizText}</strong> — ${sectorText}<br/>Ton: ${tonesText}<br/>Tarih: ${dateStr}</p>` + videos.map(v => `<div style=\"border:0.5px solid #E2E0D8;border-radius:12px;padding:1rem;margin-bottom:1rem\"><div style=\"display:flex;align-items:center;gap:10px;margin-bottom:.75rem\"><div style=\"width:32px;height:32px;border-radius:50%;background:#1D9E75;color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600\">${v.rank}</div><div style=\"font-size:15px;font-weight:500;color:#1C1B19\">${v.title}</div></div><div style=\"font-size:12px;color:#6B6963;margin-bottom:.5rem\">${v.platform} | Trend: ${v.trendScore || 'N/A'}</div><div style=\"background:#DCF8C6;border-radius:0 12px 12px 12px;padding:10px 12px;font-size:13px;color:#1C1B19;line-height:1.6;margin-bottom:.5rem\">${v.whyTrending || ''}</div><div style=\"background:#F7F6F2;border-radius:8px;padding:8px 10px;font-size:12px;color:#6B6963\"><strong style=\"color:#1D9E75\">Markaniza uyarlama:</strong> ${v.adaptation || ''}</div>${(v.tags && v.tags.length) ? `<div style=\"margin-top:.5rem\">${v.tags.map(t => `<span style=\"font-size:11px;padding:2px 8px;background:#F0FAF6;border:0.5px solid #9FE1CB;border-radius:6px;color:#085041;margin-right:4px\">${t}</span>`).join('')}</div>` : ''}</div>`).join('') + realSourcesHtml + `<div style=\"background:#F0FAF6;border-radius:8px;padding:1rem;margin-top:1.5rem;text-align:center\"><p style=\"font-size:13px;color:#0F6E56;margin:0\">Bu rapor Kolay KOBİ Trend Video Bulucu ile oluşturuldu.</p><a href=\"https://kolaykobi.com\" style=\"display:inline-block;background:#1D9E75;color:#fff;padding:10px 24px;border-radius:8px;text-decoration:none;font-size:14px;margin-top:.75rem\">Kolay KOBİ'yi Ac</a></div></div></body></html>`;\n\nconst VALID_MODES = ['instant', 'once', 'schedule'];\nconst safeMode = VALID_MODES.includes(ctx.mode) ? ctx.mode : 'instant';\n\nconst realSources = ctx.searchResultsRaw || [];\n\nreturn [{ json: {\n  content: [{ type: 'text', text }],\n  realSources,\n  email: ctx.email || '',\n  biz: bizText,\n  sector: ctx.sector || '',\n  tones: ctx.tones || [],\n  mode: safeMode,\n  hour: ctx.hour || '',\n  days: ctx.days || [],\n  audience: ctx.audience || '',\n  note: ctx.note || '',\n  prompt: ctx.prompt || '',\n  emailContent,\n  htmlBody,\n  videos,\n  ctaText: result.ctaText || '',\n  parseError: parseError,\n  rawModelTextSnippet: parseError ? debugSnippet : undefined,\n  rawModelTextFull: parseError ? text : undefined,\n} }];"
+      },
+      "id": "response-transform",
+      "name": "Response Transform",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1340, 400]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "id": "r1",
+                    "leftValue": "={{ $json.mode }}",
+                    "rightValue": "instant",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "instant"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "id": "r2",
+                    "leftValue": "={{ $json.mode }}",
+                    "rightValue": "once",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "once"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "id": "r3",
+                    "leftValue": "={{ $json.mode }}",
+                    "rightValue": "schedule",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "schedule"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "switch-mode",
+      "name": "Switch (Mode)",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [1560, 400]
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "sendTo": "={{ $json.email }}",
+        "subject": "={{ $json.biz }} — Günün Trend Video Fikirleri ({{ new Date().toLocaleDateString('tr-TR') }})",
+        "message": "={{ $json.emailContent }}",
+        "html": "={{ $json.htmlBody }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "send-email-once",
+      "name": "Send Email (Once/Schedule)",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [1780, 480],
+      "webhookId": "send-email-once"
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\nconst staticData = $getWorkflowStaticData('global');\nif (!staticData.schedules) staticData.schedules = {};\nconst id = 'sch_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);\nstaticData.schedules[id] = {\n  id,\n  biz: data.biz || 'İşletme',\n  sector: data.sector || 'ALL',\n  email: data.email || '',\n  tones: data.tones || [],\n  audience: data.audience || '',\n  note: data.note || '',\n  prompt: data.prompt || '',\n  hour: data.hour,\n  days: data.days || [],\n  createdAt: new Date().toISOString(),\n  active: true,\n};\nreturn [{ json: { ...data, scheduleId: id, scheduleSaved: true } }];"
+      },
+      "id": "save-schedule-node",
+      "name": "Save Schedule",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2000, 480]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Webhook zaten 'Respond With Job ID' ile cevap verdi; burada tekrar\n// HTTP yaniti DONMUYORUZ, sadece sonucu static data'ya job_id altinda yaziyoruz.\n//\n// YENI: \"Response Transform\" JSON.parse basarisiz olduysa (parseError dolu),\n// bunu ARTIK sessiz bir \"completed, videos:[]\" olarak degil, acik bir\n// status:'error' olarak isaretliyoruz — boylece kullanici gercek nedeni gorur.\nconst staticData = $getWorkflowStaticData('global');\nconst jobId = $('Create Job').first().json.jobId;\nconst rt = $('Response Transform').first().json;\nconst payload = { ...rt, ...$json };\n\nif (staticData.jobs && staticData.jobs[jobId]) {\n  if (rt.parseError) {\n    staticData.jobs[jobId] = {\n      status: 'error',\n      createdAt: staticData.jobs[jobId].createdAt,\n      error: 'AI çıktısı geçerli JSON değildi: ' + rt.parseError + (rt.rawModelTextSnippet ? ' | Ham metin (ilk 800 karakter): ' + rt.rawModelTextSnippet : ''),\n    };\n  } else {\n    staticData.jobs[jobId] = { status: 'completed', createdAt: staticData.jobs[jobId].createdAt, ...payload };\n  }\n}\nreturn [{ json: payload }];"
+      },
+      "id": "respond-success",
+      "name": "Store Job Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2000, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\nconst staticData = $getWorkflowStaticData('global');\nif (!staticData.jobs) staticData.jobs = {};\n// 30 dakikadan eski job kayitlarini temizle (static data sismesin)\nconst now = Date.now();\nObject.keys(staticData.jobs).forEach(id => {\n  if (now - (staticData.jobs[id].createdAt || 0) > 30 * 60 * 1000) delete staticData.jobs[id];\n});\nconst jobId = now.toString(36) + Math.random().toString(36).slice(2, 10);\nstaticData.jobs[jobId] = { status: 'pending', createdAt: now };\nreturn [{ json: { ...data, jobId } }];"
+      },
+      "id": "create-job-node",
+      "name": "Create Job",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 260]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ job_id: $json.jobId, status: 'pending' }) }}",
+        "options": {
+          "responseCode": 200,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json; charset=utf-8"
+              }
+            ]
+          }
+        }
+      },
+      "id": "respond-job-id-node",
+      "name": "Respond With Job ID",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1120, 260]
+    },
+    {
+      "parameters": {
+        "jsCode": "// DUZELTME: onceki versiyon \"err.error\" bir OBJE oldugunda onu dogrudan\n// error alanina yaziyordu; bu da istemci tarafinda \"[object Object]\" olarak\n// gorunuyordu. Artik hatanin gercek metnini cok katmanli/guvenli sekilde\n// cikariyoruz, boylece gercek MiniMax/n8n hatasini goruruz.\nconst staticData = $getWorkflowStaticData('global');\nconst jobId = $('Create Job').first().json.jobId;\nconst err = $input.first().json;\n\nfunction extractMessage(e) {\n  if (!e) return 'Bilinmeyen hata';\n  if (typeof e === 'string') return e;\n  if (typeof e.message === 'string' && e.message) return e.message;\n  if (typeof e.error === 'string' && e.error) return e.error;\n  if (e.error && typeof e.error === 'object') {\n    if (typeof e.error.message === 'string' && e.error.message) return e.error.message;\n    if (typeof e.error.error === 'string' && e.error.error) return e.error.error;\n    try { return JSON.stringify(e.error).slice(0, 400); } catch (_) {}\n  }\n  if (typeof e.description === 'string' && e.description) return e.description;\n  if (typeof e.statusCode !== 'undefined') return `HTTP ${e.statusCode}: ${JSON.stringify(e).slice(0, 300)}`;\n  try { return JSON.stringify(e).slice(0, 400); } catch (_) { return 'Bilinmeyen hata (JSON.stringify basarisiz)'; }\n}\n\nconst errorMessage = extractMessage(err);\n\nif (staticData.jobs && staticData.jobs[jobId]) {\n  staticData.jobs[jobId] = { status: 'error', createdAt: staticData.jobs[jobId].createdAt, error: errorMessage };\n}\nreturn [{ json: { ok: false, error: errorMessage } }];"
+      },
+      "id": "mark-job-error-node",
+      "name": "Mark Job Error",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1340, 560]
+    },
+    {
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "kolay-kobi-trend-video-status",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "status-webhook-node",
+      "name": "Status Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 700],
+      "webhookId": "kolay-kobi-trend-video-status"
+    },
+    {
+      "parameters": {
+        "jsCode": "const q = $input.first().json.query || {};\nconst jobId = q.jobId;\nconst staticData = $getWorkflowStaticData('global');\nconst job = (staticData.jobs || {})[jobId];\nif (!job) return [{ json: { status: 'not_found' } }];\nreturn [{ json: job }];"
+      },
+      "id": "read-job-status-node",
+      "name": "Read Job Status",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 700]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseCode": 200,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json; charset=utf-8"
+              }
+            ]
+          }
+        }
+      },
+      "id": "status-response-node",
+      "name": "Status Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [680, 700]
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\n// Kullanicinin istedigi: sektore ozel arama DEGIL, genel olarak GERCEKTEN\n// trend olan (yuksek izlenmeli) videolar. Bunlar sonradan MiniMax tarafindan\n// sektore uyarlanacak (penguen -> lojistik mantigi). Bu yuzden sabit,\n// genis kapsamli trend hashtag'leri kullaniyoruz, sektore gore degil.\nconst hashtags = ['fyp', 'kesfet'];\nreturn [{ json: { ...data, hashtags } }];"
+      },
+      "id": "build-search-query-node",
+      "name": "Build Search Query",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1340, 260]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.apify.com/v2/acts/clockworks~tiktok-scraper/run-sync-get-dataset-items",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "token",
+              "value": "BURAYA_GERCEK_APIFY_TOKEN_YAZ"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  hashtags: $json.hashtags,\n  resultsPerPage: 20,\n  proxyCountryCode: 'TR',\n  commentsPerPost: 0,\n  topLevelCommentsPerPost: 0,\n  maxRepliesPerComment: 0,\n  maxFollowersPerProfile: 0,\n  maxFollowingPerProfile: 0,\n  excludePinnedPosts: false,\n  scrapeAdditionalAuthorMeta: false,\n  scrapeRelatedSearchWords: false,\n  scrapeRelatedVideos: false,\n  shouldDownloadAvatars: false,\n  shouldDownloadCovers: false,\n  shouldDownloadMusicCovers: false,\n  shouldDownloadSlideshowImages: false,\n  shouldDownloadVideos: false\n}) }}",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "id": "apify-tiktok-trending-node",
+      "name": "Apify TikTok Trending",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1560, 260],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Apify TikTok Trending sonuclarini prompta ekliyoruz. HTTP node context'i\n// tasimadigi icin ('Build Search Query'den referansla geri cekiyoruz.\nconst ctx = $('Build Search Query').first().json;\nconst items = $input.all().map(i => i.json);\n// Apify hata dondurduyse (yanlis token, kota vb.) tek bir item icinde\n// 'error' alani olur; gercek veri geldiyse dogrudan video dizisi gelir.\nconst isError = items.length === 1 && items[0] && items[0].error;\nconst videos = (!isError && items.length) ? items : [];\n\nlet searchBlock;\nif (videos.length) {\n  const top = videos.slice(0, 10).sort((a, b) => (b.playCount || 0) - (a.playCount || 0));\n  searchBlock = '\\n\\n═══ GERÇEK TREND TIKTOK VİDEOLARI (bugün bulundu, gerçek izlenme sayılarıyla) ═══\\n' +\n    top.map((v, i) => `${i + 1}. @${v.authorMeta?.name || 'bilinmiyor'} — ${(v.playCount || 0).toLocaleString('tr-TR')} izlenme, ${(v.diggCount || 0).toLocaleString('tr-TR')} beğeni\\n   Açıklama: ${(v.text || '').slice(0, 150)}\\n   Link: ${v.webVideoUrl || ''}`).join('\\n') +\n    '\\n\\nBu videolar SEKTÖRE ÖZEL DEĞİL — genel olarak trend olmuş gerçek videolar. Senin görevin: bu videoların formatini/konseptini (penguen yürüyüşü → lojistik örneğindeki gibi) işletmenin sektörüne UYARLAMAK. Hangi videodan esinlendiysen, o videonun gerçek linkini adaptation alanında ya da ayrı bir \\'inspiredBy\\' alanında belirtebilirsin ama uydurma link üretme.';\n} else {\n  searchBlock = '\\n\\n(NOT: gerçek trend verisi bu çalıştırmada alınamadı, mevcut bilgine dayanarak üret.)';\n}\n\nconst augmentedPrompt = (ctx.prompt || '') + searchBlock;\nreturn [{ json: { ...ctx, prompt: augmentedPrompt, searchResultsRaw: videos.length ? videos : null } }];"
+      },
+      "id": "merge-search-results-node",
+      "name": "Merge Search Results",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1780, 260]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          { "node": "Rate Limit Check", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Rate Limit Check": {
+      "main": [
+        [
+          { "node": "Rate Limited?", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Rate Limited?": {
+      "main": [
+        [
+          { "node": "429 Response", "type": "main", "index": 0 }
+        ],
+        [
+          { "node": "Create Job", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Build Request Body": {
+      "main": [
+        [
+          { "node": "MiniMax API", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "MiniMax API": {
+      "main": [
+        [
+          { "node": "Response Transform", "type": "main", "index": 0 }
+        ],
+        [
+          { "node": "Mark Job Error", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Response Transform": {
+      "main": [
+        [
+          { "node": "Switch (Mode)", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Switch (Mode)": {
+      "main": [
+        [
+          { "node": "Store Job Result", "type": "main", "index": 0 }
+        ],
+        [
+          { "node": "Send Email (Once/Schedule)", "type": "main", "index": 0 }
+        ],
+        [
+          { "node": "Save Schedule", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Send Email (Once/Schedule)": {
+      "main": [
+        [
+          { "node": "Store Job Result", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Save Schedule": {
+      "main": [
+        [
+          { "node": "Store Job Result", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Create Job": {
+      "main": [
+        [
+          { "node": "Respond With Job ID", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Respond With Job ID": {
+      "main": [
+        [
+          { "node": "Build Search Query", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Status Webhook": {
+      "main": [
+        [
+          { "node": "Read Job Status", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Read Job Status": {
+      "main": [
+        [
+          { "node": "Status Response", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Build Search Query": {
+      "main": [
+        [
+          { "node": "Apify TikTok Trending", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Merge Search Results": {
+      "main": [
+        [
+          { "node": "Build Request Body", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Apify TikTok Trending": {
+      "main": [
+        [
+          { "node": "Merge Search Results", "type": "main", "index": 0 }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": [
+    "kolay-kobi",
+    "minimax",
+    "trend-video"
+  ]
+}
