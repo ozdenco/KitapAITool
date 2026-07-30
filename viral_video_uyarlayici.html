@@ -73,11 +73,11 @@ input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3p
 .tag-platform{background:#E1F5EE;color:#085041;font-weight:500}
 .tag-format{background:#E6F1FB;color:#0C447C;font-weight:500}
 
-.copy-row{display:flex;gap:8px;margin-top:1.25rem;flex-wrap:wrap}
-.btn-sm{display:flex;align-items:center;gap:6px;padding:8px 14px;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;border:0.5px solid #D3D1C7;background:#fff;color:#1C1B19}
-.btn-sm:hover{background:#F7F6F2}
-.btn-sm.primary{background:#1D9E75;color:#fff;border-color:#1D9E75}
-.btn-sm.primary:hover{background:#0F6E56}
+.actions{display:flex;gap:8px;margin-top:1.25rem;flex-wrap:wrap}
+.btn-secondary{flex:1;padding:11px;background:#fff;color:#1C1B19;border:0.5px solid #D3D1C7;border-radius:8px;font-size:14px;font-weight:500;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px}
+.btn-secondary:hover{background:#F7F6F2}
+.reset-link{display:block;text-align:center;margin-top:1rem;background:none;border:none;font-size:13px;color:#888780;cursor:pointer;text-decoration:underline;width:100%}
+@media print{.btn-primary,.btn-secondary,.actions,.cta-box,.reset-link,.rate-bar-wrap{display:none!important}}
 
 .cta-box{background:#F0FAF6;border:0.5px solid #9FE1CB;border-radius:12px;padding:1.5rem;text-align:center;margin-top:1.5rem}
 .cta-title{font-size:15px;font-weight:500;color:#085041;margin-bottom:.4rem}
@@ -189,15 +189,20 @@ input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3p
 
     <div class="adaptations-list" id="adaptations-list"></div>
 
-    <div class="copy-row">
-      <button class="btn-sm primary" onclick="copyAll()"><i class="ti ti-copy"></i> Tümünü Kopyala</button>
-      <button class="btn-sm" onclick="resetForm()"><i class="ti ti-refresh"></i> Yeni Video Dene</button>
+    <div class="actions">
+      <button class="btn-secondary" onclick="downloadTxt()"><i class="ti ti-download"></i> .txt İndir</button>
+      <button class="btn-secondary" onclick="window.print()"><i class="ti ti-printer"></i> Yazdır</button>
+      <button class="btn-secondary" onclick="resetForm()"><i class="ti ti-refresh"></i> Yeniden Oluştur</button>
     </div>
 
     <div class="cta-box">
       <div class="cta-title">Bu fikirleri düzenli almak ister misin?</div>
       <div class="cta-sub">Trend Video Bulucu ile her gün otomatik video fikirleri al<br>ve belirlediğin saatte e-postana gelsin.</div>
       <a href="/trend-video-bulucu/" class="cta-btn">Trend Video Bulucu'yu Aç</a>
+    </div>
+
+    <div style="text-align:center;margin-top:1rem">
+      <button class="reset-link" onclick="resetForm()">Formu Boşalt ve Yeniden Başla</button>
     </div>
   </div>
 </div>
@@ -402,20 +407,29 @@ function renderResults(data, videoUrl, biz, sector) {
   document.getElementById('results').style.display = 'block';
 }
 
-function copyAll() {
+function buildTxt() {
   const url = document.getElementById('source-url-display').textContent;
   const analysis = document.getElementById('format-analysis').textContent;
   const cards = document.querySelectorAll('.adapt-card');
-  let txt = 'VİRAL VİDEO UYARLAMA FİKİRLERİ\n\nKaynak: ' + url + '\n' + analysis + '\n\n';
+  let txt = 'VİRAL VİDEO UYARLAMA FİKİRLERİ\n\nKaynak: ' + url + '\n' + analysis + '\n\n' + '='.repeat(50) + '\n\n';
   cards.forEach(c => {
     const title = c.querySelector('.adapt-title')?.textContent || '';
     const hook = c.querySelector('.adapt-hook')?.textContent?.replace(/\s+/g, ' ').trim() || '';
     const desc = c.querySelector('.balloon')?.textContent || '';
     const why = c.querySelector('.adapt-tip span')?.textContent || '';
     const tags = Array.from(c.querySelectorAll('.tag')).map(t => t.textContent).join(' ');
-    txt += '--- ' + title + ' ---\n' + hook + '\n' + desc + '\n' + (why ? why + '\n' : '') + tags + '\n\n';
+    txt += '--- ' + title + ' ---\n' + hook + '\n\n' + desc + '\n' + (why ? why + '\n' : '') + tags + '\n\n' + '─'.repeat(40) + '\n\n';
   });
-  navigator.clipboard.writeText(txt).catch(() => {});
+  return txt;
+}
+
+function downloadTxt() {
+  const txt = buildTxt();
+  const blob = new Blob([txt], { type: 'text/plain;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'viral-video-uyarlama.txt';
+  a.click();
 }
 
 function resetForm() {
