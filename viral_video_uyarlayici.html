@@ -99,14 +99,6 @@ input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3p
     <h1>Viral Videoyu İşletmene Uyarla</h1>
     <p class="subtitle">Sosyal medyada gördüğün viral bir videoyu yapıştır. Yapay zeka videonun formatını analiz edip işletmene özel uyarlama fikirleri üretir.</p>
 
-    <div class="rate-bar-wrap">
-      <div class="rate-bar-label">
-        <span>Günlük kullanım</span>
-        <span id="rate-text">0 / 5</span>
-      </div>
-      <div class="rate-bar-track"><div class="rate-bar-fill" id="rate-fill" style="width:0%"></div></div>
-    </div>
-
     <div class="field">
       <label>Video Linki <span style="color:#A32D2D">*</span></label>
       <input type="url" id="video-url" placeholder="https://www.tiktok.com/@... veya https://www.instagram.com/reel/...">
@@ -160,6 +152,13 @@ input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3p
       <textarea id="extra-ctx" placeholder="Hedef kitlen, öne çıkarmak istediğin ürün/hizmet, ya da özellikle değinmek istediğin bir konu varsa yaz." style="min-height:56px"></textarea>
     </div>
 
+    <div class="rate-bar-wrap">
+      <div class="rate-bar-label">
+        <span>Günlük kullanım</span>
+        <span id="rate-text">0 / 5</span>
+      </div>
+      <div class="rate-bar-track"><div class="rate-bar-fill" id="rate-fill" style="width:0%"></div></div>
+    </div>
     <div id="err" class="err"></div>
     <button class="btn-primary" id="btn-generate" onclick="generate()">
       <i class="ti ti-wand"></i> Uyarlama Fikirlerini Üret
