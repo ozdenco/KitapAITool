@@ -1,0 +1,816 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Görünürlük Skoru — Kolay KOBİ</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,sans-serif;background:#F7F6F2;min-height:100vh}
+.app{max-width:720px;margin:0 auto;padding:2rem 1rem}
+.brand{display:flex;align-items:center;gap:8px;margin-bottom:2rem}
+.brand-name{font-size:13px;font-weight:500;color:#1D9E75;letter-spacing:.04em}
+
+.form-card{background:#fff;border-radius:16px;border:0.5px solid #E2E0D8;padding:2rem}
+h1{font-size:22px;font-weight:500;color:#1C1B19;margin-bottom:.4rem}
+.subtitle{font-size:14px;color:#6B6963;line-height:1.6;margin-bottom:2rem}
+.field{margin-bottom:1.25rem}
+label{display:block;font-size:13px;font-weight:500;color:#6B6963;margin-bottom:6px}
+input,select,textarea{width:100%;padding:10px 12px;font-size:14px;border:0.5px solid #D3D1C7;border-radius:8px;background:#fff;color:#1C1B19;outline:none;font-family:inherit}
+textarea{resize:vertical;min-height:80px;line-height:1.5}
+input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3px rgba(29,158,117,.1)}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+
+.section-title{font-size:12px;font-weight:600;color:#9A9792;letter-spacing:.06em;text-transform:uppercase;margin:1.5rem 0 .75rem;padding-top:1rem;border-top:0.5px solid #F1EFE8}
+
+.radio-group{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
+.radio-item{display:flex;align-items:center;gap:7px;padding:8px 14px;border:0.5px solid #D3D1C7;border-radius:8px;cursor:pointer;font-size:13px;color:#1C1B19;background:#fff;user-select:none;flex:1;min-width:90px;justify-content:center}
+.radio-item input[type=radio]{width:auto;padding:0;box-shadow:none}
+.radio-item:has(input:checked){border-color:#1D9E75;background:#F0FAF6}
+.radio-evet:has(input:checked){border-color:#1D9E75;background:#F0FAF6;color:#085041}
+.radio-kismi:has(input:checked){border-color:#E6A817;background:#FFF8ED;color:#633806}
+.radio-hayir:has(input:checked){border-color:#C94040;background:#FCEBEB;color:#A32D2D}
+
+.check-group{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px}
+.check-item{display:flex;align-items:center;gap:8px;padding:9px 11px;border:0.5px solid #D3D1C7;border-radius:8px;cursor:pointer;font-size:13px;color:#1C1B19;background:#fff;user-select:none}
+.check-item input[type=checkbox]{width:auto;padding:0;box-shadow:none}
+.check-item:has(input:checked){border-color:#1D9E75;background:#F0FAF6}
+
+.rate-bar-wrap{margin-bottom:1rem}
+.rate-bar-label{display:flex;justify-content:space-between;font-size:12px;color:#6B6963;margin-bottom:5px}
+.rate-bar-track{height:5px;background:#E2E0D8;border-radius:4px;overflow:hidden}
+.rate-bar-fill{height:100%;background:#1D9E75;border-radius:4px;transition:width .3s}
+
+.btn-primary{width:100%;padding:13px;background:#1D9E75;color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:500;cursor:pointer;margin-top:.5rem;display:flex;align-items:center;justify-content:center;gap:8px}
+.btn-primary:hover{background:#0F6E56}
+.btn-primary:disabled{background:#B4B2A9;cursor:not-allowed}
+.err{font-size:13px;color:#A32D2D;background:#FCEBEB;border-radius:8px;padding:10px 12px;margin-top:.75rem;display:none}
+
+.loading{text-align:center;padding:4rem 1rem;display:none}
+.spinner{width:44px;height:44px;border:3px solid #E2E0D8;border-top-color:#1D9E75;border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 1.25rem}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-txt{font-size:14px;color:#6B6963}
+.loading-note{font-size:12px;color:#9A9792;margin-top:.75rem}
+
+.results{display:none;margin-top:1.5rem}
+.results-header{margin-bottom:1.5rem}
+.results-header h2{font-size:18px;font-weight:500;color:#1C1B19;margin-bottom:.25rem}
+.results-header p{font-size:13px;color:#6B6963}
+
+/* Skor kartı */
+.score-card{background:#fff;border:0.5px solid #E2E0D8;border-radius:16px;padding:1.5rem;margin-bottom:1rem;display:flex;align-items:center;gap:1.5rem}
+.score-ring-wrap{flex-shrink:0;position:relative;width:88px;height:88px}
+.score-ring-wrap svg{transform:rotate(-90deg)}
+.score-ring-bg{fill:none;stroke:#E2E0D8;stroke-width:8}
+.score-ring-fill{fill:none;stroke-width:8;stroke-linecap:round;transition:stroke-dashoffset .6s ease}
+.score-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.score-num{font-size:24px;font-weight:700;color:#1C1B19;line-height:1}
+.score-max{font-size:11px;color:#9A9792}
+.score-info{flex:1}
+.score-label{font-size:13px;font-weight:600;color:#1C1B19;margin-bottom:.2rem}
+.score-verdict{font-size:13px;color:#6B6963;line-height:1.5}
+.score-badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:600;margin-top:.4rem}
+
+/* Kategori kartları */
+.cats-list{display:flex;flex-direction:column;gap:8px;margin-bottom:1rem}
+.cat-card{background:#fff;border:0.5px solid #E2E0D8;border-radius:12px;overflow:hidden}
+.cat-header{display:flex;align-items:center;gap:10px;padding:.75rem 1rem;cursor:pointer;user-select:none}
+.cat-icon{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.cat-icon i{font-size:16px}
+.cat-name{flex:1;font-size:13px;font-weight:500;color:#1C1B19}
+.cat-pts{font-size:12px;font-weight:600;margin-right:4px}
+.cat-pts-max{font-size:11px;color:#9A9792}
+.cat-chevron{color:#9A9792;font-size:16px;transition:transform .2s}
+.cat-card.open .cat-chevron{transform:rotate(180deg)}
+.cat-body{padding:0 1rem 1rem;display:none;border-top:0.5px solid #F1EFE8}
+.cat-card.open .cat-body{display:block}
+.cat-score-bar{height:4px;border-radius:4px;margin:.75rem 0 .6rem}
+.cat-finding{font-size:13px;color:#444441;line-height:1.6;display:flex;align-items:flex-start;gap:8px;margin-bottom:.4rem}
+.cat-finding i{flex-shrink:0;margin-top:2px;font-size:14px}
+.cat-action{font-size:12px;color:#6B6963;background:#F7F6F2;border-radius:8px;padding:8px 10px;margin-top:.6rem;line-height:1.5}
+.cat-action strong{color:#1C1B19;display:block;margin-bottom:2px;font-size:12px}
+
+/* Aksiyon planı */
+.action-plan{background:#fff;border:0.5px solid #E2E0D8;border-radius:12px;padding:1rem 1.25rem;margin-bottom:1rem}
+.action-plan h3{font-size:14px;font-weight:600;color:#1C1B19;margin-bottom:.75rem;display:flex;align-items:center;gap:8px}
+.action-step{display:flex;align-items:flex-start;gap:10px;margin-bottom:.6rem}
+.step-num{width:22px;height:22px;border-radius:50%;background:#1D9E75;color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;margin-top:1px}
+.step-txt{font-size:13px;color:#444441;line-height:1.5}
+.step-txt strong{color:#1C1B19}
+
+/* Kırmızı bayraklar */
+.flags-box{background:#FCEBEB;border:0.5px solid #F5C6C6;border-radius:12px;padding:1rem 1.25rem;margin-bottom:1rem;display:none}
+.flags-box h3{font-size:13px;font-weight:600;color:#A32D2D;margin-bottom:.5rem;display:flex;align-items:center;gap:6px}
+.flag-item{font-size:13px;color:#7A2020;display:flex;align-items:flex-start;gap:8px;margin-bottom:.35rem;line-height:1.5}
+.flag-item i{flex-shrink:0;margin-top:2px}
+
+.actions{display:flex;gap:8px;margin-top:1.25rem;flex-wrap:wrap}
+.btn-secondary{flex:1;padding:11px;background:#fff;color:#1C1B19;border:0.5px solid #D3D1C7;border-radius:8px;font-size:14px;font-weight:500;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px}
+.btn-secondary:hover{background:#F7F6F2}
+.reset-link{display:block;text-align:center;margin-top:1rem;background:none;border:none;font-size:13px;color:#888780;cursor:pointer;text-decoration:underline;width:100%}
+@media print{.btn-primary,.btn-secondary,.actions,.cta-box,.reset-link,.rate-bar-wrap{display:none!important}}
+
+.cta-box{background:#F0FAF6;border:0.5px solid #9FE1CB;border-radius:12px;padding:1.5rem;text-align:center;margin-top:1.5rem}
+.cta-title{font-size:15px;font-weight:500;color:#085041;margin-bottom:.4rem}
+.cta-sub{font-size:13px;color:#0F6E56;margin-bottom:1rem;line-height:1.6}
+.cta-btn{display:inline-block;background:#1D9E75;color:#fff;padding:10px 24px;border-radius:8px;font-size:14px;font-weight:500;text-decoration:none}
+.cta-btn:hover{background:#0F6E56}
+
+@media(max-width:540px){
+  .row2{grid-template-columns:1fr}
+  .check-group{grid-template-columns:1fr 1fr}
+  .score-card{flex-direction:column;text-align:center}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="form-card">
+    <h1>AI Görünürlük Skoru</h1>
+    <p class="subtitle">Yapay zeka uygulamaları işletmenizi araştırdığında sizi bulabilir mi? Birkaç soruyu yanıtla, AI'ın seni nasıl gördüğünü öğren ve görünürlüğünü artıracak adımları al.</p>
+
+    <div class="section-title">İşletme Bilgileri</div>
+
+    <div class="row2">
+      <div class="field">
+        <label>İşletme Adı <span style="color:#A32D2D">*</span></label>
+        <input type="text" id="biz-name" placeholder="Örn: Logvance Lojistik">
+      </div>
+      <div class="field">
+        <label>Sektör <span style="color:#A32D2D">*</span></label>
+        <select id="sector">
+          <option value="">Seçin…</option>
+          <option value="Lojistik / Taşımacılık">Lojistik / Taşımacılık</option>
+          <option value="E-ticaret / Perakende">E-ticaret / Perakende</option>
+          <option value="Restoran / Kafe / Yiyecek">Restoran / Kafe / Yiyecek</option>
+          <option value="Güzellik / Kuaför / Estetik">Güzellik / Kuaför / Estetik</option>
+          <option value="Sağlık / Klinik / Eczane">Sağlık / Klinik / Eczane</option>
+          <option value="İnşaat / Gayrimenkul">İnşaat / Gayrimenkul</option>
+          <option value="Muhasebe / Finans / Danışmanlık">Muhasebe / Finans / Danışmanlık</option>
+          <option value="Eğitim / Kurs / Koçluk">Eğitim / Kurs / Koçluk</option>
+          <option value="Teknoloji / Yazılım">Teknoloji / Yazılım</option>
+          <option value="Turizm / Otel / Seyahat">Turizm / Otel / Seyahat</option>
+          <option value="Hukuk / Avukatlık">Hukuk / Avukatlık</option>
+          <option value="Üretim / İmalat">Üretim / İmalat</option>
+          <option value="Temizlik / Hizmet">Temizlik / Hizmet</option>
+          <option value="Diğer">Diğer</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="row2">
+      <div class="field">
+        <label>Şehir <span style="color:#A32D2D">*</span></label>
+        <input type="text" id="city" placeholder="Örn: İzmir">
+      </div>
+      <div class="field">
+        <label>Web Sitesi URL <span style="color:#9A9792">(isteğe bağlı)</span></label>
+        <input type="url" id="website" placeholder="https://firmaniz.com">
+      </div>
+    </div>
+
+    <div class="section-title">Web Sitesi İçeriği</div>
+
+    <div class="field">
+      <label>Sitede hizmet/ürün sayfası var mı? Hizmetler açıkça yazılmış mı?</label>
+      <div class="radio-group">
+        <label class="radio-item radio-evet"><input type="radio" name="q_services" value="evet"> Evet</label>
+        <label class="radio-item radio-kismi"><input type="radio" name="q_services" value="kismi"> Kısmen</label>
+        <label class="radio-item radio-hayir"><input type="radio" name="q_services" value="hayir"> Hayır</label>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Referanslar veya geçmiş projeler sitede yayınlandı mı?</label>
+      <div class="radio-group">
+        <label class="radio-item radio-evet"><input type="radio" name="q_refs" value="evet"> Evet</label>
+        <label class="radio-item radio-kismi"><input type="radio" name="q_refs" value="kismi"> Kısmen</label>
+        <label class="radio-item radio-hayir"><input type="radio" name="q_refs" value="hayir"> Hayır</label>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Sitede eksiksiz iletişim bilgisi var mı? (adres, telefon, e-posta)</label>
+      <div class="radio-group">
+        <label class="radio-item radio-evet"><input type="radio" name="q_contact" value="evet"> Evet</label>
+        <label class="radio-item radio-kismi"><input type="radio" name="q_contact" value="kismi"> Kısmen</label>
+        <label class="radio-item radio-hayir"><input type="radio" name="q_contact" value="hayir"> Hayır</label>
+      </div>
+    </div>
+
+    <div class="section-title">Google &amp; Yorum Platformları</div>
+
+    <div class="field">
+      <label>Google Business Profile (Google Haritalar) kaydınız var mı?</label>
+      <div class="radio-group">
+        <label class="radio-item radio-evet"><input type="radio" name="q_gbp" value="evet"> Evet</label>
+        <label class="radio-item radio-hayir"><input type="radio" name="q_gbp" value="hayir"> Hayır</label>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Google'daki yorum sayınız ve ortalama puanınız nedir?</label>
+      <div class="radio-group">
+        <label class="radio-item radio-evet"><input type="radio" name="q_reviews" value="50+"> 50+ yorum</label>
+        <label class="radio-item radio-kismi"><input type="radio" name="q_reviews" value="10-50"> 10–50 yorum</label>
+        <label class="radio-item radio-kismi"><input type="radio" name="q_reviews" value="1-10"> 1–10 yorum</label>
+        <label class="radio-item radio-hayir"><input type="radio" name="q_reviews" value="yok"> Hiç yok</label>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Şikayetvar'da şikayetiniz var mı?</label>
+      <div class="radio-group">
+        <label class="radio-item radio-evet"><input type="radio" name="q_sikayet" value="yok"> Şikayet yok</label>
+        <label class="radio-item radio-kismi"><input type="radio" name="q_sikayet" value="cevaplanmis"> Var, cevaplanmış</label>
+        <label class="radio-item radio-hayir"><input type="radio" name="q_sikayet" value="cevaplanmamis"> Var, cevaplanmamış</label>
+      </div>
+    </div>
+
+    <div class="section-title">Sosyal Medya &amp; LinkedIn</div>
+
+    <div class="field">
+      <label>LinkedIn şirket sayfanız var mı?</label>
+      <div class="radio-group">
+        <label class="radio-item radio-evet"><input type="radio" name="q_linkedin" value="aktif"> Var ve aktif</label>
+        <label class="radio-item radio-kismi"><input type="radio" name="q_linkedin" value="pasif"> Var ama pasif</label>
+        <label class="radio-item radio-hayir"><input type="radio" name="q_linkedin" value="yok"> Yok</label>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Aktif olduğunuz sosyal medya kanalları <span style="color:#9A9792">(birden fazla seçilebilir)</span></label>
+      <div class="check-group">
+        <label class="check-item"><input type="checkbox" name="q_social" value="Instagram"> Instagram</label>
+        <label class="check-item"><input type="checkbox" name="q_social" value="Facebook"> Facebook</label>
+        <label class="check-item"><input type="checkbox" name="q_social" value="TikTok"> TikTok</label>
+        <label class="check-item"><input type="checkbox" name="q_social" value="YouTube"> YouTube</label>
+        <label class="check-item"><input type="checkbox" name="q_social" value="Twitter/X"> Twitter/X</label>
+        <label class="check-item"><input type="checkbox" name="q_social" value="Hiçbiri"> Hiçbiri</label>
+      </div>
+    </div>
+
+    <div class="section-title">Medya, Dizin &amp; Resmi Kayıtlar</div>
+
+    <div class="field">
+      <label>İşletmeniz herhangi bir haber sitesinde ya da sektör yayınında yer aldı mı?</label>
+      <div class="radio-group">
+        <label class="radio-item radio-evet"><input type="radio" name="q_media" value="evet"> Evet</label>
+        <label class="radio-item radio-hayir"><input type="radio" name="q_media" value="hayir"> Hayır</label>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>İşletmeniz aşağıdaki kaynaklarda kayıtlı mı? <span style="color:#9A9792">(birden fazla seçilebilir)</span></label>
+      <div class="check-group">
+        <label class="check-item"><input type="checkbox" name="q_dirs" value="Ticaret Odası"> Ticaret Odası</label>
+        <label class="check-item"><input type="checkbox" name="q_dirs" value="KOSGEB"> KOSGEB</label>
+        <label class="check-item"><input type="checkbox" name="q_dirs" value="Clutch/G2"> Clutch / G2</label>
+        <label class="check-item"><input type="checkbox" name="q_dirs" value="Crunchbase"> Crunchbase</label>
+        <label class="check-item"><input type="checkbox" name="q_dirs" value="Sektör dizini"> Sektör dizini</label>
+        <label class="check-item"><input type="checkbox" name="q_dirs" value="Hiçbiri"> Hiçbiri</label>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>ISO belgesi, sektörel sertifika veya ödülünüz var mı?</label>
+      <div class="radio-group">
+        <label class="radio-item radio-evet"><input type="radio" name="q_cert" value="evet"> Evet</label>
+        <label class="radio-item radio-hayir"><input type="radio" name="q_cert" value="hayir"> Hayır</label>
+      </div>
+    </div>
+
+    <div class="section-title">Anahtar Kelime Uyumu</div>
+
+    <div class="field">
+      <label>Web sitenizde sektörünüze özgü anahtar kelimeler geçiyor mu? (hizmet adları, şehir, hedef müşteri tanımı)</label>
+      <div class="radio-group">
+        <label class="radio-item radio-evet"><input type="radio" name="q_keywords" value="evet"> Evet, yeterince</label>
+        <label class="radio-item radio-kismi"><input type="radio" name="q_keywords" value="kismi"> Kısmen</label>
+        <label class="radio-item radio-hayir"><input type="radio" name="q_keywords" value="hayir"> Pek yok</label>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Site içeriği Türkçe mi, İngilizce mi, her ikisi de mi?</label>
+      <div class="radio-group">
+        <label class="radio-item radio-evet"><input type="radio" name="q_lang" value="tr+en"> Her ikisi</label>
+        <label class="radio-item radio-kismi"><input type="radio" name="q_lang" value="tr"> Sadece Türkçe</label>
+        <label class="radio-item radio-hayir"><input type="radio" name="q_lang" value="en"> Sadece İngilizce</label>
+        <label class="radio-item radio-hayir"><input type="radio" name="q_lang" value="yok"> Site yok</label>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Eklemek istediğiniz ek bilgi <span style="color:#9A9792">(isteğe bağlı)</span></label>
+      <textarea id="extra-ctx" placeholder="Özellikle güçlü olduğunuz ya da zayıf hissettiğiniz alanlar, hedefleriniz veya rakiplerinizle ilgili bilgi ekleyebilirsiniz." style="min-height:56px"></textarea>
+    </div>
+
+    <div class="rate-bar-wrap">
+      <div class="rate-bar-label">
+        <span>Günlük kullanım</span>
+        <span id="rate-text">0 / 5</span>
+      </div>
+      <div class="rate-bar-track"><div class="rate-bar-fill" id="rate-fill" style="width:0%"></div></div>
+    </div>
+    <div id="err" class="err"></div>
+    <button class="btn-primary" id="btn-generate" onclick="generate()">
+      <i class="ti ti-chart-bar"></i> AI Görünürlük Skorunu Hesapla
+    </button>
+  </div>
+
+  <div class="loading" id="loading">
+    <div class="spinner"></div>
+    <div class="loading-txt">Veriler analiz ediliyor, skor hesaplanıyor…</div>
+    <div class="loading-note">Genellikle 15–40 saniye sürer.</div>
+  </div>
+
+  <div class="results" id="results">
+    <div class="results-header">
+      <h2 id="results-title">AI Görünürlük Skoru</h2>
+      <p id="results-sub"></p>
+    </div>
+
+    <!-- Genel skor -->
+    <div class="score-card" id="score-card">
+      <div class="score-ring-wrap">
+        <svg width="88" height="88" viewBox="0 0 88 88">
+          <circle class="score-ring-bg" cx="44" cy="44" r="38"/>
+          <circle class="score-ring-fill" id="score-ring" cx="44" cy="44" r="38"
+            stroke-dasharray="238.76" stroke-dashoffset="238.76" stroke="#1D9E75"/>
+        </svg>
+        <div class="score-center">
+          <div class="score-num" id="score-num">0</div>
+          <div class="score-max">/ 100</div>
+        </div>
+      </div>
+      <div class="score-info">
+        <div class="score-label" id="score-label">—</div>
+        <div class="score-verdict" id="score-verdict"></div>
+        <span class="score-badge" id="score-badge"></span>
+      </div>
+    </div>
+
+    <!-- Kırmızı bayraklar -->
+    <div class="flags-box" id="flags-box">
+      <h3><i class="ti ti-alert-triangle"></i> Dikkat Gerektiren Alanlar</h3>
+      <div id="flags-list"></div>
+    </div>
+
+    <!-- Kategori detayları -->
+    <div class="cats-list" id="cats-list"></div>
+
+    <!-- 30 günlük aksiyon planı -->
+    <div class="action-plan" id="action-plan">
+      <h3><i class="ti ti-list-check" style="color:#1D9E75"></i> Öncelikli Aksiyon Planı</h3>
+      <div id="action-steps"></div>
+    </div>
+
+    <div class="actions">
+      <button class="btn-secondary" onclick="downloadTxt()"><i class="ti ti-download"></i> .txt İndir</button>
+      <button class="btn-secondary" onclick="window.print()"><i class="ti ti-printer"></i> Yazdır</button>
+      <button class="btn-secondary" onclick="resetForm()"><i class="ti ti-refresh"></i> Yeniden Oluştur</button>
+    </div>
+
+    <div class="cta-box">
+      <div class="cta-title">Görünürlüğünü artırmak için adım adım destek ister misin?</div>
+      <div class="cta-sub">Rakip Analizi ile sektörünüzdeki rakiplerinizi karşılaştırın<br>ve öne geçmek için stratejinizi netleştirin.</div>
+      <a href="/rakip-analizi/" class="cta-btn">Rakip Analizini Aç</a>
+    </div>
+
+    <div style="text-align:center;margin-top:1rem">
+      <button class="reset-link" onclick="resetForm()">Formu Boşalt ve Yeniden Başla</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const N8N_PROXY = '/wp-json/kolaykobi/v1/ai/ai-visibility';
+const DAILY_LIMIT = 5;
+const RATE_KEY = 'kkb_aiv_usage';
+
+function getRateData() {
+  try {
+    const raw = localStorage.getItem(RATE_KEY);
+    const d = raw ? JSON.parse(raw) : null;
+    const today = new Date().toISOString().slice(0, 10);
+    if (!d || d.date !== today) return { date: today, count: 0 };
+    return d;
+  } catch { return { date: new Date().toISOString().slice(0, 10), count: 0 }; }
+}
+
+function saveRateData(d) {
+  try { localStorage.setItem(RATE_KEY, JSON.stringify(d)); } catch {}
+}
+
+function updateRateBar() {
+  const d = getRateData();
+  const pct = Math.min(100, (d.count / DAILY_LIMIT) * 100);
+  const fill = document.getElementById('rate-fill');
+  const txt = document.getElementById('rate-text');
+  if (fill) fill.style.width = pct + '%';
+  if (txt) txt.textContent = d.count + ' / ' + DAILY_LIMIT;
+}
+
+function showErr(msg) {
+  const el = document.getElementById('err');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+
+function hideErr() { document.getElementById('err').style.display = 'none'; }
+
+function setLoading(on) {
+  document.getElementById('loading').style.display = on ? 'block' : 'none';
+  document.getElementById('btn-generate').disabled = on;
+  const fc = document.querySelector('.form-card');
+  if (on) {
+    document.getElementById('results').style.display = 'none';
+    fc.style.display = 'none';
+  } else {
+    fc.style.display = 'block';
+  }
+}
+
+function radio(name) {
+  const el = document.querySelector('input[name="' + name + '"]:checked');
+  return el ? el.value : 'belirtilmedi';
+}
+
+function checks(name) {
+  return Array.from(document.querySelectorAll('input[name="' + name + '"]:checked')).map(el => el.value);
+}
+
+async function generate() {
+  hideErr();
+
+  const biz = document.getElementById('biz-name').value.trim();
+  const sector = document.getElementById('sector').value;
+  const city = document.getElementById('city').value.trim();
+  const website = document.getElementById('website').value.trim();
+  const extraCtx = document.getElementById('extra-ctx').value.trim();
+
+  if (!biz) return showErr('İşletme adını girin.');
+  if (!sector) return showErr('Sektör seçin.');
+  if (!city) return showErr('Şehri girin.');
+
+  const rd = getRateData();
+  if (rd.count >= DAILY_LIMIT) return showErr('Günlük kullanım limitine ulaştınız (5/5). Yarın tekrar deneyin.');
+
+  const answers = {
+    services:  radio('q_services'),
+    refs:      radio('q_refs'),
+    contact:   radio('q_contact'),
+    gbp:       radio('q_gbp'),
+    reviews:   radio('q_reviews'),
+    sikayet:   radio('q_sikayet'),
+    linkedin:  radio('q_linkedin'),
+    social:    checks('q_social'),
+    media:     radio('q_media'),
+    dirs:      checks('q_dirs'),
+    cert:      radio('q_cert'),
+    keywords:  radio('q_keywords'),
+    lang:      radio('q_lang')
+  };
+
+  const prompt = `Sen bir AI görünürlük uzmanısın. Bir KOBİ'nin yapay zeka uygulamalarında (Claude, ChatGPT, Gemini, Perplexity vb.) ne kadar bulunabilir ve iyi sıralanabilir olduğunu değerlendiriyorsun.
+
+AI sistemleri bir firma araştırdığında şu sinyallere bakar: web sitesi içeriği, Google yorumları, şikayet platformları, LinkedIn, sosyal medya, medya/haber varlığı, dizinler, resmi kayıtlar ve anahtar kelime uyumu.
+
+=== İŞLETME BİLGİLERİ ===
+Ad: ${biz}
+Sektör: ${sector}
+Şehir: ${city}
+Web sitesi: ${website || 'belirtilmedi'}
+${extraCtx ? 'Ek bilgi: ' + extraCtx : ''}
+
+=== ANKETİN CEVAPLARI (kullanıcının beyan ettiği mevcut durum) ===
+Web Sitesi:
+- Hizmet/ürün sayfası: ${answers.services}
+- Referanslar/projeler: ${answers.refs}
+- İletişim bilgisi: ${answers.contact}
+
+Google & Yorumlar:
+- Google Business Profile: ${answers.gbp}
+- Yorum durumu: ${answers.reviews}
+- Şikayetvar: ${answers.sikayet}
+
+Sosyal Medya & LinkedIn:
+- LinkedIn: ${answers.linkedin}
+- Aktif kanallar: ${answers.social.length ? answers.social.join(', ') : 'yok'}
+
+Medya & Dizinler:
+- Medya/haber varlığı: ${answers.media}
+- Kayıtlı dizinler: ${answers.dirs.length ? answers.dirs.join(', ') : 'yok'}
+- Sertifika/belge: ${answers.cert}
+
+Anahtar Kelime:
+- Site içeriği: ${answers.keywords}
+- Dil: ${answers.lang}
+
+=== GÖREVIN ===
+Bu bilgileri değerlendirerek aşağıdaki JSON formatında bir AI görünürlük raporu oluştur.
+
+Puanlama rehberi (toplam 100 puan):
+- Web sitesi içeriği: 0–20 puan (hizmet+referans+iletişim)
+- Google & yorumlar: 0–20 puan (GBP varlığı + yorum sayısı + şikayet)
+- LinkedIn & sosyal medya: 0–15 puan
+- Medya & dizin varlığı: 0–15 puan
+- Resmi kayıtlar & güven: 0–15 puan (sertifika + dizinler)
+- Anahtar kelime uyumu: 0–15 puan
+
+Yanıtı MUTLAKA şu JSON formatında ver:
+
+{
+  "totalScore": 58,
+  "verdict": "Orta — AI sistemleri sizi bazı aramalarda buluyor ama güçlü rakipler karşısında görünmez kalıyorsunuz.",
+  "badge": "Geliştirilmeli",
+  "categories": [
+    {
+      "id": "website",
+      "name": "Web Sitesi İçeriği",
+      "icon": "ti-world",
+      "color": "#1D9E75",
+      "score": 14,
+      "maxScore": 20,
+      "findings": [
+        { "type": "ok", "text": "Hizmet sayfası mevcut." },
+        { "type": "warn", "text": "Referanslar eksik; AI bu bilgiyi arayacak ama bulamayacak." }
+      ],
+      "action": "Sitene 3-5 müşteri referansı veya tamamlanmış proje özeti ekle. 'Müşterilerimiz' veya 'Projelerimiz' başlıklı bir sayfa oluştur."
+    },
+    {
+      "id": "google",
+      "name": "Google & Yorum Platformları",
+      "icon": "ti-star",
+      "color": "#E6A817",
+      "score": 10,
+      "maxScore": 20,
+      "findings": [
+        { "type": "warn", "text": "Yorum sayısı düşük; AI güvenilirlik sinyali olarak yorum yoğunluğuna bakar." }
+      ],
+      "action": "Bu ay mevcut 10 müşterinden Google yorumu iste. Şikayetvar profilini düzenli kontrol et ve her şikayete 48 saat içinde yanıt ver."
+    },
+    {
+      "id": "social",
+      "name": "LinkedIn & Sosyal Medya",
+      "icon": "ti-brand-linkedin",
+      "color": "#0A66C2",
+      "score": 8,
+      "maxScore": 15,
+      "findings": [
+        { "type": "ok", "text": "Instagram aktif." },
+        { "type": "warn", "text": "LinkedIn şirket sayfası yok; B2B araştırmalarda görünmezsiniz." }
+      ],
+      "action": "LinkedIn'de şirket sayfası aç, çalışanlarını bağla. Ayda en az 4 paylaşım yap."
+    },
+    {
+      "id": "media",
+      "name": "Medya & Dizin Varlığı",
+      "icon": "ti-news",
+      "color": "#7C3AED",
+      "score": 5,
+      "maxScore": 15,
+      "findings": [
+        { "type": "err", "text": "Hiçbir haber/sektör kaynağında adınız geçmiyor. AI'nın sizi alıntı yapabileceği dış kaynak yok." }
+      ],
+      "action": "Ticaret odası bültenine haber gönder. Sektör bloğuna misafir yazı yaz. Bir yerel haber sitesiyle röportaj ayarla."
+    },
+    {
+      "id": "trust",
+      "name": "Resmi Kayıtlar & Güven",
+      "icon": "ti-certificate",
+      "color": "#059669",
+      "score": 10,
+      "maxScore": 15,
+      "findings": [
+        { "type": "ok", "text": "Ticaret odası kaydı var; güvenilirlik sinyali olarak değerlendiriliyor." },
+        { "type": "warn", "text": "ISO belgesi yoksa rakiplerinize kıyasla güven skoru düşük kalır." }
+      ],
+      "action": "KOSGEB'e kayıt ol (ücretsiz). ISO 9001 sertifikasyon sürecini araştır. Ticaret sicil numaranı web sitende yayınla."
+    },
+    {
+      "id": "keywords",
+      "name": "Anahtar Kelime Uyumu",
+      "icon": "ti-search",
+      "color": "#DC6803",
+      "score": 11,
+      "maxScore": 15,
+      "findings": [
+        { "type": "ok", "text": "Site Türkçe içerik sunuyor." },
+        { "type": "warn", "text": "AI'ın sektörünüzü ararken kullandığı terimler sitede yeterince geçmiyor olabilir." }
+      ],
+      "action": "Sitene 'İzmir lojistik firmaları', 'İstanbul nakliye hizmetleri' gibi şehir + hizmet kombinasyonlarını doğal şekilde ekle."
+    }
+  ],
+  "redFlags": [
+    "Google Business Profile eksik: AI harita tabanlı aramalarda sizi tamamen atlıyor.",
+    "Dış kaynaklarda hiç atıf yok: AI güvenilirliği teyit edemiyor."
+  ],
+  "actionPlan": [
+    { "step": 1, "title": "Google Business Profile oluştur", "detail": "Ücretsiz, 30 dakikada tamamlanır. AI harita aramalarında görünmenin tek yolu." },
+    { "step": 2, "title": "10 müşteriden yorum iste", "detail": "Bu ay WhatsApp mesajıyla ulaş. Her 10 yorumda skor 8-10 puan artıyor." },
+    { "step": 3, "title": "Referans sayfası ekle", "detail": "3-5 müşteri/proje adı yeterli. AI 'referansları olan firma' olarak sınıflandırır." },
+    { "step": 4, "title": "LinkedIn şirket sayfası aç", "detail": "B2B aramalarda LinkedIn çıktıları AI tarafından yüksek güvenilirlik sinyali olarak değerlendiriliyor." },
+    { "step": 5, "title": "Ticaret sicil no'yu siteye ekle", "detail": "Footer'a eklemen yeterli. AI şeffaflık ve güven sinyali olarak okuyor." }
+  ]
+}`;
+
+  setLoading(true);
+
+  try {
+    const res = await fetch(N8N_PROXY, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt, biz, sector, city, website, answers })
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Sunucu hatası (' + res.status + ')');
+    }
+
+    const data = await res.json();
+    const content = data.choices?.[0]?.message?.content || '';
+
+    const thinkEnd = content.lastIndexOf('</think>');
+    let text = thinkEnd !== -1 ? content.slice(thinkEnd + 8) : content;
+    const js = text.indexOf('{');
+    const je = text.lastIndexOf('}');
+    if ([js !== -1, je !== -1].every(Boolean)) text = text.slice(js, je + 1);
+
+    let parsed;
+    try { parsed = JSON.parse(text); } catch {
+      const repaired = text.replace(/,\s*([\]}])/g, '$1');
+      try { parsed = JSON.parse(repaired); } catch { throw new Error('Yanıt ayrıştırılamadı. Lütfen tekrar deneyin.'); }
+    }
+
+    rd.count++;
+    saveRateData(rd);
+    updateRateBar();
+
+    renderResults(parsed, biz, sector, city);
+  } catch (e) {
+    showErr([e, e.message].every(Boolean) ? e.message : String(e));
+    setLoading(false);
+    document.querySelector('.form-card').style.display = 'block';
+    return;
+  }
+
+  setLoading(false);
+}
+
+function scoreColor(score, max) {
+  const pct = score / max;
+  if (pct >= 0.75) return '#1D9E75';
+  if (pct >= 0.5) return '#E6A817';
+  return '#C94040';
+}
+
+function badgeStyle(score) {
+  if (score >= 75) return 'background:#D1FAE5;color:#065F46';
+  if (score >= 50) return 'background:#FEF3C7;color:#92400E';
+  return 'background:#FEE2E2;color:#991B1B';
+}
+
+function renderResults(data, biz, sector, city) {
+  document.getElementById('results-title').textContent = biz + ' — AI Görünürlük Raporu';
+  document.getElementById('results-sub').textContent = sector + ' · ' + city;
+
+  // Skor halkası
+  const score = Math.min(100, Math.max(0, data.totalScore || 0));
+  const circ = 238.76;
+  const offset = circ - (circ * score / 100);
+  const ring = document.getElementById('score-ring');
+  ring.style.strokeDashoffset = offset;
+  ring.style.stroke = scoreColor(score, 100);
+  document.getElementById('score-num').textContent = score;
+
+  document.getElementById('score-label').textContent = data.badge || '';
+  document.getElementById('score-verdict').textContent = data.verdict || '';
+  const badge = document.getElementById('score-badge');
+  badge.textContent = data.badge || '';
+  badge.style.cssText = badgeStyle(score);
+
+  // Kırmızı bayraklar
+  const flags = data.redFlags || [];
+  const flagsBox = document.getElementById('flags-box');
+  if (flags.length) {
+    const fl = document.getElementById('flags-list');
+    fl.innerHTML = '';
+    flags.forEach(f => {
+      const d = document.createElement('div');
+      d.className = 'flag-item';
+      d.innerHTML = '<i class="ti ti-alert-circle"></i><span>' + f + '</span>';
+      fl.appendChild(d);
+    });
+    flagsBox.style.display = 'block';
+  } else {
+    flagsBox.style.display = 'none';
+  }
+
+  // Kategori kartları
+  const catsList = document.getElementById('cats-list');
+  catsList.innerHTML = '';
+  (data.categories || []).forEach((cat, idx) => {
+    const pct = Math.round((cat.score / cat.maxScore) * 100);
+    const clr = scoreColor(cat.score, cat.maxScore);
+    const findingsHtml = (cat.findings || []).map(f => {
+      const icon = f.type === 'ok' ? 'ti-circle-check' : f.type === 'warn' ? 'ti-alert-triangle' : 'ti-circle-x';
+      const clrI = f.type === 'ok' ? '#1D9E75' : f.type === 'warn' ? '#E6A817' : '#C94040';
+      return '<div class="cat-finding"><i class="ti ' + icon + '" style="color:' + clrI + '"></i><span>' + f.text + '</span></div>';
+    }).join('');
+
+    const card = document.createElement('div');
+    card.className = 'cat-card';
+    card.innerHTML = `
+      <div class="cat-header" onclick="toggleCat(this)">
+        <div class="cat-icon" style="background:${clr}18">
+          <i class="ti ${cat.icon || 'ti-chart-bar'}" style="color:${clr}"></i>
+        </div>
+        <div class="cat-name">${cat.name}</div>
+        <span class="cat-pts" style="color:${clr}">${cat.score}</span>
+        <span class="cat-pts-max">/ ${cat.maxScore}</span>
+        <i class="ti ti-chevron-down cat-chevron"></i>
+      </div>
+      <div class="cat-body">
+        <div class="cat-score-bar" style="background:#E2E0D8">
+          <div style="height:4px;border-radius:4px;width:${pct}%;background:${clr};transition:width .4s"></div>
+        </div>
+        ${findingsHtml}
+        ${cat.action ? '<div class="cat-action"><strong>Ne yapmalısın?</strong>' + cat.action + '</div>' : ''}
+      </div>`;
+    catsList.appendChild(card);
+    // İlk kart açık başlasın
+    if (idx === 0) card.classList.add('open');
+  });
+
+  // Aksiyon planı
+  const steps = document.getElementById('action-steps');
+  steps.innerHTML = '';
+  (data.actionPlan || []).forEach(s => {
+    const d = document.createElement('div');
+    d.className = 'action-step';
+    d.innerHTML = '<div class="step-num">' + s.step + '</div><div class="step-txt"><strong>' + s.title + '</strong> — ' + s.detail + '</div>';
+    steps.appendChild(d);
+  });
+
+  document.getElementById('results').style.display = 'block';
+}
+
+function toggleCat(header) {
+  const card = header.closest('.cat-card');
+  card.classList.toggle('open');
+}
+
+function buildTxt() {
+  const title = document.getElementById('results-title').textContent;
+  const sub = document.getElementById('results-sub').textContent;
+  const score = document.getElementById('score-num').textContent;
+  const verdict = document.getElementById('score-verdict').textContent;
+  let txt = title + '\n' + sub + '\n\nAI GÖRÜNÜRLÜK SKORU: ' + score + '/100\n' + verdict + '\n\n' + '='.repeat(50) + '\n\n';
+
+  document.querySelectorAll('.cat-card').forEach(c => {
+    const name = c.querySelector('.cat-name')?.textContent || '';
+    const pts = (c.querySelector('.cat-pts')?.textContent || '') + (c.querySelector('.cat-pts-max')?.textContent || '');
+    const findings = Array.from(c.querySelectorAll('.cat-finding span')).map(el => '  • ' + el.textContent).join('\n');
+    const action = c.querySelector('.cat-action')?.textContent?.replace('Ne yapmalısın?', '').trim() || '';
+    txt += '--- ' + name + ' (' + pts + ') ---\n' + findings + '\n' + (action ? 'Aksiyon: ' + action + '\n' : '') + '\n';
+  });
+
+  txt += '\n' + '='.repeat(50) + '\nÖNCELİKLİ AKSİYON PLANI\n\n';
+  document.querySelectorAll('.action-step').forEach(s => {
+    txt += s.textContent.replace(/\s+/g, ' ').trim() + '\n';
+  });
+
+  const flags = Array.from(document.querySelectorAll('.flag-item span')).map(el => '⚠ ' + el.textContent);
+  if (flags.length) txt += '\nDİKKAT NOKTALARI:\n' + flags.join('\n') + '\n';
+
+  return txt;
+}
+
+function downloadTxt() {
+  const txt = buildTxt();
+  const blob = new Blob([txt], { type: 'text/plain;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'ai-gorunurluk-skoru.txt';
+  a.click();
+}
+
+function resetForm() {
+  document.getElementById('results').style.display = 'none';
+  document.querySelector('.form-card').style.display = 'block';
+  document.getElementById('biz-name').value = '';
+  document.getElementById('city').value = '';
+  document.getElementById('website').value = '';
+  document.getElementById('extra-ctx').value = '';
+  document.querySelectorAll('input[type=radio]').forEach(el => { el.checked = false; });
+  document.querySelectorAll('input[type=checkbox]').forEach(el => { el.checked = false; });
+}
+
+updateRateBar();
+</script>
+</body>
+</html>
