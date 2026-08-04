@@ -231,11 +231,12 @@ input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3p
     <div class="section-title">Sosyal Medya &amp; LinkedIn</div>
 
     <div class="field">
-      <label>LinkedIn şirket sayfanız var mı?</label>
+      <label>LinkedIn şirket sayfanız ne sıklıkla güncelleniyor?</label>
       <div class="radio-group">
-        <label class="radio-item radio-evet"><input type="radio" name="q_linkedin" value="aktif"> Var ve aktif</label>
-        <label class="radio-item radio-kismi"><input type="radio" name="q_linkedin" value="pasif"> Var ama pasif</label>
-        <label class="radio-item radio-hayir"><input type="radio" name="q_linkedin" value="yok"> Yok</label>
+        <label class="radio-item radio-evet"><input type="radio" name="q_linkedin" value="haftalik"> Haftada 1+</label>
+        <label class="radio-item radio-evet"><input type="radio" name="q_linkedin" value="ayda2-4"> Ayda 2–4 kez</label>
+        <label class="radio-item radio-kismi"><input type="radio" name="q_linkedin" value="seyrek"> Ayda 1 veya daha seyrek</label>
+        <label class="radio-item radio-hayir"><input type="radio" name="q_linkedin" value="yok"> Sayfa yok / hiç paylaşım yok</label>
       </div>
     </div>
 
@@ -262,13 +263,13 @@ input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3p
     </div>
 
     <div class="field">
-      <label>İşletmeniz aşağıdaki kaynaklarda kayıtlı mı? <span style="color:#9A9792">(birden fazla seçilebilir)</span></label>
+      <label>İşletmeniz aşağıdaki kaynaklarda kayıtlı / listelenmiş mi? <span style="color:#9A9792">(birden fazla seçilebilir)</span></label>
       <div class="check-group">
         <label class="check-item"><input type="checkbox" name="q_dirs" value="Ticaret Odası"> Ticaret Odası</label>
         <label class="check-item"><input type="checkbox" name="q_dirs" value="KOSGEB"> KOSGEB</label>
-        <label class="check-item"><input type="checkbox" name="q_dirs" value="Clutch/G2"> Clutch / G2</label>
-        <label class="check-item"><input type="checkbox" name="q_dirs" value="Crunchbase"> Crunchbase</label>
-        <label class="check-item"><input type="checkbox" name="q_dirs" value="Sektör dizini"> Sektör dizini</label>
+        <label class="check-item"><input type="checkbox" name="q_dirs" value="Sahibinden/Hepsiburada"> Sahibinden / Hepsiburada</label>
+        <label class="check-item"><input type="checkbox" name="q_dirs" value="Sektör dizini"> Sektör / iş dizini</label>
+        <label class="check-item"><input type="checkbox" name="q_dirs" value="Wikipedia/Vikipedi"> Wikipedia / Vikipedi</label>
         <label class="check-item"><input type="checkbox" name="q_dirs" value="Hiçbiri"> Hiçbiri</label>
       </div>
     </div>
@@ -497,12 +498,12 @@ Google & Yorumlar:
 - Şikayetvar: ${answers.sikayet}
 
 Sosyal Medya & LinkedIn:
-- LinkedIn: ${answers.linkedin}
+- LinkedIn paylaşım sıklığı: ${answers.linkedin}
 - Aktif kanallar: ${answers.social.length ? answers.social.join(', ') : 'yok'}
 
 Medya & Dizinler:
 - Medya/haber varlığı: ${answers.media}
-- Kayıtlı dizinler: ${answers.dirs.length ? answers.dirs.join(', ') : 'yok'}
+- Kayıtlı dizinler/platformlar: ${answers.dirs.length ? answers.dirs.join(', ') : 'yok'}
 - Sertifika/belge: ${answers.cert}
 
 Anahtar Kelime:
@@ -515,7 +516,7 @@ Bu bilgileri değerlendirerek aşağıdaki JSON formatında bir AI görünürlü
 Puanlama rehberi (toplam 100 puan):
 - Web sitesi içeriği: 0–20 puan (hizmet+referans+iletişim)
 - Google & yorumlar: 0–20 puan (GBP varlığı + yorum sayısı + şikayet)
-- LinkedIn & sosyal medya: 0–15 puan
+- LinkedIn & sosyal medya: 0–15 puan (LinkedIn sıklığı + aktif kanallar — LinkedIn sıklığı: haftalik=15, ayda2-4=10, seyrek=5, yok=0 başlangıç; sosyal kanallarla birlikte değerlendir)
 - Medya & dizin varlığı: 0–15 puan
 - Resmi kayıtlar & güven: 0–15 puan (sertifika + dizinler)
 - Anahtar kelime uyumu: 0–15 puan
