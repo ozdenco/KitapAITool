@@ -643,7 +643,20 @@ Yanıtı MUTLAKA şu JSON formatında ver:
 
     let parsed;
     try { parsed = JSON.parse(text); } catch {
-      const repaired = text.replace(/,\s*([\]}])/g, '$1');
+      // Kesilmiş JSON'u kurtarmaya çalış: son tam } veya ] bul, sonrasını kes
+      let repaired = text.replace(/,\s*([\]}])/g, '$1');
+      // Açık dizileri ve nesneleri kapat
+      const opens = (repaired.match(/[\[{]/g) || []).length;
+      const closes = (repaired.match(/[\]}]/g) || []).length;
+      const diff = opens - closes;
+      if (diff > 0) {
+        // Yarım string'i temizle: son tamamlanmamış string literal'i kes
+        repaired = repaired.replace(/,?\s*"[^"]*$/, '');
+        repaired = repaired.replace(/,?\s*"[^"]*"\s*:\s*"[^"]*$/, '');
+        for (let i = 0; i < diff; i++) {
+          repaired += repaired.trimEnd().endsWith('{') ? '}' : (repaired.trimEnd().endsWith('[') ? ']' : '}');
+        }
+      }
       try { parsed = JSON.parse(repaired); } catch { throw new Error('Yanıt ayrıştırılamadı. Lütfen tekrar deneyin.'); }
     }
 
@@ -680,7 +693,7 @@ function renderResults(data, biz, sector, city) {
   document.getElementById('results-sub').textContent = sector + ' · ' + city;
 
   // Skor halkası
-  const score = Math.min(100, Math.max(0, data.totalScore || 0));
+  const score = Math.min(100, Math.max(0, parseInt(data.totalScore) || 0));
   const circ = 238.76;
   const offset = circ - (circ * score / 100);
   const ring = document.getElementById('score-ring');

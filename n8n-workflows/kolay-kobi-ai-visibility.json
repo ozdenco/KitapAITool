@@ -17,7 +17,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const body = $input.first().json.body || $input.first().json;\nconst prompt = body.prompt || '';\nif (!prompt || prompt.length < 20) {\n  return [{ json: { error: 'Geçersiz istek: prompt eksik.' } }];\n}\nconst apiBody = {\n  model: 'MiniMax-M3',\n  max_completion_tokens: 4000,\n  messages: [{ role: 'user', content: prompt }]\n};\nreturn [{ json: { ...body, apiBody } }];"
+        "jsCode": "const body = $input.first().json.body || $input.first().json;\nconst prompt = body.prompt || '';\nif (!prompt || prompt.length < 20) {\n  return [{ json: { error: 'Geçersiz istek: prompt eksik.' } }];\n}\nconst apiBody = {\n  model: 'MiniMax-M3',\n  max_completion_tokens: 8000,\n  messages: [{ role: 'user', content: prompt }]\n};\nreturn [{ json: { ...body, apiBody } }];"
       },
       "id": "build-request-node",
       "name": "Build Request",
