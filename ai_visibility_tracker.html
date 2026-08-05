@@ -109,7 +109,13 @@ input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3p
 .btn-secondary{flex:1;padding:11px;background:#fff;color:#1C1B19;border:0.5px solid #D3D1C7;border-radius:8px;font-size:14px;font-weight:500;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px}
 .btn-secondary:hover{background:#F7F6F2}
 .reset-link{display:block;text-align:center;margin-top:1rem;background:none;border:none;font-size:13px;color:#888780;cursor:pointer;text-decoration:underline;width:100%}
-@media print{.btn-primary,.btn-secondary,.actions,.cta-box,.reset-link,.rate-bar-wrap{display:none!important}}
+@media print{
+  @page{margin:2cm 1.5cm 1.5cm 1.5cm}
+  .btn-primary,.btn-secondary,.actions,.cta-box,.reset-link,.rate-bar-wrap{display:none!important}
+  .source-url,.adapt-tags,.balloon{word-break:break-word;overflow-wrap:break-word;white-space:normal}
+  a[href]::after{content:none!important}
+  body{font-size:12px}
+}
 
 .cta-box{background:#F0FAF6;border:0.5px solid #9FE1CB;border-radius:12px;padding:1.5rem;text-align:center;margin-top:1.5rem}
 .cta-title{font-size:15px;font-weight:500;color:#085041;margin-bottom:.4rem}
