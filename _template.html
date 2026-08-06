@@ -36,11 +36,15 @@ input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3p
 .btn-primary:disabled{background:#B4B2A9;cursor:not-allowed}
 .err{font-size:13px;color:#A32D2D;background:#FCEBEB;border-radius:8px;padding:10px 12px;margin-top:.75rem;display:none}
 
-/* ── Rate Bar (Günlük Kullanım) ────────────────────────────────── */
-.rate-bar-wrap{margin-top:.75rem}
-.rate-bar-label{display:flex;justify-content:space-between;font-size:12px;color:#6B6963;margin-bottom:5px}
-.rate-bar-track{height:5px;background:#E2E0D8;border-radius:4px;overflow:hidden}
-.rate-bar-fill{height:100%;background:#1D9E75;border-radius:4px;transition:width .3s}
+/* ── Rate Bar (Aylık Kullanım) ────────────────────────────────── */
+.rate-bar{display:flex;align-items:center;justify-content:space-between;background:#F7F6F2;border:0.5px solid #E2E0D8;border-radius:8px;padding:9px 14px;margin-bottom:1.25rem;gap:12px}
+.rate-dots{display:flex;gap:5px}
+.rate-dot{width:10px;height:10px;border-radius:50%;background:#1D9E75;transition:background .3s}
+.rate-dot.used{background:#D3D1C7}
+.rate-label{font-size:12px;color:#6B6963;flex:1}
+.rate-label strong{color:#1C1B19}
+.rate-warn{font-size:12px;color:#A32D2D;font-weight:500}
+.rate-empty .rate-label{color:#A32D2D}
 
 /* ── Loading ───────────────────────────────────────────────────── */
 .loading{text-align:center;padding:4rem 1rem;display:none}
@@ -104,7 +108,7 @@ input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3p
   .form-collapsed-bar{display:none!important}
   #form-persist-row{display:none!important}
   /* Interaktif widget gizli, seçili değerler yeşil etiket olarak görünür */
-  .err,.rate-bar-wrap{display:none!important}
+  .err,.rate-bar{display:none!important}
   .radio-group,.check-group{display:flex!important;flex-wrap:wrap!important;gap:4px!important;margin-top:2px!important;grid-template-columns:unset!important}
   .radio-item:not(:has(input:checked)),.check-item:not(:has(input:checked)){display:none!important}
   .radio-item:has(input:checked),.check-item:has(input:checked){display:inline-flex!important;border:0.5px solid #1D9E75;background:#F0FAF6;padding:3px 9px;border-radius:6px;font-size:12px;margin:2px}
@@ -156,14 +160,10 @@ input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3p
       <!-- ── STANDART BLOK: Rate Bar ───────────────────────────────────────
            Her araçta aynı. Sadece RATE_KEY ve MONTHLY_LIMIT değişir (aşağıda JS'de).
       -->
-      <div class="rate-bar-wrap">
-        <div class="rate-bar-label">
-          <span>Günlük kullanım</span>
-          <span id="rate-text">0 / 3</span>
-        </div>
-        <div class="rate-bar-track">
-          <div class="rate-bar-fill" id="rate-fill" style="width:0%"></div>
-        </div>
+      <div class="rate-bar" id="rate-bar">
+        <div class="rate-dots" id="rate-dots"></div>
+        <span class="rate-label" id="rate-label">Aylık <strong id="rate-remaining">3</strong> / 3 kullanım hakkınız var</span>
+        <span class="rate-warn" id="rate-warn" style="display:none">Limit doldu</span>
       </div>
 
       <!-- ── STANDART BLOK: Form Kaydet / Yükle ───────────────────────────
@@ -334,16 +334,45 @@ function showLoading(on) {
 // ════════════════════════════════════════════════════════════════
 
 // Rate Bar
-const _LS_RATE = window.RATE_KEY;
 function updateRateBar() {
   const d = JSON.parse(localStorage.getItem(RATE_KEY) || '{}');
-  const today = new Date().toISOString().slice(0,7);
-  const count = (d.date === today) ? (d.count || 0) : 0;
-  const pct = Math.min(100, (count / MONTHLY_LIMIT) * 100);
-  const fill = document.getElementById('rate-fill');
-  const text = document.getElementById('rate-text');
-  if (fill) fill.style.width = pct + '%';
-  if (text) text.textContent = count + ' / ' + MONTHLY_LIMIT;
+  const month = new Date().toISOString().slice(0,7);
+  const used = (d.date === month) ? (d.count || 0) : 0;
+  const remaining = Math.max(0, MONTHLY_LIMIT - used);
+
+  const dotsEl = document.getElementById('rate-dots');
+  if (dotsEl) {
+    dotsEl.innerHTML = '';
+    const maxDots = Math.min(MONTHLY_LIMIT, 10);
+    const usedDots = Math.round((used / MONTHLY_LIMIT) * maxDots);
+    for (let i = 0; i < maxDots; i++) {
+      const dot = document.createElement('span');
+      dot.className = 'rate-dot' + (i < usedDots ? ' used' : '');
+      dotsEl.appendChild(dot);
+    }
+  }
+
+  const bar   = document.getElementById('rate-bar');
+  const warn  = document.getElementById('rate-warn');
+  const label = document.getElementById('rate-label');
+  const btn   = document.querySelector('.btn-primary');
+
+  if (remaining === 0) {
+    if (bar) bar.classList.add('rate-empty');
+    if (warn) warn.style.display = 'inline';
+    if (label) label.style.display = 'none';
+    if (btn) { btn.disabled = true; btn.title = 'Aylık kullanım limitinize ulaştınız. ' + nextMonthName() + ' ayında tekrar deneyin.'; }
+  } else if (remaining === 1) {
+    if (bar) bar.classList.remove('rate-empty');
+    if (warn) warn.style.display = 'none';
+    if (label) { label.style.display = 'inline'; label.innerHTML = 'Bu ay <strong>1</strong> kullanım hakkınız kaldı ⚠️'; }
+    if (btn) { btn.disabled = false; btn.title = ''; }
+  } else {
+    if (bar) bar.classList.remove('rate-empty');
+    if (warn) warn.style.display = 'none';
+    if (label) { label.style.display = 'inline'; label.innerHTML = 'Aylık <strong>' + remaining + '</strong> / ' + MONTHLY_LIMIT + ' kullanım hakkınız var'; }
+    if (btn) { btn.disabled = false; btn.title = ''; }
+  }
 }
 function checkRateLimit() {
   const d = JSON.parse(localStorage.getItem(RATE_KEY) || '{}');
