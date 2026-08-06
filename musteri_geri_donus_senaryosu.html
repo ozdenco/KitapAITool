@@ -277,8 +277,8 @@ input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3p
     </div>
 
     <div class="cta-box">
-      <div class="cta-title">Bu senaryoyu otomasyona bağlayalım</div>
-      <div class="cta-sub" id="cta-sub">Müşteri takibini otomatikleştirerek müşteri kaybını azaltın.</div>
+      <div class="cta-title">Bu senaryoyu hayata geçirelim</div>
+      <div class="cta-sub">Uzmanlarımız bu müşteri geri dönüş planını işletmenize özel uygulasın.</div>
       <a href="https://kolaykobi.com/iletisim" class="cta-btn" target="_blank" rel="noopener noreferrer">Ücretsiz Görüşme Ayarla</a>
     </div>
 
@@ -413,7 +413,8 @@ const list = document.getElementById('steps-list');
   }).join('');
 
   if (result.ctaText) {
-    document.getElementById('cta-sub').textContent = result.ctaText;
+    // CTA metni statik — AI çıktısından güncelleme yapılmıyor
+    // document.getElementById('cta-sub').textContent = result.ctaText;
   }
 
   document.getElementById('results-section').style.display = 'block'; collapseForm();
