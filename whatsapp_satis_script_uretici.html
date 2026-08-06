@@ -97,7 +97,7 @@ input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3p
   header,footer,nav,aside,#wpadminbar,#masthead,#colophon,.site-header,.site-footer,.widget-area,.sidebar,.elementor-location-header,.elementor-location-footer{display:none!important}
   .form-card,.brand{display:none!important}
   .results{display:block!important}
-  #results-sub{display:block!important}
+  #results-sub{display:none!important}
   .loading{display:none!important}
   .btn-primary,.btn-secondary,.btn-sm,.actions,.cta-box,.reset-link{display:none!important}
   a,span,div{word-break:break-word!important;overflow-wrap:break-word!important;white-space:normal!important}
@@ -234,21 +234,9 @@ input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3p
 
   <!-- RESULTS (form altında) -->
   <div class="results" id="results-section" style="display:none">
-    <div class="results-top">
-      <div>
-        <h2 id="results-title">WhatsApp Satış Scriptleri</h2>
-        <p id="results-sub" style="white-space:pre-line;display:none">5 hazır mesaj şablonu</p>
-      </div>
-      <div class="action-row">
-        
-      <button class="btn-secondary" onclick="window.print()">
-        <i class="ti ti-printer" aria-hidden="true"></i> Yazdır / PDF Al
-      </button>
-      <button class="btn-secondary" onclick="generate()">
-        <i class="ti ti-refresh" aria-hidden="true"></i> Yeniden Oluştur
-      </button>
-        <button class="btn-sm" onclick="resetForm()"><i class="ti ti-refresh" aria-hidden="true"></i> Formu Boşalt</button>
-      </div>
+    <div style="margin-bottom:1.25rem">
+      <h2 id="results-title">WhatsApp Satış Scriptleri</h2>
+      <p id="results-sub" style="white-space:pre-line;display:none;font-size:13px;color:#6B6963;margin-top:.25rem">5 hazır mesaj şablonu</p>
     </div>
 
     <div class="wa-note">
@@ -257,6 +245,16 @@ input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3p
     </div>
 
     <div class="scripts-grid" id="scripts-grid"></div>
+
+    <div class="action-row" style="margin-top:1rem;margin-bottom:.5rem">
+      <button class="btn-secondary" onclick="window.print()">
+        <i class="ti ti-printer" aria-hidden="true"></i> Yazdır / PDF Al
+      </button>
+      <button class="btn-secondary" onclick="generate()">
+        <i class="ti ti-refresh" aria-hidden="true"></i> Yeniden Oluştur
+      </button>
+      <button class="btn-sm" onclick="resetForm()"><i class="ti ti-eraser" aria-hidden="true"></i> Formu Boşalt</button>
+    </div>
 
     <div class="cta-box">
       <div class="cta-title">Scriptleri sistemli kullanmak ister misiniz?</div>
