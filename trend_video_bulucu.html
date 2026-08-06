@@ -36,8 +36,6 @@ input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3p
 .radio-item-title{font-weight:500;margin-bottom:2px}
 .radio-item-desc{font-size:12px;color:#6B6963;line-height:1.5}
 
-.schedule-fields{display:none;margin-top:1rem;padding:1rem;background:#F7F6F2;border-radius:10px;border:0.5px solid #E2E0D8}
-.schedule-fields.is-visible{display:block}
 .section-title{font-size:13px;font-weight:500;color:#1C1B19;margin-bottom:.75rem;display:flex;align-items:center;gap:6px}
 .section-title i{color:#1D9E75}
 
@@ -171,7 +169,7 @@ input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3p
   </div>
   <div id="form-body">
     <h1>Trend Video Bulucu</h1>
-    <p class="subtitle">Sektörünüze uygun Instagram ve Facebook'ta trend olan video fikirlerini bulun; markanıza uyarlayın, otomatik mail ile her sabah alın.</p>
+    <p class="subtitle">Sektörünüze uygun Instagram, Facebook ve TikTok'ta trend olan video fikirlerini bulun; markanıza uyarlayın.</p>
 
     <div class="field">
       <label>İşletme / hizmet adı <span style="color:#9A9792;font-weight:400">(opsiyonel)</span></label>
@@ -210,82 +208,6 @@ input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3p
         <label class="check-item"><input type="checkbox" id="tone-sincere" value="Samimi ve yakın"> <i class="ti ti-heart" aria-hidden="true"></i> Samimi ve yakın</label>
         <label class="check-item"><input type="checkbox" id="tone-energetic" value="Enerjik ve motive edici"> <i class="ti ti-bolt" aria-hidden="true"></i> Enerjik ve motive edici</label>
         <label class="check-item"><input type="checkbox" id="tone-humor" value="Mizahi ve eğlenceli"> <i class="ti ti-mood-happy" aria-hidden="true"></i> Mizahi ve eğlenceli</label>
-      </div>
-    </div>
-
-    <div class="field">
-      <label>Çalıştırma modu <span style="color:#A32D2D">*</span></label>
-      <div class="radio-group" id="mode-group">
-        <label class="radio-item">
-          <input type="radio" name="f-mode" value="instant" checked>
-          <div>
-            <div class="radio-item-title"><i class="ti ti-player-play" aria-hidden="true"></i> Şimdi çalıştır (anlık sonuç)</div>
-            <div class="radio-item-desc">Formu doldurur doldurmaz trendleri ekranda görürsünüz. Mail gönderilmez, mail adresi gerektirmez.</div>
-          </div>
-        </label>
-        <label class="radio-item">
-          <input type="radio" name="f-mode" value="once">
-          <div>
-            <div class="radio-item-title"><i class="ti ti-send" aria-hidden="true"></i> Bir kez mail at</div>
-            <div class="radio-item-desc">Hemen çalıştırır, sonuçları aşağıdaki mail adresine tek seferlik gönderir.</div>
-          </div>
-        </label>
-        <label class="radio-item">
-          <input type="radio" name="f-mode" value="schedule">
-          <div>
-            <div class="radio-item-title"><i class="ti ti-calendar-repeat" aria-hidden="true"></i> Haftalık Schedule</div>
-            <div class="radio-item-desc">Seçtiğiniz gün ve saatte otomatik çalışır, mail atar. Örn: her Pazartesi 09:00.</div>
-          </div>
-        </label>
-      </div>
-    </div>
-
-    <div class="field" id="mail-field" style="display:none">
-      <label>Sonuç mail adresi <span style="color:#A32D2D">*</span></label>
-      <input type="email" id="f-email" placeholder="info@firmaniz.com">
-      <div style="font-size:12px;color:#9A9792;margin-top:4px">Mail modu seçtiğiniz için zorunludur. Şimdi çalıştır modunda mail gönderilmez.</div>
-    </div>
-
-    <div class="schedule-fields" id="schedule-fields">
-      <div class="section-title"><i class="ti ti-clock" aria-hidden="true"></i> Schedule ayarları</div>
-      <div class="field">
-        <label>Saat (1-24)</label>
-        <select id="f-hour">
-          <option value="6">06:00 — Şafak</option>
-          <option value="7">07:00</option>
-          <option value="8">08:00</option>
-          <option value="9" selected>09:00 — Sabah rutini</option>
-          <option value="10">10:00</option>
-          <option value="11">11:00</option>
-          <option value="12">12:00 — Öğle</option>
-          <option value="13">13:00</option>
-          <option value="14">14:00</option>
-          <option value="15">15:00</option>
-          <option value="16">16:00</option>
-          <option value="17">17:00</option>
-          <option value="18">18:00 — Akşam</option>
-          <option value="19">19:00</option>
-          <option value="20">20:00</option>
-          <option value="21">21:00</option>
-          <option value="22">22:00</option>
-          <option value="23">23:00</option>
-          <option value="24">24:00 — Gece yarısı</option>
-          <option value="1">01:00</option>
-          <option value="2">02:00</option>
-          <option value="3">03:00</option>
-        </select>
-      </div>
-      <div class="field">
-        <label>Çalışılacak günler (en az 1)</label>
-        <div class="check-group-3" id="days-group">
-          <label class="check-item"><input type="checkbox" id="day-mon" value="mon"> Pzt</label>
-          <label class="check-item"><input type="checkbox" id="day-tue" value="tue"> Sal</label>
-          <label class="check-item"><input type="checkbox" id="day-wed" value="wed"> Çar</label>
-          <label class="check-item"><input type="checkbox" id="day-thu" value="thu"> Per</label>
-          <label class="check-item"><input type="checkbox" id="day-fri" value="fri"> Cuma</label>
-          <label class="check-item"><input type="checkbox" id="day-sat" value="sat"> Cmt</label>
-          <label class="check-item"><input type="checkbox" id="day-sun" value="sun"> Pazar</label>
-        </div>
       </div>
     </div>
 
@@ -348,11 +270,6 @@ input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3p
     <div class="results-header">
       <h2 id="results-title">Trend Video Fikirleri</h2>
       <p id="results-sub" style="white-space:pre-line;display:none"></p>
-    </div>
-
-<div class="success-box" id="schedule-success" style="display:none">
-      <i class="ti ti-circle-check" aria-hidden="true"></i>
-      <div id="schedule-success-msg">Schedule kaydedildi.</div>
     </div>
 
 <div class="videos-list" id="videos-list"></div>
@@ -456,19 +373,10 @@ function getCheckedTones() {
   return [...document.querySelectorAll('#tone-group input:checked')].map(el => el.value);
 }
 
-function getCheckedDays() {
-  return [...document.querySelectorAll('#days-group input:checked')].map(el => el.value);
-}
-
-function getMode() {
-  const r = document.querySelector('input[name="f-mode"]:checked');
-  return r ? r.value : 'instant';
-}
 
 function clearResults() {
   document.getElementById('results-section').style.display = 'none';
   document.getElementById('videos-list').innerHTML = '';
-  document.getElementById('schedule-success').style.display = 'none';
 }
 
 function showLoading(v) {
@@ -487,25 +395,12 @@ function renderResults(result) {
   const fd = lastFormData;
   const toneStr = (fd.tones || []).join(' + ');
   document.getElementById('results-title').textContent = `${toneStr ? toneStr + ' — ' : ''}Trend Video Fikirleri`;
+  document.getElementById('results-sub').style.display = 'block';
   document.getElementById('results-sub').textContent = [
     [fd.biz, fd.sector].every(Boolean) ? `${fd.biz} — ${fd.sector === 'ALL' ? 'Tüm Sektörler' : fd.sector}` : '',
     toneStr ? `Ton: ${toneStr}` : '',
     fd.audience ? `Hedef kitle: ${fd.audience}` : '',
-    fd.mode === 'once' ? '✓ Mail gönderilecek: ' + fd.email : '',
-    fd.mode === 'schedule' ? '✓ Schedule: ' + (fd.days||[]).map(d => ({mon:'Pzt',tue:'Sal',wed:'Çar',thu:'Per',fri:'Cum',sat:'Cmt',sun:'Paz'}[d])).join(', ') + ' ' + (fd.hour||'') + ':00' : '',
   ].filter(Boolean).join('\n') || 'Trend video fikirleri ve markanıza uyarlama önerileri';
-
-  // Mode-specific success
-  if (fd.mode === 'once') {
-    const sb = document.getElementById('schedule-success');
-    sb.style.display = 'flex';
-    document.getElementById('schedule-success-msg').textContent = 'Sonuçlar ' + fd.email + ' adresine gönderildi.';
-  } else if (fd.mode === 'schedule') {
-    const sb = document.getElementById('schedule-success');
-    sb.style.display = 'flex';
-    const dayNames = (fd.days||[]).map(d => ({mon:'Pazartesi',tue:'Salı',wed:'Çarşamba',thu:'Perşembe',fri:'Cuma',sat:'Cumartesi',sun:'Pazar'}[d])).join(', ');
-    document.getElementById('schedule-success-msg').textContent = `Schedule kaydedildi: ${dayNames} günleri saat ${fd.hour}:00'de ${fd.email} adresine gönderilecek.`;
-  }
 
   const list = document.getElementById('videos-list');
   list.innerHTML = lastVideos.map(v => {
@@ -572,25 +467,16 @@ async function generate() {
 
   const biz = document.getElementById('f-biz').value.trim();
   const sector = document.getElementById('f-sector').value;
-  const email = document.getElementById('f-email').value.trim();
   const tones = getCheckedTones();
   const audience = document.getElementById('f-audience').value.trim();
   const note = document.getElementById('f-note').value.trim();
-  const mode = getMode();
-  const hour = document.getElementById('f-hour').value;
-  const days = getCheckedDays();
 
   if (!sector) { showErr('Lütfen sektör seçin.'); return; }
   if (tones.length === 0) { showErr('En az bir video tonu seçin.'); return; }
-  if (mode !== 'instant') {
-    if (!email) { showErr('Mail gönderimi için mail adresi zorunludur.'); return; }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { showErr('Geçerli bir mail adresi girin.'); return; }
-  }
-  if ([mode === 'schedule', days.length === 0].every(Boolean)) { showErr('Schedule için en az bir gün seçin.'); return; }
 
   hideErr();
   lastBiz = biz;
-  lastFormData = { biz, sector, email, tones, audience, note, mode, hour, days };
+  lastFormData = { biz, sector, tones, audience, note };
   clearResults();
   showLoading(true);
   document.getElementById('loading-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -604,7 +490,6 @@ async function generate() {
   const ticker = setInterval(() => { mi = (mi + 1) % loadingMsgs.length; msgEl.textContent = loadingMsgs[mi]; }, 1800);
 
   const sectorText = sector === 'ALL' ? 'TÜM SEKTÖRLER (genel tarama — sektör bağımsız viral içerikler)' : sector;
-  const daysText = days.length ? days.join(', ') : 'N/A (anlık mod)';
 
   // Ayni promptun tekrar tekrar ayni fikirleri uretmesini engellemek icin her
   // calistirmada formatlarin rastgele bir alt kumesini one cikariyoruz.
@@ -657,7 +542,7 @@ SADECE JSON döndür (Türkçe karakterleri koru):
     const startRes = await fetch(startUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt, biz, sector, email, tones, audience, note, mode, hour, days }),
+      body: JSON.stringify({ prompt, biz, sector, tones, audience, note }),
     });
     if (!startRes.ok) {
       if (startRes.status === 404) throw new Error('404: WordPress proxy endpoint tanımlı değil');
@@ -690,7 +575,7 @@ SADECE JSON döndür (Türkçe karakterleri koru):
       document.getElementById('loading-note').textContent = `Yapay zeka çalışıyor (${(i + 1) * 3} sn geçti)...`;
     }
     if (!result) {
-      throw new Error('TIMEOUT: 11 dakika içinde sonuç gelmedi.' + (mode !== 'instant' ? ' Mail modundasınız, işlem arka planda bitince mailinize yine de gelecektir.' : ' Yapay zeka hâlâ çalışıyor olabilir, birkaç dakika sonra tekrar deneyin.'));
+      throw new Error('TIMEOUT: 11 dakika içinde sonuç gelmedi. Yapay zeka hâlâ çalışıyor olabilir, birkaç dakika sonra tekrar deneyin.');
     }
 
     rateData.count++;
@@ -735,15 +620,9 @@ function hideErr() {
 function resetForm() {
   document.getElementById('f-biz').value = '';
   document.getElementById('f-sector').value = '';
-  document.getElementById('f-email').value = '';
   document.querySelectorAll('#tone-group input').forEach(el => el.checked = false);
   document.getElementById('f-audience').value = '';
   document.getElementById('f-note').value = '';
-  document.querySelectorAll('#days-group input').forEach(el => el.checked = false);
-  document.querySelector('input[name="f-mode"][value="instant"]').checked = true;
-  document.getElementById('f-hour').value = '9';
-  document.getElementById('schedule-fields').classList.remove('is-visible');
-  document.getElementById('mail-field').style.display = 'none';
   localStorage.removeItem(LS_KEY);
   hideErr();
   clearResults();
@@ -809,7 +688,6 @@ function restoreForm() {
         el.value = val;
       }
     });
-    toggleScheduleFields();
   } catch(e) {}
 }
 
@@ -854,8 +732,7 @@ function importFormJSON(input) {
         }
       });
       saveForm();
-      toggleScheduleFields();
-      input.value = '';
+        input.value = '';
       const notice = document.getElementById('import-notice');
       if (notice) { notice.style.display='flex'; setTimeout(()=>notice.style.display='none', 2500); }
     } catch(e) { alert('Geçersiz form dosyası.'); }
@@ -863,30 +740,11 @@ function importFormJSON(input) {
   reader.readAsText(file);
 }
 
-// Schedule + mail fields toggle
-function toggleScheduleFields() {
-  const mode = getMode();
-  const sf = document.getElementById('schedule-fields');
-  const mf = document.getElementById('mail-field');
-  if (mode === 'schedule') sf.classList.add('is-visible');
-  else sf.classList.remove('is-visible');
-  if (mode === 'once' || mode === 'schedule') {
-    mf.style.display = 'block';
-    document.getElementById('f-email').required = true;
-  } else {
-    mf.style.display = 'none';
-    document.getElementById('f-email').required = false;
-  }
-}
-
-document.querySelectorAll('input[name="f-mode"]').forEach(r => r.addEventListener('change', toggleScheduleFields));
-
 // Auto-save on any change
 document.addEventListener('change', e => { if (document.getElementById('form-section')?.contains(e.target)) saveForm(); });
 document.addEventListener('input',  e => { if (document.getElementById('form-section')?.contains(e.target)) saveForm(); });
 // Restore on load
 restoreForm();
-toggleScheduleFields();
 
 // ── Form Collapse ──────────────────────────────────────────────────────────
 function collapseForm() {
