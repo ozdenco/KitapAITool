@@ -261,6 +261,10 @@ td:first-child{font-weight:500;color:#6B6963;font-size:12px}
       </div>
     </div>
 
+    <div style="display:flex;align-items:center;gap:7px;background:#F0FAF5;border:0.5px solid #A8DFC6;border-radius:8px;padding:9px 13px;margin-bottom:.75rem;font-size:12px;color:#1C6B4A">
+      <i class="ti ti-sparkles" aria-hidden="true" style="font-size:15px;flex-shrink:0"></i>
+      <span>Rakiplerin sosyal medya platformları <strong>Gemini AI</strong> tarafından otomatik araştırılacak — manuel seçim gerekmez.</span>
+    </div>
     <div class="section-label" style="margin-top:.5rem">Rakip 1 <span style="font-size:11px;font-weight:400;color:#A32D2D">(zorunlu)</span></div>
 
     <div id="competitor-1" class="competitor-block">
@@ -272,16 +276,6 @@ td:first-child{font-weight:500;color:#6B6963;font-size:12px}
         <div class="field">
           <label>Web sitesi (opsiyonel)</label>
           <input type="text" class="c-web" data-idx="1" placeholder="aslanhukuk.com">
-        </div>
-      </div>
-      <div class="field">
-        <label>Aktif platformları</label>
-        <div class="check-group c-platforms" data-idx="1">
-          <label class="check-item"><input id="f-google-business" type="checkbox" value="Google Business"> <i class="ti ti-brand-google" aria-hidden="true"></i> Google Business</label>
-          <label class="check-item"><input id="f-instagram" type="checkbox" value="Instagram"> <i class="ti ti-brand-instagram" aria-hidden="true"></i> Instagram</label>
-          <label class="check-item"><input id="f-facebook" type="checkbox" value="Facebook"> <i class="ti ti-brand-facebook" aria-hidden="true"></i> Facebook</label>
-          <label class="check-item"><input id="f-linkedin" type="checkbox" value="LinkedIn"> <i class="ti ti-brand-linkedin" aria-hidden="true"></i> LinkedIn</label>
-          <label class="check-item"><input id="f-whatsapp" type="checkbox" value="WhatsApp İş"> <i class="ti ti-brand-whatsapp" aria-hidden="true"></i> WhatsApp İş</label>
         </div>
       </div>
       <div class="field">
@@ -309,16 +303,6 @@ td:first-child{font-weight:500;color:#6B6963;font-size:12px}
         </div>
       </div>
       <div class="field">
-        <label>Aktif platformları</label>
-        <div class="check-group c-platforms" data-idx="2">
-          <label class="check-item"><input id="f-google-business" type="checkbox" value="Google Business"> <i class="ti ti-brand-google" aria-hidden="true"></i> Google Business</label>
-          <label class="check-item"><input id="f-instagram" type="checkbox" value="Instagram"> <i class="ti ti-brand-instagram" aria-hidden="true"></i> Instagram</label>
-          <label class="check-item"><input id="f-facebook" type="checkbox" value="Facebook"> <i class="ti ti-brand-facebook" aria-hidden="true"></i> Facebook</label>
-          <label class="check-item"><input id="f-linkedin" type="checkbox" value="LinkedIn"> <i class="ti ti-brand-linkedin" aria-hidden="true"></i> LinkedIn</label>
-          <label class="check-item"><input id="f-whatsapp" type="checkbox" value="WhatsApp İş"> <i class="ti ti-brand-whatsapp" aria-hidden="true"></i> WhatsApp İş</label>
-        </div>
-      </div>
-      <div class="field">
         <label>Tahmini fiyat segmenti</label>
         <select class="c-price" data-idx="2">
           <option value="">Seçin...</option>
@@ -340,16 +324,6 @@ td:first-child{font-weight:500;color:#6B6963;font-size:12px}
         <div class="field">
           <label>Web sitesi (opsiyonel)</label>
           <input type="text" class="c-web" data-idx="3" placeholder="yildizburo.com">
-        </div>
-      </div>
-      <div class="field">
-        <label>Aktif platformları</label>
-        <div class="check-group c-platforms" data-idx="3">
-          <label class="check-item"><input id="f-google-business" type="checkbox" value="Google Business"> <i class="ti ti-brand-google" aria-hidden="true"></i> Google Business</label>
-          <label class="check-item"><input id="f-instagram" type="checkbox" value="Instagram"> <i class="ti ti-brand-instagram" aria-hidden="true"></i> Instagram</label>
-          <label class="check-item"><input id="f-facebook" type="checkbox" value="Facebook"> <i class="ti ti-brand-facebook" aria-hidden="true"></i> Facebook</label>
-          <label class="check-item"><input id="f-linkedin" type="checkbox" value="LinkedIn"> <i class="ti ti-brand-linkedin" aria-hidden="true"></i> LinkedIn</label>
-          <label class="check-item"><input id="f-whatsapp" type="checkbox" value="WhatsApp İş"> <i class="ti ti-brand-whatsapp" aria-hidden="true"></i> WhatsApp İş</label>
         </div>
       </div>
       <div class="field">
@@ -497,9 +471,10 @@ function nextMonthName() { return TR_MONTHS[(new Date().getMonth() + 1) % 12]; }
 const RATE_KEY = 'kkb_rakip_usage_' + new Date().toISOString().slice(0,7);
 
 const loadingMsgs = [
-  'Rakip analizi yapılıyor...',
-  'Platform varlıkları karşılaştırılıyor...',
-  'Güçlü ve zayıf yönler analiz ediliyor...',
+  'Rakip profilleri Google\'da araştırılıyor...',
+  'Sosyal medya varlıkları tespit ediliyor...',
+  'Platform verileri analiz ediliyor...',
+  'Güçlü ve zayıf yönler karşılaştırılıyor...',
   'Fırsat ve tehditler belirleniyor...',
   'Aksiyon önerileri hazırlanıyor...',
 ];
@@ -573,9 +548,8 @@ function getCompetitorData() {
   for (let i = 1; i <= 3; i++) {
     const name = document.querySelector(`.c-name[data-idx="${i}"]`).value.trim();
     const web = document.querySelector(`.c-web[data-idx="${i}"]`).value.trim();
-    const platforms = [...document.querySelectorAll(`.c-platforms[data-idx="${i}"] input:checked`)].map(el => el.value);
     const price = document.querySelector(`.c-price[data-idx="${i}"]`).value;
-    if (name) comps.push({ name, web, platforms, price });
+    if (name) comps.push({ name, web, price });
   }
   return comps;
 }
@@ -584,7 +558,7 @@ function buildCompetitorsText(comps) {
   return comps.map((c, i) => {
     return `Rakip ${i + 1}: ${c.name}
   Web: ${c.web || 'yok'}
-  Platformlar: ${c.platforms.join(', ') || 'belirtilmemiş'}
+  Platformlar: (Gemini AI tarafından araştırılacak)
   Fiyat segmenti: ${c.price || 'belirtilmemiş'}`;
   }).join('\n\n');
 }
@@ -813,7 +787,7 @@ SADECE JSON döndür:
         res = await fetch(N8N_PROXY, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ prompt }),
+          body: JSON.stringify({ prompt, competitors: comps.map(c => ({ name: c.name, web: c.web })) }),
         });
         if (res.status === 429) {
           clearInterval(ticker);

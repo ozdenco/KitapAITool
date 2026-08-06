@@ -12,42 +12,29 @@
       "name": "Webhook",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
-      "position": [
-        240,
-        300
-      ],
+      "position": [240, 300],
       "webhookId": "kolay-kobi-rakip"
     },
     {
       "parameters": {
-        "jsCode": "const ip = $input.first().json.headers?.['x-forwarded-for']?.split(',')[0]?.trim() || $input.first().json.headers?.['x-real-ip'] || 'unknown';\nconst today = new Date().toISOString().slice(0, 10);\nconst key = 'rl_rakip_' + ip + '_' + today;\nconst staticData = $getWorkflowStaticData('global');\nif (!staticData.rateLimits) staticData.rateLimits = {};\nconst current = staticData.rateLimits[key] || 0;\nif (current >= 50) {\n  return [{ json: { rateLimitExceeded: true } }];\n}\nstaticData.rateLimits[key] = current + 1;\nconst body = $input.first().json.body || $input.first().json;\nreturn [{ json: { rateLimitExceeded: false, prompt: body.prompt } }];"
+        "jsCode": "const ip = $input.first().json.headers?.['x-forwarded-for']?.split(',')[0]?.trim() || $input.first().json.headers?.['x-real-ip'] || 'unknown';\nconst month = new Date().toISOString().slice(0, 7);\nconst key = 'rl_rakip_' + ip + '_' + month;\nconst staticData = $getWorkflowStaticData('global');\nif (!staticData.rateLimits) staticData.rateLimits = {};\n// Eski kayıtları temizle (2 aydan eski)\nconst cutoff = Date.now() - 62*24*60*60*1000;\nObject.keys(staticData.rateLimits).forEach(k => { if ((staticData.rateLimits[k].ts||0) < cutoff) delete staticData.rateLimits[k]; });\nconst entry = staticData.rateLimits[key] || { count: 0, ts: Date.now() };\nif (entry.count >= 50) {\n  return [{ json: { rateLimitExceeded: true } }];\n}\nentry.count += 1;\nentry.ts = Date.now();\nstaticData.rateLimits[key] = entry;\nconst body = $input.first().json.body || $input.first().json;\nreturn [{ json: { rateLimitExceeded: false, prompt: body.prompt, competitors: body.competitors || [] } }];"
       },
       "id": "rate-limit-node",
       "name": "Rate Limit Check",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [
-        460,
-        300
-      ]
+      "position": [460, 300]
     },
     {
       "parameters": {
         "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict"
-          },
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
           "conditions": [
             {
               "id": "c1",
               "leftValue": "={{ $json.rateLimitExceeded }}",
               "rightValue": true,
-              "operator": {
-                "type": "boolean",
-                "operation": "equal"
-              }
+              "operator": { "type": "boolean", "operation": "equal" }
             }
           ],
           "combinator": "and"
@@ -57,27 +44,63 @@
       "name": "Rate Limited?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [
-        680,
-        300
-      ]
+      "position": [680, 300]
     },
     {
       "parameters": {
         "respondWith": "json",
         "responseBody": "{\"error\":\"rate_limit\"}",
-        "options": {
-          "responseCode": 429
-        }
+        "options": { "responseCode": 429 }
       },
       "id": "respond-rate-limit",
       "name": "429 Response",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1,
-      "position": [
-        900,
-        180
-      ]
+      "position": [900, 160]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Gemini Flash'a gönderilecek arama isteğini hazırlar.\n// competitors: [{name, web}] — HTML'den gelen ham rakip listesi.\nconst data = $input.first().json;\nconst competitors = data.competitors || [];\nif (!competitors.length) {\n  // Rakip yoksa Gemini adımını atla; boş platform verisiyle devam et.\n  return [{ json: { ...data, geminiSkipped: true } }];\n}\nconst compList = competitors.map(c => `- ${c.name}${c.web ? ' (web: ' + c.web + ')' : ''}`).join('\\n');\nconst geminiPrompt = `Aşağıdaki Türk işletmeler için hızlıca Google araması yap ve her birinin resmi sosyal medya hesaplarını bul. Aradığın platformlar: Instagram, Facebook, LinkedIn, Google Business, WhatsApp Business. Bulamazsan o alan için null yaz. SADECE JSON döndür, başka açıklama ekleme.\\n\\nİşletmeler:\\n${compList}\\n\\nFormat: {\"competitors\":[{\"name\":\"...\",\"instagram\":\"url veya null\",\"facebook\":\"url veya null\",\"linkedin\":\"url veya null\",\"google_business\":\"url veya null\",\"whatsapp\":\"numara veya null\"}]}`;\nconst geminiBody = {\n  contents: [{ parts: [{ text: geminiPrompt }] }],\n  tools: [{ google_search: {} }]\n};\nreturn [{ json: { ...data, geminiBody } }];"
+      },
+      "id": "prepare-gemini-node",
+      "name": "Prepare Gemini Request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 380]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=YOUR_GEMINI_API_KEY",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "options": { "timeout": 30000 },
+        "jsonBody": "={{ $json.geminiBody }}",
+        "onError": "continueRegularOutput"
+      },
+      "id": "gemini-api-node",
+      "name": "Gemini Flash API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1120, 380],
+      "notes": "Google Search grounding ile rakiplerin sosyal medya profillerini bulur. Hata durumunda continueRegularOutput ile akış devam eder — Gemini bulamazsa MiniMax yine de çalışır.",
+      "notesInFlow": false
+    },
+    {
+      "parameters": {
+        "jsCode": "// Gemini'nin bulduğu platform bilgilerini orijinal prompt'a ekler.\n// Gemini başarısız olduysa veya parse edilemezse sessizce atlar.\nconst geminiRaw = $input.first().json;\nconst origData = $('Prepare Gemini Request').item.json;\n\nlet platformInfo = '';\ntry {\n  if (!origData.geminiSkipped) {\n    const parts = geminiRaw.candidates?.[0]?.content?.parts || [];\n    const geminiText = parts.map(p => p.text || '').join('');\n    const jsonStart = geminiText.indexOf('{');\n    const jsonEnd = geminiText.lastIndexOf('}');\n    if (jsonStart !== -1 && jsonEnd !== -1) {\n      const parsed = JSON.parse(geminiText.slice(jsonStart, jsonEnd + 1));\n      if (parsed.competitors?.length) {\n        platformInfo = '\\n═══ GEMİNİ ARAŞTIRMA SONUÇLARI (gerçek zamanlı web araması) ═══\\n';\n        platformInfo += parsed.competitors.map(c => {\n          const found = [\n            c.instagram && c.instagram !== 'null' ? `Instagram: ${c.instagram}` : null,\n            c.facebook && c.facebook !== 'null' ? `Facebook: ${c.facebook}` : null,\n            c.linkedin && c.linkedin !== 'null' ? `LinkedIn: ${c.linkedin}` : null,\n            c.google_business && c.google_business !== 'null' ? `Google Business: ${c.google_business}` : null,\n            c.whatsapp && c.whatsapp !== 'null' ? `WhatsApp: ${c.whatsapp}` : null,\n          ].filter(Boolean);\n          return `${c.name}: ${found.length ? found.join(' | ') : 'platform bulunamadı'}`;\n        }).join('\\n');\n      }\n    }\n  }\n} catch(e) {\n  // Parse hatası — platfom bilgisi olmadan devam et\n}\n\nconst enrichedPrompt = platformInfo\n  ? origData.prompt.replace('(Gemini AI tarafından araştırılacak)', platformInfo)\n  : origData.prompt;\n\nconst apiBody = {\n  model: 'MiniMax-M3',\n  max_completion_tokens: 12000,\n  messages: [{ role: 'user', content: enrichedPrompt }]\n};\nreturn [{ json: { ...origData, apiBody } }];"
+      },
+      "id": "build-body-node",
+      "name": "Build MiniMax Body",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1340, 380]
     },
     {
       "parameters": {
@@ -86,48 +109,31 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            {
-              "name": "Authorization",
-              "value": "Bearer YOUR_MINIMAX_API_KEY"
-            },
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            },
-            {
-              "name": "Accept-Charset",
-              "value": "utf-8"
-            }
+            { "name": "Authorization", "value": "Bearer YOUR_MINIMAX_API_KEY" },
+            { "name": "Content-Type", "value": "application/json" },
+            { "name": "Accept-Charset", "value": "utf-8" }
           ]
         },
         "sendBody": true,
         "specifyBody": "json",
-        "options": {
-          "timeout": 120000
-        },
+        "options": { "timeout": 120000 },
         "jsonBody": "={{ $json.apiBody }}"
       },
       "id": "minimax-api-node",
       "name": "MiniMax API",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [
-        900,
-        400
-      ]
+      "position": [1560, 380]
     },
     {
       "parameters": {
-        "jsCode": "const data = $input.first().json;\nlet text = data.choices?.[0]?.message?.content || '';\nconst jsonStart = text.indexOf('{');\nconst jsonEnd = text.lastIndexOf('}');\nif (jsonStart !== -1 && jsonEnd !== -1) text = text.slice(jsonStart, jsonEnd + 1);\nreturn [{ json: { content: [{ type: 'text', text }] } }];"
+        "jsCode": "const data = $input.first().json;\nlet text = data.choices?.[0]?.message?.content || '';\nconst thinkEnd = text.lastIndexOf('</think>');\nif (thinkEnd !== -1) text = text.slice(thinkEnd + '</think>'.length);\nconst jsonStart = text.indexOf('{');\nconst jsonEnd = text.lastIndexOf('}');\nif (jsonStart !== -1 && jsonEnd !== -1) text = text.slice(jsonStart, jsonEnd + 1);\nreturn [{ json: { content: [{ type: 'text', text }] } }];"
       },
       "id": "response-transform",
       "name": "Response Transform",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [
-        1120,
-        400
-      ]
+      "position": [1780, 380]
     },
     {
       "parameters": {
@@ -137,10 +143,7 @@
           "responseCode": 200,
           "responseHeaders": {
             "entries": [
-              {
-                "name": "Content-Type",
-                "value": "application/json; charset=utf-8"
-              }
+              { "name": "Content-Type", "value": "application/json; charset=utf-8" }
             ]
           }
         }
@@ -149,105 +152,38 @@
       "name": "Success Response",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1,
-      "position": [
-        1340,
-        400
-      ]
-    },
-    {
-      "parameters": {
-        "jsCode": "const data = $input.first().json;\nconst apiBody = {\n  model: 'MiniMax-M3',\n  max_completion_tokens: 12000,\n  messages: [{ role: 'user', content: data.prompt || '' }]\n};\nreturn [{ json: { ...data, apiBody } }];"
-      },
-      "id": "build-body-node",
-      "name": "Build Request Body",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        680,
-        400
-      ]
+      "position": [2000, 380]
     }
   ],
   "connections": {
     "Webhook": {
-      "main": [
-        [
-          {
-            "node": "Rate Limit Check",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
+      "main": [[{ "node": "Rate Limit Check", "type": "main", "index": 0 }]]
     },
     "Rate Limit Check": {
-      "main": [
-        [
-          {
-            "node": "Rate Limited?",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
+      "main": [[{ "node": "Rate Limited?", "type": "main", "index": 0 }]]
     },
     "Rate Limited?": {
       "main": [
-        [
-          {
-            "node": "429 Response",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Build Request Body",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        [{ "node": "429 Response", "type": "main", "index": 0 }],
+        [{ "node": "Prepare Gemini Request", "type": "main", "index": 0 }]
       ]
+    },
+    "Prepare Gemini Request": {
+      "main": [[{ "node": "Gemini Flash API", "type": "main", "index": 0 }]]
+    },
+    "Gemini Flash API": {
+      "main": [[{ "node": "Build MiniMax Body", "type": "main", "index": 0 }]]
+    },
+    "Build MiniMax Body": {
+      "main": [[{ "node": "MiniMax API", "type": "main", "index": 0 }]]
     },
     "MiniMax API": {
-      "main": [
-        [
-          {
-            "node": "Response Transform",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
+      "main": [[{ "node": "Response Transform", "type": "main", "index": 0 }]]
     },
     "Response Transform": {
-      "main": [
-        [
-          {
-            "node": "Success Response",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Build Request Body": {
-      "main": [
-        [
-          {
-            "node": "MiniMax API",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
+      "main": [[{ "node": "Success Response", "type": "main", "index": 0 }]]
     }
   },
-  "settings": {
-    "executionOrder": "v1"
-  },
-  "tags": [
-    "kolay-kobi",
-    "minimax"
-  ]
+  "settings": { "executionOrder": "v1" },
+  "tags": ["kolay-kobi", "minimax", "gemini"]
 }
