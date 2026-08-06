@@ -130,8 +130,10 @@ input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3p
   .form-collapsed-bar{display:none!important}
   #form-persist-row{display:none!important}
   .results{display:block!important}
-  .btn-primary,.btn-secondary,.actions,.cta-box,.reset-link,.rate-bar-wrap,.radio-group,.check-group,.err{display:none!important}
+  .btn-primary,.btn-secondary,.actions,.cta-box,.reset-link,.rate-bar-wrap,.err{display:none!important}
   .field label{color:#1C1B19!important}
+  .radio-group,.check-group{display:flex!important;flex-wrap:wrap!important;gap:4px!important;margin-top:2px!important;grid-template-columns:unset!important}
+  .radio-item:not(:has(input:checked)),.check-item:not(:has(input:checked)){display:none!important}
   .radio-item:has(input:checked),.check-item:has(input:checked){display:inline-flex!important;border:0.5px solid #1D9E75;background:#F0FAF6;padding:4px 10px;border-radius:6px;font-size:12px;margin:2px}
   .radio-item:has(input:checked) input,.check-item:has(input:checked) input{display:none}
   .field{margin-bottom:.6rem}
