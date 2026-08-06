@@ -147,7 +147,7 @@ input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3p
 </head>
 <body>
 <div class="app">
-  <div class="form-card">
+  <div class="form-card" id="form-section">
     <h1>AI Görünürlük Skoru</h1>
     <p class="subtitle">Yapay zeka uygulamaları işletmenizi araştırdığında sizi bulabilir mi? Birkaç soruyu yanıtla, AI'ın seni nasıl gördüğünü öğren ve görünürlüğünü artıracak adımları al.</p>
 
@@ -329,6 +329,19 @@ input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3p
       <textarea id="extra-ctx" placeholder="Özellikle güçlü olduğunuz ya da zayıf hissettiğiniz alanlar, hedefleriniz veya rakiplerinizle ilgili bilgi ekleyebilirsiniz." style="min-height:56px"></textarea>
     </div>
 
+  <!-- Form kaydet/yukle -->
+  <div style="display:flex;gap:8px;margin-top:1rem;flex-wrap:wrap" id="form-persist-row">
+    <button type="button" onclick="exportFormJSON()" style="display:flex;align-items:center;gap:5px;padding:7px 13px;background:#fff;border:0.5px solid #D3D1C7;border-radius:8px;font-size:12px;color:#6B6963;cursor:pointer">
+      <i class="ti ti-device-floppy" aria-hidden="true"></i> Formu Kaydet
+    </button>
+    <label style="display:flex;align-items:center;gap:5px;padding:7px 13px;background:#fff;border:0.5px solid #D3D1C7;border-radius:8px;font-size:12px;color:#6B6963;cursor:pointer">
+      <i class="ti ti-upload" aria-hidden="true"></i> Form Yukle (.json)
+      <input type="file" accept=".json" style="display:none" onchange="importFormJSON(this)">
+    </label>
+    <span id="import-notice" style="display:none;align-items:center;gap:4px;font-size:12px;color:#1D9E75;padding:7px 0">
+      <i class="ti ti-circle-check" aria-hidden="true"></i> Form yuklendi
+    </span>
+  </div>
     <div class="rate-bar-wrap">
       <div class="rate-bar-label">
         <span>Günlük kullanım</span>
@@ -390,7 +403,7 @@ input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3p
     </div>
 
     <div class="actions">
-      <button class="btn-secondary" onclick="downloadTxt()"><i class="ti ti-download"></i> .txt İndir</button>
+      
       <button class="btn-secondary" onclick="window.print()"><i class="ti ti-printer"></i> Yazdır</button>
       <button class="btn-secondary" onclick="resetForm()"><i class="ti ti-refresh"></i> Yeniden Oluştur</button>
     </div>
@@ -401,9 +414,7 @@ input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3p
       <a href="https://kolaykobi.com/rakip-analiz-panosu/" class="cta-btn">Rakip Analizini Aç</a>
     </div>
 
-    <div style="text-align:center;margin-top:1rem">
-      <button class="reset-link" onclick="resetForm()">Formu Boşalt ve Yeniden Başla</button>
-    </div>
+    
   </div>
 </div>
 
@@ -845,7 +856,83 @@ function resetForm() {
   document.querySelectorAll('input[type=checkbox]').forEach(el => { el.checked = false; });
 }
 
+
+// Form Kaliciligi (localStorage + JSON export/import)
+const LS_KEY = 'kkform_' + location.pathname.replace(/\//g,'_');
+
+function saveForm() {
+  const form = document.getElementById('form-section');
+  if (!form) return;
+  const data = {};
+  form.querySelectorAll('input,select,textarea').forEach(el => {
+    if (!el.id) return;
+    if (el.type === 'checkbox') data[el.id] = el.checked;
+    else if (el.type === 'radio') { if (el.checked) data['radio_' + el.name] = el.value; }
+    else data[el.id] = el.value;
+  });
+  try { localStorage.setItem(LS_KEY, JSON.stringify(data)); } catch(e) {}
+}
+
+function restoreForm() {
+  try {
+    const saved = localStorage.getItem(LS_KEY);
+    if (!saved) return;
+    const data = JSON.parse(saved);
+    const form = document.getElementById('form-section');
+    if (!form) return;
+    form.querySelectorAll('input,select,textarea').forEach(el => {
+      if (!el.id) return;
+      if (el.type === 'checkbox' && data[el.id] !== undefined) el.checked = data[el.id];
+      else if (el.type === 'radio') { if (data['radio_' + el.name] === el.value) el.checked = true; }
+      else if (data[el.id] !== undefined) el.value = data[el.id];
+    });
+  } catch(e) {}
+}
+
+function exportFormJSON() {
+  const form = document.getElementById('form-section');
+  if (!form) return;
+  const data = { _tool: document.title, _date: new Date().toISOString() };
+  form.querySelectorAll('input,select,textarea').forEach(el => {
+    if (!el.id) return;
+    data[el.id] = el.type === 'checkbox' ? el.checked : el.value;
+  });
+  const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'form-' + location.pathname.replace(/\//g,'').replace(/-/g,'_') + '.json';
+  a.click();
+}
+
+function importFormJSON(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const data = JSON.parse(e.target.result);
+      const form = document.getElementById('form-section');
+      if (!form) return;
+      form.querySelectorAll('input,select,textarea').forEach(el => {
+        if (!el.id) return;
+        if (el.type === 'checkbox' && data[el.id] !== undefined) el.checked = data[el.id];
+        else if (el.type === 'radio') { if (data['radio_' + el.name] === el.value) el.checked = true; }
+        else if (data[el.id] !== undefined) el.value = data[el.id];
+      });
+      saveForm();
+      input.value = '';
+      const notice = document.getElementById('import-notice');
+      if (notice) { notice.style.display='flex'; setTimeout(function(){ notice.style.display='none'; }, 2500); }
+    } catch(e) { alert('Gecersiz form dosyasi.'); }
+  };
+  reader.readAsText(file);
+}
+
+document.addEventListener('change', function(e) { if (document.getElementById('form-section') && document.getElementById('form-section').contains(e.target)) saveForm(); });
+document.addEventListener('input',  function(e) { if (document.getElementById('form-section') && document.getElementById('form-section').contains(e.target)) saveForm(); });
+
 updateRateBar();
+restoreForm();
 </script>
 </body>
 </html>
