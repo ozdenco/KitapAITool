@@ -335,8 +335,8 @@ input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3p
 
     <div class="cta-box">
       <div class="cta-title">Bu chatbotu sizin için kuralım</div>
-      <div class="cta-sub" id="cta-sub">WhatsApp'tan Yazın → 05323766030</div>
-      <a href="https://kolaykobi.com/iletisim" class="cta-btn" target="_blank" rel="noopener noreferrer">Benim İçin Kur</a>
+      <div class="cta-sub" id="cta-sub">WhatsApp veya web sitenize entegre chatbot ile 7/24 müşteri desteği sağlayın.</div>
+      <a href="https://wa.me/905323766030" class="cta-btn" target="_blank" rel="noopener noreferrer">WhatsApp'tan Yazın</a>
     </div>
 
     
@@ -432,8 +432,8 @@ function renderResults(result) {
   currentScenario = result;
   showLoading(false);
 
-  // ctaText AI'dan gelse de sabit metin kullanılır; numara değişirse sadece burası güncellenir
-  document.getElementById('cta-sub').textContent = 'WhatsApp\'tan Yazın → 05323766030';
+  // ctaText AI üretse de CTA metni sabit kalır
+  // document.getElementById('cta-sub').textContent = result.ctaText;
   document.getElementById('test-bot-name').textContent = lastBiz + ' Bot';
   const fd = lastFormData;
   document.getElementById('results-sub').textContent = [
