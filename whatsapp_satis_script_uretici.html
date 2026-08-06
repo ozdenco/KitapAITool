@@ -518,8 +518,7 @@ SADECE JSON döndür, başka hiçbir şey yazma:
     renderResults(result, biz);
   } catch(e) {
     clearInterval(ticker);
-    incrementUsage();
-    updateRateBar();
+    // incrementUsage() — catch bloğunda sayılmaz, sadece başarılı yanıtta sayılır
     if (genBtn) { genBtn.disabled = false; genBtn.style.opacity = ''; }
     renderResults(fallback(biz, sector, objections, service, price, target, advantage), biz);
   }
@@ -567,13 +566,15 @@ function renderResults(data, biz) {
   allScripts = data.scripts;
   document.getElementById('results-title').textContent = `${biz} — WhatsApp Satış Scriptleri`;
   const fd = lastFormData;
+  document.getElementById('results-sub').style.display = 'block';
   document.getElementById('results-sub').textContent = [
     fd.sector ? `Sektör: ${fd.sector}` : '',
     fd.service ? `Hizmet/Ürün: ${fd.service}` : '',
     fd.price ? `Fiyat: ${fd.price}` : '',
     fd.target ? `Hedef müşteri: ${fd.target}` : '',
   ].filter(Boolean).join('\n') || '5 adımlık hazır satış akışı';
-  document.getElementById('cta-sub').textContent = data.ctaText || 'Mesajları hangi müşteriye ne zaman atacağınızı birlikte planlayalım.';
+  // CTA metni statik — AI çıktısından güncelleme yapılmıyor
+  // document.getElementById('cta-sub').textContent = data.ctaText || '...';
 
   const grid = document.getElementById('scripts-grid');
   grid.innerHTML = '';
@@ -615,36 +616,15 @@ function copyScript(idx, btn) {
   });
 }
 
-function getFormContext() {
-  const biz      = document.getElementById('f-biz').value.trim();
-  const sector   = document.getElementById('f-sector').value;
-  const service  = document.getElementById('f-service').value.trim();
-  const price    = document.getElementById('f-price').value.trim();
-  const target   = document.getElementById('f-target').value.trim();
-  const advantage= document.getElementById('f-advantage').value.trim();
-  const objections = getChecked('obj-group');
-  const lines = [
-    '═══ İŞLETME BİLGİLERİ ═══',
-    biz      ? `İşletme     : ${biz}`      : null,
-    sector   ? `Sektör      : ${sector}`   : null,
-    service  ? `Hizmet/Ürün : ${service}`  : null,
-    price    ? `Fiyat       : ${price}`    : null,
-    target   ? `Hedef Müşteri: ${target}`  : null,
-    objections.length ? `İtirazlar   : ${objections.join(', ')}` : null,
-    advantage? `Avantajlar  : ${advantage}`: null,
-  ].filter(Boolean);
-  return lines.join('\n');
-}
+// getFormContext() kaldırıldı — kullanılmıyordu (dead code)
 
-
-function restart() {
-  clearResults();
-}
 
 function resetForm() {
   ['f-biz','f-service','f-price','f-target','f-advantage'].forEach(id => document.getElementById(id).value='');
   document.getElementById('f-sector').value='';
   document.querySelectorAll('#obj-group input').forEach(el => el.checked = false);
+  localStorage.removeItem(LS_KEY);
+  expandForm();
   clearResults();
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
