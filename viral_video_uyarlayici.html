@@ -77,6 +77,14 @@ input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3p
 .btn-secondary{flex:1;padding:11px;background:#fff;color:#1C1B19;border:0.5px solid #D3D1C7;border-radius:8px;font-size:14px;font-weight:500;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px}
 .btn-secondary:hover{background:#F7F6F2}
 .reset-link{display:block;text-align:center;margin-top:1rem;background:none;border:none;font-size:13px;color:#888780;cursor:pointer;text-decoration:underline;width:100%}
+/* Form collapse */
+.form-collapsed-bar{display:none;align-items:center;justify-content:space-between;padding:.5rem 0;border-bottom:0.5px solid #F1EFE8;margin-bottom:0}
+.form-card.is-collapsed .form-collapsed-bar{display:flex}
+.form-card.is-collapsed #form-body{display:none}
+.form-collapsed-title{font-size:14px;font-weight:500;color:#1C1B19}
+.form-collapsed-sub{font-size:12px;color:#9A9792;margin-top:2px}
+.form-expand-btn{display:flex;align-items:center;gap:5px;padding:7px 14px;background:#F0FAF6;border:0.5px solid #9FE1CB;border-radius:8px;font-size:13px;font-weight:500;color:#085041;cursor:pointer;white-space:nowrap}
+.form-expand-btn:hover{background:#E1F5EE}
 @media print{
   @page{margin:2cm 1.5cm 1.5cm 1.5cm}
   html,body{width:100%!important;background:#fff;font-size:12px}
@@ -93,6 +101,9 @@ input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3p
   .results > div:last-child{page-break-after:avoid;margin-bottom:0}
   /* Form 1. sayfada görünür */
   .form-card{display:block!important}
+  #form-body{display:block!important}
+  .form-collapsed-bar{display:none!important}
+  #form-persist-row{display:none!important}
   /* Interaktif widget gizli, seçili değerler etiket olarak görünür */
   .radio-group,.check-group,.err,.rate-bar-wrap{display:none!important}
   .radio-item:has(input:checked),.check-item:has(input:checked){display:inline-flex!important;border:0.5px solid #1D9E75;background:#F0FAF6;padding:3px 9px;border-radius:6px;font-size:12px;margin:2px}
@@ -120,6 +131,16 @@ input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3p
 <body>
 <div class="app">
   <div class="form-card" id="form-section">
+  <div class="form-collapsed-bar">
+    <div>
+      <div class="form-collapsed-title">Viral Video Uyarlayıcı</div>
+      <div class="form-collapsed-sub">Formu düzenlemek için tıklayın</div>
+    </div>
+    <button class="form-expand-btn" onclick="expandForm()">
+      <i class="ti ti-chevron-down" aria-hidden="true"></i> Formu Aç
+    </button>
+  </div>
+  <div id="form-body">
     <h1>Viral Videoyu İşletmene Uyarla</h1>
     <p class="subtitle">Sosyal medyada gördüğün viral bir videoyu yapıştır. Yapay zeka videonun formatını analiz edip işletmene özel uyarlama fikirleri üretir.</p>
 
@@ -200,7 +221,7 @@ input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3p
     <button class="btn-primary" id="btn-generate" onclick="generate()">
       <i class="ti ti-wand"></i> Uyarlama Fikirlerini Üret
     </button>
-  </div>
+  </div><!-- /form-body -->  </div>
 
   <div class="loading" id="loading">
     <div class="spinner"></div>
@@ -284,9 +305,9 @@ function setLoading(on) {
   document.getElementById('btn-generate').disabled = on;
   if (on) {
     document.getElementById('results').style.display = 'none';
-    document.querySelector('.form-card').style.display = on ? 'none' : 'block';
+    if (on) collapseForm(); else expandForm();
   } else {
-    document.querySelector('.form-card').style.display = 'block';
+    expandForm();
   }
 }
 
@@ -393,7 +414,7 @@ Yanıtı MUTLAKA şu JSON formatında ver:
   } catch (e) {
     showErr([e, e.message].every(Boolean) ? e.message : String(e));
     setLoading(false);
-    document.querySelector('.form-card').style.display = 'block';
+    expandForm();
     return;
   }
 
@@ -460,7 +481,7 @@ function buildTxt() {
 
 function resetForm() {
   document.getElementById('results').style.display = 'none';
-  document.querySelector('.form-card').style.display = 'block';
+  expandForm();
   document.getElementById('video-url').value = '';
   document.getElementById('video-desc').value = '';
   document.getElementById('extra-ctx').value = '';
@@ -544,6 +565,15 @@ document.addEventListener('input',  function(e) { if (document.getElementById('f
 
 updateRateBar();
 restoreForm();
-</script>
+
+function collapseForm() {
+  const fc = document.getElementById('form-section');
+  if (fc) fc.classList.add('is-collapsed');
+}
+function expandForm() {
+  const fc = document.getElementById('form-section');
+  if (fc) fc.classList.remove('is-collapsed');
+}
+
 </body>
 </html>
