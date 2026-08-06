@@ -107,7 +107,7 @@ input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3p
   .app,.app *{visibility:visible}
   .app{position:absolute;left:0;top:0;max-width:100%!important;width:100%!important;padding:0;margin:0}
   header,footer,nav,aside,#wpadminbar,#masthead,#colophon,.site-header,.site-footer,.widget-area,.sidebar,.elementor-location-header,.elementor-location-footer{display:none!important}
-  .form-card,.brand{display:none!important}
+  .brand{display:none!important}
   .results{display:block!important}
   #results-sub{display:block!important}
   .loading{display:none!important}
@@ -229,7 +229,7 @@ input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3p
     <div class="rate-bar-wrap">
       <div class="rate-bar-label">
         <span>Günlük kullanım</span>
-        <span id="rate-text">0 / 5</span>
+        <span id="rate-text">0 / 3</span>
       </div>
       <div class="rate-bar-track">
         <div class="rate-bar-fill" id="rate-fill" style="width:0%"></div>
@@ -272,7 +272,7 @@ input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3p
     <div class="personas-grid" id="personas-grid"></div>
     <div class="actions">
 <button class="btn-secondary" onclick="window.print()">
-        <i class="ti ti-printer" aria-hidden="true"></i> Yazdır
+        <i class="ti ti-printer" aria-hidden="true"></i> Yazdır / PDF Al
       </button>
       <button class="btn-secondary" onclick="restart()">
         <i class="ti ti-refresh" aria-hidden="true"></i> Yeniden Oluştur
@@ -280,7 +280,7 @@ input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3p
     </div>
     <div class="cta-box" style="margin-top:1.5rem">
       <div class="cta-title">Bu personaları birlikte hayata geçirelim</div>
-      <div class="cta-sub" id="cta-sub">Hedef kitlenizi tanıdınız — şimdi onlara ulaşacak stratejiyi oluşturalım.</div>
+      <div class="cta-sub" id="cta-sub">Uzmanlarımız müşteri segmentasyonu ve hedefleme stratejinizi oluştursun.</div>
       <a href="https://kolaykobi.com/iletisim" class="cta-btn">Ücretsiz Görüşme Ayarla</a>
     </div>
     <div style="text-align:center;margin-top:1rem">
@@ -303,7 +303,8 @@ function hasEncodingCorruption(text) {
 }
 
 const DAILY_LIMIT = 3;
-const RATE_KEY = 'kkb_persona_usage';
+const today = new Date().toISOString().slice(0,10);
+const RATE_KEY = 'kkb_persona_usage_' + today;
 
 function getRateData() {
   try {
@@ -533,7 +534,7 @@ function renderPersonas(data, biz) {
     fd.current ? `Mevcut müşteri özellikleri: ${fd.current}` : '',
     [fd.pains, fd.pains?.length].every(Boolean) ? `Müşteri öncelikleri: ${fd.pains.join(', ')}` : '',
   ].filter(Boolean).join('\n') || `${biz} için ${data.personas.length} farklı hedef müşteri profili`;
-  document.getElementById('cta-sub').textContent = data.ctaText;
+  // document.getElementById('cta-sub').textContent = result.ctaText;
 
   data.personas.forEach((p, i) => {
     const col = avatarColors[i % avatarColors.length];
@@ -616,7 +617,9 @@ function restart() {
   document.getElementById('f-price').value='';
   document.getElementById('f-current').value='';
   document.querySelectorAll('#pain-group input').forEach(el=>el.checked=false);
+  localStorage.removeItem(LS_KEY);
   show('form-section');
+  expandForm();
 }
 
 show('form-section');

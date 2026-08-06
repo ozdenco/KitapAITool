@@ -253,14 +253,14 @@ input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3p
 
     <div class="actions">
       
-      <button class="btn-secondary" onclick="window.print()"><i class="ti ti-printer"></i> Yazdır</button>
+      <button class="btn-secondary" onclick="window.print()"><i class="ti ti-printer"></i> Yazdır / PDF Al</button>
       <button class="btn-secondary" onclick="resetForm()"><i class="ti ti-refresh"></i> Yeniden Oluştur</button>
     </div>
 
     <div class="cta-box">
       <div class="cta-title">Bu fikirleri düzenli almak ister misin?</div>
       <div class="cta-sub">Trend Video Bulucu ile her gün otomatik video fikirleri al<br>ve belirlediğin saatte e-postana gelsin.</div>
-      <a href="https://kolaykobi.com/trend-video-bulucu/" class="cta-btn">Trend Video Bulucu'yu Aç</a>
+      <a href="https://kolaykobi.com/iletisim" class="cta-btn">Ücretsiz Görüşme Ayarla</a>
     </div>
 
     
@@ -310,9 +310,7 @@ function setLoading(on) {
   document.getElementById('btn-generate').disabled = on;
   if (on) {
     document.getElementById('results').style.display = 'none';
-    if (on) collapseForm(); else expandForm();
-  } else {
-    expandForm();
+    collapseForm();
   }
 }
 

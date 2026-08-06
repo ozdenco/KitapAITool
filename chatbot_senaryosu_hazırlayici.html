@@ -325,7 +325,7 @@ input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3p
     <div class="actions">
       
       <button class="btn-secondary" onclick="window.print()">
-        <i class="ti ti-printer" aria-hidden="true"></i> Yazdır
+        <i class="ti ti-printer" aria-hidden="true"></i> Yazdır / PDF Al
       </button>
       <button class="btn-secondary" onclick="resetForm()">
         <i class="ti ti-refresh" aria-hidden="true"></i> Yeniden Oluştur
@@ -356,7 +356,8 @@ function hasEncodingCorruption(text) {
   return /[㐀-鿿]/.test(text);
 }
 const DAILY_LIMIT = 3;
-const RATE_KEY = 'kkb_chatbot_usage';
+const today = new Date().toISOString().slice(0,10);
+const RATE_KEY = 'kkb_chatbot_usage_' + today;
 
 const loadingMsgs = [
   'Chatbot senaryosu hazırlanıyor...',
@@ -438,6 +439,7 @@ function renderResults(result) {
   // document.getElementById('cta-sub').textContent = result.ctaText;
   document.getElementById('test-bot-name').textContent = lastBiz + ' Bot';
   const fd = lastFormData;
+  document.getElementById('results-sub').style.display = 'block';
   document.getElementById('results-sub').textContent = [
     [fd.biz, fd.sector].every(Boolean) ? `${fd.biz} — ${fd.sector}` : '',
     fd.services ? `Hizmetler: ${fd.services}` : '',
@@ -555,7 +557,7 @@ function sendTestMsg() {
 async function generate() {
   const rateData = getRateData();
   if (rateData.count >= DAILY_LIMIT) {
-    showErr('Günlük kullanım limitiniz (5) doldu. Yarın tekrar deneyin.');
+    showErr('Günlük kullanım limitiniz (' + DAILY_LIMIT + ') doldu. Yarın tekrar deneyin.');
     return;
   }
 
@@ -695,6 +697,8 @@ function resetForm() {
   clearResults();
   showLoading(false);
   currentScenario = null;
+  localStorage.removeItem(LS_KEY);
+  expandForm();
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 

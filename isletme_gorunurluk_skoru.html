@@ -112,7 +112,7 @@ input:focus,select:focus{border-color:#1D9E75;box-shadow:0 0 0 3px rgba(29,158,1
   .app,.app *{visibility:visible}
   .app{position:absolute;left:0;top:0;max-width:100%!important;width:100%!important;padding:0;margin:0}
   header,footer,nav,aside,#wpadminbar,#masthead,#colophon,.site-header,.site-footer,.widget-area,.sidebar,.elementor-location-header,.elementor-location-footer{display:none!important}
-  .form-card,.brand{display:none!important}
+  .brand{display:none!important}
   .results{display:block!important}
   #results-sub{display:block!important}
   .loading{display:none!important}
@@ -236,7 +236,7 @@ input:focus,select:focus{border-color:#1D9E75;box-shadow:0 0 0 3px rgba(29,158,1
     <div class="rate-bar-wrap">
       <div class="rate-bar-label">
         <span>Günlük kullanım</span>
-        <span id="rate-text">0 / 5</span>
+        <span id="rate-text">0 / 3</span>
       </div>
       <div class="rate-bar-track">
         <div class="rate-bar-fill" id="rate-fill" style="width:0%"></div>
@@ -304,7 +304,7 @@ input:focus,select:focus{border-color:#1D9E75;box-shadow:0 0 0 3px rgba(29,158,1
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
         <span class="section-title" style="margin-bottom:0">Öncelikli Aksiyonlar</span>
         <div class="action-row" style="margin-bottom:0">
-          <button class="btn-sm" onclick="window.print()"><i class="ti ti-printer" aria-hidden="true"></i> Yazdır</button><button class="btn-sm" onclick="resetForm()"><i class="ti ti-refresh" aria-hidden="true"></i> Yeniden Oluştur</button>
+          <button class="btn-sm" onclick="window.print()"><i class="ti ti-printer" aria-hidden="true"></i> Yazdır / PDF Al</button><button class="btn-sm" onclick="expandForm(); document.getElementById('results-section').style.display='none';"><i class="ti ti-refresh" aria-hidden="true"></i> Yeniden Oluştur</button>
 <button class="btn-sm" onclick="resetForm()"><i class="ti ti-refresh" aria-hidden="true"></i> Formu Boşalt</button>
         </div>
       </div>
@@ -314,7 +314,7 @@ input:focus,select:focus{border-color:#1D9E75;box-shadow:0 0 0 3px rgba(29,158,1
     <!-- CTA -->
     <div class="cta-box">
       <div class="cta-title">Skoru yükseltmek için nereden başlamalısınız?</div>
-      <div class="cta-sub" id="cta-text">Kişiselleştirilmiş bir dijital görünürlük planı hazırlayalım.</div>
+      <div class="cta-sub" id="cta-text">Uzmanlarımız işletmenizin görünürlüğünü artıracak strateji oluştursun.</div>
       <a href="https://kolaykobi.com/iletisim" class="cta-btn" target="_blank" rel="noopener noreferrer">Ücretsiz Görüşme Ayarla</a>
     </div>
 
@@ -338,7 +338,8 @@ function hasEncodingCorruption(text) {
 }
 
 const DAILY_LIMIT = 3;
-const RATE_KEY = 'kkb_skor_usage';
+const today = new Date().toISOString().slice(0,10);
+const RATE_KEY = 'kkb_skor_usage_' + today;
 
 function getRateData() {
   try {
@@ -559,7 +560,7 @@ function renderResult(r, ctx) {
   document.getElementById('score-num').textContent = score;
   document.getElementById('score-title').textContent = r.level + ' seviye';
   document.getElementById('score-sub').textContent = r.summary;
-  document.getElementById('cta-text').textContent = r.ctaText;
+  // document.getElementById('cta-text').textContent = r.ctaText; // disabled: cta-text is static
 
   const ring = document.getElementById('score-ring');
   if (score < 30)      ring.style.borderColor = '#E24B4A';
@@ -610,6 +611,8 @@ function resetForm() {
   if (liActiveEl) { liActiveEl.value = ''; liActiveEl.disabled = true; }
   showLoading(false);
   showResults(false);
+  localStorage.removeItem(LS_KEY);
+  expandForm();
   window.scrollTo({ top:0, behavior:'smooth' });
 }
 

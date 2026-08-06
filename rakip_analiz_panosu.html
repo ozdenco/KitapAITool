@@ -463,7 +463,7 @@ td:first-child{font-weight:500;color:#6B6963;font-size:12px}
     <div class="actions">
       
       <button class="btn-secondary" onclick="window.print()">
-        <i class="ti ti-printer" aria-hidden="true"></i> Yazdır
+        <i class="ti ti-printer" aria-hidden="true"></i> Yazdır / PDF Al
       </button>
       <button class="btn-secondary" onclick="resetForm()">
         <i class="ti ti-refresh" aria-hidden="true"></i> Yeniden Oluştur
@@ -472,7 +472,7 @@ td:first-child{font-weight:500;color:#6B6963;font-size:12px}
 
     <div class="cta-box">
       <div class="cta-title">Rakiplerinizin önüne geçelim</div>
-      <div class="cta-sub" id="cta-sub">Analize dayalı strateji ile rekabet avantajı kazanın.</div>
+      <div class="cta-sub" id="cta-sub">Uzmanlarımız rakiplerinize karşı strateji geliştirmenize yardımcı olsun.</div>
       <a href="https://kolaykobi.com/iletisim" class="cta-btn" target="_blank" rel="noopener noreferrer">Ücretsiz Görüşme Ayarla</a>
     </div>
 
@@ -492,7 +492,7 @@ function hasEncodingCorruption(text) {
 }
 
 const DAILY_LIMIT = 3;
-const RATE_KEY = 'kkb_rakip_usage';
+const RATE_KEY = 'kkb_rakip_usage_' + new Date().toDateString().replace(/ /g,'_');
 
 const loadingMsgs = [
   'Rakip analizi yapılıyor...',
@@ -695,8 +695,9 @@ function renderResults(result, myData) {
     `;
   }).join('');
 
-  if (result.ctaText) document.getElementById('cta-sub').textContent = result.ctaText;
+  // if (result.ctaText) document.getElementById('cta-sub').textContent = result.ctaText;
 
+  document.getElementById('results-sub').style.display = 'block';
   document.getElementById('results-section').style.display = 'block'; collapseForm();
   document.getElementById('results-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
@@ -704,7 +705,7 @@ function renderResults(result, myData) {
 async function generate() {
   const rateData = getRateData();
   if (rateData.count >= DAILY_LIMIT) {
-    showErr('Günlük kullanım limitiniz (5) doldu. Yarın tekrar deneyin.');
+    showErr('Günlük kullanım limitiniz (' + DAILY_LIMIT + ') doldu. Yarın tekrar deneyin.');
     return;
   }
 
@@ -851,6 +852,8 @@ function resetForm() {
   hideErr();
   clearResults();
   showLoading(false);
+  localStorage.removeItem(LS_KEY);
+  expandForm();
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 

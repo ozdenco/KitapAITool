@@ -204,13 +204,13 @@ input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3p
     <div class="field">
       <label>Haftanın hangi günleri paylaşım yapılsın? <span style="color:#A32D2D">*</span></label>
       <div class="check-group" id="weekday-group" style="grid-template-columns:repeat(7,1fr)">
-        <label class="check-item"><input type="checkbox" value="1" onchange="enforceWeekdayCap(this)"> Pzt</label>
-        <label class="check-item"><input type="checkbox" value="2" onchange="enforceWeekdayCap(this)"> Sal</label>
-        <label class="check-item"><input type="checkbox" value="3" onchange="enforceWeekdayCap(this)"> Çar</label>
-        <label class="check-item"><input type="checkbox" value="4" onchange="enforceWeekdayCap(this)"> Per</label>
-        <label class="check-item"><input type="checkbox" value="5" onchange="enforceWeekdayCap(this)"> Cum</label>
-        <label class="check-item"><input type="checkbox" value="6" onchange="enforceWeekdayCap(this)"> Cmt</label>
-        <label class="check-item"><input type="checkbox" value="0" onchange="enforceWeekdayCap(this)"> Paz</label>
+        <label class="check-item"><input id="day-mon" type="checkbox" value="1" onchange="enforceWeekdayCap(this)"> Pzt</label>
+        <label class="check-item"><input id="day-tue" type="checkbox" value="2" onchange="enforceWeekdayCap(this)"> Sal</label>
+        <label class="check-item"><input id="day-wed" type="checkbox" value="3" onchange="enforceWeekdayCap(this)"> Çar</label>
+        <label class="check-item"><input id="day-thu" type="checkbox" value="4" onchange="enforceWeekdayCap(this)"> Per</label>
+        <label class="check-item"><input id="day-fri" type="checkbox" value="5" onchange="enforceWeekdayCap(this)"> Cum</label>
+        <label class="check-item"><input id="day-sat" type="checkbox" value="6" onchange="enforceWeekdayCap(this)"> Cmt</label>
+        <label class="check-item"><input id="day-sun" type="checkbox" value="0" onchange="enforceWeekdayCap(this)"> Paz</label>
       </div>
       <p style="font-size:12px;color:#9A9792;margin-top:6px">En fazla 1 gün seçebilirsiniz (yapay zeka yanıt süresi ve maliyeti nedeniyle).</p>
     </div>
@@ -294,7 +294,7 @@ input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3p
       </div>
       <div class="action-row">
 <button class="btn-sm" id="csv-btn" onclick="downloadCSV()"><i class="ti ti-download" aria-hidden="true"></i> CSV İndir</button>
-        <button class="btn-sm" id="print-btn" onclick="printFullCalendar()"><i class="ti ti-printer" aria-hidden="true"></i> Yazdır</button><button class="btn-sm" onclick="resetForm()"><i class="ti ti-refresh" aria-hidden="true"></i> Yeniden Oluştur</button>
+        <button class="btn-sm" id="print-btn" onclick="printFullCalendar()"><i class="ti ti-printer" aria-hidden="true"></i> Yazdır / PDF Al</button><button class="btn-sm" onclick="resetForm()"><i class="ti ti-refresh" aria-hidden="true"></i> Yeniden Oluştur</button>
         <button class="btn-sm" onclick="requestNewVersionCta()"><i class="ti ti-refresh" aria-hidden="true"></i> Yeniden</button>
       </div>
     </div>
@@ -311,7 +311,7 @@ input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3p
 
     <div class="cta-box" style="margin-top:1.5rem">
       <div class="cta-title">İçerik stratejinizi birlikte yönetelim</div>
-      <div class="cta-sub" id="cta-sub">Takvim hazır — şimdi uygulamaya geçmek için destek alalım.</div>
+      <div class="cta-sub" id="cta-sub">Uzmanlarımız içerik stratejinizi hayata geçirmenize yardımcı olsun.</div>
       <a href="https://kolaykobi.com/iletisim" class="cta-btn">Ücretsiz Görüşme Ayarla</a>
     </div>
     <div style="text-align:center;margin-top:1rem">
@@ -450,7 +450,8 @@ function hasEncodingCorruption(text, lang) {
 }
 
 const DAILY_LIMIT = 3;
-const RATE_KEY = `kkb_takvim_usage`;
+const today = new Date().toISOString().slice(0,10);
+const RATE_KEY = `kkb_takvim_usage_` + today;
 
 function getRateData() {
   try {
@@ -1132,7 +1133,8 @@ function fetchAndMergeGroup(group, startDate) {
       // ölçeklenir.
       res = await fetchJsonAsyncJob(N8N_PROXY, { prompt, dayCount: chunkPostingDays.length }, campaignCtx.lang, onProgress, chunkPostingDays);
       if (res.status === 429) { const e = new Error(`RATE_LIMIT`); throw e; }
-    } else {
+    } /* else {
+      // DEV FALLBACK — hardcoded MiniMax API URL removed for production safety
       const rawRes = await fetch(`https://api.minimax.io/v1/chat/completions`, {
         method: `POST`,
         headers: { 'Content-Type': `application/json`, 'Authorization': `Bearer DEV_KEY` },
@@ -1141,7 +1143,7 @@ function fetchAndMergeGroup(group, startDate) {
       const rawData = await rawRes.json();
       const clean = extractJson(rawData.choices?.[0]?.message?.content || ``);
       res = { status: 200, result: JSON.parse(clean) };
-    }
+    } */
     const result = res.result;
     const newDays = result.days.map(d => {
       const dt = new Date(startMs + (d.day - 1) * 86400000);
@@ -1289,7 +1291,7 @@ function renderResultsShell(ctaText) {
   const endDate = new Date(startDate);
   endDate.setDate(endDate.getDate() + 29);
   document.getElementById(`results-sub`).textContent = `${fmt(startDate)} – ${fmt(endDate)} · ${formData.platforms.join(', ')}`;
-  document.getElementById(`cta-sub`).textContent = ctaText || `Takvim hazır — şimdi uygulamaya geçmek için destek alalım.`;
+  // document.getElementById(`cta-sub`).textContent = ctaText || `Takvim hazır — şimdi uygulamaya geçmek için destek alalım.`;
 
   currentTabIndex = 0;
   renderTabButtons();

@@ -204,12 +204,12 @@ input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3p
     <div class="field">
       <label>Video Tonu (en az 1, çoklu seçim) <span style="color:#A32D2D">*</span></label>
       <div class="check-group" id="tone-group">
-        <label class="check-item"><input type="checkbox" value="Eğlendirici"> <i class="ti ti-confetti" aria-hidden="true"></i> Eğlendirici</label>
-        <label class="check-item"><input type="checkbox" value="Eğitici"> <i class="ti ti-school" aria-hidden="true"></i> Eğitici</label>
-        <label class="check-item"><input type="checkbox" value="Bilgilendirici"> <i class="ti ti-info-circle" aria-hidden="true"></i> Bilgilendirici</label>
-        <label class="check-item"><input type="checkbox" value="Samimi ve yakın"> <i class="ti ti-heart" aria-hidden="true"></i> Samimi ve yakın</label>
-        <label class="check-item"><input type="checkbox" value="Enerjik ve motive edici"> <i class="ti ti-bolt" aria-hidden="true"></i> Enerjik ve motive edici</label>
-        <label class="check-item"><input type="checkbox" value="Mizahi ve eğlenceli"> <i class="ti ti-mood-happy" aria-hidden="true"></i> Mizahi ve eğlenceli</label>
+        <label class="check-item"><input type="checkbox" id="tone-funny" value="Eğlendirici"> <i class="ti ti-confetti" aria-hidden="true"></i> Eğlendirici</label>
+        <label class="check-item"><input type="checkbox" id="tone-edu" value="Eğitici"> <i class="ti ti-school" aria-hidden="true"></i> Eğitici</label>
+        <label class="check-item"><input type="checkbox" id="tone-info" value="Bilgilendirici"> <i class="ti ti-info-circle" aria-hidden="true"></i> Bilgilendirici</label>
+        <label class="check-item"><input type="checkbox" id="tone-sincere" value="Samimi ve yakın"> <i class="ti ti-heart" aria-hidden="true"></i> Samimi ve yakın</label>
+        <label class="check-item"><input type="checkbox" id="tone-energetic" value="Enerjik ve motive edici"> <i class="ti ti-bolt" aria-hidden="true"></i> Enerjik ve motive edici</label>
+        <label class="check-item"><input type="checkbox" id="tone-humor" value="Mizahi ve eğlenceli"> <i class="ti ti-mood-happy" aria-hidden="true"></i> Mizahi ve eğlenceli</label>
       </div>
     </div>
 
@@ -378,7 +378,7 @@ input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3p
 
     <div class="cta-box">
       <div class="cta-title">Bu işi otomasyona bağlayalım</div>
-      <div class="cta-sub" id="cta-sub">Her sabah mailinize trend içerik fikirleri gelsin — ekibiniz içerik üretmeye odaklansın.</div>
+      <div class="cta-sub" id="cta-sub">Uzmanlarımız video pazarlama stratejinizi oluştursun.</div>
       <a href="https://kolaykobi.com/iletisim" class="cta-btn" target="_blank" rel="noopener noreferrer">Ücretsiz Görüşme Ayarla</a>
     </div>
 
@@ -555,9 +555,9 @@ function renderResults(result) {
     sourcesSection.style.display = 'none';
   }
 
-  if (result.ctaText) {
-    document.getElementById('cta-sub').textContent = result.ctaText;
-  }
+  // if (result.ctaText) {
+  //   document.getElementById('cta-sub').textContent = result.ctaText;
+  // }
 
   document.getElementById('results-section').style.display = 'block'; collapseForm();
   document.getElementById('results-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -616,9 +616,7 @@ async function generate() {
   ];
   const suggestedFormats = [...FORMAT_POOL].sort(() => Math.random() - 0.5).slice(0, 5).join(', ');
 
-  // TEST MODU: token tasarrufu icin 2 video uretiliyor. Test basarili olup
-  // canliya alindiginda bunu tekrar 7'ye cevir.
-  const VIDEO_COUNT = 2;
+  const VIDEO_COUNT = 7;
 
   const prompt = `Sen sosyal medya trend analisti ve içerik stratejistisin. NOT: gerçek zamanlı internet erişimin yok; aşağıdaki formatlar 2023-2025 arası Instagram Reels / Facebook Reels'te yaygın kullanılan, bilinen viral kalıplardır — bunlardan esinlenerek işletmeye özel, uygulanabilir senaryolar üret.
 
@@ -746,9 +744,11 @@ function resetForm() {
   document.getElementById('f-hour').value = '9';
   document.getElementById('schedule-fields').classList.remove('is-visible');
   document.getElementById('mail-field').style.display = 'none';
+  localStorage.removeItem(LS_KEY);
   hideErr();
   clearResults();
   showLoading(false);
+  expandForm();
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 

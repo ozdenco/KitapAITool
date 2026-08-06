@@ -218,7 +218,7 @@ tr:last-child td{border-bottom:none}
     <div class="rate-bar-wrap">
       <div class="rate-bar-label">
         <span>Günlük kullanım</span>
-        <span id="rate-text">0 / 5</span>
+        <span id="rate-text">0 / 3</span>
       </div>
       <div class="rate-bar-track">
         <div class="rate-bar-fill" id="rate-fill" style="width:0%"></div>
@@ -322,7 +322,7 @@ tr:last-child td{border-bottom:none}
 
     <div class="cta-box">
       <div class="cta-title">Reklam stratejinizi birlikte optimize edelim</div>
-      <div class="cta-sub" id="cta-sub">Hesaplanan bütçe dağılımıyla daha fazla müşteri kazanın.</div>
+      <div class="cta-sub" id="cta-sub">Uzmanlarımız reklam bütçenizi en verimli şekilde planlamanıza yardımcı olsun.</div>
       <a href="https://kolaykobi.com/iletisim" class="cta-btn" target="_blank" rel="noopener noreferrer">Ücretsiz Görüşme Ayarla</a>
     </div>
 
@@ -341,7 +341,8 @@ function hasEncodingCorruption(text) {
   return /[㐀-鿿]/.test(text);
 }
 const DAILY_LIMIT = 3;
-const RATE_KEY = 'kkb_butce_usage';
+const today = new Date().toISOString().slice(0,10);
+const RATE_KEY = 'kkb_butce_usage_' + today;
 
 // cvr (tıklama -> lead dönüşüm oranı) değerleri, kanalın "satın alma
 // niyeti"ne göre kademeli olarak ayarlanmış muhafazakâr/gerçekçi
@@ -551,10 +552,12 @@ function renderResults(rows, aiData) {
     </div>
   `).join('');
 
-  if (aiData.ctaText) {
-    document.getElementById('cta-sub').textContent = aiData.ctaText;
-  }
+  // ctaText from AI intentionally not injected — cta-sub is static
+  // if (aiData.ctaText) {
+  //   document.getElementById('cta-sub').textContent = aiData.ctaText;
+  // }
 
+  document.getElementById('results-sub').style.display = 'block';
   document.getElementById('results-section').style.display = 'block'; collapseForm();
   document.getElementById('results-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
@@ -562,7 +565,7 @@ function renderResults(rows, aiData) {
 async function generate() {
   const rateData = getRateData();
   if (rateData.count >= DAILY_LIMIT) {
-    showErr('Günlük kullanım limitiniz (5) doldu. Yarın tekrar deneyin.');
+    showErr('Günlük kullanım limitiniz (' + DAILY_LIMIT + ') doldu. Yarın tekrar deneyin.');
     return;
   }
 
@@ -684,9 +687,6 @@ SADECE JSON döndür:
     if (genBtn) { genBtn.disabled = false; genBtn.style.opacity = ''; }
     if (resetBtn) { resetBtn.disabled = false; resetBtn.style.opacity = ''; }
   } catch(e) {
-    rateData.count++;
-    saveRate(rateData);
-    updateRateBar();
     clearInterval(ticker);
     renderResults(rows, fallback());
     if (genBtn) { genBtn.disabled = false; genBtn.style.opacity = ''; }

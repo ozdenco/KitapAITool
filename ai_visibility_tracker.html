@@ -433,14 +433,14 @@ input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3p
 
     <div class="actions">
       
-      <button class="btn-secondary" onclick="window.print()"><i class="ti ti-printer"></i> Yazdır</button>
+      <button class="btn-secondary" onclick="window.print()"><i class="ti ti-printer"></i> Yazdır / PDF Al</button>
       <button class="btn-secondary" onclick="resetForm()"><i class="ti ti-refresh"></i> Yeniden Oluştur</button>
     </div>
 
     <div class="cta-box">
-      <div class="cta-title">Görünürlüğünü artırmak için adım adım destek ister misin?</div>
-      <div class="cta-sub">Rakip Analizi ile sektörünüzdeki rakiplerinizi karşılaştırın<br>ve öne geçmek için stratejinizi netleştirin.</div>
-      <a href="https://kolaykobi.com/rakip-analiz-panosu/" class="cta-btn">Rakip Analizini Aç</a>
+      <div class="cta-title">Bu analizi işletmeniz için uygulayalım</div>
+      <div class="cta-sub" id="cta-sub">Uzmanlarımız sizin için özelleştirilmiş strateji oluştursun.</div>
+      <a href="https://kolaykobi.com/iletisim" class="cta-btn">Ücretsiz Görüşme Ayarla</a>
     </div>
 
     
@@ -450,7 +450,8 @@ input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3p
 <script>
 const N8N_PROXY = '/wp-json/kolaykobi/v1/ai/ai-visibility';
 const DAILY_LIMIT = 5;
-const RATE_KEY = 'kkb_aiv_usage';
+const today = new Date().toISOString().slice(0,10);
+const RATE_KEY = 'kkb_aiv_usage_' + today;
 
 function getRateData() {
   try {
@@ -750,6 +751,7 @@ function badgeStyle(score) {
 }
 
 function renderResults(data, biz, sector, city) {
+  collapseForm();
   document.getElementById('results-title').textContent = biz + ' — AI Görünürlük Raporu';
   document.getElementById('results-sub').textContent = sector + ' · ' + city;
 
@@ -839,35 +841,10 @@ function toggleCat(header) {
   card.classList.toggle('open');
 }
 
-function buildTxt() {
-  const title = document.getElementById('results-title').textContent;
-  const sub = document.getElementById('results-sub').textContent;
-  const score = document.getElementById('score-num').textContent;
-  const verdict = document.getElementById('score-verdict').textContent;
-  let txt = title + '\n' + sub + '\n\nAI GÖRÜNÜRLÜK SKORU: ' + score + '/100\n' + verdict + '\n\n' + '='.repeat(50) + '\n\n';
-
-  document.querySelectorAll('.cat-card').forEach(c => {
-    const name = c.querySelector('.cat-name')?.textContent || '';
-    const pts = (c.querySelector('.cat-pts')?.textContent || '') + (c.querySelector('.cat-pts-max')?.textContent || '');
-    const findings = Array.from(c.querySelectorAll('.cat-finding span')).map(el => '  • ' + el.textContent).join('\n');
-    const action = c.querySelector('.cat-action')?.textContent?.replace('Ne yapmalısın?', '').trim() || '';
-    txt += '--- ' + name + ' (' + pts + ') ---\n' + findings + '\n' + (action ? 'Aksiyon: ' + action + '\n' : '') + '\n';
-  });
-
-  txt += '\n' + '='.repeat(50) + '\nÖNCELİKLİ AKSİYON PLANI\n\n';
-  document.querySelectorAll('.action-step').forEach(s => {
-    txt += s.textContent.replace(/\s+/g, ' ').trim() + '\n';
-  });
-
-  const flags = Array.from(document.querySelectorAll('.flag-item span')).map(el => '⚠ ' + el.textContent);
-  if (flags.length) txt += '\nDİKKAT NOKTALARI:\n' + flags.join('\n') + '\n';
-
-  return txt;
-}
-
 
 function resetForm() {
   document.getElementById('results').style.display = 'none';
+  localStorage.removeItem(LS_KEY);
   expandForm();
   document.getElementById('biz-name').value = '';
   document.getElementById('city').value = '';

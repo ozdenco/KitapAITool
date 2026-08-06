@@ -269,7 +269,7 @@ input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3p
     <div class="actions">
       
       <button class="btn-secondary" onclick="window.print()">
-        <i class="ti ti-printer" aria-hidden="true"></i> Yazdır
+        <i class="ti ti-printer" aria-hidden="true"></i> Yazdır / PDF Al
       </button>
       <button class="btn-secondary" onclick="resetForm()">
         <i class="ti ti-refresh" aria-hidden="true"></i> Yeniden Oluştur
@@ -297,7 +297,8 @@ function hasEncodingCorruption(text) {
   return /[㐀-鿿]/.test(text);
 }
 const DAILY_LIMIT = 3;
-const RATE_KEY = 'kkb_gd_usage';
+const today = new Date().toISOString().slice(0,10);
+const RATE_KEY = 'kkb_gd_usage_' + today;
 
 const loadingMsgs = [
   'Takip senaryosu hazırlanıyor...',
@@ -380,6 +381,7 @@ function renderResults(result) {
   showLoading(false);
 
   const fd = lastFormData;
+  document.getElementById('results-sub').style.display = 'block';
   document.getElementById('results-sub').textContent = [
     [fd.biz, fd.sector].every(Boolean) ? `${fd.biz} — ${fd.sector}` : '',
     fd.service ? `Hizmet: ${fd.service}` : '',
@@ -424,7 +426,7 @@ const list = document.getElementById('steps-list');
 async function generate() {
   const rateData = getRateData();
   if (rateData.count >= DAILY_LIMIT) {
-    showErr('Günlük kullanım limitiniz (5) doldu. Yarın tekrar deneyin.');
+    showErr('Günlük kullanım limitiniz (' + DAILY_LIMIT + ') doldu. Yarın tekrar deneyin.');
     return;
   }
 
@@ -529,12 +531,6 @@ SADECE JSON döndür, Türkçe karakterleri koru:
           showErr('Çok fazla istek gönderildi. Lütfen biraz bekleyin.');
           return;
         }
-      } else {
-        res = await fetch('https://api.minimax.io/v1/chat/completions', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer DEV_KEY' },
-          body: JSON.stringify({ model: 'MiniMax-M3', max_completion_tokens: 1500, messages: [{ role: 'user', content: prompt }] }),
-        });
       }
       const data = await res.json();
       text = N8N_PROXY
@@ -584,7 +580,9 @@ function resetForm() {
   hideErr();
   clearResults();
   showLoading(false);
+  localStorage.removeItem(LS_KEY);
   window.scrollTo({ top: 0, behavior: 'smooth' });
+  expandForm();
 }
 
 
