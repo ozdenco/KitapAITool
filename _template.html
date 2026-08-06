@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ARAÇ ADI — Kolay KOBİ</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
+<style>
+/* ── Reset & Base ──────────────────────────────────────────────── */
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,sans-serif;background:#F7F6F2;min-height:100vh}
+.app{max-width:720px;margin:0 auto;padding:2rem 1rem}
+.brand{display:flex;align-items:center;gap:8px;margin-bottom:2rem}
+.brand-name{font-size:13px;font-weight:500;color:#1D9E75;letter-spacing:.04em}
+
+/* ── Form Card ─────────────────────────────────────────────────── */
+.form-card{background:#fff;border-radius:16px;border:0.5px solid #E2E0D8;padding:2rem}
+h1{font-size:22px;font-weight:500;color:#1C1B19;margin-bottom:.4rem}
+.subtitle{font-size:14px;color:#6B6963;line-height:1.6;margin-bottom:2rem}
+.field{margin-bottom:1.25rem}
+label{display:block;font-size:13px;font-weight:500;color:#6B6963;margin-bottom:6px}
+input,select,textarea{width:100%;padding:10px 12px;font-size:14px;border:0.5px solid #D3D1C7;border-radius:8px;background:#fff;color:#1C1B19;outline:none;font-family:inherit}
+textarea{resize:vertical;min-height:80px;line-height:1.5}
+input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3px rgba(29,158,117,.1)}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.radio-group{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px}
+.radio-item{display:flex;align-items:center;gap:8px;padding:9px 11px;border:0.5px solid #D3D1C7;border-radius:8px;cursor:pointer;font-size:13px;color:#1C1B19;background:#fff;user-select:none}
+.radio-item input[type=radio]{width:auto;padding:0;box-shadow:none}
+.radio-item:has(input:checked){border-color:#1D9E75;background:#F0FAF6}
+.check-group{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px}
+.check-item{display:flex;align-items:center;gap:8px;padding:9px 11px;border:0.5px solid #D3D1C7;border-radius:8px;cursor:pointer;font-size:13px;color:#1C1B19;background:#fff;user-select:none}
+.check-item input[type=checkbox]{width:auto;padding:0;box-shadow:none}
+.check-item:has(input:checked){border-color:#1D9E75;background:#F0FAF6}
+.btn-primary{width:100%;padding:13px;background:#1D9E75;color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:500;cursor:pointer;margin-top:.5rem;display:flex;align-items:center;justify-content:center;gap:8px}
+.btn-primary:hover{background:#0F6E56}
+.btn-primary:disabled{background:#B4B2A9;cursor:not-allowed}
+.err{font-size:13px;color:#A32D2D;background:#FCEBEB;border-radius:8px;padding:10px 12px;margin-top:.75rem;display:none}
+
+/* ── Rate Bar (Günlük Kullanım) ────────────────────────────────── */
+.rate-bar-wrap{margin-top:.75rem}
+.rate-bar-label{display:flex;justify-content:space-between;font-size:12px;color:#6B6963;margin-bottom:5px}
+.rate-bar-track{height:5px;background:#E2E0D8;border-radius:4px;overflow:hidden}
+.rate-bar-fill{height:100%;background:#1D9E75;border-radius:4px;transition:width .3s}
+
+/* ── Loading ───────────────────────────────────────────────────── */
+.loading{text-align:center;padding:4rem 1rem;display:none}
+.spinner{width:44px;height:44px;border:3px solid #E2E0D8;border-top-color:#1D9E75;border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 1.25rem}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-txt{font-size:14px;color:#6B6963}
+.loading-note{font-size:12px;color:#9A9792;margin-top:.75rem}
+
+/* ── Results ───────────────────────────────────────────────────── */
+.results{display:none}
+
+/* ── Results Actions ───────────────────────────────────────────── */
+.btn-sm{display:flex;align-items:center;gap:6px;padding:8px 14px;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;border:0.5px solid #D3D1C7;background:#fff;color:#1C1B19;white-space:nowrap}
+.btn-sm:hover{background:#F7F6F2}
+
+/* ── CTA Box ───────────────────────────────────────────────────── */
+.cta-box{background:#F0FAF6;border:0.5px solid #9FE1CB;border-radius:12px;padding:1.5rem;text-align:center;margin-top:.5rem}
+.cta-title{font-size:15px;font-weight:500;color:#085041;margin-bottom:.4rem}
+.cta-sub{font-size:13px;color:#0F6E56;margin-bottom:1rem;line-height:1.6}
+.cta-btn{display:inline-block;background:#1D9E75;color:#fff;padding:10px 24px;border-radius:8px;font-size:14px;font-weight:500;text-decoration:none}
+.cta-btn:hover{background:#0F6E56}
+
+/* ── Form Collapse ─────────────────────────────────────────────── */
+.form-collapsed-bar{display:none;align-items:center;justify-content:space-between;padding:.5rem 0;border-bottom:0.5px solid #F1EFE8;margin-bottom:0}
+.form-card.is-collapsed .form-collapsed-bar{display:flex}
+.form-card.is-collapsed #form-body{display:none}
+.form-collapsed-title{font-size:14px;font-weight:500;color:#1C1B19}
+.form-collapsed-sub{font-size:12px;color:#9A9792;margin-top:2px}
+.form-expand-btn{display:flex;align-items:center;gap:5px;padding:7px 14px;background:#F0FAF6;border:0.5px solid #9FE1CB;border-radius:8px;font-size:13px;font-weight:500;color:#085041;cursor:pointer;white-space:nowrap}
+.form-expand-btn:hover{background:#E1F5EE}
+
+/* ── Responsive ────────────────────────────────────────────────── */
+@media(max-width:520px){
+  .row2{grid-template-columns:1fr}
+  .radio-group{grid-template-columns:1fr}
+  .check-group{grid-template-columns:1fr 1fr}
+}
+
+/* ════════════════════════════════════════════════════════════════
+   PRINT CSS — değiştirme, tüm araçlarda aynı olmalı
+   ════════════════════════════════════════════════════════════════ */
+@media print{
+  @page{margin:2cm 1.5cm 1.5cm 1.5cm}
+  html,body{width:100%!important;background:#fff;font-size:12px}
+  body *{visibility:hidden}
+  .app,.app *{visibility:visible}
+  .app{position:absolute;left:0;top:0;max-width:100%!important;width:100%!important;padding:0;margin:0}
+  header,footer,nav,aside,#wpadminbar,#masthead,#colophon,.site-header,.site-footer,.widget-area,.sidebar,.elementor-location-header,.elementor-location-footer{display:none!important}
+  .form-card,.brand{display:none!important}
+  .results{display:block!important}
+  .loading{display:none!important}
+  .btn-primary,.btn-secondary,.btn-sm,.actions,.cta-box,.reset-link{display:none!important}
+  a,span,div{word-break:break-word!important;overflow-wrap:break-word!important;white-space:normal!important}
+  a[href]::after{content:none!important}
+  /* Form 1. sayfada görünür */
+  .form-card{display:block!important}
+  #form-body{display:block!important}
+  .form-collapsed-bar{display:none!important}
+  #form-persist-row{display:none!important}
+  /* Interaktif widget gizli, seçili değerler yeşil etiket olarak görünür */
+  .radio-group,.check-group,.err,.rate-bar-wrap{display:none!important}
+  .radio-item:has(input:checked),.check-item:has(input:checked){display:inline-flex!important;border:0.5px solid #1D9E75;background:#F0FAF6;padding:3px 9px;border-radius:6px;font-size:12px;margin:2px}
+  .radio-item:has(input:checked) input,.check-item:has(input:checked) input{display:none}
+  .field{margin-bottom:.5rem}
+  .section-title{border-top:0.5px solid #E2E0D8;padding-top:.4rem;margin-top:.6rem}
+  /* Sonuçlar 2. sayfadan başlar */
+  .results{page-break-before:always!important}
+  .results > div:last-child{page-break-after:avoid;margin-bottom:0}
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- MARKA -->
+  <div class="brand">
+    <span class="brand-name">⬡ Kolay KOBİ</span>
+  </div>
+
+  <!-- FORM -->
+  <div class="form-card" id="form-section">
+
+    <!-- Collapse bar (sonuçlar gösterilince form küçülür) -->
+    <div class="form-collapsed-bar">
+      <div>
+        <div class="form-collapsed-title">ARAÇ ADI</div>
+        <div class="form-collapsed-sub">Formu düzenlemek için tıklayın</div>
+      </div>
+      <button class="form-expand-btn" onclick="expandForm()">
+        <i class="ti ti-chevron-down" aria-hidden="true"></i> Formu Aç
+      </button>
+    </div>
+
+    <!-- Form gövdesi -->
+    <div id="form-body">
+      <h1>ARAÇ ADI</h1>
+      <p class="subtitle">Aracın kısa açıklaması.</p>
+
+      <!-- ════ FORM ALANLARI BURAYA ════ -->
+      <div class="field">
+        <label>Alan adı <span style="color:#A32D2D">*</span></label>
+        <input type="text" id="f-ornek" placeholder="Örnek değer">
+      </div>
+
+      <!-- Hata mesajı -->
+      <div id="err" class="err"></div>
+
+      <!-- ── STANDART BLOK: Rate Bar ───────────────────────────────────────
+           Her araçta aynı. Sadece RATE_KEY ve DAILY_LIMIT değişir (aşağıda JS'de).
+      -->
+      <div class="rate-bar-wrap">
+        <div class="rate-bar-label">
+          <span>Günlük kullanım</span>
+          <span id="rate-text">0 / 5</span>
+        </div>
+        <div class="rate-bar-track">
+          <div class="rate-bar-fill" id="rate-fill" style="width:0%"></div>
+        </div>
+      </div>
+
+      <!-- ── STANDART BLOK: Form Kaydet / Yükle ───────────────────────────
+           Her araçta aynı. Değiştirme.
+      -->
+      <div style="display:flex;gap:8px;margin-top:1rem;flex-wrap:wrap" id="form-persist-row">
+        <button type="button" onclick="exportFormJSON()" style="display:flex;align-items:center;gap:5px;padding:7px 13px;background:#fff;border:0.5px solid #D3D1C7;border-radius:8px;font-size:12px;color:#6B6963;cursor:pointer">
+          <i class="ti ti-device-floppy" aria-hidden="true"></i> Formu Kaydet
+        </button>
+        <label style="display:flex;align-items:center;gap:5px;padding:7px 13px;background:#fff;border:0.5px solid #D3D1C7;border-radius:8px;font-size:12px;color:#6B6963;cursor:pointer">
+          <i class="ti ti-upload" aria-hidden="true"></i> Form Yükle (.json)
+          <input type="file" accept=".json" style="display:none" onchange="importFormJSON(this)">
+        </label>
+        <span id="import-notice" style="display:none;align-items:center;gap:4px;font-size:12px;color:#1D9E75;padding:7px 0">
+          <i class="ti ti-circle-check" aria-hidden="true"></i> Form yüklendi
+        </span>
+      </div>
+
+      <!-- Ana buton -->
+      <button type="button" class="btn-primary" id="gen-btn" onclick="generate()">
+        <i class="ti ti-sparkles" aria-hidden="true"></i> Oluştur
+      </button>
+    </div><!-- /form-body -->
+  </div><!-- /form-card -->
+
+  <!-- LOADING -->
+  <div class="loading" id="loading">
+    <div class="spinner"></div>
+    <div class="loading-txt" id="loading-msg">Hazırlanıyor…</div>
+    <div class="loading-note">Bu işlem 15–30 saniye sürebilir.</div>
+  </div>
+
+  <!-- SONUÇLAR -->
+  <div class="results" id="results">
+
+    <!-- ── STANDART BLOK: Sonuç başlığı + butonlar ──────────────────────
+         Her araçta aynı. Sadece araç adı değişebilir.
+    -->
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:1.5rem">
+      <h2 style="font-size:18px;font-weight:500;color:#1C1B19">Sonuç</h2>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn-sm" onclick="window.print()">
+          <i class="ti ti-printer" aria-hidden="true"></i> Yazdır
+        </button>
+        <button class="btn-sm" onclick="resetForm()">
+          <i class="ti ti-refresh" aria-hidden="true"></i> Yeniden Oluştur
+        </button>
+      </div>
+    </div>
+
+    <!-- ════ SONUÇ İÇERİĞİ BURAYA ════ -->
+    <div id="result-content"></div>
+
+    <!-- ── STANDART BLOK: CTA Kutusu ────────────────────────────────────
+         Her araçta aynı. Sadece href ve metin araça göre değişir.
+    -->
+    <div class="cta-box">
+      <div class="cta-title">Bir sonraki adıma geçmeye hazır mısınız?</div>
+      <div class="cta-sub">Uzman desteğiyle daha hızlı sonuç alın.</div>
+      <a href="https://kolaykobi.com/iletisim" class="cta-btn" target="_blank" rel="noopener noreferrer">
+        Ücretsiz Görüşme Ayarla
+      </a>
+    </div>
+
+  </div><!-- /results -->
+
+</div><!-- /app -->
+
+<script>
+// ════════════════════════════════════════════════════════════════
+// ARAÇA ÖZGÜ AYARLAR — her araçta değiştirilen tek bölüm
+// ════════════════════════════════════════════════════════════════
+const DAILY_LIMIT = 5;
+const RATE_KEY    = 'kkb_ARAÇ_ANAHTARI_usage';  // örn: 'kkb_chatbot_usage'
+const N8N_PROXY   = '/wp-json/kolaykobi/v1/ai/ARAÇ-ENDPOINT'; // örn: 'chatbot-senaryosu'
+
+// Yükleniyor mesajları (araça göre özelleştir)
+const loadingMsgs = [
+  'Yapay zeka analiz ediyor…',
+  'Sonuçlar hazırlanıyor…',
+  'Tamamlanıyor…',
+];
+
+// ── generate() — Araça özgü ──────────────────────────────────────
+async function generate() {
+  const ornek = document.getElementById('f-ornek')?.value.trim();
+  if (!ornek) { showErr('Lütfen alan adını doldurun.'); return; }
+  if (!checkRateLimit()) {
+    showErr('Günlük kullanım limitiniz (' + DAILY_LIMIT + ') doldu. Yarın tekrar deneyin.');
+    return;
+  }
+
+  showErr('');
+  showLoading(true);
+
+  const prompt = `Araça özgü prompt buraya — ${ornek}`;
+
+  try {
+    const res = await fetch(N8N_PROXY, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt }),
+    });
+    const data = await res.json();
+    const text = data?.choices?.[0]?.message?.content || '';
+    const result = JSON.parse(text);
+
+    incrementRateLimit();
+    showLoading(false);
+    showResults(result);
+  } catch (e) {
+    showLoading(false);
+    showErr('Yanıt ayrıştırılamadı. Lütfen tekrar deneyin.');
+  }
+}
+
+// ── resetForm() — Araça özgü ─────────────────────────────────────
+function resetForm() {
+  document.getElementById('results').style.display = 'none';
+  expandForm();
+}
+
+// ── showResults() — Araça özgü ───────────────────────────────────
+function showResults(result) {
+  document.getElementById('result-content').innerHTML = '<p>' + result + '</p>';
+  document.getElementById('results').style.display = 'block';
+  collapseForm();
+}
+
+// ════════════════════════════════════════════════════════════════
+// STANDART YARDIMCI FONKSİYONLAR — değiştirme
+// ════════════════════════════════════════════════════════════════
+function showErr(msg) {
+  const el = document.getElementById('err');
+  if (!el) return;
+  el.textContent = msg;
+  el.style.display = msg ? 'block' : 'none';
+}
+
+let loadingTimer;
+let loadingMsgIndex = 0;
+function showLoading(on) {
+  const el = document.getElementById('loading');
+  const btn = document.getElementById('gen-btn');
+  if (!el) return;
+  if (on) {
+    el.style.display = 'block';
+    if (btn) btn.disabled = true;
+    loadingMsgIndex = 0;
+    const msgEl = document.getElementById('loading-msg');
+    if (msgEl) msgEl.textContent = loadingMsgs[0];
+    loadingTimer = setInterval(() => {
+      loadingMsgIndex = (loadingMsgIndex + 1) % loadingMsgs.length;
+      if (msgEl) msgEl.textContent = loadingMsgs[loadingMsgIndex];
+    }, 1800);
+  } else {
+    el.style.display = 'none';
+    if (btn) btn.disabled = false;
+    clearInterval(loadingTimer);
+  }
+}
+
+// ════════════════════════════════════════════════════════════════
+// STANDART PAYLAŞILAN KODLAR — kkb-shared.js içeriği
+// (WordPress'te kkb-shared.js yüklüyse bu blok kaldırılabilir)
+// ════════════════════════════════════════════════════════════════
+
+// Rate Bar
+const _LS_RATE = window.RATE_KEY;
+function updateRateBar() {
+  const d = JSON.parse(localStorage.getItem(RATE_KEY) || '{}');
+  const today = new Date().toDateString();
+  const count = (d.date === today) ? (d.count || 0) : 0;
+  const pct = Math.min(100, (count / DAILY_LIMIT) * 100);
+  const fill = document.getElementById('rate-fill');
+  const text = document.getElementById('rate-text');
+  if (fill) fill.style.width = pct + '%';
+  if (text) text.textContent = count + ' / ' + DAILY_LIMIT;
+}
+function checkRateLimit() {
+  const d = JSON.parse(localStorage.getItem(RATE_KEY) || '{}');
+  const today = new Date().toDateString();
+  if (d.date !== today) return true;
+  return (d.count || 0) < DAILY_LIMIT;
+}
+function incrementRateLimit() {
+  const d = JSON.parse(localStorage.getItem(RATE_KEY) || '{}');
+  const today = new Date().toDateString();
+  const count = (d.date === today) ? (d.count || 0) : 0;
+  localStorage.setItem(RATE_KEY, JSON.stringify({ date: today, count: count + 1 }));
+  updateRateBar();
+}
+
+// Form Persistence
+const LS_KEY = 'kkform_' + location.pathname.replace(/\//g, '_');
+function saveForm() {
+  const form = document.getElementById('form-section');
+  if (!form) return;
+  const data = {};
+  form.querySelectorAll('input,select,textarea').forEach(el => {
+    if (!el.id && el.type !== 'radio') return;
+    if (el.type === 'radio') { if (el.checked) data['radio_' + el.name] = el.value; }
+    else if (el.type === 'checkbox') { if (el.id) data[el.id] = el.checked; }
+    else if (el.id) data[el.id] = el.value;
+  });
+  try { localStorage.setItem(LS_KEY, JSON.stringify(data)); } catch(e) {}
+}
+function restoreForm() {
+  try {
+    const saved = localStorage.getItem(LS_KEY);
+    if (!saved) return;
+    const data = JSON.parse(saved);
+    Object.entries(data).forEach(([id, val]) => {
+      if (id.startsWith('radio_')) {
+        const el = document.querySelector(`input[type=radio][name="${id.slice(6)}"][value="${val}"]`);
+        if (el) el.checked = true;
+      } else {
+        const el = document.getElementById(id);
+        if (!el) return;
+        if (el.type === 'checkbox') el.checked = val; else el.value = val;
+      }
+    });
+  } catch(e) {}
+}
+function exportFormJSON() {
+  const form = document.getElementById('form-section');
+  if (!form) return;
+  const data = { _tool: document.title, _date: new Date().toISOString() };
+  form.querySelectorAll('input,select,textarea').forEach(el => {
+    if (!el.id && el.type !== 'radio') return;
+    if (el.type === 'radio') { if (el.checked) data['radio_' + el.name] = el.value; }
+    else if (el.type === 'checkbox') { if (el.id) data[el.id] = el.checked; }
+    else if (el.id) data[el.id] = el.value;
+  });
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json;charset=utf-8' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  a.download = 'form-' + location.pathname.replace(/\//g, '').replace(/-/g, '_') + '.json';
+  a.click();
+}
+function importFormJSON(input) {
+  const file = input.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const data = JSON.parse(e.target.result);
+      Object.entries(data).forEach(([id, val]) => {
+        if (id.startsWith('_')) return;
+        if (id.startsWith('radio_')) {
+          const el = document.querySelector(`input[type=radio][name="${id.slice(6)}"][value="${val}"]`);
+          if (el) el.checked = true;
+        } else {
+          const el = document.getElementById(id); if (!el) return;
+          if (el.type === 'checkbox') el.checked = val; else el.value = val;
+        }
+      });
+      saveForm(); input.value = '';
+      const notice = document.getElementById('import-notice');
+      if (notice) { notice.style.display = 'flex'; setTimeout(() => notice.style.display = 'none', 2500); }
+    } catch(e) { alert('Geçersiz form dosyası.'); }
+  };
+  reader.readAsText(file);
+}
+function collapseForm() { document.getElementById('form-section')?.classList.add('is-collapsed'); }
+function expandForm()   { document.getElementById('form-section')?.classList.remove('is-collapsed'); }
+
+document.addEventListener('change', e => { if (document.getElementById('form-section')?.contains(e.target)) saveForm(); });
+document.addEventListener('input',  e => { if (document.getElementById('form-section')?.contains(e.target)) saveForm(); });
+
+// Başlangıç
+updateRateBar();
+restoreForm();
+</script>
+</body>
+</html>
