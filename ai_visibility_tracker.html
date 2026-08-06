@@ -130,6 +130,9 @@ input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3p
   .form-collapsed-bar{display:none!important}
   #form-persist-row{display:none!important}
   .results{display:block!important}
+  #results-sub{display:block!important}
+  #real-sources-section{display:block!important}
+  .flags-box{display:block!important}
   .btn-primary,.btn-secondary,.actions,.cta-box,.reset-link,.rate-bar-wrap,.err{display:none!important}
   .field label{color:#1C1B19!important}
   .radio-group,.check-group{display:flex!important;flex-wrap:wrap!important;gap:4px!important;margin-top:2px!important;grid-template-columns:unset!important}
@@ -142,6 +145,9 @@ input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3p
   a,span,div{word-break:break-word!important;overflow-wrap:break-word!important;white-space:normal!important}
   a[href]::after{content:none!important}
   .results > div:last-child{page-break-after:avoid;margin-bottom:0}
+  /* Tüm accordion/expand bölümleri print'te açık */
+  .cat-body,.details-body,.expand-body{display:block!important}
+  .cat-chevron{display:none!important}
   .results{page-break-before:always!important}
 }
 
