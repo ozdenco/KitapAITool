@@ -1,0 +1,1102 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<title>Kolay KOBİ AI Araçları — Geliştirici Rehberi v3.0</title>
+<style>
+  :root {
+    --green: #1D9E75;
+    --green-light: #F0FAF6;
+    --green-dark: #14785A;
+    --gray: #6B7280;
+    --gray-light: #F9FAFB;
+    --border: #E5E7EB;
+    --text: #111827;
+    --orange: #F59E0B;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--text);
+    background: #fff;
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 20px 30px;
+  }
+  h1 { font-size: 22px; color: var(--green-dark); margin-bottom: 4px; }
+  h2 { font-size: 16px; color: var(--green-dark); margin: 28px 0 8px; border-bottom: 2px solid var(--green); padding-bottom: 4px; }
+  h3 { font-size: 14px; color: var(--green); margin: 18px 0 6px; }
+  h4 { font-size: 13px; color: var(--text); margin: 12px 0 4px; font-weight: 600; }
+  p { margin-bottom: 8px; }
+  ul, ol { margin: 6px 0 10px 20px; }
+  li { margin-bottom: 3px; }
+  code {
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 11.5px;
+    background: #F3F4F6;
+    padding: 1px 5px;
+    border-radius: 3px;
+    color: #B45309;
+  }
+  pre {
+    background: #1E293B;
+    color: #E2E8F0;
+    padding: 14px 16px;
+    border-radius: 8px;
+    overflow-x: auto;
+    margin: 10px 0 14px;
+    font-size: 11.5px;
+    line-height: 1.7;
+    font-family: 'Consolas', 'Courier New', monospace;
+  }
+  pre code { background: none; color: inherit; padding: 0; }
+  table { width: 100%; border-collapse: collapse; margin: 10px 0 16px; font-size: 12px; }
+  th { background: var(--green); color: #fff; padding: 7px 10px; text-align: left; font-weight: 600; }
+  td { padding: 6px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  tr:nth-child(even) td { background: var(--gray-light); }
+  .cover { text-align: center; padding: 40px 0 30px; border-bottom: 3px solid var(--green); margin-bottom: 30px; }
+  .cover .logo { font-size: 36px; }
+  .cover .subtitle { color: var(--gray); margin-top: 6px; font-size: 14px; }
+  .cover .meta { margin-top: 16px; font-size: 12px; color: var(--gray); }
+  .cover .meta span { margin: 0 10px; }
+  .toc { background: var(--green-light); border: 1px solid #A7F3D0; border-radius: 8px; padding: 16px 20px; margin-bottom: 24px; }
+  .toc h2 { border: none; margin-top: 0; color: var(--green-dark); font-size: 14px; }
+  .toc ol { margin: 0 0 0 16px; }
+  .toc li { margin-bottom: 2px; color: var(--green-dark); font-size: 12px; }
+  .callout { border-left: 4px solid var(--green); background: var(--green-light); padding: 10px 14px; border-radius: 0 6px 6px 0; margin: 12px 0; }
+  .callout.warn { border-color: var(--orange); background: #FFFBEB; }
+  .callout.info { border-color: #3B82F6; background: #EFF6FF; }
+  .tag { display: inline-block; padding: 1px 7px; border-radius: 10px; font-size: 10px; font-weight: 600; margin-left: 6px; }
+  .tag.new { background: #DCFCE7; color: #166534; }
+  .tag.changed { background: #FEF9C3; color: #854D0E; }
+  .tag.removed { background: #FEE2E2; color: #991B1B; }
+  .badge-app { display: inline-block; background: var(--green); color: #fff; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; }
+  .checklist li { list-style: none; padding-left: 4px; }
+  .checklist li::before { content: "☐ "; color: var(--green); font-weight: bold; }
+  .page-break { page-break-before: always; }
+  .section-number { color: var(--green); font-weight: 700; margin-right: 4px; }
+  .version-row-new td { background: #DCFCE7 !important; font-weight: 600; }
+  .file-new { color: var(--green); font-weight: 600; }
+
+  @media print {
+    body { padding: 10px 20px; font-size: 11.5px; }
+    h2 { page-break-after: avoid; }
+    h3, h4 { page-break-after: avoid; }
+    pre { page-break-inside: avoid; }
+    table { page-break-inside: avoid; }
+    .page-break { page-break-before: always; }
+    .no-print { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- COVER -->
+<div class="cover">
+  <div class="logo">🤖</div>
+  <h1>Kolay KOBİ AI Araçları</h1>
+  <div class="subtitle">Geliştirici Referans Rehberi</div>
+  <div style="font-size:28px;font-weight:700;color:#1D9E75;margin:12px 0;">v3.0</div>
+  <div class="meta">
+    <span>📅 2026-08-06</span>
+    <span>👤 Ozden Isikgil</span>
+    <span>🌐 kolaykobi.com</span>
+  </div>
+  <div style="margin-top:14px;font-size:12px;color:#6B7280;">Bu belge Kolay KOBİ AI araçlarının teknik mimarisi, standartları ve<br>geliştirme süreçlerini kapsar.</div>
+</div>
+
+<!-- TABLE OF CONTENTS -->
+<div class="toc">
+  <h2>📋 İçindekiler</h2>
+  <ol>
+    <li>Proje Genel Bakış</li>
+    <li>Uygulama Envanteri (9 Araç)</li>
+    <li>Teknik Mimari</li>
+    <li>n8n Webhook Konfigürasyonu</li>
+    <li>Standart UX Bileşenleri</li>
+    <li>Print / PDF Standartları <span class="tag new">YENİ</span></li>
+    <li>Dosya Yapısı ve Standartlar</li>
+    <li>Yeni Araç Oluşturma (_template.html) <span class="tag new">YENİ</span></li>
+    <li>Güvenlik Standartları</li>
+    <li>WordPress Entegrasyonu</li>
+    <li>Deployment Kontrol Listesi</li>
+    <li>Sık Karşılaşılan Sorunlar</li>
+    <li>n8n Workflow Şablonu</li>
+    <li>Dosya Haritası</li>
+    <li>Sürüm Geçmişi</li>
+  </ol>
+</div>
+
+<!-- SECTION 1 -->
+<h2><span class="section-number">1.</span> Proje Genel Bakış</h2>
+
+<p>Kolay KOBİ AI Araçları, KOBİ sahiplerinin pazarlama ve operasyon süreçlerini hızlandırmalarına yönelik <strong>9 adet tarayıcı tabanlı AI aracıdır</strong>. Her araç:</p>
+
+<ul>
+  <li>Tek sayfalık HTML dosyası olarak WordPress'e yüklenir</li>
+  <li>Kullanıcı formunu WordPress REST API üzerinden n8n'e iletir</li>
+  <li>n8n, MiniMax-M3 reasoning modelini çağırır ve yanıtı işler</li>
+  <li>Sonuç, kullanıcıya araç sayfasında gösterilir ve yazdırılabilir</li>
+</ul>
+
+<div class="callout">
+  <strong>Tasarım İlkesi:</strong> Her araç bağımsız, self-contained bir HTML dosyasıdır. Harici CSS/JS bağımlılığı yoktur (kkb-shared.js tercihen eklenir). WordPress tema değişikliği hiçbir aracı bozmaz.
+</div>
+
+<!-- SECTION 2 -->
+<h2><span class="section-number">2.</span> Uygulama Envanteri</h2>
+
+<table>
+  <tr>
+    <th>#</th>
+    <th>Araç Adı</th>
+    <th>Dosya</th>
+    <th>WordPress Slug</th>
+    <th>n8n Webhook</th>
+  </tr>
+  <tr>
+    <td>1</td>
+    <td>Rakip Analiz Panosu</td>
+    <td><code>rakip_analiz_panosu.html</code></td>
+    <td>/rakip-analiz-panosu/</td>
+    <td>kolay-kobi-competitor</td>
+  </tr>
+  <tr>
+    <td>2</td>
+    <td>Müşteri Persona Oluşturucu</td>
+    <td><code>musteri_persona_olusturucu.html</code></td>
+    <td>/musteri-persona/</td>
+    <td>kolay-kobi-persona</td>
+  </tr>
+  <tr>
+    <td>3</td>
+    <td>İçerik Takvimi Üretici</td>
+    <td><code>icerik_takvimi_uretici.html</code></td>
+    <td>/icerik-takvimi/</td>
+    <td>kolay-kobi-content</td>
+  </tr>
+  <tr>
+    <td>4</td>
+    <td>WhatsApp Satış Script Üretici</td>
+    <td><code>whatsapp_satis_script_uretici.html</code></td>
+    <td>/whatsapp-satis/</td>
+    <td>kolay-kobi-whatsapp</td>
+  </tr>
+  <tr>
+    <td>5</td>
+    <td>Müşteri Geri Dönüş Senaryosu</td>
+    <td><code>musteri_geri_donus_senaryosu.html</code></td>
+    <td>/musteri-geri-donus/</td>
+    <td>kolay-kobi-retention</td>
+  </tr>
+  <tr>
+    <td>6</td>
+    <td>Reklam Bütçe Dağıtıcı</td>
+    <td><code>reklam_butce_dagitici.html</code></td>
+    <td>/reklam-butce/</td>
+    <td>kolay-kobi-budget</td>
+  </tr>
+  <tr>
+    <td>7</td>
+    <td>Trend Video Bulucu</td>
+    <td><code>trend_video_bulucu.html</code></td>
+    <td>/trend-video/</td>
+    <td>kolay-kobi-trend</td>
+  </tr>
+  <tr>
+    <td>8</td>
+    <td>İşletme Görünürlük Skoru</td>
+    <td><code>isletme_gorunurluk_skoru.html</code></td>
+    <td>/gorunurluk-skoru/</td>
+    <td>kolay-kobi-visibility</td>
+  </tr>
+  <tr>
+    <td>9</td>
+    <td>AI Görünürlük Skoru <span class="tag new">YENİ</span></td>
+    <td><code>ai_visibility_tracker.html</code></td>
+    <td>/ai-gorunurluk/</td>
+    <td>kolay-kobi-ai-visibility</td>
+  </tr>
+  <tr>
+    <td>+</td>
+    <td>Viral Video Uyarlayıcı</td>
+    <td><code>viral_video_uyarlayici.html</code></td>
+    <td>/viral-video/</td>
+    <td>kolay-kobi-viral</td>
+  </tr>
+  <tr>
+    <td>+</td>
+    <td>Chatbot Senaryo Hazırlayıcı</td>
+    <td><code>chatbot_senaryosu_hazırlayici.html</code></td>
+    <td>/chatbot-senaryosu/</td>
+    <td>kolay-kobi-chatbot</td>
+  </tr>
+</table>
+
+<div class="callout info">
+  <strong>Not:</strong> Yukarıdaki listede 9 ana araç ve 2 ek araç (Viral Video Uyarlayıcı ve Chatbot Senaryo Hazırlayıcı) yer almaktadır. Tüm araçlar aynı mimariyi kullanır.
+</div>
+
+<!-- SECTION 3 -->
+<h2><span class="section-number">3.</span> Teknik Mimari</h2>
+
+<pre><code>Kullanıcı Tarayıcısı
+       │  fetch POST
+       ▼
+WordPress REST API
+  /wp-json/kolaykobi/v1/ai/{tool}
+       │  forward
+       ▼
+n8n Webhook
+  /webhook/kolay-kobi-{tool}
+       │
+       ├─ Build Request node
+       │     └─ MiniMax Messages API çağrısı
+       │
+       ├─ MiniMax API (onError: continueErrorOutput)
+       │     └─ Model: MiniMax-Text-01 / M3 reasoning
+       │
+       └─ Response Transform node
+             ├─ <think>...</think> bloğunu siler
+             ├─ JSON parse eder
+             └─ WordPress'e döner → Tarayıcıya iletir</code></pre>
+
+<h3>API İstek Formatı</h3>
+
+<pre><code>// Frontend → WordPress REST API
+fetch('/wp-json/kolaykobi/v1/ai/competitor', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    isletme_adi: '...',
+    sektor: '...',
+    // ... form alanları
+  })
+});
+
+// n8n Response (başarılı)
+{
+  "success": true,
+  "data": { /* araç-spesifik JSON */ }
+}
+
+// n8n Response (hata)
+{
+  "success": false,
+  "error": "API yanıt vermedi"
+}</code></pre>
+
+<h3>MiniMax-M3 Reasoning Model Özellikleri</h3>
+
+<ul>
+  <li><code>model: "MiniMax-Text-01"</code> veya <code>"abab6.5s-chat"</code></li>
+  <li>Yanıt başında <code>&lt;think&gt;...&lt;/think&gt;</code> bloğu gelir — n8n'de <strong>mutlaka</strong> silinmeli</li>
+  <li><code>max_completion_tokens: 8000</code> ayarlanmalı (aksi halde response kesilebilir)</li>
+  <li>n8n'de <code>onError: continueErrorOutput</code> ile API hatası graceful handle edilmeli</li>
+</ul>
+
+<div class="callout warn">
+  <strong>Önemli:</strong> MiniMax yanıtı kesilebilir (truncated). n8n Response Transform'da JSON.parse öncesi <code>&lt;think&gt;</code> bloğu temizlenmeli ve parse hatası yakalanmalıdır.
+</div>
+
+<!-- SECTION 4 -->
+<h2><span class="section-number">4.</span> n8n Webhook Konfigürasyonu</h2>
+
+<h3>4.1 WordPress REST API Plugin Kodu</h3>
+
+<pre><code>// functions.php veya custom plugin
+add_action('rest_api_init', function() {
+  $tools = [
+    'competitor', 'persona', 'content', 'whatsapp',
+    'retention', 'budget', 'trend', 'visibility',
+    'ai-visibility', 'viral', 'chatbot'
+  ];
+  foreach ($tools as $tool) {
+    register_rest_route('kolaykobi/v1', '/ai/' . $tool, [
+      'methods'  => 'POST',
+      'callback' => function($req) use ($tool) {
+        $n8n_url = 'https://n8n.kolaykobi.com/webhook/kolay-kobi-' . $tool;
+        $response = wp_remote_post($n8n_url, [
+          'body'    => json_encode($req->get_json_params()),
+          'headers' => ['Content-Type' => 'application/json'],
+          'timeout' => 60,
+        ]);
+        return rest_ensure_response(
+          json_decode(wp_remote_retrieve_body($response), true)
+        );
+      },
+      'permission_callback' => '__return_true',
+    ]);
+  }
+});</code></pre>
+
+<h3>4.2 n8n Webhook URL Tablosu</h3>
+
+<table>
+  <tr>
+    <th>Araç</th>
+    <th>REST API Path</th>
+    <th>n8n Webhook Path</th>
+  </tr>
+  <tr><td>Rakip Analiz</td><td>/ai/competitor</td><td>/webhook/kolay-kobi-competitor</td></tr>
+  <tr><td>Müşteri Persona</td><td>/ai/persona</td><td>/webhook/kolay-kobi-persona</td></tr>
+  <tr><td>İçerik Takvimi</td><td>/ai/content</td><td>/webhook/kolay-kobi-content</td></tr>
+  <tr><td>WhatsApp Satış</td><td>/ai/whatsapp</td><td>/webhook/kolay-kobi-whatsapp</td></tr>
+  <tr><td>Müşteri Geri Dönüş</td><td>/ai/retention</td><td>/webhook/kolay-kobi-retention</td></tr>
+  <tr><td>Reklam Bütçe</td><td>/ai/budget</td><td>/webhook/kolay-kobi-budget</td></tr>
+  <tr><td>Trend Video</td><td>/ai/trend</td><td>/webhook/kolay-kobi-trend</td></tr>
+  <tr><td>İşletme Görünürlük</td><td>/ai/visibility</td><td>/webhook/kolay-kobi-visibility</td></tr>
+  <tr><td><strong>AI Görünürlük</strong> <span class="tag new">YENİ</span></td><td>/ai/ai-visibility</td><td>/webhook/kolay-kobi-ai-visibility</td></tr>
+  <tr><td>Viral Video</td><td>/ai/viral</td><td>/webhook/kolay-kobi-viral</td></tr>
+  <tr><td>Chatbot Senaryo</td><td>/ai/chatbot</td><td>/webhook/kolay-kobi-chatbot</td></tr>
+</table>
+
+<!-- SECTION 5 -->
+<div class="page-break"></div>
+<h2><span class="section-number">5.</span> Standart UX Bileşenleri</h2>
+
+<h3>5.1 Günlük Kullanım Çubuğu (Rate Bar)</h3>
+
+<p>Her araçta günde <code>DAILY_LIMIT</code> (varsayılan: 3) kullanım hakkı vardır. Kullanım <code>localStorage</code>'da <code>RATE_KEY</code> ile gün bazında saklanır.</p>
+
+<pre><code>const DAILY_LIMIT = 3;
+const RATE_KEY = 'rl_competitor_' + new Date().toISOString().slice(0,10);
+
+function checkRateLimit() {
+  const used = parseInt(localStorage.getItem(RATE_KEY) || '0');
+  return used < DAILY_LIMIT;
+}
+function incrementRateLimit() {
+  const used = parseInt(localStorage.getItem(RATE_KEY) || '0');
+  localStorage.setItem(RATE_KEY, used + 1);
+  updateRateBar();
+}
+function updateRateBar() {
+  const used = parseInt(localStorage.getItem(RATE_KEY) || '0');
+  const pct = Math.min(100, (used / DAILY_LIMIT) * 100);
+  document.getElementById('rate-fill').style.width = pct + '%';
+  document.getElementById('rate-text').textContent =
+    used + '/' + DAILY_LIMIT + ' kullanım';
+}</code></pre>
+
+<h3>5.2 Form Kalıcılığı (LocalStorage Auto-Save)</h3>
+
+<p>Form alanları her değişiklikte otomatik kaydedilir. Sayfa yenilenince geri yüklenir.</p>
+
+<pre><code>const LS_KEY = 'kkform_' + location.pathname.replace(/\//g, '_');
+
+function saveForm() {
+  const data = {};
+  document.querySelectorAll('#form-body input,#form-body textarea,#form-body select').forEach(el => {
+    if (el.type === 'radio') {
+      if (el.checked) data['radio_' + el.name] = el.value;
+    } else if (el.type === 'checkbox') {
+      data[el.id || el.name] = el.checked;
+    } else {
+      data[el.id || el.name] = el.value;
+    }
+  });
+  localStorage.setItem(LS_KEY, JSON.stringify(data));
+}
+
+function restoreForm() {
+  const saved = JSON.parse(localStorage.getItem(LS_KEY) || '{}');
+  Object.entries(saved).forEach(([k, v]) => {
+    if (k.startsWith('radio_')) {
+      const name = k.replace('radio_', '');
+      const radio = document.querySelector(`input[type=radio][name="${name}"][value="${v}"]`);
+      if (radio) radio.checked = true;
+    } else {
+      const el = document.getElementById(k) || document.querySelector(`[name="${k}"]`);
+      if (!el) return;
+      if (el.type === 'checkbox') el.checked = v;
+      else el.value = v;
+    }
+  });
+}</code></pre>
+
+<h3>5.3 Formu Kaydet / Form Yükle (JSON Export/Import) <span class="tag new">YENİ</span></h3>
+
+<p>Kullanıcılar form verilerini JSON dosyası olarak dışa aktarabilir ve başka bir cihazda veya oturumda içe aktarabilir.</p>
+
+<pre><code>function exportFormJSON() {
+  saveForm();
+  const data = localStorage.getItem(LS_KEY) || '{}';
+  const blob = new Blob([data], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'form-verisi.json';
+  a.click();
+}
+
+function importFormJSON(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const data = JSON.parse(e.target.result);
+      localStorage.setItem(LS_KEY, JSON.stringify(data));
+      restoreForm();
+      alert('Form verisi yüklendi!');
+    } catch { alert('Geçersiz dosya.'); }
+  };
+  reader.readAsText(file);
+}</code></pre>
+
+<div style="margin:8px 0 4px"><strong>HTML (Form Persist Row):</strong></div>
+<pre><code>&lt;div id="form-persist-row" class="persist-row"&gt;
+  &lt;button class="btn-sm" onclick="exportFormJSON()"&gt;💾 Formu Kaydet&lt;/button&gt;
+  &lt;label class="btn-sm" style="cursor:pointer"&gt;
+    📂 Form Yükle (.json)
+    &lt;input type="file" accept=".json" style="display:none" onchange="importFormJSON(this)"&gt;
+  &lt;/label&gt;
+  &lt;button class="btn-sm btn-danger" onclick="resetForm()"&gt;🗑 Formu Boşalt&lt;/button&gt;
+&lt;/div&gt;</code></pre>
+
+<h3>5.4 Form Daralt / Genişlet (Collapse Pattern) <span class="tag new">YENİ</span></h3>
+
+<p>Sonuçlar gösterildiğinde form otomatik olarak daraltılır. Kullanıcı "Formu Aç" düğmesiyle tekrar açabilir. Bu, PDF/print çıktısında ekran alanını verimli kullanır.</p>
+
+<pre><code>// HTML yapısı
+&lt;div class="form-card" id="form-section"&gt;
+  &lt;!-- Collapsed bar: sadece form kapalıyken görünür --&gt;
+  &lt;div class="form-collapsed-bar" onclick="expandForm()"&gt;
+    &lt;span class="form-collapsed-title"&gt;📋 Form&lt;/span&gt;
+    &lt;button class="btn-sm"&gt;▼ Formu Aç&lt;/button&gt;
+  &lt;/div&gt;
+
+  &lt;!-- Form içeriği --&gt;
+  &lt;div id="form-body"&gt;
+    &lt;!-- ... form alanları ... --&gt;
+  &lt;/div&gt;
+&lt;/div&gt;</code></pre>
+
+<pre><code>// CSS
+.form-collapsed-bar {
+  display: none;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  cursor: pointer;
+}
+.form-card.is-collapsed .form-collapsed-bar { display: flex; }
+.form-card.is-collapsed #form-body { display: none; }
+
+// JavaScript
+function collapseForm() {
+  document.querySelector('.form-card').classList.add('is-collapsed');
+}
+function expandForm() {
+  document.querySelector('.form-card').classList.remove('is-collapsed');
+}</code></pre>
+
+<div class="callout">
+  <strong>Kullanım:</strong> Sonuçlar gösterildiğinde <code>collapseForm()</code> çağırın. "Yeniden Oluştur" butonunda <code>expandForm()</code> + sonuç alanını gizleme.
+</div>
+
+<h3>5.5 Dışa Aktarma Seçenekleri <span class="tag changed">GÜNCELLENDİ</span></h3>
+
+<p>Tüm araçlarda standart dışa aktarma:</p>
+<ul>
+  <li><strong>🖨 Yazdır / PDF Al</strong> — <code>window.print()</code> → tarayıcının PDF kaydet özelliği</li>
+  <li><strong>💾 Formu Kaydet</strong> — Form verilerini JSON olarak dışa aktar</li>
+  <li><strong>📂 Form Yükle (.json)</strong> — Kaydedilmiş form verisini içe aktar</li>
+</ul>
+
+<div class="callout warn">
+  <strong>Kaldırıldı:</strong> <code>.txt İndir</code> butonu tüm araçlardan kaldırılmıştır. <code>downloadTxt()</code> fonksiyonu artık kullanılmamaktadır.
+</div>
+
+<h3>5.6 CTA Kutusu (Call to Action)</h3>
+
+<p>Her araçta sonuçların altında standart CTA kutusu bulunur. Telefon numarası veya dinamik AI çıktısı içermez.</p>
+
+<pre><code>&lt;div class="cta-box"&gt;
+  &lt;div class="cta-title"&gt;Bu analizi işletmeniz için uygulayalım&lt;/div&gt;
+  &lt;div class="cta-sub"&gt;Uzmanlarımız sizin için özelleştirilmiş strateji oluşturun.&lt;/div&gt;
+  &lt;a href="https://kolaykobi.com/iletisim" class="cta-btn"
+     target="_blank" rel="noopener noreferrer"&gt;
+    Ücretsiz Görüşme Ayarla
+  &lt;/a&gt;
+&lt;/div&gt;</code></pre>
+
+<div class="callout warn">
+  <strong>Dikkat:</strong> CTA metni statik olmalıdır. AI yanıtından dinamik CTA metni veya telefon numarası kullanmayın — yanlış/eski bilgi gösterebilir.
+</div>
+
+<!-- SECTION 6 -->
+<div class="page-break"></div>
+<h2><span class="section-number">6.</span> Print / PDF Standartları <span class="tag new">YENİ BÖLÜM</span></h2>
+
+<h3>6.1 Temel Print CSS Yaklaşımı</h3>
+
+<p>WordPress tema elementleri (header, footer, sidebar, menü) PDF'te görünmemesi için <code>visibility</code> tabanlı izolasyon kullanılır:</p>
+
+<pre><code>@media print {
+  /* Adım 1: Tüm sayfayı gizle */
+  body * { visibility: hidden !important; }
+
+  /* Adım 2: Sadece .app ve içeriğini göster */
+  .app, .app * { visibility: visible !important; }
+  .app {
+    position: absolute;
+    left: 0; top: 0;
+    width: 100%;
+    margin: 0; padding: 0;
+  }
+
+  /* Adım 3: Baskı gereksizlerini gizle */
+  .btn-primary, .btn-secondary, .actions,
+  .cta-box, .reset-link, .err,
+  #form-persist-row, .form-collapsed-bar { display: none !important; }
+
+  /* Adım 4: Form body'yi göster (collapsed olsa bile) */
+  #form-body { display: block !important; }
+  .form-collapsed-bar { display: none !important; }
+
+  /* Adım 5: Sonuç bölümü yeni sayfadan başlasın */
+  #results-section { page-break-before: always; }
+}</code></pre>
+
+<h3>6.2 Radio / Checkbox Cevapları Print'te Gösterme <span class="tag new">YENİ</span></h3>
+
+<p><strong>Sorun:</strong> <code>.radio-group{display:none!important}</code> parent container'ı gizlerse, seçili öğe çocuk olduğu için <code>display:inline-flex!important</code> override edemez.</p>
+
+<p><strong>Çözüm:</strong> Parent container'ı görünür bırak, sadece seçilmemiş öğeleri gizle:</p>
+
+<pre><code>@media print {
+  /* YANLIŞ — parent gizlenince çocuk override edemez:
+  .radio-group, .check-group { display: none !important; }  */
+
+  /* DOĞRU — parent görünür, sadece seçilmemişler gizli: */
+  .radio-group, .check-group {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 4px !important;
+    margin-top: 2px !important;
+    grid-template-columns: unset !important;
+  }
+  .radio-item:not(:has(input:checked)),
+  .check-item:not(:has(input:checked)) {
+    display: none !important;
+  }
+  .radio-item:has(input:checked),
+  .check-item:has(input:checked) {
+    display: inline-flex !important;
+    border: 0.5px solid #1D9E75;
+    background: #F0FAF6;
+    padding: 3px 9px;
+    border-radius: 6px;
+    font-size: 12px;
+    margin: 2px;
+  }
+}</code></pre>
+
+<h3>6.3 Accordion Bölümleri Print'te Açık Gösterme</h3>
+
+<p>Accordion kategorileri (.cat-body), detay bölümleri ve expand box'ları print'te kapalı kalmamalıdır:</p>
+
+<pre><code>@media print {
+  .cat-body, .details-body, .expand-body {
+    display: block !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+  .cat-chevron { display: none !important; }
+}</code></pre>
+
+<h3>6.4 Form Collapse Pattern Print Davranışı</h3>
+
+<p>Print'te form collapsed durumda olsa bile form alanları gösterilmeli, collapsed bar gizlenmelidir:</p>
+
+<pre><code>@media print {
+  /* Form her zaman açık göster */
+  #form-body { display: block !important; }
+  .form-collapsed-bar { display: none !important; }
+  /* Form persist row gizle */
+  #form-persist-row { display: none !important; }
+}</code></pre>
+
+<h3>6.5 WordPress'ten PDF Alma</h3>
+
+<p>Araç sayfasında <strong>Yazdır / PDF Al</strong> butonuna tıklayarak tarayıcının yerleşik PDF özelliği kullanılır:</p>
+<ul>
+  <li><strong>Chrome/Edge:</strong> Yazdır → Hedef: PDF Olarak Kaydet → Kaydet</li>
+  <li><strong>Safari:</strong> Dosya → PDF Olarak Aktar</li>
+  <li>WordPress header/footer print'te gizlenir (visibility CSS ile)</li>
+  <li>PDF almadan önce sayfayı yenile (WordPress cache temizlendikten sonra)</li>
+</ul>
+
+<div class="callout warn">
+  <strong>WordPress PDF Eklentisi:</strong> WP-Print, WP Advanced PDF gibi eklentiler araç sayfaları için gerekmez. Tarayıcı print yeterlidir. Ancak genel içerik sayfaları için WP Advanced PDF veya mPDF entegrasyonu değerlendirilebilir.
+</div>
+
+<!-- SECTION 7 -->
+<div class="page-break"></div>
+<h2><span class="section-number">7.</span> Dosya Yapısı ve Standartlar</h2>
+
+<h3>7.1 Repository Dosya Yapısı</h3>
+
+<table>
+  <tr>
+    <th>Dosya</th>
+    <th>Açıklama</th>
+    <th>Durum</th>
+  </tr>
+  <tr>
+    <td><code>rakip_analiz_panosu.html</code></td>
+    <td>Rakip Analiz Panosu aracı</td>
+    <td>Aktif</td>
+  </tr>
+  <tr>
+    <td><code>musteri_persona_olusturucu.html</code></td>
+    <td>Müşteri Persona Oluşturucu aracı</td>
+    <td>Aktif</td>
+  </tr>
+  <tr>
+    <td><code>icerik_takvimi_uretici.html</code></td>
+    <td>İçerik Takvimi Üretici aracı</td>
+    <td>Aktif</td>
+  </tr>
+  <tr>
+    <td><code>whatsapp_satis_script_uretici.html</code></td>
+    <td>WhatsApp Satış Script Üretici</td>
+    <td>Aktif</td>
+  </tr>
+  <tr>
+    <td><code>musteri_geri_donus_senaryosu.html</code></td>
+    <td>Müşteri Geri Dönüş Senaryosu</td>
+    <td>Aktif</td>
+  </tr>
+  <tr>
+    <td><code>reklam_butce_dagitici.html</code></td>
+    <td>Reklam Bütçe Dağıtıcı</td>
+    <td>Aktif</td>
+  </tr>
+  <tr>
+    <td><code>trend_video_bulucu.html</code></td>
+    <td>Trend Video Bulucu</td>
+    <td>Aktif</td>
+  </tr>
+  <tr>
+    <td><code>isletme_gorunurluk_skoru.html</code></td>
+    <td>İşletme Görünürlük Skoru</td>
+    <td>Aktif</td>
+  </tr>
+  <tr class="file-new">
+    <td><code class="file-new">ai_visibility_tracker.html</code></td>
+    <td>AI Görünürlük Skoru (App 9) <span class="tag new">YENİ</span></td>
+    <td>Aktif</td>
+  </tr>
+  <tr>
+    <td><code>viral_video_uyarlayici.html</code></td>
+    <td>Viral Video Uyarlayıcı</td>
+    <td>Aktif</td>
+  </tr>
+  <tr>
+    <td><code>chatbot_senaryosu_hazırlayici.html</code></td>
+    <td>Chatbot Senaryo Hazırlayıcı</td>
+    <td>Aktif</td>
+  </tr>
+  <tr>
+    <td><code>kolay_kobi_test_launcher.html</code></td>
+    <td>Test launcher (local dev)</td>
+    <td>Dev only</td>
+  </tr>
+  <tr class="file-new">
+    <td><code class="file-new">_template.html</code></td>
+    <td>Yeni araç şablonu — copy-paste base <span class="tag new">YENİ</span></td>
+    <td>Template</td>
+  </tr>
+  <tr class="file-new">
+    <td><code class="file-new">kkb-shared.js</code></td>
+    <td>Paylaşılan JS kütüphanesi <span class="tag new">YENİ</span></td>
+    <td>Library</td>
+  </tr>
+  <tr>
+    <td><code>kolay_kobi_gelistirme_rehberi_v3.html</code></td>
+    <td>Bu rehber (v3.0)</td>
+    <td>Docs</td>
+  </tr>
+</table>
+
+<h3>7.2 n8n Workflow Dosyaları</h3>
+
+<table>
+  <tr>
+    <th>Dosya</th>
+    <th>Araç</th>
+  </tr>
+  <tr><td><code>kolay-kobi-competitor.json</code></td><td>Rakip Analiz</td></tr>
+  <tr><td><code>kolay-kobi-persona.json</code></td><td>Müşteri Persona</td></tr>
+  <tr><td><code>kolay-kobi-content.json</code></td><td>İçerik Takvimi</td></tr>
+  <tr><td><code>kolay-kobi-whatsapp.json</code></td><td>WhatsApp Satış</td></tr>
+  <tr><td><code>kolay-kobi-retention.json</code></td><td>Müşteri Geri Dönüş</td></tr>
+  <tr><td><code>kolay-kobi-budget.json</code></td><td>Reklam Bütçe</td></tr>
+  <tr><td><code>kolay-kobi-trend.json</code></td><td>Trend Video</td></tr>
+  <tr><td><code>kolay-kobi-visibility.json</code></td><td>İşletme Görünürlük</td></tr>
+  <tr><td><code class="file-new">kolay-kobi-ai-visibility.json</code> <span class="tag new">YENİ</span></td><td>AI Görünürlük Skoru</td></tr>
+  <tr><td><code>kolay-kobi-viral.json</code></td><td>Viral Video</td></tr>
+  <tr><td><code>kolay-kobi-chatbot.json</code></td><td>Chatbot Senaryo</td></tr>
+</table>
+
+<h3>7.3 HTML Dosya Yapısı (Standart)</h3>
+
+<pre><code>&lt;!-- 1. Meta / Title --&gt;
+&lt;!-- 2. CSS (inline &lt;style&gt;) --&gt;
+&lt;!-- 3. .app container --&gt;
+  &lt;!-- 3a. .header-bar (logo + rate bar) --&gt;
+  &lt;!-- 3b. .form-card (form-collapsed-bar + #form-body) --&gt;
+  &lt;!-- 3c. .result-card (sonuçlar) --&gt;
+  &lt;!-- 3d. .cta-box (iletişim CTA) --&gt;
+&lt;!-- 4. JavaScript (inline &lt;script&gt;) --&gt;</code></pre>
+
+<h3>7.4 Standart JavaScript Fonksiyonları <span class="tag changed">GÜNCELLENDİ</span></h3>
+
+<table>
+  <tr>
+    <th>Fonksiyon</th>
+    <th>Açıklama</th>
+    <th>Durum</th>
+  </tr>
+  <tr><td><code>generate()</code></td><td>Form validasyon + API çağrısı + showResults()</td><td>Araç-spesifik</td></tr>
+  <tr><td><code>showResults(data)</code></td><td>Sonuçları DOM'a render eder</td><td>Araç-spesifik</td></tr>
+  <tr><td><code>resetForm()</code></td><td>Formu sıfırlar, localStorage temizler</td><td>Standart</td></tr>
+  <tr><td><code>checkRateLimit()</code></td><td>Günlük limit kontrolü</td><td>Standart</td></tr>
+  <tr><td><code>incrementRateLimit()</code></td><td>Kullanım sayacını artırır</td><td>Standart</td></tr>
+  <tr><td><code>updateRateBar()</code></td><td>Rate bar UI günceller</td><td>Standart</td></tr>
+  <tr><td><code>saveForm()</code></td><td>Form alanlarını localStorage'a kaydeder</td><td>Standart</td></tr>
+  <tr><td><code>restoreForm()</code></td><td>localStorage'dan form alanlarını geri yükler</td><td>Standart</td></tr>
+  <tr><td><code>exportFormJSON()</code> <span class="tag new">YENİ</span></td><td>Form verisini JSON olarak indirir</td><td>Standart</td></tr>
+  <tr><td><code>importFormJSON(input)</code> <span class="tag new">YENİ</span></td><td>JSON dosyasından form verisini yükler</td><td>Standart</td></tr>
+  <tr><td><code>collapseForm()</code> <span class="tag new">YENİ</span></td><td>.form-card'a is-collapsed class ekler</td><td>Standart</td></tr>
+  <tr><td><code>expandForm()</code> <span class="tag new">YENİ</span></td><td>.form-card'dan is-collapsed class kaldırır</td><td>Standart</td></tr>
+  <tr>
+    <td><code>downloadTxt()</code></td>
+    <td><del>TXT olarak indirme</del></td>
+    <td><span class="tag removed">KALDIRILDI</span></td>
+  </tr>
+</table>
+
+<!-- SECTION 8 -->
+<div class="page-break"></div>
+<h2><span class="section-number">8.</span> Yeni Araç Oluşturma (_template.html) <span class="tag new">YENİ BÖLÜM</span></h2>
+
+<h3>8.1 _template.html Kullanımı</h3>
+
+<p><code>_template.html</code> dosyası yeni araçlar için tam bir başlangıç noktasıdır. Tüm standart bileşenler hazır gelir:</p>
+
+<ul>
+  <li>✅ Rate bar (günlük kullanım çubuğu)</li>
+  <li>✅ Form persist row (Formu Kaydet / Form Yükle / Formu Boşalt)</li>
+  <li>✅ Form collapse/expand pattern</li>
+  <li>✅ Tam print CSS (radio/checkbox fix dahil)</li>
+  <li>✅ CTA kutusu (Ücretsiz Görüşme Ayarla → iletisim)</li>
+  <li>✅ Hata işleme ve yükleme durumu</li>
+</ul>
+
+<h3>8.2 Yeni Araç Adımları</h3>
+
+<ol>
+  <li><code>_template.html</code>'i kopyala → araç adıyla kaydet (ör. <code>yeni_arac.html</code>)</li>
+  <li>Değiştir: <code>DAILY_LIMIT</code>, <code>RATE_KEY</code>, <code>N8N_PROXY</code></li>
+  <li>Form alanlarını <code>#form-body</code> içine ekle</li>
+  <li><code>generate()</code> fonksiyonunda form verilerini topla ve API'ye gönder</li>
+  <li><code>showResults(data)</code> fonksiyonunda sonuçları render et</li>
+  <li>Başlık (<code>&lt;h1&gt;</code>), araç adı ve CTA alt metnini özelleştir</li>
+  <li>n8n'de yeni webhook oluştur ve gerçek API key'i ekle</li>
+  <li>WordPress REST API'ye yeni route ekle</li>
+  <li>WordPress'e HTML dosyasını yükle</li>
+</ol>
+
+<h3>8.3 kkb-shared.js Kullanımı</h3>
+
+<p><code>kkb-shared.js</code> tüm standart fonksiyonları merkezi olarak barındırır. Araç HTML'de şu şekilde kullanılır:</p>
+
+<pre><code>&lt;!-- HTML'de yükle --&gt;
+&lt;script src="/wp-content/uploads/kkb-shared.js"&gt;&lt;/script&gt;
+
+&lt;!-- Fonksiyonlar hem window.kkbShared.* hem de global olarak erişilebilir --&gt;
+&lt;script&gt;
+  // kkb-shared.js otomatik çalıştırır:
+  // - restoreForm()
+  // - updateRateBar()
+
+  // Araç-spesifik override (isteğe bağlı):
+  window.kkbShared.RATE_KEY = 'rl_yeni_arac_' + new Date().toISOString().slice(0,10);
+  window.kkbShared.DAILY_LIMIT = 5;
+&lt;/script&gt;</code></pre>
+
+<!-- SECTION 9 -->
+<h2><span class="section-number">9.</span> Güvenlik Standartları</h2>
+
+<ul>
+  <li><strong>API Key'ler asla commit edilmez.</strong> Dosyalarda her zaman <code>BURAYA_GERCEK_MINIMAX_API_KEY_YAZ</code> placeholder'ı kullanılır.</li>
+  <li>Gerçek API key'ler n8n workflow içinde ayarlanır (n8n Credentials veya Environment Variable)</li>
+  <li><strong>CORS:</strong> WordPress REST API sadece aynı alan adından gelen isteklere izin verir</li>
+  <li><strong>Rate limiting:</strong> Frontend localStorage ile (kolay bypass edilebilir) — güvenlik için n8n'de de rate limit uygulanmalı</li>
+  <li><strong>Input sanitization:</strong> n8n'de tüm kullanıcı girdileri temizlenmeli, prompt injection kontrol edilmeli</li>
+</ul>
+
+<div class="callout warn">
+  <strong>GitHub'a dikkat:</strong> <code>git log</code> veya <code>git diff</code> çıktılarında gerçek API key görünmediğinden emin olun. Yanlışlıkla commit edildiyse GitHub Secret Scanning uyarısı gelir ve key derhal iptal edilmelidir.
+</div>
+
+<!-- SECTION 10 -->
+<h2><span class="section-number">10.</span> WordPress Entegrasyonu</h2>
+
+<h3>10.1 HTML Dosyası Yükleme</h3>
+
+<ol>
+  <li>WP Admin → Media → Dosya Yükle → HTML dosyasını seç</li>
+  <li>Ya da FTP/SFTP ile <code>/wp-content/uploads/</code> altına yükle</li>
+  <li>Sayfada <code>[html_block file="dosya.html"]</code> shortcode veya Elementor HTML widget kullan</li>
+</ol>
+
+<h3>10.2 Cache Yönetimi</h3>
+
+<div class="callout warn">
+  <strong>Önemli:</strong> HTML dosyası güncellendiğinde WordPress/LiteSpeed Cache temizlenmeden değişiklikler canlı sitede görünmez.
+  <br><br>
+  <strong>Temizleme:</strong> WP Admin → LiteSpeed Cache → Manage → Purge All
+  <br>veya: WP Admin → Settings → W3 Total Cache → Performance → Purge All
+</div>
+
+<h3>10.3 REST API Hata Ayıklama</h3>
+
+<pre><code># REST API erişim testi
+curl -X POST https://kolaykobi.com/wp-json/kolaykobi/v1/ai/competitor \
+  -H "Content-Type: application/json" \
+  -d '{"isletme_adi":"Test","sektor":"Perakende"}'
+
+# Beklenen başarılı yanıt
+{"success":true,"data":{...}}
+
+# n8n webhook direkt test
+curl -X POST https://n8n.kolaykobi.com/webhook/kolay-kobi-competitor \
+  -H "Content-Type: application/json" \
+  -d '{"isletme_adi":"Test","sektor":"Perakende"}'</code></pre>
+
+<!-- SECTION 11 -->
+<div class="page-break"></div>
+<h2><span class="section-number">11.</span> Deployment Kontrol Listesi</h2>
+
+<p>Yeni araç veya güncelleme deploy ederken bu listeyi takip edin:</p>
+
+<ul class="checklist">
+  <li>HTML dosyasında <code>BURAYA_GERCEK_MINIMAX_API_KEY_YAZ</code> placeholder'ı var mı? (Gerçek key YOK)</li>
+  <li>n8n webhook oluşturuldu mu? (<code>/webhook/kolay-kobi-{tool}</code>)</li>
+  <li>n8n workflow'da gerçek API key ayarlandı mı?</li>
+  <li>n8n <code>max_completion_tokens: 8000</code> ayarlandı mı?</li>
+  <li>n8n <code>onError: continueErrorOutput</code> ayarlandı mı?</li>
+  <li>n8n Response Transform'da <code>&lt;think&gt;</code> bloğu temizleniyor mu?</li>
+  <li>WordPress REST API route'u eklendi mi?</li>
+  <li>HTML dosyası WordPress'e yüklendi mi?</li>
+  <li>WordPress sayfasında shortcode/widget doğru mu?</li>
+  <li>LiteSpeed/W3 Total Cache temizlendi mi?</li>
+  <li><strong>Rate bar</strong> çalışıyor mu? (RATE_KEY, DAILY_LIMIT doğru)</li>
+  <li><strong>Form collapse/expand</strong> çalışıyor mu? (is-collapsed class)</li>
+  <li><strong>Formu Kaydet / Form Yükle</strong> çalışıyor mu? (JSON export/import)</li>
+  <li><strong>Print CSS</strong> test edildi mi? (form görünüyor, radio/checkbox cevapları görünüyor)</li>
+  <li>Accordion bölümleri print'te açık görünüyor mu?</li>
+  <li><strong>CTA bağlantısı</strong> <code>kolaykobi.com/iletisim</code>'e mi yönlendiriyor?</li>
+  <li>CTA metni statik mi? (AI-generated telefon/metin YOK)</li>
+  <li>TXT İndir butonu YOK mu? (<span class="tag removed">KALDIRILDI</span>)</li>
+  <li>Mobil görünüm test edildi mi?</li>
+  <li>API hata durumunda kullanıcıya anlamlı mesaj gösteriliyor mu?</li>
+</ul>
+
+<!-- SECTION 12 -->
+<h2><span class="section-number">12.</span> Sık Karşılaşılan Sorunlar</h2>
+
+<table>
+  <tr>
+    <th>Sorun</th>
+    <th>Neden</th>
+    <th>Çözüm</th>
+  </tr>
+  <tr>
+    <td>Canlı sitede değişiklik görünmüyor</td>
+    <td>WordPress/LiteSpeed Cache</td>
+    <td>WP Admin → Cache → Purge All</td>
+  </tr>
+  <tr>
+    <td>"Yanıt ayrıştırılamadı" hatası</td>
+    <td>MiniMax yanıtı kesildi veya &lt;think&gt; bloğu temizlenmedi</td>
+    <td>n8n'de think strip + JSON parse try/catch; max_completion_tokens: 8000 ayarla</td>
+  </tr>
+  <tr>
+    <td>PDF'te form görünmüyor</td>
+    <td>Form is-collapsed durumda; #form-body display:none</td>
+    <td>Print CSS: <code>#form-body{display:block!important}</code> ekle</td>
+  </tr>
+  <tr>
+    <td>PDF'te radio/checkbox cevapları boş</td>
+    <td>.radio-group parent gizli; child override edemiyor</td>
+    <td>Parent'ı görünür bırak; <code>:not(:has(input:checked)){display:none}</code> kullan</td>
+  </tr>
+  <tr>
+    <td>PDF'te accordion kapalı</td>
+    <td>.cat-body display:none (collapsed state)</td>
+    <td>Print CSS: <code>.cat-body{display:block!important}</code> ekle</td>
+  </tr>
+  <tr>
+    <td>PDF'te WordPress header/footer görünüyor</td>
+    <td>Print CSS yoktu veya .app selector eksik</td>
+    <td><code>body *{visibility:hidden} .app,.app *{visibility:visible}</code></td>
+  </tr>
+  <tr>
+    <td>Form verisi sayfa yenilenmesinde kayboluyor</td>
+    <td>restoreForm() çağrılmıyor</td>
+    <td>DOMContentLoaded'da restoreForm() + updateRateBar() çağır</td>
+  </tr>
+  <tr>
+    <td>CTA'da yanlış telefon numarası gösteriyor</td>
+    <td>AI yanıtından ctaText dinamik kullanılıyordu</td>
+    <td>CTA statik HTML olmalı; AI-generated text kullanma</td>
+  </tr>
+</table>
+
+<!-- SECTION 13 -->
+<div class="page-break"></div>
+<h2><span class="section-number">13.</span> n8n Workflow Şablonu</h2>
+
+<p>Yeni araç için n8n workflow iskelet yapısı:</p>
+
+<pre><code>{
+  "name": "Kolay KOBİ - Yeni Araç",
+  "nodes": [
+    {
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "kolay-kobi-yeni-arac",
+        "responseMode": "responseNode"
+      }
+    },
+    {
+      "name": "Build Request",
+      "type": "n8n-nodes-base.code",
+      "parameters": {
+        "jsCode": "// Form verilerini al\nconst body = $input.first().json.body;\n\n// MiniMax API isteği oluştur\nreturn [{\n  json: {\n    model: 'abab6.5s-chat',\n    max_completion_tokens: 8000,\n    messages: [\n      {\n        role: 'system',\n        content: 'Sen KOBİ danışmanısın...'\n      },\n      {\n        role: 'user',\n        content: `İşletme: ${body.isletme_adi}\\nSektör: ${body.sektor}`\n      }\n    ]\n  }\n}];"
+      }
+    },
+    {
+      "name": "MiniMax API",
+      "type": "n8n-nodes-base.httpRequest",
+      "onError": "continueErrorOutput",
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.minimaxi.chat/v1/text/chatcompletion_v2",
+        "headers": {
+          "Authorization": "Bearer BURAYA_GERCEK_MINIMAX_API_KEY_YAZ"
+        }
+      }
+    },
+    {
+      "name": "Response Transform",
+      "type": "n8n-nodes-base.code",
+      "parameters": {
+        "jsCode": "const raw = $input.first().json;\nif (!raw.choices) {\n  return [{ json: { success: false, error: 'API yanıt vermedi' } }];\n}\n\nlet content = raw.choices[0].message.content;\n// <think> bloğunu temizle\ncontent = content.replace(/<think>[\\s\\S]*?<\\/think>/g, '').trim();\n\ntry {\n  const data = JSON.parse(content);\n  return [{ json: { success: true, data } }];\n} catch(e) {\n  return [{ json: { success: false, error: 'Yanıt ayrıştırılamadı', raw: content } }];\n}"
+      }
+    }
+  ]
+}</code></pre>
+
+<!-- SECTION 14 -->
+<h2><span class="section-number">14.</span> Dosya Haritası</h2>
+
+<pre><code>KitapAITool/
+├── HTML Araçlar (11 dosya)
+│   ├── rakip_analiz_panosu.html
+│   ├── musteri_persona_olusturucu.html
+│   ├── icerik_takvimi_uretici.html
+│   ├── whatsapp_satis_script_uretici.html
+│   ├── musteri_geri_donus_senaryosu.html
+│   ├── reklam_butce_dagitici.html
+│   ├── trend_video_bulucu.html
+│   ├── isletme_gorunurluk_skoru.html
+│   ├── ai_visibility_tracker.html          ← YENİ (App 9)
+│   ├── viral_video_uyarlayici.html
+│   └── chatbot_senaryosu_hazırlayici.html
+│
+├── Şablon ve Kütüphane
+│   ├── _template.html                      ← YENİ (yeni araç başlangıç noktası)
+│   └── kkb-shared.js                       ← YENİ (paylaşılan JS kütüphanesi)
+│
+├── Dev Tools
+│   └── kolay_kobi_test_launcher.html
+│
+├── n8n Workflow JSON'ları (11 dosya)
+│   ├── kolay-kobi-competitor.json
+│   ├── kolay-kobi-persona.json
+│   ├── kolay-kobi-content.json
+│   ├── kolay-kobi-whatsapp.json
+│   ├── kolay-kobi-retention.json
+│   ├── kolay-kobi-budget.json
+│   ├── kolay-kobi-trend.json
+│   ├── kolay-kobi-visibility.json
+│   ├── kolay-kobi-ai-visibility.json       ← YENİ
+│   ├── kolay-kobi-viral.json
+│   └── kolay-kobi-chatbot.json
+│
+└── Dokümantasyon
+    ├── kolay_kobi_gelistirme_rehberi_v3.html  ← BU DOSYA (v3.0)
+    └── kolay_kobi_gelistirme_rehberi_v3_son.pdf  ← Önceki sürüm (v2.0)</code></pre>
+
+<!-- SECTION 15 -->
+<div class="page-break"></div>
+<h2><span class="section-number">15.</span> Sürüm Geçmişi</h2>
+
+<table>
+  <tr>
+    <th>Sürüm</th>
+    <th>Tarih</th>
+    <th>Değişiklikler</th>
+  </tr>
+  <tr class="version-row-new">
+    <td><strong>v3.0</strong></td>
+    <td>2026-08-06</td>
+    <td>
+      <strong>Yeni Araç:</strong> AI Görünürlük Skoru (App 9) eklendi<br>
+      <strong>UX:</strong> Form collapse/expand pattern tüm araçlara eklendi<br>
+      <strong>UX:</strong> Formu Kaydet / Form Yükle (.json) tüm araçlara eklendi<br>
+      <strong>PDF/Print:</strong> Radio/checkbox cevapları print'te görünür hale getirildi<br>
+      <strong>PDF/Print:</strong> Accordion bölümleri print'te açık gösterildi<br>
+      <strong>PDF/Print:</strong> Form body print'te her zaman gösterildi (collapsed olsa bile)<br>
+      <strong>CTA:</strong> Tüm araçlarda statik "Ücretsiz Görüşme Ayarla" → kolaykobi.com/iletisim<br>
+      <strong>Kaldırıldı:</strong> .txt İndir butonu ve downloadTxt() fonksiyonu tüm araçlardan kaldırıldı<br>
+      <strong>Şablon:</strong> _template.html (yeni araç başlangıç noktası) oluşturuldu<br>
+      <strong>Kütüphane:</strong> kkb-shared.js (paylaşılan JS) oluşturuldu<br>
+      <strong>Rehber:</strong> Print/PDF standartları bölümü eklendi (Bölüm 6)
+    </td>
+  </tr>
+  <tr>
+    <td>v2.0</td>
+    <td>2026-07-24</td>
+    <td>
+      8 araç tamamlandı<br>
+      n8n MiniMax-M3 entegrasyonu<br>
+      WordPress REST API proxy<br>
+      LocalStorage form kalıcılığı<br>
+      Rate limiting
+    </td>
+  </tr>
+  <tr>
+    <td>v1.0</td>
+    <td>2026-06</td>
+    <td>İlk MVP — Rakip Analiz Panosu ve temel mimari</td>
+  </tr>
+</table>
+
+<hr style="margin:30px 0;border:none;border-top:2px solid #E5E7EB;">
+<div style="text-align:center;color:#6B7280;font-size:11px;">
+  Kolay KOBİ AI Araçları — Geliştirici Referans Rehberi v3.0 | 2026-08-06 | kolaykobi.com
+</div>
+
+</body>
+</html>
