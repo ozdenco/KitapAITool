@@ -120,6 +120,9 @@ input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3p
   .results > div:last-child{page-break-after:avoid;margin-bottom:0}
   /* Form 1. sayfada görünür */
   .form-card{display:block!important}
+  #form-body{display:block!important}
+  .form-collapsed-bar{display:none!important}
+  #form-persist-row{display:none!important}
   /* Interaktif widget gizli, seçili değerler etiket olarak görünür */
   .radio-group,.check-group,.err,.rate-bar-wrap{display:none!important}
   .radio-item:has(input:checked),.check-item:has(input:checked){display:inline-flex!important;border:0.5px solid #1D9E75;background:#F0FAF6;padding:3px 9px;border-radius:6px;font-size:12px;margin:2px}
@@ -285,8 +288,7 @@ input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3p
         <p id="results-sub"></p>
       </div>
       <div class="action-row">
-        <button class="btn-sm" id="txt-btn" onclick="downloadTxt()"><i class="ti ti-file-text" aria-hidden="true"></i> TXT İndir</button>
-        <button class="btn-sm" id="csv-btn" onclick="downloadCSV()"><i class="ti ti-download" aria-hidden="true"></i> CSV İndir</button>
+<button class="btn-sm" id="csv-btn" onclick="downloadCSV()"><i class="ti ti-download" aria-hidden="true"></i> CSV İndir</button>
         <button class="btn-sm" id="print-btn" onclick="printFullCalendar()"><i class="ti ti-printer" aria-hidden="true"></i> Yazdır</button><button class="btn-sm" onclick="resetForm()"><i class="ti ti-refresh" aria-hidden="true"></i> Yeniden Oluştur</button>
         <button class="btn-sm" onclick="requestNewVersionCta()"><i class="ti ti-refresh" aria-hidden="true"></i> Yeniden</button>
       </div>
@@ -1425,31 +1427,6 @@ async function ensureAllGroupsLoadedOrAlert() {
   }
 }
 
-async function downloadTxt() {
-  if (!allDays.length) return;
-  if (!(await ensureAllGroupsLoadedOrAlert())) return;
-  const fd = formData || {};
-  const header = [
-    `İşletme: ${fd.biz||''}`, `Sektör: ${fd.sector||''}`,
-    `Hedef Kitle: ${fd.audience||''}`,
-    `Platformlar: ${fd.platforms?.length ? fd.platforms.join(', ') : ''}`,
-    `Ton: ${fd.tone||''}`, `Dil: ${fd.lang||''}`,
-    `Paylaşım günleri: ${fd.weekdays?.length ? fd.weekdays.map(w => TR_DAYS[w]).join(', ') : ''}`,
-    `Özel gün/kampanya: ${fd.special||''}`,
-    ``, `=`.repeat(50), ``
-  ].join(`\n`);
-  const body = allDays.map(d => {
-    const dt = d.date;
-    return `Gün ${d.day} — ${dt.getDate()} ${TR_MONTHS[dt.getMonth()]}\nKonu: ${d.topic}\nFormat: ${d.format} · ${d.platform}\n\n${d.draft}`;
-  }).join(`\n\n─`.repeat(1) + `\n\n`);
-  const blob = new Blob([header + body], {type:`text/plain;charset=utf-8`});
-  const a = document.createElement(`a`);
-  a.href = URL.createObjectURL(blob);
-  a.download = `icerik-takvimi-${(fd.biz||'takvim').replace(/\s+/g,'-').toLowerCase()}.txt`;
-  a.click();
-  const btn = document.getElementById(`txt-btn`);
-  if (btn) { const o = btn.innerHTML; btn.innerHTML = `<i class="ti ti-circle-check" aria-hidden="true"></i> İndirildi ✓`; setTimeout(() => btn.innerHTML = o, 2000); }
-}
 
 async function downloadCSV() {
   if (!allDays.length) return;

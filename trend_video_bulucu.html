@@ -139,6 +139,9 @@ input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3p
   .results > div:last-child{page-break-after:avoid;margin-bottom:0}
   /* Form 1. sayfada görünür */
   .form-card{display:block!important}
+  #form-body{display:block!important}
+  .form-collapsed-bar{display:none!important}
+  #form-persist-row{display:none!important}
   /* Interaktif widget gizli, seçili değerler etiket olarak görünür */
   .radio-group,.check-group,.err,.rate-bar-wrap{display:none!important}
   .radio-item:has(input:checked),.check-item:has(input:checked){display:inline-flex!important;border:0.5px solid #1D9E75;background:#F0FAF6;padding:3px 9px;border-radius:6px;font-size:12px;margin:2px}
@@ -747,32 +750,6 @@ function resetForm() {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-function downloadTxt() {
-  if (!lastVideos.length) return;
-  const fd = lastFormData;
-  const formCtx = [
-    fd.sector ? `Sektör: ${fd.sector === 'ALL' ? 'Tüm Sektörler' : fd.sector}` : '',
-    fd.email ? `Mail: ${fd.email}` : '',
-    (fd.tones || []).length ? `Ton: ${fd.tones.join(' + ')}` : '',
-    fd.audience ? `Hedef kitle: ${fd.audience}` : '',
-    fd.note ? `Not: ${fd.note}` : '',
-  ].filter(Boolean).join('\n');
-  const lines = [`=== ${lastBiz} — TREND VİDEO FİKİRLERİ ===`, formCtx, ''];
-  lastVideos.forEach(v => {
-    lines.push(`#${v.rank} — ${v.title}`);
-    lines.push(`Platform: ${v.platform} | Trend: ${v.trendScore || 'N/A'}`);
-    lines.push(`Etiketler: ${(v.tags || []).join(', ')}`);
-    lines.push(`Neden trend: ${v.whyTrending || ''}`);
-    lines.push(`Markanıza uyarlama: ${v.adaptation || ''}`);
-    lines.push('---');
-  });
-  const blob = new Blob([lines.join('\n')], { type: 'text/plain;charset=utf-8' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'trend-video-fikirleri.txt';
-  a.click();
-  URL.revokeObjectURL(a.href);
-}
 
 function downloadCsv() {
   if (!lastVideos.length) return;

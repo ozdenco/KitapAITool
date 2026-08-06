@@ -127,6 +127,9 @@ input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3p
   .results > div:last-child{page-break-after:avoid;margin-bottom:0}
   /* Form 1. sayfada görünür */
   .form-card{display:block!important}
+  #form-body{display:block!important}
+  .form-collapsed-bar{display:none!important}
+  #form-persist-row{display:none!important}
   /* Interaktif widget gizli, seçili değerler etiket olarak görünür */
   .radio-group,.check-group,.err,.rate-bar-wrap{display:none!important}
   .radio-item:has(input:checked),.check-item:has(input:checked){display:inline-flex!important;border:0.5px solid #1D9E75;background:#F0FAF6;padding:3px 9px;border-radius:6px;font-size:12px;margin:2px}
@@ -692,38 +695,6 @@ function resetForm() {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-function downloadTxt() {
-  if (!currentScenario) return;
-  const fd = lastFormData;
-  const formCtx = [
-    fd.sector      ? `Sektör: ${fd.sector}`                      : '',
-    fd.services    ? `Hizmetler: ${fd.services}`                  : '',
-    fd.hours       ? `Mesai: ${fd.hours}`                         : '',
-    [fd.faqs, fd.faqs?.length].every(Boolean) ? `SSS: ${fd.faqs.join(' | ')}`     : '',
-    fd.redirectGoal ? `Yönlendirme: ${fd.redirectGoal}${fd.redirectLink ? ' → ' + fd.redirectLink : ''}` : '',
-  ].filter(Boolean).join('\n');
-  const lines = [`=== ${lastBiz} — CHATBOT SENARYOSU ===`, formCtx, ''];
-  lines.push('--- KARŞILAMA MESAJI ---'); lines.push(currentScenario.welcome); lines.push('');
-  if (currentScenario.faqs) {
-    lines.push('--- SSS AKIŞLARI ---');
-    currentScenario.faqs.forEach((faq, i) => {
-      lines.push(`ADIM ${i + 1}: ${faq.question}`);
-      lines.push(`Anahtar kelimeler: ${(faq.keywords || []).join(', ')}`);
-      lines.push(`Bot yanıtı: ${faq.answer}`);
-      if (faq.followup) lines.push(`Takip mesajı: ${faq.followup}`);
-      lines.push('');
-    });
-  }
-  lines.push('--- BİLİNMEYEN SORU (FALLBACK) ---'); lines.push(currentScenario.fallback); lines.push('');
-  lines.push('--- KAPANIS ---'); lines.push(currentScenario.closing); lines.push('');
-  lines.push('--- MESAİ DIŞI ---'); lines.push(currentScenario.offHours);
-  const blob = new Blob([lines.join('\n')], { type: 'text/plain;charset=utf-8' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'chatbot-senaryosu.txt';
-  a.click();
-  URL.revokeObjectURL(a.href);
-}
 
 function downloadN8nJson() {
   if (!currentScenario) return;

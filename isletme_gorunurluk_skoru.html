@@ -122,6 +122,9 @@ input:focus,select:focus{border-color:#1D9E75;box-shadow:0 0 0 3px rgba(29,158,1
   .results > div:last-child{page-break-after:avoid;margin-bottom:0}
   /* Form 1. sayfada görünür */
   .form-card{display:block!important}
+  #form-body{display:block!important}
+  .form-collapsed-bar{display:none!important}
+  #form-persist-row{display:none!important}
   /* Interaktif widget gizli, seçili değerler etiket olarak görünür */
   .radio-group,.check-group,.err,.rate-bar-wrap{display:none!important}
   .radio-item:has(input:checked),.check-item:has(input:checked){display:inline-flex!important;border:0.5px solid #1D9E75;background:#F0FAF6;padding:3px 9px;border-radius:6px;font-size:12px;margin:2px}
@@ -300,8 +303,7 @@ input:focus,select:focus{border-color:#1D9E75;box-shadow:0 0 0 3px rgba(29,158,1
         <span class="section-title" style="margin-bottom:0">Öncelikli Aksiyonlar</span>
         <div class="action-row" style="margin-bottom:0">
           <button class="btn-sm" onclick="window.print()"><i class="ti ti-printer" aria-hidden="true"></i> Yazdır</button><button class="btn-sm" onclick="resetForm()"><i class="ti ti-refresh" aria-hidden="true"></i> Yeniden Oluştur</button>
-          <button class="btn-sm" onclick="downloadTxt()"><i class="ti ti-file-text" aria-hidden="true"></i> TXT İndir</button>
-          <button class="btn-sm" onclick="resetForm()"><i class="ti ti-refresh" aria-hidden="true"></i> Formu Boşalt</button>
+<button class="btn-sm" onclick="resetForm()"><i class="ti ti-refresh" aria-hidden="true"></i> Formu Boşalt</button>
         </div>
       </div>
       <div id="items-list"></div>
@@ -589,46 +591,6 @@ function escHtml(s) {
   return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
-function downloadTxt() {
-  const ctx = lastFormContext || {};
-  const name = ctx.name || document.getElementById('f-name')?.value || '';
-  const sector = ctx.sector || document.getElementById('f-sector')?.value || '';
-  const city = ctx.city || document.getElementById('f-city')?.value || '';
-  const web = ctx.web || document.getElementById('f-web')?.value || '';
-  const goal = ctx.goal || document.getElementById('f-goal')?.value || '';
-  const platforms = ctx.platforms || [];
-  const liInfo = ctx.liExists === 'evet'
-    ? 'var' + (ctx.liActive === 'evet' ? ' / düzenli paylaşım yapılıyor' : ctx.liActive === 'hayir' ? ' / aktif değil' : '')
-    : ctx.liExists === 'hayir' ? 'yok' : '';
-  const scoreEl = document.getElementById('score-num');
-  const score = scoreEl ? scoreEl.textContent : '';
-  const level = document.getElementById('score-title')?.textContent || '';
-  const summary = document.getElementById('score-sub')?.textContent || '';
-  const items = [...document.querySelectorAll('#items-list .item-card')].map(card => {
-    const nm = card.querySelector('.item-name')?.textContent?.trim() || '';
-    const desc = card.querySelector('.item-desc')?.textContent?.trim() || '';
-    return '• ' + nm + ': ' + desc;
-  }).join('\n');
-  const text = [
-    'İşletme: ' + name,
-    'Sektör: ' + sector,
-    'Şehir: ' + city,
-    web ? 'Web sitesi: ' + web : '',
-    platforms.length ? 'Platformlar: ' + platforms.join(', ') : '',
-    liInfo ? 'LinkedIn: ' + liInfo : '',
-    goal ? 'Aylık hedef: ' + goal + ' yeni müşteri' : '',
-    '',
-    'Görünürlük Skoru: ' + score + '/100 (' + level + ')',
-    summary,
-    '',
-    'Aksiyonlar:', items
-  ].join('\n');
-  const blob = new Blob([text], {type:'text/plain;charset=utf-8'});
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'gorunurluk-skoru-' + (name||'isletme').replace(/\s+/g,'-').toLowerCase() + '.txt';
-  a.click();
-}
 
 function resetForm() {
   document.getElementById('f-name').value  = '';
@@ -777,7 +739,6 @@ function expandForm() {
 window.startAnalysis  = startAnalysis;
 window.exportFormJSON = exportFormJSON;
 window.importFormJSON = importFormJSON;
-window.downloadTxt    = downloadTxt;
 window.resetForm      = resetForm;
 window.expandForm     = expandForm;
 </script>

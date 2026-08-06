@@ -117,6 +117,9 @@ input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3p
   .results > div:last-child{page-break-after:avoid;margin-bottom:0}
   /* Form 1. sayfada görünür */
   .form-card{display:block!important}
+  #form-body{display:block!important}
+  .form-collapsed-bar{display:none!important}
+  #form-persist-row{display:none!important}
   /* Interaktif widget gizli, seçili değerler etiket olarak görünür */
   .radio-group,.check-group,.err,.rate-bar-wrap{display:none!important}
   .radio-item:has(input:checked),.check-item:has(input:checked){display:inline-flex!important;border:0.5px solid #1D9E75;background:#F0FAF6;padding:3px 9px;border-radius:6px;font-size:12px;margin:2px}
@@ -266,10 +269,7 @@ input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3p
     </div>
     <div class="personas-grid" id="personas-grid"></div>
     <div class="actions">
-      <button class="btn-secondary" onclick="downloadTxt()">
-        <i class="ti ti-download" aria-hidden="true"></i> TXT İndir
-      </button>
-      <button class="btn-secondary" onclick="window.print()">
+<button class="btn-secondary" onclick="window.print()">
         <i class="ti ti-printer" aria-hidden="true"></i> Yazdır
       </button>
       <button class="btn-secondary" onclick="restart()">
@@ -605,27 +605,6 @@ function copyPersona(idx, btn) {
 }
 
 
-function downloadTxt() {
-  if (!allPersonasData.length) return;
-  const fd = lastFormData;
-  const header = [
-    `İşletme: ${fd.biz||''}`,
-    `Sektör: ${fd.sector||''}`,
-    `Şehir: ${fd.city||''}`,
-    `Hizmet/Ürün: ${fd.service||''}`,
-    `Hedef Yaş: ${fd.age||''}`,
-    `Fiyat Aralığı: ${fd.price||''}`,
-    `Mevcut müşteri özellikleri: ${fd.current||''}`,
-    `Müşteri öncelikleri: ${[fd.pains, fd.pains?.length].every(Boolean) ? fd.pains.join(', ') : ''}`,
-    '','='.repeat(50),''
-  ].join('\n');
-  const body = allPersonasData.map(p => personaToText(p)).join('\n\n' + '─'.repeat(40) + '\n\n');
-  const blob = new Blob([header + body], {type: 'text/plain;charset=utf-8'});
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = `personas-${(fd.biz||'musteri').replace(/\s+/g,'-').toLowerCase()}.txt`;
-  a.click();
-}
 function restart() {
   document.getElementById('f-biz').value='';
   document.getElementById('f-sector').value='';

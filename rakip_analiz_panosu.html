@@ -165,6 +165,9 @@ td:first-child{font-weight:500;color:#6B6963;font-size:12px}
   .results > div:last-child{page-break-after:avoid;margin-bottom:0}
   /* Form 1. sayfada görünür */
   .form-card{display:block!important}
+  #form-body{display:block!important}
+  .form-collapsed-bar{display:none!important}
+  #form-persist-row{display:none!important}
   /* Interaktif widget gizli, seçili değerler etiket olarak görünür */
   .radio-group,.check-group,.err,.rate-bar-wrap{display:none!important}
   .radio-item:has(input:checked),.check-item:has(input:checked){display:inline-flex!important;border:0.5px solid #1D9E75;background:#F0FAF6;padding:3px 9px;border-radius:6px;font-size:12px;margin:2px}
@@ -849,46 +852,6 @@ function resetForm() {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-function downloadTxt() {
-  if (!lastResult) return;
-  const md = lastMyData;
-  const formCtx = [
-    md.sector     ? `Sektör: ${md.sector}`                          : '',
-    md.myWeb      ? `Web sitesi: ${md.myWeb}`                       : '',
-    [md.myPlatforms, md.myPlatforms?.length].every(Boolean) ? `Platformlar: ${md.myPlatforms.join(', ')}` : '',
-    md.myPrice    ? `Fiyat segmenti: ${md.myPrice}`                 : '',
-    md.strengths  ? `Güçlü yönler: ${md.strengths}`                 : '',
-  ].filter(Boolean).join('\n');
-  const compCtx = lastComps.map((c, i) =>
-    `Rakip ${i+1}: ${c.name}${c.platforms.length ? ' (' + c.platforms.join(', ') + ')' : ''}${c.price ? ' · ' + c.price : ''}`
-  ).join('\n');
-  const lines = [`=== ${lastBiz} — RAKİP ANALİZ RAPORU ===`, formCtx, compCtx ? '\n--- RAKİPLER ---\n' + compCtx : '', ''];
-  if (lastResult.summary) { lines.push('ÖZET:'); lines.push(lastResult.summary); lines.push(''); }
-  if (lastResult.competitors) {
-    lines.push('RAKİP ANALİZİ:');
-    lastResult.competitors.forEach(c => {
-      lines.push(`${c.name} (Tehdit Seviyesi: ${c.threat})`);
-      lines.push(`  Güçlü Yönler: ${(c.strengths||[]).join(' | ')}`);
-      lines.push(`  Zayıf Yönler: ${(c.weaknesses||[]).join(' | ')}`);
-      lines.push('');
-    });
-  }
-  if (lastResult.opportunities) { lines.push('FIRSATLAR:'); lastResult.opportunities.forEach(o => lines.push(`• ${o}`)); lines.push(''); }
-  if (lastResult.threats) { lines.push('TEHDİTLER:'); lastResult.threats.forEach(t => lines.push(`• ${t}`)); lines.push(''); }
-  if (lastResult.actions) {
-    lines.push('AKSİYON ÖNERİLERİ:');
-    lastResult.actions.forEach((a, i) => {
-      lines.push(`${i + 1}. ${a.title} [${a.priority}]`);
-      lines.push(`   ${a.desc}`);
-    });
-  }
-  const blob = new Blob([lines.join('\n')], { type: 'text/plain;charset=utf-8' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'rakip-analiz-raporu.txt';
-  a.click();
-  URL.revokeObjectURL(a.href);
-}
 
 updateRateBar();
 

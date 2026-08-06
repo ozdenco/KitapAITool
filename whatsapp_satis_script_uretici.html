@@ -103,6 +103,9 @@ input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3p
   .results > div:last-child{page-break-after:avoid;margin-bottom:0}
   /* Form 1. sayfada görünür */
   .form-card{display:block!important}
+  #form-body{display:block!important}
+  .form-collapsed-bar{display:none!important}
+  #form-persist-row{display:none!important}
   /* Interaktif widget gizli, seçili değerler etiket olarak görünür */
   .radio-group,.check-group,.err,.rate-bar-wrap{display:none!important}
   .radio-item:has(input:checked),.check-item:has(input:checked){display:inline-flex!important;border:0.5px solid #1D9E75;background:#F0FAF6;padding:3px 9px;border-radius:6px;font-size:12px;margin:2px}
@@ -629,19 +632,6 @@ function getFormContext() {
   return lines.join('\n');
 }
 
-function downloadTxt() {
-  const biz = document.getElementById('f-biz').value.trim() || 'isletme';
-  const context = getFormContext();
-  const scripts = allScripts.map((s, i) => `${stepMeta[i].label}\nZamanlama: ${s.timing}\n\n${s.message}`).join('\n\n' + '═'.repeat(50) + '\n\n');
-  const full = `WhatsApp Satış Scriptleri — ${biz}\n${'═'.repeat(50)}\n\n${context}\n\n${'═'.repeat(50)}\n\n${scripts}`;
-  const blob = new Blob([full], { type: 'text/plain;charset=utf-8' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `${biz.replace(/[^\w\u00C0-\u024F]/g,'_').slice(0,30)}_whatsapp_scriptleri.txt`;
-  a.click();
-  URL.revokeObjectURL(url);
-}
 
 function restart() {
   clearResults();

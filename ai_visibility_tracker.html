@@ -836,14 +836,6 @@ function buildTxt() {
   return txt;
 }
 
-function downloadTxt() {
-  const txt = buildTxt();
-  const blob = new Blob([txt], { type: 'text/plain;charset=utf-8' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'ai-gorunurluk-skoru.txt';
-  a.click();
-}
 
 function resetForm() {
   document.getElementById('results').style.display = 'none';

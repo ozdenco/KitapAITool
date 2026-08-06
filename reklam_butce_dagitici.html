@@ -123,6 +123,9 @@ tr:last-child td{border-bottom:none}
   .results > div:last-child{page-break-after:avoid;margin-bottom:0}
   /* Form 1. sayfada görünür */
   .form-card{display:block!important}
+  #form-body{display:block!important}
+  .form-collapsed-bar{display:none!important}
+  #form-persist-row{display:none!important}
   /* Interaktif widget gizli, seçili değerler etiket olarak görünür */
   .radio-group,.check-group,.err,.rate-bar-wrap{display:none!important}
   .radio-item:has(input:checked),.check-item:has(input:checked){display:inline-flex!important;border:0.5px solid #1D9E75;background:#F0FAF6;padding:3px 9px;border-radius:6px;font-size:12px;margin:2px}
@@ -712,37 +715,6 @@ function resetForm() {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-function downloadTxt() {
-  if (!lastRows.length) return;
-  const fd = lastFormData;
-  const formCtx = [
-    `İşletme: ${fd.biz || lastBiz}`,
-    fd.sector   ? `Sektör: ${fd.sector}`                         : '',
-    fd.budget   ? `Aylık Bütçe: ${Number(fd.budget).toLocaleString('tr-TR')} TL` : '',
-    fd.goal     ? `Hedef: ${fd.goal}`                            : '',
-    fd.audience ? `Hedef Kitle: ${fd.audience}`                  : '',
-    [fd.channels, fd.channels?.length].every(Boolean) ? `Kanallar: ${fd.channels.join(', ')}` : '',
-  ].filter(Boolean).join('\n');
-  const lines = ['=== REKLAM BÜTÇE DAĞILIMI ===', formCtx, ''];
-  const totalBudget = lastRows.reduce((a, b) => a + b.budget, 0);
-  lines.push(`Toplam Bütçe: ${totalBudget.toLocaleString('tr-TR')} TL`);
-  lines.push('');
-  lines.push('KANAL | BÜTÇE | PAY | TIKLAMA | LEAD');
-  lastRows.forEach(r => {
-    lines.push(`${r.channel} | ${r.budget.toLocaleString('tr-TR')} TL | %${r.pct} | ${r.clicks} | ${r.leads}`);
-  });
-  lines.push('');
-  if (lastSuggestions.length) {
-    lines.push('ÖNERİLER:');
-    lastSuggestions.forEach((s, i) => lines.push(`${i + 1}. ${s.title}: ${s.desc}`));
-  }
-  const blob = new Blob([lines.join('\n')], { type: 'text/plain;charset=utf-8' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'reklam-butce-dagitimi.txt';
-  a.click();
-  URL.revokeObjectURL(a.href);
-}
 
 updateRateBar();
 
