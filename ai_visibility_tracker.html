@@ -373,7 +373,7 @@ input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3p
   </div>
     <div class="rate-bar-wrap">
       <div class="rate-bar-label">
-        <span>Günlük kullanım</span>
+        <span>Aylık kullanım</span>
         <span id="rate-text">0 / 5</span>
       </div>
       <div class="rate-bar-track"><div class="rate-bar-fill" id="rate-fill" style="width:0%"></div></div>
@@ -449,18 +449,20 @@ input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3p
 
 <script>
 const N8N_PROXY = '/wp-json/kolaykobi/v1/ai/ai-visibility';
-const DAILY_LIMIT = 5;
-const today = new Date().toISOString().slice(0,10);
+const MONTHLY_LIMIT = 3;
+const TR_MONTHS = ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
+function nextMonthName() { return TR_MONTHS[(new Date().getMonth() + 1) % 12]; }
+const today = new Date().toISOString().slice(0,7);
 const RATE_KEY = 'kkb_aiv_usage_' + today;
 
 function getRateData() {
   try {
     const raw = localStorage.getItem(RATE_KEY);
     const d = raw ? JSON.parse(raw) : null;
-    const today = new Date().toISOString().slice(0, 10);
+    const today = new Date().toISOString().slice(0, 7);
     if (!d || d.date !== today) return { date: today, count: 0 };
     return d;
-  } catch { return { date: new Date().toISOString().slice(0, 10), count: 0 }; }
+  } catch { return { date: new Date().toISOString().slice(0, 7), count: 0 }; }
 }
 
 function saveRateData(d) {
@@ -469,11 +471,11 @@ function saveRateData(d) {
 
 function updateRateBar() {
   const d = getRateData();
-  const pct = Math.min(100, (d.count / DAILY_LIMIT) * 100);
+  const pct = Math.min(100, (d.count / MONTHLY_LIMIT) * 100);
   const fill = document.getElementById('rate-fill');
   const txt = document.getElementById('rate-text');
   if (fill) fill.style.width = pct + '%';
-  if (txt) txt.textContent = d.count + ' / ' + DAILY_LIMIT;
+  if (txt) txt.textContent = d.count + ' / ' + MONTHLY_LIMIT;
 }
 
 function showErr(msg) {
@@ -519,7 +521,7 @@ async function generate() {
   if (!city) return showErr('Şehri girin.');
 
   const rd = getRateData();
-  if (rd.count >= DAILY_LIMIT) return showErr('Günlük kullanım limitine ulaştınız (5/5). Yarın tekrar deneyin.');
+  if (rd.count >= MONTHLY_LIMIT) return showErr('Aylık kullanım limitinize ulaştınız. ' + nextMonthName() + ' ayında tekrar deneyin.');
 
   const answers = {
     services:  radio('q_services'),

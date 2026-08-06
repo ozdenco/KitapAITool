@@ -357,29 +357,42 @@ add_action('rest_api_init', function() {
 <div class="page-break"></div>
 <h2><span class="section-number">5.</span> Standart UX Bileşenleri</h2>
 
-<h3>5.1 Günlük Kullanım Çubuğu (Rate Bar)</h3>
+<h3>5.1 Aylık Kullanım Çubuğu (Rate Bar)</h3>
 
-<p>Her araçta günde <code>DAILY_LIMIT</code> (varsayılan: 3) kullanım hakkı vardır. Kullanım <code>localStorage</code>'da <code>RATE_KEY</code> ile gün bazında saklanır.</p>
+<p>Her araçta ayda <code>MONTHLY_LIMIT</code> (= 3) kullanım hakkı vardır. Kullanım <code>localStorage</code>'da <code>RATE_KEY</code> ile ay bazında (YYYY-MM) saklanır; yeni ayda otomatik sıfırlanır. Limit dolduğunda bir sonraki ayın adı gösterilir.</p>
 
-<pre><code>const DAILY_LIMIT = 3;
-const RATE_KEY = 'rl_competitor_' + new Date().toISOString().slice(0,10);
+<pre><code>const MONTHLY_LIMIT = 3;
+const TR_MONTHS = ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran',
+                   'Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
+function nextMonthName() { return TR_MONTHS[(new Date().getMonth() + 1) % 12]; }
+const RATE_KEY = 'kkb_arac_usage_' + new Date().toISOString().slice(0,7); // örn: 'kkb_arac_usage_2025-08'
 
 function checkRateLimit() {
-  const used = parseInt(localStorage.getItem(RATE_KEY) || '0');
-  return used < DAILY_LIMIT;
+  const d = JSON.parse(localStorage.getItem(RATE_KEY) || '{}');
+  const month = new Date().toISOString().slice(0,7);
+  if (d.date !== month) return true;
+  return (d.count || 0) < MONTHLY_LIMIT;
 }
 function incrementRateLimit() {
-  const used = parseInt(localStorage.getItem(RATE_KEY) || '0');
-  localStorage.setItem(RATE_KEY, used + 1);
+  const d = JSON.parse(localStorage.getItem(RATE_KEY) || '{}');
+  const month = new Date().toISOString().slice(0,7);
+  const count = (d.date === month) ? (d.count || 0) : 0;
+  localStorage.setItem(RATE_KEY, JSON.stringify({ date: month, count: count + 1 }));
   updateRateBar();
 }
 function updateRateBar() {
-  const used = parseInt(localStorage.getItem(RATE_KEY) || '0');
-  const pct = Math.min(100, (used / DAILY_LIMIT) * 100);
+  const d = JSON.parse(localStorage.getItem(RATE_KEY) || '{}');
+  const month = new Date().toISOString().slice(0,7);
+  const count = (d.date === month) ? (d.count || 0) : 0;
+  const pct = Math.min(100, (count / MONTHLY_LIMIT) * 100);
   document.getElementById('rate-fill').style.width = pct + '%';
   document.getElementById('rate-text').textContent =
-    used + '/' + DAILY_LIMIT + ' kullanım';
-}</code></pre>
+    count + '/' + MONTHLY_LIMIT + ' kullanım';
+}
+
+// Hata mesajı (limit dolduğunda):
+// 'Aylık kullanım limitinize ulaştınız. ' + nextMonthName() + ' ayında tekrar deneyin.'
+</code></pre>
 
 <h3>5.2 Form Kalıcılığı (LocalStorage Auto-Save)</h3>
 
@@ -790,7 +803,7 @@ function expandForm() {
 <p><code>_template.html</code> dosyası yeni araçlar için tam bir başlangıç noktasıdır. Tüm standart bileşenler hazır gelir:</p>
 
 <ul>
-  <li>✅ Rate bar (günlük kullanım çubuğu)</li>
+  <li>✅ Rate bar (aylık kullanım çubuğu)</li>
   <li>✅ Form persist row (Formu Kaydet / Form Yükle / Formu Boşalt)</li>
   <li>✅ Form collapse/expand pattern</li>
   <li>✅ Tam print CSS (radio/checkbox fix dahil)</li>
@@ -802,7 +815,7 @@ function expandForm() {
 
 <ol>
   <li><code>_template.html</code>'i kopyala → araç adıyla kaydet (ör. <code>yeni_arac.html</code>)</li>
-  <li>Değiştir: <code>DAILY_LIMIT</code>, <code>RATE_KEY</code>, <code>N8N_PROXY</code></li>
+  <li>Değiştir: <code>MONTHLY_LIMIT</code>, <code>RATE_KEY</code>, <code>N8N_PROXY</code></li>
   <li>Form alanlarını <code>#form-body</code> içine ekle</li>
   <li><code>generate()</code> fonksiyonunda form verilerini topla ve API'ye gönder</li>
   <li><code>showResults(data)</code> fonksiyonunda sonuçları render et</li>
@@ -827,7 +840,7 @@ function expandForm() {
 
   // Araç-spesifik override (isteğe bağlı):
   window.kkbShared.RATE_KEY = 'rl_yeni_arac_' + new Date().toISOString().slice(0,10);
-  window.kkbShared.DAILY_LIMIT = 5;
+  window.kkbShared.MONTHLY_LIMIT = 3;
 &lt;/script&gt;</code></pre>
 
 <!-- SECTION 9 -->
@@ -897,7 +910,7 @@ curl -X POST https://n8n.kolaykobi.com/webhook/kolay-kobi-competitor \
   <li>HTML dosyası WordPress'e yüklendi mi?</li>
   <li>WordPress sayfasında shortcode/widget doğru mu?</li>
   <li>LiteSpeed/W3 Total Cache temizlendi mi?</li>
-  <li><strong>Rate bar</strong> çalışıyor mu? (RATE_KEY, DAILY_LIMIT doğru)</li>
+  <li><strong>Rate bar</strong> çalışıyor mu? (RATE_KEY, MONTHLY_LIMIT doğru)</li>
   <li><strong>Form collapse/expand</strong> çalışıyor mu? (is-collapsed class)</li>
   <li><strong>Formu Kaydet / Form Yükle</strong> çalışıyor mu? (JSON export/import)</li>
   <li><strong>Print CSS</strong> test edildi mi? (form görünüyor, radio/checkbox cevapları görünüyor)</li>

@@ -363,7 +363,7 @@ td:first-child{font-weight:500;color:#6B6963;font-size:12px}
 
     <div class="rate-bar-wrap">
       <div class="rate-bar-label">
-        <span>Günlük kullanım</span>
+        <span>Aylık kullanım</span>
         <span id="rate-text">0 / 5</span>
       </div>
       <div class="rate-bar-track">
@@ -491,8 +491,10 @@ function hasEncodingCorruption(text) {
   return /[㐀-鿿]/.test(text);
 }
 
-const DAILY_LIMIT = 3;
-const RATE_KEY = 'kkb_rakip_usage_' + new Date().toDateString().replace(/ /g,'_');
+const MONTHLY_LIMIT = 3;
+const TR_MONTHS = ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
+function nextMonthName() { return TR_MONTHS[(new Date().getMonth() + 1) % 12]; }
+const RATE_KEY = 'kkb_rakip_usage_' + new Date().toISOString().slice(0,7);
 
 const loadingMsgs = [
   'Rakip analizi yapılıyor...',
@@ -511,10 +513,10 @@ function escHtml(s) {
 function getRateData() {
   try {
     const d = JSON.parse(localStorage.getItem(RATE_KEY) || '{}');
-    const today = new Date().toDateString();
+    const today = new Date().toISOString().slice(0,7);
     if (d.date !== today) return { count: 0, date: today };
     return d;
-  } catch(e) { return { count: 0, date: new Date().toDateString() }; }
+  } catch(e) { return { count: 0, date: new Date().toISOString().slice(0,7) }; }
 }
 
 function saveRate(d) {
@@ -523,13 +525,13 @@ function saveRate(d) {
 
 function updateRateBar() {
   const d = getRateData();
-  const pct = Math.min(100, (d.count / DAILY_LIMIT) * 100);
+  const pct = Math.min(100, (d.count / MONTHLY_LIMIT) * 100);
   document.getElementById('rate-fill').style.width = pct + '%';
-  document.getElementById('rate-text').textContent = d.count + ' / ' + DAILY_LIMIT;
+  document.getElementById('rate-text').textContent = d.count + ' / ' + MONTHLY_LIMIT;
   const btn = document.getElementById('gen-btn');
-  if (d.count >= DAILY_LIMIT) {
+  if (d.count >= MONTHLY_LIMIT) {
     btn.disabled = true;
-    btn.innerHTML = '<i class="ti ti-lock" aria-hidden="true"></i> Günlük limit doldu';
+    btn.innerHTML = '<i class="ti ti-lock" aria-hidden="true"></i> Aylık limit doldu';
   }
 }
 
@@ -704,8 +706,8 @@ function renderResults(result, myData) {
 
 async function generate() {
   const rateData = getRateData();
-  if (rateData.count >= DAILY_LIMIT) {
-    showErr('Günlük kullanım limitiniz (' + DAILY_LIMIT + ') doldu. Yarın tekrar deneyin.');
+  if (rateData.count >= MONTHLY_LIMIT) {
+    showErr('Aylık kullanım limitinize ulaştınız. ' + nextMonthName() + ' ayında tekrar deneyin.');
     return;
   }
 

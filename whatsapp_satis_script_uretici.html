@@ -199,7 +199,7 @@ input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3p
     <!-- RATE LIMIT GÖSTERGESI -->
     <div class="rate-bar" id="rate-bar">
       <div class="rate-dots" id="rate-dots"></div>
-      <span class="rate-label" id="rate-label">Günlük <strong id="rate-remaining">5</strong> / 5 kullanım hakkınız var</span>
+      <span class="rate-label" id="rate-label">Aylık <strong id="rate-remaining">3</strong> / 3 kullanım hakkınız var</span>
       <span class="rate-warn" id="rate-warn" style="display:none">Limit doldu</span>
     </div>
 
@@ -281,8 +281,10 @@ function hasEncodingCorruption(text) {
 }
 
 // ─── RATE LIMIT ───────────────────────────────────────────────────────────
-const DAILY_LIMIT = 3;
-const RATE_KEY    = 'kkb_wa_usage';
+const MONTHLY_LIMIT = 3;
+const TR_MONTHS = ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
+function nextMonthName() { return TR_MONTHS[(new Date().getMonth() + 1) % 12]; }
+const RATE_KEY    = 'kkb_wa_usage_' + new Date().toISOString().slice(0,7);
 
 function getRateData() {
   try {
@@ -292,18 +294,18 @@ function getRateData() {
   } catch { return { date: '', count: 0 }; }
 }
 
-function getTodayStr() {
-  return new Date().toISOString().slice(0, 10);
+function getThisMonthStr() {
+  return new Date().toISOString().slice(0, 7);
 }
 
 function getRemainingUses() {
   const data = getRateData();
-  if (data.date !== getTodayStr()) return DAILY_LIMIT;
-  return Math.max(0, DAILY_LIMIT - data.count);
+  if (data.date !== getThisMonthStr()) return MONTHLY_LIMIT;
+  return Math.max(0, MONTHLY_LIMIT - data.count);
 }
 
 function incrementUsage() {
-  const today = getTodayStr();
+  const today = getThisMonthStr();
   const data  = getRateData();
   const count = data.date === today ? data.count + 1 : 1;
   localStorage.setItem(RATE_KEY, JSON.stringify({ date: today, count }));
@@ -311,15 +313,15 @@ function incrementUsage() {
 
 function updateRateBar() {
   const remaining = getRemainingUses();
-  const used = DAILY_LIMIT - remaining;
+  const used = MONTHLY_LIMIT - remaining;
 
-  // DAILY_LIMIT büyük bir sayı olabileceğinden (ör. test amaçlı) 1 nokta =
+  // MONTHLY_LIMIT büyük bir sayı olabileceğinden (ör. test amaçlı) 1 nokta =
   // 1 hak yerine sınırlı sayıda nokta gösterip her birine oranlı bir hak
   // aralığı temsil ettiriyoruz — böylece limit yükseldiğinde ekran taşmıyor.
   const dotsEl = document.getElementById('rate-dots');
   dotsEl.innerHTML = '';
-  const maxDots = Math.min(DAILY_LIMIT, 10);
-  const usedDots = Math.round((used / DAILY_LIMIT) * maxDots);
+  const maxDots = Math.min(MONTHLY_LIMIT, 10);
+  const usedDots = Math.round((used / MONTHLY_LIMIT) * maxDots);
   for (let i = 0; i < maxDots; i++) {
     const dot = document.createElement('span');
     dot.className = 'rate-dot' + (i < usedDots ? ' used' : '');
@@ -336,19 +338,19 @@ function updateRateBar() {
     warn.style.display  = 'inline';
     label.style.display = 'none';
     btn.disabled = true;
-    btn.title = 'Günlük kullanım limitine ulaştınız. Yarın tekrar deneyin.';
+    btn.title = 'Aylık kullanım limitinize ulaştınız. ' + nextMonthName() + ' ayında tekrar deneyin.';
   } else if (remaining === 1) {
     bar.classList.remove('rate-empty');
     warn.style.display  = 'none';
     label.style.display = 'inline';
-    label.innerHTML = 'Bugün <strong>1</strong> kullanım hakkınız kaldı ⚠️';
+    label.innerHTML = 'Bu ay <strong>1</strong> kullanım hakkınız kaldı ⚠️';
     btn.disabled = false;
     btn.title = '';
   } else {
     bar.classList.remove('rate-empty');
     warn.style.display  = 'none';
     label.style.display = 'inline';
-    label.innerHTML = `Günlük <strong>${remaining}</strong> / ${DAILY_LIMIT} kullanım hakkınız var`;
+    label.innerHTML = `Aylık <strong>${remaining}</strong> / ${MONTHLY_LIMIT} kullanım hakkınız var`;
     btn.disabled = false;
     btn.title = '';
   }
@@ -394,7 +396,7 @@ function clearResults() {
 async function generate() {
   // Rate limit kontrolü
   if (getRemainingUses() === 0) {
-    document.getElementById('err').textContent = 'Günlük kullanım limitinize ulaştınız. Yarın tekrar deneyin.';
+    document.getElementById('err').textContent = 'Aylık kullanım limitinize ulaştınız. ' + nextMonthName() + ' ayında tekrar deneyin.';
     document.getElementById('err').style.display = 'block';
     return;
   }
@@ -478,7 +480,7 @@ SADECE JSON döndür, başka hiçbir şey yazma:
         if (res.status === 429) {
           clearInterval(ticker);
           showLoading(false);
-          err.textContent = 'Sunucu tarafında günlük limit doldu. Lütfen yarın tekrar deneyin.';
+          err.textContent = 'Sunucu tarafında aylık limit doldu. Lütfen ' + nextMonthName() + ' ayında tekrar deneyin.';
           err.style.display = 'block';
           if (genBtn) { genBtn.disabled = false; genBtn.style.opacity = ''; }
           return;

@@ -269,17 +269,19 @@ input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3p
 
 <script>
 const N8N_PROXY = '/wp-json/kolaykobi/v1/ai/viral-uyarlayici';
-const DAILY_LIMIT = 5;
-const RATE_KEY = 'kkb_vu_usage';
+const MONTHLY_LIMIT = 3;
+const TR_MONTHS = ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
+function nextMonthName() { return TR_MONTHS[(new Date().getMonth() + 1) % 12]; }
+const RATE_KEY = 'kkb_vu_usage_' + new Date().toISOString().slice(0,7);
 
 function getRateData() {
   try {
     const raw = localStorage.getItem(RATE_KEY);
     const d = raw ? JSON.parse(raw) : null;
-    const today = new Date().toISOString().slice(0, 10);
+    const today = new Date().toISOString().slice(0, 7);
     if (!d || d.date !== today) return { date: today, count: 0 };
     return d;
-  } catch { return { date: new Date().toISOString().slice(0, 10), count: 0 }; }
+  } catch { return { date: new Date().toISOString().slice(0, 7), count: 0 }; }
 }
 
 function saveRateData(d) {
@@ -288,11 +290,11 @@ function saveRateData(d) {
 
 function updateRateBar() {
   const d = getRateData();
-  const pct = Math.min(100, (d.count / DAILY_LIMIT) * 100);
+  const pct = Math.min(100, (d.count / MONTHLY_LIMIT) * 100);
   const fill = document.getElementById('rate-fill');
   const txt = document.getElementById('rate-text');
   if (fill) fill.style.width = pct + '%';
-  if (txt) txt.textContent = d.count + ' / ' + DAILY_LIMIT;
+  if (txt) txt.textContent = d.count + ' / ' + MONTHLY_LIMIT;
 }
 
 function showErr(msg) {
@@ -333,7 +335,7 @@ async function generate() {
   if (!sector) return showErr('Sektör seçin.');
 
   const rd = getRateData();
-  if (rd.count >= DAILY_LIMIT) return showErr('Günlük kullanım limitine ulaştınız (5/5). Yarın tekrar deneyin.');
+  if (rd.count >= MONTHLY_LIMIT) return showErr('Aylık kullanım limitinize ulaştınız. ' + nextMonthName() + ' ayında tekrar deneyin.');
 
   const bizText = biz || 'İşletmeniz';
   const tonesText = tones.length ? tones.join(', ') : 'belirtilmedi';
