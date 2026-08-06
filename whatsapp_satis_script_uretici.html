@@ -78,6 +78,8 @@ input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3p
   .action-row{flex-direction:column}
 }
 
+.btn-secondary{background:#fff;color:#1D9E75;border:1.5px solid #1D9E75;padding:8px 18px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;}
+.btn-secondary:hover{background:#F0FAF6;}
 /* Form collapse */
 .form-collapsed-bar{display:none;align-items:center;justify-content:space-between;padding:.5rem 0;border-bottom:0.5px solid #F1EFE8;margin-bottom:0}
 .form-card.is-collapsed .form-collapsed-bar{display:flex}
@@ -240,9 +242,9 @@ input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3p
       <div class="action-row">
         
       <button class="btn-secondary" onclick="window.print()">
-        <i class="ti ti-printer" aria-hidden="true"></i> Yazdır
+        <i class="ti ti-printer" aria-hidden="true"></i> Yazdır / PDF Al
       </button>
-      <button class="btn-secondary" onclick="resetForm()">
+      <button class="btn-secondary" onclick="generate()">
         <i class="ti ti-refresh" aria-hidden="true"></i> Yeniden Oluştur
       </button>
         <button class="btn-sm" onclick="resetForm()"><i class="ti ti-refresh" aria-hidden="true"></i> Formu Boşalt</button>
