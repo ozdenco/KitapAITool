@@ -1369,7 +1369,7 @@ async function printFullCalendar() {
   const btn = document.getElementById(`print-btn`);
   if (btn) { btn.disabled = true; btn.innerHTML = `<i class="ti ti-loader-2" aria-hidden="true"></i> Hazırlanıyor...`; }
   const ok = await ensureAllGroupsLoadedOrAlert();
-  if (btn) { btn.disabled = false; btn.innerHTML = `<i class="ti ti-printer" aria-hidden="true"></i> Yazdır`; }
+  if (btn) { btn.disabled = false; btn.innerHTML = `<i class="ti ti-printer" aria-hidden="true"></i> Yazdır / PDF Al`; }
   if (!ok) return;
   const fd = formData || {};
   const container = document.getElementById(`print-all-days`);
@@ -1640,6 +1640,19 @@ document.addEventListener(`input`,  e => { if (document.getElementById(`form-sec
 // Restore on load
 restoreForm();
 updateRateBar();
+
+// ── Reset Form (Yeniden Oluştur button) ───────────────────────────────────
+function resetForm() {
+  localStorage.removeItem(LS_KEY);
+  allDays = [];
+  chunkGroups = [];
+  viewTabs = [];
+  currentTabIndex = 0;
+  loadedGroupIds = new Set();
+  campaignCtx = {};
+  show(`form-section`);
+  expandForm();
+}
 
 // ── Form Collapse ──────────────────────────────────────────────────────────
 function collapseForm() {

@@ -465,30 +465,14 @@ function renderResults(data, videoUrl, biz, sector) {
   document.getElementById('results').style.display = 'block';
 }
 
-function buildTxt() {
-  const url = document.getElementById('source-url-display').textContent;
-  const analysis = document.getElementById('format-analysis').textContent;
-  const cards = document.querySelectorAll('.adapt-card');
-  let txt = 'VİRAL VİDEO UYARLAMA FİKİRLERİ\n\nKaynak: ' + url + '\n' + analysis + '\n\n' + '='.repeat(50) + '\n\n';
-  cards.forEach(c => {
-    const title = c.querySelector('.adapt-title')?.textContent || '';
-    const hook = c.querySelector('.adapt-hook')?.textContent?.replace(/\s+/g, ' ').trim() || '';
-    const desc = c.querySelector('.balloon')?.textContent || '';
-    const why = c.querySelector('.adapt-tip span')?.textContent || '';
-    const tags = Array.from(c.querySelectorAll('.tag')).map(t => t.textContent).join(' ');
-    txt += '--- ' + title + ' ---\n' + hook + '\n\n' + desc + '\n' + (why ? why + '\n' : '') + tags + '\n\n' + '─'.repeat(40) + '\n\n';
-  });
-  return txt;
-}
-
-
 function resetForm() {
   document.getElementById('results').style.display = 'none';
-  expandForm();
+  localStorage.removeItem(LS_KEY);
   document.getElementById('video-url').value = '';
   document.getElementById('video-desc').value = '';
   document.getElementById('extra-ctx').value = '';
   document.querySelectorAll('input[name="tone"]').forEach(el => { el.checked = false; });
+  expandForm();
 }
 
 

@@ -278,13 +278,13 @@ input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3p
       <div class="field">
         <label>Çalışılacak günler (en az 1)</label>
         <div class="check-group-3" id="days-group">
-          <label class="check-item"><input type="checkbox" value="mon"> Pzt</label>
-          <label class="check-item"><input type="checkbox" value="tue"> Sal</label>
-          <label class="check-item"><input type="checkbox" value="wed"> Çar</label>
-          <label class="check-item"><input type="checkbox" value="thu"> Per</label>
-          <label class="check-item"><input type="checkbox" value="fri"> Cuma</label>
-          <label class="check-item"><input type="checkbox" value="sat"> Cmt</label>
-          <label class="check-item"><input type="checkbox" value="sun"> Pazar</label>
+          <label class="check-item"><input type="checkbox" id="day-mon" value="mon"> Pzt</label>
+          <label class="check-item"><input type="checkbox" id="day-tue" value="tue"> Sal</label>
+          <label class="check-item"><input type="checkbox" id="day-wed" value="wed"> Çar</label>
+          <label class="check-item"><input type="checkbox" id="day-thu" value="thu"> Per</label>
+          <label class="check-item"><input type="checkbox" id="day-fri" value="fri"> Cuma</label>
+          <label class="check-item"><input type="checkbox" id="day-sat" value="sat"> Cmt</label>
+          <label class="check-item"><input type="checkbox" id="day-sun" value="sun"> Pazar</label>
         </div>
       </div>
     </div>
@@ -387,14 +387,14 @@ input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3p
 </div>
 
 <script>
-// const N8N_PROXY = null;
 const N8N_PROXY = '/wp-json/kolaykobi/v1/ai/trend-video';
 
 function hasEncodingCorruption(text) {
   return /[㐀-鿿]/.test(text);
 }
 const DAILY_LIMIT = 5;
-const RATE_KEY = 'kkb_tv_usage';
+const today = new Date().toISOString().slice(0, 10);
+const RATE_KEY = 'kkb_tv_usage_' + today;
 
 const loadingMsgs = [
   'Trend videolar taranıyor...',

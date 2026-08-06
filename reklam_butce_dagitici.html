@@ -313,7 +313,7 @@ tr:last-child td{border-bottom:none}
     <div class="actions">
       
       <button class="btn-secondary" onclick="window.print()">
-        <i class="ti ti-printer" aria-hidden="true"></i> Yazdır
+        <i class="ti ti-printer" aria-hidden="true"></i> Yazdır / PDF Al
       </button>
       <button class="btn-secondary" onclick="resetForm()">
         <i class="ti ti-refresh" aria-hidden="true"></i> Yeniden Oluştur
@@ -714,6 +714,8 @@ function resetForm() {
   hideErr();
   clearResults();
   showLoading(false);
+  localStorage.removeItem(LS_KEY);
+  expandForm();
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
