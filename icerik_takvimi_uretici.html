@@ -1050,7 +1050,9 @@ function buildCalendarPrompt(chunkPostingDays, chunkPostingDates, ctx) {
     : ``;
   const noDateBit = hasDateAnchoredCampaign ? `` : ` | Tarihe bağlı değil, 3-4 güne FARKLI açı`;
 
-  return `${biz} için ${lang} ${tone || `profesyonel`} tonunda, ${sector} sektörü, ${platformList} platformlarına uygun, ${audience || `genel`} hedef kitleye yönelik ${chunkPostingDays.length} günlük içerik takvimi üret. SADECE JSON döndür.
+  return `[ÖNEMLİ: Yanıtını oluştururken düşünce sürecini (think bloğunu) kısa tut — karmaşık özel gün çakışmaları için bile 3-4 cümle yeterli, uzun analiz yapma. Doğrudan JSON üret.]
+
+${biz} için ${lang} ${tone || `profesyonel`} tonunda, ${sector} sektörü, ${platformList} platformlarına uygun, ${audience || `genel`} hedef kitleye yönelik ${chunkPostingDays.length} günlük içerik takvimi üret. SADECE JSON döndür.
 
 Kampanyalar: ${campaignBit}${movableBit}${noDateBit}
 ${special ? `` : `Kampanya belirtilmedi — ${chunkRangeStr} aralığına özgü, sektörle alakalı genel bir mevsimsel fırsatı kendi bilgine dayanarak seç, en az 1 günde isSpecial:true yap.`}
