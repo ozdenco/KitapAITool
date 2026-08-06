@@ -84,13 +84,23 @@ input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3p
   .app,.app *{visibility:visible}
   .app{position:absolute;left:0;top:0;max-width:100%!important;width:100%!important;padding:0;margin:0}
   header,footer,nav,aside,#wpadminbar,#masthead,#colophon,.site-header,.site-footer,.widget-area,.sidebar,.elementor-location-header,.elementor-location-footer{display:none!important}
-  .form-card,.brand,.loading{display:none!important}
+  .brand,.loading{display:none!important}
   .results{display:block!important}
   .btn-primary,.btn-secondary,.actions,.cta-box,.reset-link,.rate-bar-wrap{display:none!important}
   .adapt-card{page-break-inside:avoid;break-inside:avoid}
   a,span,div{word-break:break-word!important;overflow-wrap:break-word!important;white-space:normal!important}
   a[href]::after{content:none!important}
   .results > div:last-child{page-break-after:avoid;margin-bottom:0}
+  /* Form 1. sayfada görünür */
+  .form-card{display:block!important}
+  /* Interaktif widget gizli, seçili değerler etiket olarak görünür */
+  .radio-group,.check-group,.err,.rate-bar-wrap{display:none!important}
+  .radio-item:has(input:checked),.check-item:has(input:checked){display:inline-flex!important;border:0.5px solid #1D9E75;background:#F0FAF6;padding:3px 9px;border-radius:6px;font-size:12px;margin:2px}
+  .radio-item:has(input:checked) input,.check-item:has(input:checked) input{display:none}
+  .field{margin-bottom:.5rem}
+  .section-title{border-top:0.5px solid #E2E0D8;padding-top:.4rem;margin-top:.6rem}
+  /* Sonuçlar 2. sayfadan başlar */
+  .results{page-break-before:always!important}
 }
 
 .cta-box{background:#F0FAF6;border:0.5px solid #9FE1CB;border-radius:12px;padding:1.5rem;text-align:center;margin-top:1.5rem}
@@ -211,7 +221,7 @@ input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3p
     <div class="cta-box">
       <div class="cta-title">Bu fikirleri düzenli almak ister misin?</div>
       <div class="cta-sub">Trend Video Bulucu ile her gün otomatik video fikirleri al<br>ve belirlediğin saatte e-postana gelsin.</div>
-      <a href="/trend-video-bulucu/" class="cta-btn">Trend Video Bulucu'yu Aç</a>
+      <a href="https://kolaykobi.com/trend-video-bulucu/" class="cta-btn">Trend Video Bulucu'yu Aç</a>
     </div>
 
     <div style="text-align:center;margin-top:1rem">

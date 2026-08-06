@@ -125,6 +125,16 @@ input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3p
   a,span,div{word-break:break-word!important;overflow-wrap:break-word!important;white-space:normal!important}
   a[href]::after{content:none!important}
   .results > div:last-child{page-break-after:avoid;margin-bottom:0}
+  /* Form 1. sayfada görünür */
+  .form-card{display:block!important}
+  /* Interaktif widget gizli, seçili değerler etiket olarak görünür */
+  .radio-group,.check-group,.err,.rate-bar-wrap{display:none!important}
+  .radio-item:has(input:checked),.check-item:has(input:checked){display:inline-flex!important;border:0.5px solid #1D9E75;background:#F0FAF6;padding:3px 9px;border-radius:6px;font-size:12px;margin:2px}
+  .radio-item:has(input:checked) input,.check-item:has(input:checked) input{display:none}
+  .field{margin-bottom:.5rem}
+  .section-title{border-top:0.5px solid #E2E0D8;padding-top:.4rem;margin-top:.6rem}
+  /* Sonuçlar 2. sayfadan başlar */
+  .results{page-break-before:always!important}
 }
 </style>
 </head>
