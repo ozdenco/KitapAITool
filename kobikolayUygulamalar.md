@@ -52,6 +52,28 @@ Kolay KOBİ AI Araçları, küçük ve orta ölçekli işletme (KOBİ) sahipleri
 
 ---
 
+## Araç Öncelik ve Teknoloji Sınıflandırması
+
+Eski planlama döneminden gelen öncelik sırası (gerçekleşen geliştirme sırasına göre güncellenmiştir):
+
+| # | Araç | Öncelik | API |
+|---|---|---|---|
+| 1 | İşletme Görünürlük Skoru | **YÜKSEK** | MiniMax-M3 + n8n |
+| 2 | Müşteri Persona Oluşturucu | ORTA | MiniMax-M3 + n8n |
+| 3 | 30 Günlük İçerik Takvimi | **YÜKSEK** | MiniMax-M3 + n8n (async) |
+| 4 | WhatsApp Satış Script Üretici | **YÜKSEK** | MiniMax-M3 + n8n |
+| 5 | Reklam Bütçe Dağıtıcı | ORTA | MiniMax-M3 + n8n |
+| 6 | Müşteri Geri Dönüş Senaryosu | ORTA | MiniMax-M3 + n8n |
+| 7 | Rakip Analiz Panosu | ORTA | MiniMax-M3 + Gemini Flash + n8n |
+| 8 | Chatbot Senaryo Hazırlayıcı | ORTA | MiniMax-M3 + n8n |
+| 9 | AI Görünürlük Takipçisi | ORTA | MiniMax-M3 + n8n |
+| 10 | Viral Video Uyarlayıcı | ORTA | MiniMax-M3 + n8n |
+| 11 | Trend Video Bulucu | **DÜŞÜKˣ** | MiniMax-M3 + Apify + n8n |
+
+> **ˣ Trend Video Bulucu:** Apify API maliyeti (~20 TL/çalıştırma) nedeniyle kullanım sıklığı diğerlerinden belirgin biçimde düşük tutulmalıdır.
+
+---
+
 ## BR-02: İşletme Görünürlük Skoru
 
 **Teknik tasarım referansı:** TD-01, TD-02, TD-04, TD-12
@@ -470,10 +492,22 @@ Girilen rakiplerin sosyal medya ve dijital platformlardaki varlığını analiz 
 }
 ```
 
+### Ek Özellikler (Chatbot'a Özgü)
+
+| Özellik | Açıklama |
+|---|---|
+| **Canlı Test** | Araç içinde mini chat penceresi — kullanıcı üretilen senaryoyu gerçek bir chatbot gibi test edebilir; mesaj yazar, AI'ın vereceği yanıtı simüle eder |
+| **n8n Workflow JSON Export** | "n8n Workflow Olarak İndir" butonu — senaryo akışını n8n'e doğrudan import edilebilir JSON formatında indirir |
+| **"Benim İçin Kur" CTA** | Teknik kuruluma ihtiyaç duyan kullanıcılar için danışmanlık hizmeti lead kapısı — n8n entegrasyonu gerektiren müşterileri yönlendirir |
+
+> **Not:** WhatsApp Business API için Meta Business onayı gereklidir. Bu süreç araç tarafından yönetilmez; kullanıcıya uyarı gösterilmelidir.
+
 ### Yorumlama ve Aksiyon Kılavuzu
 
 - SSS cevaplarını chatbot platformuna (Tidio, ManyChat, WhatsApp Business) yapıştırın
 - Senaryo akışını görselleştirerek ekibinizle paylaşın
+- Canlı test modunda gerçek müşteri sorularını deneyin — cevap yoksa SSS listesini genişletin
+- n8n workflow JSON'unu indirip import ederek chatbotu doğrudan aktif hale getirebilirsiniz
 - Her 6 ayda bir müşteri sorularına göre güncelleyin
 
 ---
