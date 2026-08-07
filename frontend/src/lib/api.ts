@@ -28,7 +28,9 @@ api.interceptors.response.use(
 
       if (refreshToken) {
         try {
+          const accessToken = localStorage.getItem('access_token')
           const { data } = await axios.post<ApiResponse<AuthTokens>>('/api/auth/refresh', {
+            accessToken,
             refreshToken,
           })
           if (data.success && data.data) {

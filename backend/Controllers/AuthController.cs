@@ -28,14 +28,17 @@ public class AuthController(UserService users) : ControllerBase
     {
         var result = await users.RegisterAsync(req.Name, req.Email, req.Password);
         if (result is null)
-            return Conflict(new { error = "Bu e-posta adresi zaten kayıtlı." });
+            return Conflict(new { success = false, error = "Bu e-posta adresi zaten kayıtlı." });
 
         var (user, access, refresh) = result.Value;
         return Ok(new
         {
-            accessToken = access,
-            refreshToken = refresh,
-            user = new { user.Id, user.Name, user.Email }
+            success = true,
+            data = new
+            {
+                tokens = new { accessToken = access, refreshToken = refresh },
+                user = new { user.Id, user.Name, user.Email }
+            }
         });
     }
 
@@ -44,14 +47,17 @@ public class AuthController(UserService users) : ControllerBase
     {
         var result = await users.LoginAsync(req.Email, req.Password);
         if (result is null)
-            return Unauthorized(new { error = "E-posta veya şifre hatalı." });
+            return Unauthorized(new { success = false, error = "E-posta veya şifre hatalı." });
 
         var (user, access, refresh) = result.Value;
         return Ok(new
         {
-            accessToken = access,
-            refreshToken = refresh,
-            user = new { user.Id, user.Name, user.Email }
+            success = true,
+            data = new
+            {
+                tokens = new { accessToken = access, refreshToken = refresh },
+                user = new { user.Id, user.Name, user.Email }
+            }
         });
     }
 
@@ -60,14 +66,13 @@ public class AuthController(UserService users) : ControllerBase
     {
         var result = await users.RefreshAsync(req.AccessToken, req.RefreshToken);
         if (result is null)
-            return Unauthorized(new { error = "Oturum süresi doldu. Lütfen tekrar giriş yapın." });
+            return Unauthorized(new { success = false, error = "Oturum süresi doldu. Lütfen tekrar giriş yapın." });
 
-        var (user, access, refresh) = result.Value;
+        var (_, access, refresh) = result.Value;
         return Ok(new
         {
-            accessToken = access,
-            refreshToken = refresh,
-            user = new { user.Id, user.Name, user.Email }
+            success = true,
+            data = new { accessToken = access, refreshToken = refresh }
         });
     }
 
@@ -77,14 +82,18 @@ public class AuthController(UserService users) : ControllerBase
     {
         var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
         var user = await users.GetByIdAsync(userId);
-        if (user is null) return NotFound();
+        if (user is null) return NotFound(new { success = false, error = "Kullanıcı bulunamadı." });
 
         return Ok(new
         {
-            user.Id,
-            user.Name,
-            user.Email,
-            plan = user.Subscription?.Plan.Type.ToString().ToLower() ?? "free"
+            success = true,
+            data = new
+            {
+                user.Id,
+                user.Name,
+                user.Email,
+                plan = user.Subscription?.Plan.Type.ToString().ToLower() ?? "free"
+            }
         });
     }
 
