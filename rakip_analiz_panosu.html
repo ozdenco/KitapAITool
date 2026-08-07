@@ -617,22 +617,35 @@ function renderResults(result, myData) {
   ].filter(Boolean).join('\n') || 'Karşılaştırmalı analiz ve aksiyon önerileri hazır';
   const comps = result.competitors || [];
 
-  // Comparison table header
-  const allEntities = [{ name: biz + ' (Sen)', platforms: myPlatforms, price: myPrice, web: myWeb }, ...comps.map((c, i) => ({ ...c, platforms: lastComps[i]?.platforms || [], price: lastComps[i]?.price || '', web: lastComps[i]?.web || '' }))];
+  // Comparison table — platform sütunları kaldırıldı (Gemini entegrasyonu devam ediyor);
+  // şimdilik Web Sitesi, Fiyat ve Tehdit Seviyesi gösteriliyor.
+  const myEntity = { name: biz + ' (Sen)', price: myPrice, web: myWeb };
+  const compEntities = comps.map((c, i) => ({
+    name: c.name,
+    price: lastComps[i]?.price || '',
+    web: lastComps[i]?.web || '',
+    threat: c.threat,
+  }));
+  const allEntities = [myEntity, ...compEntities];
 
   const thead = document.getElementById('comp-thead');
   thead.innerHTML = '<tr><th>Kriter</th>' + allEntities.map(e => `<th>${escHtml(e.name)}</th>`).join('') + '</tr>';
 
+  const threatLabel = { high: 'Yüksek', medium: 'Orta', low: 'Düşük' };
+  const threatColor = { high: '#A32D2D', medium: '#9D6E2A', low: '#1D9E75' };
+
   const tbody = document.getElementById('comp-tbody');
   const rows = [];
   rows.push(['Web Sitesi', ...allEntities.map(e => e.web ? `<i class="ti ti-check tick" aria-hidden="true"></i>` : `<i class="ti ti-x cross" aria-hidden="true"></i>`)]);
-  ALL_PLATFORMS.forEach(p => {
-    rows.push([p, ...allEntities.map(e => (e.platforms || []).includes(p) ? `<i class="ti ti-check tick" aria-hidden="true"></i>` : `<i class="ti ti-x cross" aria-hidden="true"></i>`)]);
-  });
-  rows.push(['Fiyat', ...allEntities.map(e => {
+  rows.push(['Fiyat Segmenti', ...allEntities.map(e => {
     const p = e.price || '';
     const cls = p === 'Ekonomik' ? 'price-ekonomik' : p === 'Orta' ? 'price-orta' : p === 'Premium' ? 'price-premium' : '';
     return p ? `<span class="price-badge ${cls}">${escHtml(p)}</span>` : '<span style="color:#B4B2A9">—</span>';
+  })]);
+  rows.push(['Tehdit Seviyesi', '<span style="color:#B4B2A9">—</span>', ...compEntities.map(e => {
+    const lbl = threatLabel[e.threat] || '—';
+    const col = threatColor[e.threat] || '#B4B2A9';
+    return `<span style="font-weight:500;color:${col}">${lbl}</span>`;
   })]);
   tbody.innerHTML = rows.map(r => `<tr>${r.map((cell, i) => `<td>${i === 0 ? escHtml(cell) : cell}</td>`).join('')}</tr>`).join('');
 
