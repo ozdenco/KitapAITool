@@ -108,7 +108,7 @@
         "sendBody": true,
         "specifyBody": "json",
         "options": {
-          "timeout": 30000
+          "timeout": 90000
         },
         "jsonBody": "={{ $json.geminiBody }}"
       },
