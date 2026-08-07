@@ -595,6 +595,8 @@ function clearResults() {
 
 function showLoading(v) {
   document.getElementById('loading-section').style.display = v ? 'block' : 'none';
+  const fs = document.getElementById('form-section');
+  if (fs) fs.style.display = v ? 'none' : '';
 }
 
 let lastResult = null;
@@ -836,8 +838,12 @@ SADECE JSON döndür:
   "ctaText": "..."
 }`;
 
+  const warnBeforeUnload = (e) => { e.preventDefault(); e.returnValue = ''; };
+  window.addEventListener('beforeunload', warnBeforeUnload);
+
   try {
     let text = '';
+    let data;
     for (let attempt = 0; attempt <= 1; attempt++) {
       let res;
       if (N8N_PROXY) {
@@ -848,6 +854,7 @@ SADECE JSON döndür:
         });
         if (res.status === 429) {
           clearInterval(ticker);
+          window.removeEventListener('beforeunload', warnBeforeUnload);
           showLoading(false);
           showErr('Çok fazla istek gönderildi. Lütfen biraz bekleyin.');
           return;
@@ -859,7 +866,7 @@ SADECE JSON döndür:
           body: JSON.stringify({ model: 'MiniMax-M3', max_completion_tokens: 1500, messages: [{ role: 'user', content: prompt }] }),
         });
       }
-      const data = await res.json();
+      data = await res.json();
       text = N8N_PROXY
         ? (data.content || []).map(b => b.text || '').join('')
         : (data.choices?.[0]?.message?.content || '');
@@ -870,12 +877,13 @@ SADECE JSON döndür:
     const s = searchText.indexOf('{'); const e = searchText.lastIndexOf('}'); const clean = [s !== -1, e !== -1].every(Boolean) ? searchText.slice(s, e + 1) : searchText.replace(/```json|```/g, '').trim();
     const result = JSON.parse(clean);
     // Gemini platform verisini al (n8n'den gelir, yoksa boş dizi)
-    const geminiPlatforms = (await Promise.resolve(data?.geminiPlatforms)) || [];
+    const geminiPlatforms = data?.geminiPlatforms || [];
 
     rateData.count++;
     saveRate(rateData);
     updateRateBar();
     clearInterval(ticker);
+    window.removeEventListener('beforeunload', warnBeforeUnload);
     if (genBtn) { genBtn.disabled = false; genBtn.style.opacity = ''; }
     if (resetBtn) { resetBtn.disabled = false; resetBtn.style.opacity = ''; }
     renderResults(result, { biz, sector, myPlatforms, myPrice, myWeb, strengths }, geminiPlatforms);
@@ -884,6 +892,7 @@ SADECE JSON döndür:
     saveRate(rateData);
     updateRateBar();
     clearInterval(ticker);
+    window.removeEventListener('beforeunload', warnBeforeUnload);
     if (genBtn) { genBtn.disabled = false; genBtn.style.opacity = ''; }
     if (resetBtn) { resetBtn.disabled = false; resetBtn.style.opacity = ''; }
     renderResults(fallback(biz, comps), { biz, sector, myPlatforms, myPrice, myWeb, strengths });
