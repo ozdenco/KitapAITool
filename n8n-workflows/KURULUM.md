@@ -302,7 +302,60 @@ düşer — hata vermez ama dinamik hesaplamanın faydasını kaybedersiniz).
 
 ---
 
-## 5. Uygulama Durumu
+## 5. API Maliyet Takibi
+
+> Ölçülen gerçek canlı maliyetler — tahmini değil.
+
+### MiniMax API
+
+| Araç | Avg token/sorgu | Maliyet/sorgu |
+|---|---|---|
+| İçerik Takvimi (4 gün) | ~6.800 token | ~$0.007 |
+| Rakip Analiz Panosu | ~12.000 token | ~$0.012 |
+| Diğer araçlar | ~3.000–5.000 token | ~$0.003–0.005 |
+
+Platform: [platform.minimax.io](https://platform.minimax.io) → Billing
+
+---
+
+### Gemini API (Rakip Analiz Panosu)
+
+| Sorgu | Token kullanımı | Maliyet (USD) | Maliyet (TL) |
+|---|---|---|---|
+| Tek rakip platform araması | ~9.300 token | ~$0.028 | ~0,13 TL |
+
+- Model: `gemini-3.5-flash` + Google Search Grounding
+- Ölçüm tarihi: Ağustos 2026
+- Platform: [aistudio.google.com/spend](https://aistudio.google.com/spend) → Project: KolayKobi
+- Kümülatif harcama: **4,13 TL** (ölçüm anında)
+
+**Not:** Google Search Grounding ilk 5.000 sorgu/ay ücretsiz — aylık limit aşılırsa her 1.000 sorguda $14 ek ücret.
+
+---
+
+### Apify (Viral Video Bulucu / Trend Video Bulucu)
+
+| İşlem | Maliyet |
+|---|---|
+| Tek çalıştırma (TikTok/YouTube trend tarama) | ~20 TL |
+
+- Platform: [apify.com](https://apify.com) → Billing
+- Bu araç diğerlerinden farklı olarak her çalıştırmada Apify scraper kullanıyor; MiniMax + Apify maliyeti birlikte değerlendirilmeli.
+
+---
+
+### Toplam Maliyet Özeti (Tek Sorgu Başına)
+
+| Araç | API(lar) | Tahmini TL/sorgu |
+|---|---|---|
+| İçerik Takvimi | MiniMax | ~0,10 TL |
+| Rakip Analiz Panosu | MiniMax + Gemini | ~0,40 TL |
+| Viral / Trend Video Bulucu | MiniMax + Apify | ~20+ TL |
+| Diğer 7 araç | MiniMax | ~0,05–0,15 TL |
+
+---
+
+## 6. Uygulama Durumu
 
 | # | Uygulama | Workflow | HTML | Canlı |
 |---|---|---|---|---|
