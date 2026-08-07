@@ -355,7 +355,24 @@ Platform: [platform.minimax.io](https://platform.minimax.io) → Billing
 
 ---
 
-## 6. Uygulama Durumu
+## 6. Form UX Davranışları (Tüm Araçlarda)
+
+Tüm araçlarda aşağıdaki UX kuralları geçerlidir:
+
+| Davranış | Açıklama |
+|---|---|
+| **Form gizleme** | "Analizi Başlat" tıklanınca form tamamen gizlenir, yalnızca spinner ve mesaj gösterilir |
+| **Sayfa terk uyarısı** | AI üretim sürerken sayfadan çıkmaya / sekmeyi kapatmaya çalışılırsa tarayıcı uyarı gösterir |
+| **Form daraltma** | Sonuçlar yüklendiğinde form otomatik olarak daraltılır (collapsed bar görünür) |
+| **Yeniden oluştur** | Daraltılmış form açılıp form düzenlenebilir, "Yeniden Oluştur" ile tekrar gönderilebilir |
+
+> **Not:** Tarayıcılar güvenlik nedeniyle `beforeunload` diyaloğunda özel metin göstermez.
+> Bunun yerine tarayıcının kendi dilindeki genel uyarısını gösterir (ör. "Değişiklikler kaydedilmemiş olabilir").
+> Bu kısıt JavaScript/HTML ile aşılamaz — tüm modern tarayıcılarda (Chrome 51+, Firefox 44+) geçerlidir.
+
+---
+
+## 7. Uygulama Durumu
 
 | # | Uygulama | Workflow | HTML | Canlı |
 |---|---|---|---|---|
@@ -365,5 +382,5 @@ Platform: [platform.minimax.io](https://platform.minimax.io) → Billing
 | 6 | WhatsApp Satış Script Üretici | kolay-kobi-wa.json | ✅ hazır | ⏳ |
 | 4 | Reklam Bütçe Dağıtıcı | — | ❌ kodlanmadı | ⏳ |
 | 5 | Müşteri Geri Dönüş Senaryosu | — | ❌ kodlanmadı | ⏳ |
-| 7 | Rakip Analiz Panosu | — | ❌ kodlanmadı | ⏳ |
-| 8 | Chatbot Senaryosu Hazırlayıcı | — | ❌ kodlanmadı | ⏳ |
+| 7 | Rakip Analiz Panosu | kolay-kobi-rakip.json | ✅ hazır | ⏳ |
+| 8 | Chatbot Senaryosu Hazırlayıcı | — | ✅ hazır | ⏳ |

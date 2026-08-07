@@ -527,8 +527,11 @@ function setLoading(on) {
   if (on) {
     document.getElementById('results').style.display = 'none';
     fc.style.display = 'none';
+    window._warnBU = window._warnBU || (function(e) { e.preventDefault(); e.returnValue = ''; });
+    window.addEventListener('beforeunload', window._warnBU);
   } else {
     fc.style.display = 'block';
+    if (window._warnBU) window.removeEventListener('beforeunload', window._warnBU);
   }
 }
 

@@ -386,12 +386,16 @@ function show(id) {
   if (id === 'loading-section') {
     document.getElementById('form-section').style.display = 'none';
     document.getElementById('loading-section').style.display = 'block';
+    window._warnBU = window._warnBU || (function(e) { e.preventDefault(); e.returnValue = ''; });
+    window.addEventListener('beforeunload', window._warnBU);
     document.getElementById('results-section').style.display = 'none';
   } else if (id === 'results-section') {
+    if (window._warnBU) window.removeEventListener('beforeunload', window._warnBU);
     document.getElementById('form-section').style.display = 'block';
     document.getElementById('loading-section').style.display = 'none';
     document.getElementById('results-section').style.display = 'block'; collapseForm();
   } else {
+    if (window._warnBU) window.removeEventListener('beforeunload', window._warnBU);
     document.getElementById('form-section').style.display = 'block';
     document.getElementById('loading-section').style.display = 'none';
     document.getElementById('results-section').style.display = 'none';

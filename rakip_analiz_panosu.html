@@ -64,11 +64,12 @@ input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3p
 
 /* Comparison table */
 .table-wrap{overflow-x:auto}
-table{width:100%;border-collapse:collapse;font-size:13px}
-th{text-align:left;padding:8px 10px;font-size:11px;font-weight:500;color:#6B6963;text-transform:uppercase;letter-spacing:.05em;border-bottom:0.5px solid #E2E0D8;white-space:nowrap;background:#F7F6F2}
-td{padding:10px;border-bottom:0.5px solid #F1EFE8;color:#1C1B19;vertical-align:middle}
+table{width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed}
+th{text-align:left;padding:8px 8px;font-size:11px;font-weight:500;color:#6B6963;text-transform:uppercase;letter-spacing:.04em;border-bottom:0.5px solid #E2E0D8;background:#F7F6F2;word-break:break-word;overflow-wrap:break-word;vertical-align:bottom}
+th:first-child{width:88px}
+td{padding:10px 8px;border-bottom:0.5px solid #F1EFE8;color:#1C1B19;vertical-align:middle}
 tr:last-child td{border-bottom:none}
-td:first-child{font-weight:500;color:#6B6963;font-size:12px}
+td:first-child{font-weight:500;color:#6B6963;font-size:12px;width:88px}
 .tick{color:#1D9E75;font-size:16px}
 .cross{color:#B4B2A9;font-size:16px}
 .price-badge{display:inline-block;padding:2px 9px;border-radius:12px;font-size:11px;font-weight:500}

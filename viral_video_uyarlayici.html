@@ -346,7 +346,12 @@ function setLoading(on) {
   document.getElementById('btn-generate').disabled = on;
   if (on) {
     document.getElementById('results').style.display = 'none';
-    collapseForm();
+    const fs = document.getElementById('form-section');
+    if (fs) fs.style.display = 'none';
+    window._warnBU = window._warnBU || (function(e) { e.preventDefault(); e.returnValue = ''; });
+    window.addEventListener('beforeunload', window._warnBU);
+  } else {
+    if (window._warnBU) window.removeEventListener('beforeunload', window._warnBU);
   }
 }
 

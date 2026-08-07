@@ -321,10 +321,17 @@ function showLoading(on) {
       loadingMsgIndex = (loadingMsgIndex + 1) % loadingMsgs.length;
       if (msgEl) msgEl.textContent = loadingMsgs[loadingMsgIndex];
     }, 1800);
+    const fs = document.getElementById('form-section');
+    if (fs) fs.style.display = 'none';
+    window._warnBU = window._warnBU || (function(e) { e.preventDefault(); e.returnValue = ''; });
+    window.addEventListener('beforeunload', window._warnBU);
   } else {
     el.style.display = 'none';
     if (btn) btn.disabled = false;
     clearInterval(loadingTimer);
+    const fs = document.getElementById('form-section');
+    if (fs) fs.style.display = '';
+    if (window._warnBU) window.removeEventListener('beforeunload', window._warnBU);
   }
 }
 

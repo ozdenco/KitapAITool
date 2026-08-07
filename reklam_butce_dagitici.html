@@ -514,6 +514,14 @@ function fallback() {
 
 function showLoading(v) {
   document.getElementById('loading-section').style.display = v ? 'block' : 'none';
+  const fs = document.getElementById('form-section');
+  if (fs) fs.style.display = v ? 'none' : '';
+  if (v) {
+    window._warnBU = window._warnBU || (function(e) { e.preventDefault(); e.returnValue = ''; });
+    window.addEventListener('beforeunload', window._warnBU);
+  } else {
+    if (window._warnBU) window.removeEventListener('beforeunload', window._warnBU);
+  }
 }
 
 function clearResults() {
