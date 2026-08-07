@@ -602,7 +602,8 @@ let lastBiz = '';
 let lastComps = [];
 let lastMyData = {};
 
-function renderResults(result, myData) {
+function renderResults(result, myData, geminiPlatforms) {
+  geminiPlatforms = geminiPlatforms || [];
   clearResults();
   lastResult = result;
   showLoading(false);
@@ -617,14 +618,16 @@ function renderResults(result, myData) {
   ].filter(Boolean).join('\n') || 'Karşılaştırmalı analiz ve aksiyon önerileri hazır';
   const comps = result.competitors || [];
 
-  // Comparison table — platform sütunları kaldırıldı (Gemini entegrasyonu devam ediyor);
-  // şimdilik Web Sitesi, Fiyat ve Tehdit Seviyesi gösteriliyor.
+  // Karşılaştırma Tablosu
+  // Platform satırları Gemini'den, Web/Fiyat/Tehdit form+MiniMax'tan gelir.
   const myEntity = { name: biz + ' (Sen)', price: myPrice, web: myWeb };
   const compEntities = comps.map((c, i) => ({
     name: c.name,
     price: lastComps[i]?.price || '',
     web: lastComps[i]?.web || '',
     threat: c.threat,
+    // Gemini'den gelen platform verisi (isim eşleştirme)
+    platforms: geminiPlatforms.find(g => g.name?.toLowerCase() === c.name?.toLowerCase()) || null,
   }));
   const allEntities = [myEntity, ...compEntities];
 
@@ -633,20 +636,61 @@ function renderResults(result, myData) {
 
   const threatLabel = { high: 'Yüksek', medium: 'Orta', low: 'Düşük' };
   const threatColor = { high: '#A32D2D', medium: '#9D6E2A', low: '#1D9E75' };
+  const chk = `<i class="ti ti-check tick" aria-hidden="true"></i>`;
+  const xmk = `<i class="ti ti-x cross" aria-hidden="true"></i>`;
+  const hasUrl = v => v && v !== 'null' && v !== 'undefined';
 
   const tbody = document.getElementById('comp-tbody');
   const rows = [];
-  rows.push(['Web Sitesi', ...allEntities.map(e => e.web ? `<i class="ti ti-check tick" aria-hidden="true"></i>` : `<i class="ti ti-x cross" aria-hidden="true"></i>`)]);
+
+  // Web Sitesi — formdan
+  rows.push(['Web Sitesi', ...allEntities.map(e => e.web ? chk : xmk)]);
+
+  // Platform satırları — Gemini'den (en az 1 rakip için veri varsa göster)
+  const hasGeminiData = compEntities.some(e => e.platforms);
+  if (hasGeminiData) {
+    const platformFields = [
+      { key: 'google_business', label: 'Google Business' },
+      { key: 'instagram',       label: 'Instagram' },
+      { key: 'facebook',        label: 'Facebook' },
+      { key: 'linkedin',        label: 'LinkedIn' },
+      { key: 'whatsapp',        label: 'WhatsApp' },
+    ];
+    platformFields.forEach(({ key, label }) => {
+      rows.push([label,
+        // Kendi işletmemiz için form checkboxlarından
+        (myPlatforms || []).includes(label) ? chk : xmk,
+        // Rakipler için Gemini'den
+        ...compEntities.map(e => {
+          if (!e.platforms) return '<span style="color:#B4B2A9">?</span>';
+          return hasUrl(e.platforms[key]) ? chk : xmk;
+        }),
+      ]);
+    });
+  } else {
+    // Gemini veri döndüremediyse sadece kendi platformlarımızı göster
+    ALL_PLATFORMS.forEach(p => {
+      rows.push([p,
+        (myPlatforms || []).includes(p) ? chk : xmk,
+        ...compEntities.map(() => '<span style="color:#B4B2A9">?</span>'),
+      ]);
+    });
+  }
+
+  // Fiyat Segmenti — formdan
   rows.push(['Fiyat Segmenti', ...allEntities.map(e => {
     const p = e.price || '';
     const cls = p === 'Ekonomik' ? 'price-ekonomik' : p === 'Orta' ? 'price-orta' : p === 'Premium' ? 'price-premium' : '';
     return p ? `<span class="price-badge ${cls}">${escHtml(p)}</span>` : '<span style="color:#B4B2A9">—</span>';
   })]);
+
+  // Tehdit Seviyesi — MiniMax'tan
   rows.push(['Tehdit Seviyesi', '<span style="color:#B4B2A9">—</span>', ...compEntities.map(e => {
     const lbl = threatLabel[e.threat] || '—';
     const col = threatColor[e.threat] || '#B4B2A9';
     return `<span style="font-weight:500;color:${col}">${lbl}</span>`;
   })]);
+
   tbody.innerHTML = rows.map(r => `<tr>${r.map((cell, i) => `<td>${i === 0 ? escHtml(cell) : cell}</td>`).join('')}</tr>`).join('');
 
   // Competitor analysis cards
@@ -825,6 +869,8 @@ SADECE JSON döndür:
     const searchText = thinkEnd !== -1 ? text.slice(thinkEnd + '</think>'.length) : text;
     const s = searchText.indexOf('{'); const e = searchText.lastIndexOf('}'); const clean = [s !== -1, e !== -1].every(Boolean) ? searchText.slice(s, e + 1) : searchText.replace(/```json|```/g, '').trim();
     const result = JSON.parse(clean);
+    // Gemini platform verisini al (n8n'den gelir, yoksa boş dizi)
+    const geminiPlatforms = (await Promise.resolve(data?.geminiPlatforms)) || [];
 
     rateData.count++;
     saveRate(rateData);
@@ -832,7 +878,7 @@ SADECE JSON döndür:
     clearInterval(ticker);
     if (genBtn) { genBtn.disabled = false; genBtn.style.opacity = ''; }
     if (resetBtn) { resetBtn.disabled = false; resetBtn.style.opacity = ''; }
-    renderResults(result, { biz, sector, myPlatforms, myPrice, myWeb, strengths });
+    renderResults(result, { biz, sector, myPlatforms, myPrice, myWeb, strengths }, geminiPlatforms);
   } catch(e) {
     rateData.count++;
     saveRate(rateData);
