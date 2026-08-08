@@ -84,6 +84,14 @@ echo "✅  SSH tüneli aktif: http://localhost:${N8N_TUNNEL_LOCAL_PORT}"
 # ── 3. Mac host: .NET backend ─────────────────────────────────────────────────
 echo ""
 echo "▶  .NET backend başlatılıyor (Mac host, port 5001)..."
+
+# Port 5001'i kullanan eski process varsa kapat
+_old_pid=$(lsof -ti "TCP:5001" -s TCP:LISTEN 2>/dev/null || true)
+if [[ -n "${_old_pid}" ]]; then
+  echo "   Eski backend (PID ${_old_pid}) kapatılıyor..."
+  kill -9 "${_old_pid}" 2>/dev/null || true
+  sleep 1
+fi
 echo ""
 
 export ASPNETCORE_ENVIRONMENT=Development
