@@ -70,12 +70,17 @@ builder.Services.AddCors(opts =>
         .AllowAnyMethod()
         .AllowCredentials()));
 
-// Application services — SSL bypass for Docker/TLS compatibility
+// Application services
+// Retry: Traefik TLS aralıklı reset yapıyor — StandardResilienceHandler 3 deneme yapar.
+// AttemptTimeout ≤ SamplingDuration/2 kuralı: 25s attempt, 60s sampling, 120s toplam.
 builder.Services.AddHttpClient<N8nProxyService>()
-    .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+    .AddStandardResilienceHandler(opts =>
     {
-        // TODO: kaldır production'da — Docker içinde TLS el sıkışma sorunu tanısı için
-        ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
+        opts.Retry.MaxRetryAttempts = 3;
+        opts.Retry.Delay = TimeSpan.FromSeconds(2);
+        opts.TotalRequestTimeout.Timeout = TimeSpan.FromSeconds(120);
+        opts.AttemptTimeout.Timeout = TimeSpan.FromSeconds(25);
+        opts.CircuitBreaker.SamplingDuration = TimeSpan.FromSeconds(60);
     });
 builder.Services.AddScoped<TokenService>();
 builder.Services.AddScoped<UserService>();
