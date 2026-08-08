@@ -25,8 +25,25 @@ if [[ ! -f "${ROOT_DIR}/.env" ]]; then
   echo "❌  .env dosyası bulunamadı: ${ROOT_DIR}/.env"
   exit 1
 fi
-# shellcheck disable=SC1090
-source <(grep -v '^#' "${ROOT_DIR}/.env" | grep '=')
+# .env'i güvenli şekilde yükle: &, !, # gibi özel karakterleri Python ile okur
+# Shell expansion veya özel karakter yorumlaması yapmaz
+_env_val() {
+  python3 -c "
+import re, sys
+key = sys.argv[1]
+for line in open('${ROOT_DIR}/.env'):
+    m = re.match(r'^' + re.escape(key) + r'=(.*)', line.rstrip('\n'))
+    if m:
+        print(m.group(1))
+        sys.exit(0)
+" "$1"
+}
+
+DB_PASSWORD="$(_env_val DB_PASSWORD)"
+JWT_SECRET="$(_env_val JWT_SECRET)"
+N8N_BASE_URL="$(_env_val N8N_BASE_URL)"
+
+export DB_PASSWORD JWT_SECRET N8N_BASE_URL
 
 # ── 1. Docker: postgres + frontend + nginx ────────────────────────────────────
 echo "▶  Docker container'ları başlatılıyor (postgres + frontend + nginx)..."
