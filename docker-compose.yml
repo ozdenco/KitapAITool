@@ -59,8 +59,24 @@ services:
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
     ports:
-      # Sadece localhost:3001'e bağla — Hostinger nginx dışarıdan proxy yapıyor
+      # Yerel test için — Traefik dışarıdan proxy yapıyor
       - "127.0.0.1:3001:80"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.kolaykobi.rule=Host(`app.kolaykobi.com`)"
+      - "traefik.http.routers.kolaykobi.tls=true"
+      - "traefik.http.routers.kolaykobi.entrypoints=websecure"
+      - "traefik.http.routers.kolaykobi.tls.certresolver=letsencrypt"
+      - "traefik.http.services.kolaykobi.loadbalancer.server.port=80"
+      - "traefik.docker.network=n8n_default"
+    networks:
+      - default
+      - traefik_net
 
 volumes:
   postgres_data:
+
+networks:
+  traefik_net:
+    external: true
+    name: n8n_default

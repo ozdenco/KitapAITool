@@ -6,7 +6,7 @@
 #   1. Kodu Hostinger sunucusuna rsync ile gönderir
 #   2. Docker image'larını build eder
 #   3. Stack'i sıfırdan ayağa kaldırır
-#   4. Hostinger nginx vhost'u kurar (ilk kez)
+#   4. Traefik routing'i doğrular (SSL otomatik, sistem nginx gerekmez)
 
 set -euo pipefail
 
@@ -68,39 +68,29 @@ REMOTE_SCRIPT
 
 echo ""
 
-# ─── 4. Hostinger nginx vhost kur (ilk deploy'da) ────────────────────────────
-echo "🌐 [4/4] Nginx vhost kuruluyor..."
-ssh "$REMOTE_HOST" bash <<VHOST_SCRIPT
-  VHOST_FILE="/etc/nginx/sites-available/$APP_DOMAIN"
-  VHOST_LINK="/etc/nginx/sites-enabled/$APP_DOMAIN"
-
-  if [[ -f "\$VHOST_FILE" ]]; then
-    echo "  → Vhost zaten var, güncelleniyor..."
+# ─── 4. Traefik routing doğrula ──────────────────────────────────────────────
+# Sistem nginx gerekmez — Traefik (n8n stack'i) Docker label'lardan
+# kkb-nginx'i otomatik keşfeder ve SSL sertifikasını Let's Encrypt'ten alır.
+echo "🌐 [4/4] Traefik routing doğrulanıyor..."
+ssh "$REMOTE_HOST" bash <<VERIFY_SCRIPT
+  # kkb-nginx'in Traefik ağında olduğunu kontrol et
+  NETWORKS=\$(docker inspect kkb-nginx --format '{{range \$k,\$v := .NetworkSettings.Networks}}{{\$k}} {{end}}' 2>/dev/null || echo "")
+  if echo "\$NETWORKS" | grep -q "n8n_default"; then
+    echo "  ✓ kkb-nginx Traefik ağında (n8n_default)"
   else
-    echo "  → Yeni vhost oluşturuluyor..."
+    echo "  ⚠️  kkb-nginx Traefik ağında değil — docker compose up -d nginx çalıştırılıyor..."
+    cd "$REMOTE_DIR" && docker compose up -d --no-deps nginx
   fi
 
-  cp "$REMOTE_DIR/nginx/hostinger-vhost.conf" "\$VHOST_FILE"
-
-  if [[ ! -L "\$VHOST_LINK" ]]; then
-    ln -s "\$VHOST_FILE" "\$VHOST_LINK"
-    echo "  → Symlink oluşturuldu"
-  fi
-
-  nginx -t && systemctl reload nginx
-  echo "  ✓ Nginx yeniden yüklendi"
-
-  # SSL sertifikası (ilk kez)
-  if [[ ! -d "/etc/letsencrypt/live/$APP_DOMAIN" ]]; then
-    echo ""
-    echo "  ⚡ SSL sertifikası alınıyor..."
-    certbot --nginx -d "$APP_DOMAIN" --non-interactive --agree-tos \
-      -m ozdenisikgil@gmail.com --redirect || \
-      echo "  ⚠️  Certbot başarısız — DNS kaydı henüz yayılmamış olabilir. 5 dakika bekleyip tekrar dene."
+  # HTTP yanıtı kontrol et (Traefik HTTPS'e yönlendirmeli)
+  sleep 3
+  STATUS=\$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "https://$APP_DOMAIN" 2>/dev/null || echo "000")
+  if [[ "\$STATUS" =~ ^[23] ]]; then
+    echo "  ✓ https://$APP_DOMAIN yanıt veriyor (HTTP \$STATUS)"
   else
-    echo "  ✓ SSL zaten mevcut"
+    echo "  ⚠️  https://$APP_DOMAIN yanıt kodu: \$STATUS (DNS yayılımı bekleniyor olabilir)"
   fi
-VHOST_SCRIPT
+VERIFY_SCRIPT
 
 echo ""
 echo "✅ Deploy tamamlandı!"
