@@ -6,9 +6,11 @@ export function useToolUsage() {
   return useQuery({
     queryKey: ['tool-usage'],
     queryFn: async () => {
-      const { data } = await api.get<ApiResponse<ToolUsage[]>>('/tools/usage')
-      if (!data.success) throw new Error(data.error)
-      return data.data ?? []
+      const { data } = await api.get<ApiResponse<ToolUsage[]> | ToolUsage[]>('/tools/usage')
+      // Backend {success, data} envelope veya ham array dönebilir
+      if (Array.isArray(data)) return data
+      if (!data.success) throw new Error((data as ApiResponse<ToolUsage[]>).error)
+      return (data as ApiResponse<ToolUsage[]>).data ?? []
     },
     staleTime: 30_000,
   })
