@@ -47,7 +47,7 @@ export function ToolShell({
   const isAtLimit = usage != null && usage.limit != null && usage.usedCount >= usage.limit
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-8">
+    <div className="w-full max-w-2xl px-4 py-8">
       {/* ── Başlık ────────────────────────────────────────── */}
       <div className="mb-6 no-print">
         <div className="flex items-start justify-between gap-4">

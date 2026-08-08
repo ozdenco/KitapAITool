@@ -51,7 +51,7 @@ export function HesabimPage() {
 
   if (subLoading) {
     return (
-      <div className="max-w-3xl mx-auto px-4 py-8">
+      <div className="w-full max-w-2xl px-4 py-8">
         <div className="h-8 w-48 bg-gray-100 rounded animate-pulse mb-6" />
         <div className="h-32 bg-gray-100 rounded-2xl animate-pulse" />
       </div>
@@ -61,7 +61,7 @@ export function HesabimPage() {
   const planColor = PLAN_COLORS[sub?.plan ?? 'free'] ?? PLAN_COLORS.free
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-8">
+    <div className="w-full max-w-2xl px-4 py-8">
       <h1 className="text-2xl font-bold text-gray-900 mb-8">Hesabım</h1>
 
       {/* Current plan */}
