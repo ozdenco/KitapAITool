@@ -23,6 +23,9 @@ public class AuthController(UserService users) : ControllerBase
         [Required] string AccessToken,
         [Required] string RefreshToken);
 
+    public record GoogleRequest([Required] string IdToken);
+
+    // ── Kayıt ─────────────────────────────────────────────────────────────────
     [HttpPost("register")]
     public async Task<IActionResult> Register([FromBody] RegisterRequest req)
     {
@@ -37,11 +40,12 @@ public class AuthController(UserService users) : ControllerBase
             data = new
             {
                 tokens = new { accessToken = access, refreshToken = refresh },
-                user = new { user.Id, user.Name, user.Email }
+                user   = new { user.Id, user.Name, user.Email, user.EmailVerified }
             }
         });
     }
 
+    // ── Giriş ─────────────────────────────────────────────────────────────────
     [HttpPost("login")]
     public async Task<IActionResult> Login([FromBody] LoginRequest req)
     {
@@ -56,11 +60,59 @@ public class AuthController(UserService users) : ControllerBase
             data = new
             {
                 tokens = new { accessToken = access, refreshToken = refresh },
-                user = new { user.Id, user.Name, user.Email }
+                user   = new { user.Id, user.Name, user.Email, user.EmailVerified }
             }
         });
     }
 
+    // ── Google OAuth ──────────────────────────────────────────────────────────
+    [HttpPost("google")]
+    public async Task<IActionResult> Google([FromBody] GoogleRequest req)
+    {
+        var result = await users.GoogleLoginAsync(req.IdToken);
+        if (result is null)
+            return Unauthorized(new { success = false, error = "Google doğrulaması başarısız." });
+
+        var (user, access, refresh) = result.Value;
+        return Ok(new
+        {
+            success = true,
+            data = new
+            {
+                tokens = new { accessToken = access, refreshToken = refresh },
+                user   = new { user.Id, user.Name, user.Email, user.EmailVerified }
+            }
+        });
+    }
+
+    // ── E-posta doğrulama ─────────────────────────────────────────────────────
+    [HttpPost("verify-email")]
+    public async Task<IActionResult> VerifyEmail([FromQuery] string token)
+    {
+        if (string.IsNullOrWhiteSpace(token))
+            return BadRequest(new { success = false, error = "Geçersiz doğrulama bağlantısı." });
+
+        var ok = await users.VerifyEmailAsync(token);
+        if (!ok)
+            return BadRequest(new { success = false, error = "Bağlantı geçersiz veya süresi dolmuş." });
+
+        return Ok(new { success = true });
+    }
+
+    // ── Doğrulama maili yeniden gönder ───────────────────────────────────────
+    [HttpPost("resend-verification")]
+    [Authorize]
+    public async Task<IActionResult> ResendVerification()
+    {
+        var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        var ok = await users.ResendVerificationAsync(userId);
+
+        return ok
+            ? Ok(new { success = true })
+            : BadRequest(new { success = false, error = "E-posta gönderilemedi veya zaten doğrulanmış." });
+    }
+
+    // ── Token yenile ──────────────────────────────────────────────────────────
     [HttpPost("refresh")]
     public async Task<IActionResult> Refresh([FromBody] RefreshRequest req)
     {
@@ -72,10 +124,11 @@ public class AuthController(UserService users) : ControllerBase
         return Ok(new
         {
             success = true,
-            data = new { accessToken = access, refreshToken = refresh }
+            data    = new { accessToken = access, refreshToken = refresh }
         });
     }
 
+    // ── Mevcut kullanıcı ─────────────────────────────────────────────────────
     [HttpGet("me")]
     [Authorize]
     public async Task<IActionResult> Me()
@@ -92,11 +145,13 @@ public class AuthController(UserService users) : ControllerBase
                 user.Id,
                 user.Name,
                 user.Email,
+                user.EmailVerified,
                 plan = user.Subscription?.Plan.Type.ToString().ToLower() ?? "free"
             }
         });
     }
 
+    // ── Çıkış ─────────────────────────────────────────────────────────────────
     [HttpPost("logout")]
     [Authorize]
     public async Task<IActionResult> Logout()

@@ -11,6 +11,14 @@ public class User
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
+    // ── E-posta doğrulama ─────────────────────────────────────────────────────
+    public bool EmailVerified { get; set; } = false;
+    public string? EmailVerificationToken { get; set; }
+    public DateTime? EmailVerificationExpiry { get; set; }
+
+    // ── Google OAuth ──────────────────────────────────────────────────────────
+    public string? GoogleId { get; set; }
+
     // Navigation
     public Subscription? Subscription { get; set; }
     public ICollection<ToolUsageLog> UsageLogs { get; set; } = [];

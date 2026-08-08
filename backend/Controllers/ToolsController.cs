@@ -40,8 +40,14 @@ public class ToolsController(
     {
         var userId = CurrentUserId;
 
-        // Check rate limit
-        if (!await usage.CanUseToolAsync(userId, toolId))
+        // E-posta doğrulama + rate limit kontrolü
+        bool canUse;
+        try { canUse = await usage.CanUseToolAsync(userId, toolId); }
+        catch (InvalidOperationException ex) when (ex.Message == "EMAIL_NOT_VERIFIED")
+        {
+            return StatusCode(403, new { error = "EMAIL_NOT_VERIFIED" });
+        }
+        if (!canUse)
             return StatusCode(429, new { error = "Aylık kullanım limitinize ulaştınız. Planı yükseltin." });
 
         try

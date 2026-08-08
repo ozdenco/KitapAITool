@@ -48,6 +48,11 @@ public class ToolUsageService(AppDbContext db)
 
     public async Task<bool> CanUseToolAsync(Guid userId, string toolId)
     {
+        // E-posta doğrulanmamışsa araç kullanılamaz
+        var user = await db.Users.FindAsync(userId);
+        if (user is not null && !user.EmailVerified)
+            throw new InvalidOperationException("EMAIL_NOT_VERIFIED");
+
         var plan = await GetUserPlanAsync(userId);
         if (plan?.UsagePerToolPerMonth is null) return true; // unlimited
 

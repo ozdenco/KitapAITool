@@ -83,6 +83,7 @@ builder.Services.AddHttpClient<N8nProxyService>()
         opts.CircuitBreaker.SamplingDuration = TimeSpan.FromSeconds(60);
     });
 builder.Services.AddScoped<TokenService>();
+builder.Services.AddScoped<EmailService>();
 builder.Services.AddScoped<UserService>();
 builder.Services.AddScoped<ToolUsageService>();
 builder.Services.AddScoped<SubscriptionService>();
