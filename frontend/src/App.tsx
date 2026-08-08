@@ -21,36 +21,46 @@ const queryClient = new QueryClient({
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID ?? ''
 
-export default function App() {
+function AppRoutes() {
   return (
-    <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
-      <QueryClientProvider client={queryClient}>
-        <BrowserRouter>
-          <Routes>
-            {/* Public */}
-            <Route path="/giris" element={<LoginPage />} />
-            <Route path="/kayit" element={<RegisterPage />} />
-            <Route path="/e-posta-dogrula" element={<VerifyEmailPage />} />
+    <QueryClientProvider client={queryClient}>
+      <BrowserRouter>
+        <Routes>
+          {/* Public */}
+          <Route path="/giris" element={<LoginPage />} />
+          <Route path="/kayit" element={<RegisterPage />} />
+          <Route path="/e-posta-dogrula" element={<VerifyEmailPage />} />
 
-            {/* Protected */}
-            <Route
-              element={
-                <AuthGuard>
-                  <Layout />
-                </AuthGuard>
-              }
-            >
-              <Route path="/dashboard" element={<DashboardPage />} />
-              <Route path="/hesabim" element={<HesabimPage />} />
-              <Route path="/arac/:toolId" element={<ToolPage />} />
-            </Route>
+          {/* Protected */}
+          <Route
+            element={
+              <AuthGuard>
+                <Layout />
+              </AuthGuard>
+            }
+          >
+            <Route path="/dashboard" element={<DashboardPage />} />
+            <Route path="/hesabim" element={<HesabimPage />} />
+            <Route path="/arac/:toolId" element={<ToolPage />} />
+          </Route>
 
-            {/* Default */}
-            <Route path="/" element={<Navigate to="/dashboard" replace />} />
-            <Route path="*" element={<Navigate to="/dashboard" replace />} />
-          </Routes>
-        </BrowserRouter>
-      </QueryClientProvider>
-    </GoogleOAuthProvider>
+          {/* Default */}
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+        </Routes>
+      </BrowserRouter>
+    </QueryClientProvider>
   )
+}
+
+export default function App() {
+  // GoogleOAuthProvider yalnızca Client ID tanımlıysa wrap eder
+  if (GOOGLE_CLIENT_ID) {
+    return (
+      <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
+        <AppRoutes />
+      </GoogleOAuthProvider>
+    )
+  }
+  return <AppRoutes />
 }

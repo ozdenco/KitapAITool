@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { useGoogleLogin } from '@react-oauth/google'
 import { useLogin, useGoogleAuth } from '@/hooks/useAuth'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
+
+const GOOGLE_ENABLED = !!(import.meta.env.VITE_GOOGLE_CLIENT_ID)
 
 export function LoginPage() {
   const [email, setEmail] = useState('')
@@ -15,27 +16,6 @@ export function LoginPage() {
     e.preventDefault()
     login({ email, password })
   }
-
-  const handleGoogleSuccess = useGoogleLogin({
-    onSuccess: (response) => {
-      // response.access_token ile userinfo alalım; ya da ID token flow kullanın
-      // Google OAuth2 implicit flow: access_token → userinfo endpoint
-      fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-        headers: { Authorization: `Bearer ${response.access_token}` },
-      })
-        .then(r => r.json())
-        .then((profile: { sub: string; email: string; name: string }) => {
-          // Backend'e sub (Google user ID) ile giriş yap
-          // Not: Gerçek ID token için credential flow kullanılmalı
-          // Şimdilik access_token'ı backend'e iletiyoruz
-          googleAuth(response.access_token)
-        })
-    },
-    onError: () => {
-      // Google popup kapandı veya hata oluştu
-    },
-    flow: 'implicit',
-  })
 
   const loginError = error instanceof Error ? error.message : error ? 'Giriş yapılamadı.' : null
   const gError = googleError instanceof Error ? googleError.message : null
@@ -62,25 +42,21 @@ export function LoginPage() {
             </div>
           )}
 
-          {/* Google butonu */}
-          <button
-            type="button"
-            onClick={() => handleGoogleSuccess()}
-            disabled={googlePending || isPending}
-            className="w-full flex items-center justify-center gap-3 px-4 py-2.5 border border-gray-200
-                       rounded-xl text-sm font-medium text-gray-700 bg-white hover:bg-gray-50
-                       transition-colors disabled:opacity-50 disabled:cursor-not-allowed mb-4"
-          >
-            <GoogleIcon />
-            {googlePending ? 'Bekleniyor...' : 'Google ile Giriş Yap'}
-          </button>
-
-          {/* Ayırıcı */}
-          <div className="flex items-center gap-3 mb-4">
-            <div className="flex-1 h-px bg-gray-100" />
-            <span className="text-xs text-gray-400">veya e-posta ile</span>
-            <div className="flex-1 h-px bg-gray-100" />
-          </div>
+          {/* Google butonu — sadece Client ID tanımlıysa göster */}
+          {GOOGLE_ENABLED && (
+            <>
+              <GoogleButton
+                label={googlePending ? 'Bekleniyor...' : 'Google ile Giriş Yap'}
+                disabled={googlePending || isPending}
+                onClick={() => googleAuth('')}
+              />
+              <div className="flex items-center gap-3 mb-4">
+                <div className="flex-1 h-px bg-gray-100" />
+                <span className="text-xs text-gray-400">veya e-posta ile</span>
+                <div className="flex-1 h-px bg-gray-100" />
+              </div>
+            </>
+          )}
 
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             <Input
@@ -117,6 +93,22 @@ export function LoginPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+function GoogleButton({ label, disabled, onClick }: { label: string; disabled: boolean; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className="w-full flex items-center justify-center gap-3 px-4 py-2.5 border border-gray-200
+                 rounded-xl text-sm font-medium text-gray-700 bg-white hover:bg-gray-50
+                 transition-colors disabled:opacity-50 disabled:cursor-not-allowed mb-4"
+    >
+      <GoogleIcon />
+      {label}
+    </button>
   )
 }
 

@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { useGoogleLogin } from '@react-oauth/google'
 import { useRegister, useGoogleAuth } from '@/hooks/useAuth'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
+
+const GOOGLE_ENABLED = !!(import.meta.env.VITE_GOOGLE_CLIENT_ID)
 
 export function RegisterPage() {
   const [name, setName] = useState('')
@@ -16,14 +17,6 @@ export function RegisterPage() {
     e.preventDefault()
     register({ name, email, password })
   }
-
-  const handleGoogleSuccess = useGoogleLogin({
-    onSuccess: (response) => {
-      googleAuth(response.access_token)
-    },
-    onError: () => {},
-    flow: 'implicit',
-  })
 
   const regError = error instanceof Error ? error.message : error ? 'Kayıt yapılamadı.' : null
   const gError = googleError instanceof Error ? googleError.message : null
@@ -49,25 +42,27 @@ export function RegisterPage() {
             </div>
           )}
 
-          {/* Google butonu */}
-          <button
-            type="button"
-            onClick={() => handleGoogleSuccess()}
-            disabled={googlePending || isPending}
-            className="w-full flex items-center justify-center gap-3 px-4 py-2.5 border border-gray-200
-                       rounded-xl text-sm font-medium text-gray-700 bg-white hover:bg-gray-50
-                       transition-colors disabled:opacity-50 disabled:cursor-not-allowed mb-4"
-          >
-            <GoogleIcon />
-            {googlePending ? 'Bekleniyor...' : 'Google ile Kayıt Ol'}
-          </button>
-
-          {/* Ayırıcı */}
-          <div className="flex items-center gap-3 mb-4">
-            <div className="flex-1 h-px bg-gray-100" />
-            <span className="text-xs text-gray-400">veya e-posta ile</span>
-            <div className="flex-1 h-px bg-gray-100" />
-          </div>
+          {/* Google butonu — sadece Client ID tanımlıysa göster */}
+          {GOOGLE_ENABLED && (
+            <>
+              <button
+                type="button"
+                onClick={() => googleAuth('')}
+                disabled={googlePending || isPending}
+                className="w-full flex items-center justify-center gap-3 px-4 py-2.5 border border-gray-200
+                           rounded-xl text-sm font-medium text-gray-700 bg-white hover:bg-gray-50
+                           transition-colors disabled:opacity-50 disabled:cursor-not-allowed mb-4"
+              >
+                <GoogleIcon />
+                {googlePending ? 'Bekleniyor...' : 'Google ile Kayıt Ol'}
+              </button>
+              <div className="flex items-center gap-3 mb-4">
+                <div className="flex-1 h-px bg-gray-100" />
+                <span className="text-xs text-gray-400">veya e-posta ile</span>
+                <div className="flex-1 h-px bg-gray-100" />
+              </div>
+            </>
+          )}
 
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             <Input
