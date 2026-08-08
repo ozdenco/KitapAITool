@@ -70,8 +70,13 @@ builder.Services.AddCors(opts =>
         .AllowAnyMethod()
         .AllowCredentials()));
 
-// Application services
-builder.Services.AddHttpClient<N8nProxyService>();
+// Application services — SSL bypass for Docker/TLS compatibility
+builder.Services.AddHttpClient<N8nProxyService>()
+    .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+    {
+        // TODO: kaldır production'da — Docker içinde TLS el sıkışma sorunu tanısı için
+        ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
+    });
 builder.Services.AddScoped<TokenService>();
 builder.Services.AddScoped<UserService>();
 builder.Services.AddScoped<ToolUsageService>();

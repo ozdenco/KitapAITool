@@ -4,151 +4,279 @@ import api from '@/lib/api'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
-import { ResultCard, ResultSection } from '@/components/ui/ResultCard'
-import type { GorunurlukSkoruPayload } from '@/types'
+import { FormPersistButtons } from '@/components/ui/FormPersistButtons'
 
-interface ScoreResult {
-  skore: number
-  ozet: string
-  guclu_yonler: string[]
-  zayif_yonler: string[]
-  oncelikli_aksiyonlar: string[]
-  detayli_analiz: {
-    google_varligi: { puan: number; yorum: string }
-    sosyal_medya: { puan: number; yorum: string }
-    web_sitesi: { puan: number; yorum: string }
-    musteriyorum: { puan: number; yorum: string }
-    yerel_seo: { puan: number; yorum: string }
-  }
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+interface ScoreItem {
+  status: 'red' | 'amber' | 'green'
+  icon: string
+  name: string
+  desc: string
+  badge: string
 }
 
-const SEHIRLER = [
-  'İstanbul', 'Ankara', 'İzmir', 'Bursa', 'Antalya', 'Adana', 'Gaziantep',
-  'Konya', 'Mersin', 'Kayseri', 'Eskişehir', 'Diyarbakır', 'Samsun',
-  'Denizli', 'Trabzon', 'Diğer'
-]
+interface ScoreResult {
+  score: number
+  level: string
+  summary: string
+  items: ScoreItem[]
+  ctaText: string
+}
+
+// ─── Constants ────────────────────────────────────────────────────────────────
 
 const SEKTORLER = [
-  'Restoran / Kafe', 'Perakende / Mağaza', 'Güzellik / Kuaför', 'Sağlık / Klinik',
-  'Eğitim / Kurs', 'İnşaat / Tadilat', 'Hukuk / Danışmanlık', 'Muhasebe / Mali Müşavirlik',
-  'Otomotiv / Servis', 'Turizm / Otel', 'Teknoloji / Yazılım', 'Diğer'
+  'Muhasebe / Finans',
+  'Sağlık / Klinik',
+  'Eğitim / Kurs',
+  'İnşaat / Mühendislik',
+  'Hukuk / Danışmanlık',
+  'Perakende / Mağaza',
+  'Yiyecek / İçecek',
+  'Güzellik / Estetik',
+  'Lojistik / Taşımacılık',
+  'Teknoloji / Yazılım',
+  'Diğer',
 ]
 
+const PLATFORMLAR = [
+  { value: 'Google Business', label: 'Google Business' },
+  { value: 'Instagram', label: 'Instagram' },
+  { value: 'Facebook', label: 'Facebook' },
+  { value: 'WhatsApp İş', label: 'WhatsApp İş' },
+  { value: 'Hiçbiri', label: 'Hiçbiri' },
+]
+
+const MUSTERI_HEDEFLERI = ['1–5', '5–20', '20–50', '50+']
+
+// ─── Prompt builder ────────────────────────────────────────────────────────────
+
+function buildPrompt(fields: {
+  name: string
+  sector: string
+  city: string
+  web: string
+  platforms: string[]
+  liExists: string
+  liActive: string
+  goal: string
+}): string {
+  const liInfo =
+    fields.liExists === 'evet'
+      ? `var / Düzenli paylaşım: ${fields.liActive === 'evet' ? 'evet' : fields.liActive === 'hayir' ? 'hayır' : 'belirtilmemiş'}`
+      : fields.liExists === 'hayir'
+        ? 'yok'
+        : 'belirtilmemiş'
+
+  return (
+    'Sen dijital pazarlama ve yerel SEO uzmanısın. Aşağıdaki işletme için görünürlük analizi yap.\n\n' +
+    'İŞLETME BİLGİLERİ:\n' +
+    '- İşletme adı: ' + fields.name + '\n' +
+    '- Sektör: ' + fields.sector + '\n' +
+    '- Şehir: ' + fields.city + '\n' +
+    '- Web sitesi: ' + (fields.web || 'yok') + '\n' +
+    '- Mevcut platformlar: ' + (fields.platforms.length ? fields.platforms.join(', ') : 'hiçbiri') + '\n' +
+    '- LinkedIn sayfası: ' + liInfo + '\n' +
+    '- Aylık müşteri hedefi: ' + (fields.goal || 'belirtilmemiş') + '\n\n' +
+    'GÖREV:\n' +
+    fields.name + ' için 0-100 arası bir görünürlük skoru ve öncelikli aksiyon listesi hazırla.\n' +
+    '- Web sitesi yoksa skoru düşür\n' +
+    '- Google Business yoksa kritik eksik say\n' +
+    '- Sosyal medya varlığına göre değerlendir\n' +
+    '- Sektöre özgü değerlendirme yap (' + fields.sector + ')\n\n' +
+    'Tüm metin alanları Türkçe olsun.\n\n' +
+    'SADECE JSON dondur:\n' +
+    '{\n' +
+    '  "score": [0-100 arasi tam sayi],\n' +
+    '  "level": "[Baslangic|Gelismekte|Orta|Iyi|Mukemmel]",\n' +
+    '  "summary": "[' + fields.name + ' icin 1-2 cumle ozet]",\n' +
+    '  "items": [\n' +
+    '    {\n' +
+    '      "status": "[red|amber|green]",\n' +
+    '      "icon": "[tabler icon adi, ornek: ti-world]",\n' +
+    '      "name": "[kisa baslik]",\n' +
+    '      "desc": "[somut 1-2 cumle aciklama]",\n' +
+    '      "badge": "[Kritik|Iyilestir|Guclu]"\n' +
+    '    }\n' +
+    '  ],\n' +
+    '  "ctaText": "[' + fields.name + ' icin kisisel 1 cumle]"\n' +
+    '}\n' +
+    '6-8 item olsun. Once red, sonra amber, sonra green. Tum metin alanlari Turkce olsun.'
+  )
+}
+
+// ─── Score visual helpers ─────────────────────────────────────────────────────
+
+function scoreColor(score: number) {
+  if (score >= 70) return { text: 'text-green-600', ring: 'stroke-green-500' }
+  if (score >= 40) return { text: 'text-amber-500', ring: 'stroke-amber-400' }
+  return { text: 'text-red-500', ring: 'stroke-red-400' }
+}
+
+function statusConfig(status: string) {
+  if (status === 'red') return { dot: 'bg-red-500', badge: 'bg-red-50 text-red-700 border-red-200' }
+  if (status === 'amber') return { dot: 'bg-amber-400', badge: 'bg-amber-50 text-amber-700 border-amber-200' }
+  return { dot: 'bg-green-500', badge: 'bg-green-50 text-green-700 border-green-200' }
+}
+
+// ─── Component ────────────────────────────────────────────────────────────────
+
 export function GorunurlukSkoruPage() {
-  const [form, setForm] = useState<GorunurlukSkoruPayload>({
-    isletme_adi: '',
-    sehir: '',
-    sektor: '',
-    web_sitesi: '',
-    google_isletme_profili: false,
-    sosyal_medya: [],
-  })
+  const [name, setName] = useState('')
+  const [sector, setSector] = useState('')
+  const [city, setCity] = useState('')
+  const [web, setWeb] = useState('')
+  const [platforms, setPlatforms] = useState<string[]>([])
+  const [liExists, setLiExists] = useState('')
+  const [liActive, setLiActive] = useState('')
+  const [goal, setGoal] = useState('')
   const [result, setResult] = useState<ScoreResult | null>(null)
 
-  const update = (field: keyof GorunurlukSkoruPayload, value: unknown) =>
-    setForm((prev) => ({ ...prev, [field]: value }))
-
-  const toggleSosyalMedya = (platform: string) => {
-    setForm((prev) => ({
-      ...prev,
-      sosyal_medya: prev.sosyal_medya.includes(platform)
-        ? prev.sosyal_medya.filter((p) => p !== platform)
-        : [...prev.sosyal_medya, platform],
-    }))
-  }
+  const togglePlatform = (value: string) =>
+    setPlatforms((prev) =>
+      prev.includes(value) ? prev.filter((p) => p !== value) : [...prev, value],
+    )
 
   const mutation = useMutation({
     mutationFn: async () => {
-      const res = await api.post('/tools/gorunurluk-skoru/run', form)
-      return res.data as ScoreResult
+      const prompt = buildPrompt({ name, sector, city, web, platforms, liExists, liActive, goal })
+      const res = await api.post('/tools/gorunurluk-skoru/run', { prompt })
+      // n8n returns { content: [{ type: "text", text: "{...json...}" }] }
+      const content = res.data?.content?.[0]?.text ?? res.data
+      if (typeof content === 'string') {
+        return JSON.parse(content) as ScoreResult
+      }
+      return content as ScoreResult
     },
     onSuccess: (data) => setResult(data),
   })
 
-  const canSubmit =
-    form.isletme_adi.trim() &&
-    form.sehir &&
-    form.sektor &&
-    !mutation.isPending
+  const canSubmit = name.trim() && sector && city.trim() && !mutation.isPending
 
-  const scoreColor = (score: number) =>
-    score >= 70 ? 'text-green-600' : score >= 40 ? 'text-amber-500' : 'text-red-500'
+  const colors = result ? scoreColor(result.score) : null
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-8">
+      {/* Header */}
       <div className="mb-8">
         <div className="flex items-center gap-3 mb-2">
           <span className="text-3xl">📊</span>
           <h1 className="text-2xl font-bold text-gray-900">İşletme Görünürlük Skoru</h1>
         </div>
         <p className="text-gray-500 text-sm">
-          İşletmenizin dijital görünürlüğünü analiz edin. 0-100 arası puan ve öncelikli aksiyonlar alın.
+          İşletmenizin Google, sosyal medya ve web'deki varlığını analiz edip 0–100 arası görünürlük puanı ve öncelikli aksiyon listesi hazırlıyoruz.
         </p>
       </div>
 
       {/* Form */}
       <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm mb-6">
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-5">
           <Input
-            label="İşletme Adı *"
-            placeholder="ör. Ayşe'nin Pastanesi"
-            value={form.isletme_adi}
-            onChange={(e) => update('isletme_adi', e.target.value)}
+            label="İşletme adı *"
+            placeholder="Örn: Yıldız Muhasebe Ofisi"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
           />
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Select
-              label="Şehir *"
-              value={form.sehir}
-              onChange={(e) => update('sehir', e.target.value)}
-              options={[{ value: '', label: 'Seçin...' }, ...SEHIRLER.map((s) => ({ value: s, label: s }))]}
-            />
-            <Select
               label="Sektör *"
-              value={form.sektor}
-              onChange={(e) => update('sektor', e.target.value)}
-              options={[{ value: '', label: 'Seçin...' }, ...SEKTORLER.map((s) => ({ value: s, label: s }))]}
+              value={sector}
+              onChange={(e) => setSector(e.target.value)}
+              options={[
+                { value: '', label: 'Seçin...' },
+                ...SEKTORLER.map((s) => ({ value: s, label: s })),
+              ]}
+            />
+            <Input
+              label="Şehir *"
+              placeholder="Örn: İzmir"
+              value={city}
+              onChange={(e) => setCity(e.target.value)}
             />
           </div>
 
           <Input
-            label="Web Sitesi (varsa)"
-            placeholder="https://ornekisletme.com"
-            type="url"
-            value={form.web_sitesi}
-            onChange={(e) => update('web_sitesi', e.target.value)}
+            label="Web sitesi (varsa)"
+            placeholder="Örn: www.yildizmuhasebe.com"
+            value={web}
+            onChange={(e) => setWeb(e.target.value)}
           />
 
+          {/* Platform checkboxes */}
           <div>
-            <label className="text-sm font-medium text-gray-700 mb-2 block">
-              Sosyal Medya Varlığı
-            </label>
+            <p className="text-sm font-medium text-gray-700 mb-2">
+              Hangi platformlarda varlığınız var?
+            </p>
             <div className="flex flex-wrap gap-2">
-              {['Instagram', 'Facebook', 'TikTok', 'YouTube', 'Twitter/X', 'LinkedIn'].map((p) => (
-                <button
-                  key={p}
-                  type="button"
-                  onClick={() => toggleSosyalMedya(p)}
-                  className={`px-3 py-1.5 rounded-full text-sm border transition
-                    ${form.sosyal_medya.includes(p)
-                      ? 'bg-[#1D9E75] text-white border-[#1D9E75]'
-                      : 'border-gray-300 text-gray-600 hover:border-[#1D9E75]'}`}
-                >
-                  {p}
-                </button>
-              ))}
+              {PLATFORMLAR.map(({ value, label }) => {
+                const checked = platforms.includes(value)
+                return (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => togglePlatform(value)}
+                    className={`px-3 py-1.5 rounded-lg border text-sm transition-colors ${
+                      checked
+                        ? 'bg-[#1D9E75] border-[#1D9E75] text-white'
+                        : 'bg-white border-gray-200 text-gray-600 hover:border-[#1D9E75]/40'
+                    }`}
+                  >
+                    {checked ? '✓ ' : ''}{label}
+                  </button>
+                )
+              })}
             </div>
           </div>
 
-          <label className="flex items-center gap-3 cursor-pointer select-none">
-            <input
-              type="checkbox"
-              checked={form.google_isletme_profili}
-              onChange={(e) => update('google_isletme_profili', e.target.checked)}
-              className="w-4 h-4 accent-[#1D9E75]"
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Select
+              label="LinkedIn sayfanız var mı?"
+              value={liExists}
+              onChange={(e) => { setLiExists(e.target.value); if (e.target.value !== 'evet') setLiActive('') }}
+              options={[
+                { value: '', label: 'Seçin...' },
+                { value: 'evet', label: 'Evet' },
+                { value: 'hayir', label: 'Hayır' },
+              ]}
             />
-            <span className="text-sm text-gray-700">Google İşletme Profilim var</span>
-          </label>
+            <Select
+              label="LinkedIn'de düzenli paylaşım?"
+              value={liActive}
+              onChange={(e) => setLiActive(e.target.value)}
+              options={[
+                { value: '', label: 'Seçin...' },
+                { value: 'evet', label: 'Evet, düzenli paylaşım var' },
+                { value: 'hayir', label: 'Hayır, aktif değil' },
+              ]}
+            />
+          </div>
+
+          <Select
+            label="Aylık ortalama kaç yeni müşteri hedefliyorsunuz?"
+            value={goal}
+            onChange={(e) => setGoal(e.target.value)}
+            options={[
+              { value: '', label: 'Seçin...' },
+              ...MUSTERI_HEDEFLERI.map((g) => ({ value: g, label: g })),
+            ]}
+          />
+
+          <FormPersistButtons
+            filename="gorunurluk-skoru-formu.json"
+            getData={() => ({ name, sector, city, web, platforms, liExists, liActive, goal })}
+            onLoad={(d) => {
+              if (typeof d.name === 'string') setName(d.name)
+              if (typeof d.sector === 'string') setSector(d.sector)
+              if (typeof d.city === 'string') setCity(d.city)
+              if (typeof d.web === 'string') setWeb(d.web)
+              if (Array.isArray(d.platforms)) setPlatforms(d.platforms as string[])
+              if (typeof d.liExists === 'string') setLiExists(d.liExists)
+              if (typeof d.liActive === 'string') setLiActive(d.liActive)
+              if (typeof d.goal === 'string') setGoal(d.goal)
+            }}
+          />
 
           {mutation.isError && (
             <p className="text-sm text-red-500">
@@ -160,92 +288,79 @@ export function GorunurlukSkoruPage() {
             onClick={() => mutation.mutate()}
             disabled={!canSubmit}
             loading={mutation.isPending}
-            className="mt-2"
+            className="mt-1 w-full"
           >
-            Skoru Hesapla
+            📊 Skoru Hesapla
           </Button>
+
+          {mutation.isPending && (
+            <p className="text-center text-sm text-gray-400 animate-pulse">
+              Yapay zeka analiz ediyor — bu işlem 1-2 dakika sürebilir...
+            </p>
+          )}
         </div>
       </div>
 
       {/* Results */}
-      {result && (
+      {result && colors && (
         <div className="flex flex-col gap-4">
-          {/* Score hero */}
-          <ResultCard className="text-center">
-            <div className={`text-7xl font-black mb-2 ${scoreColor(result.skore)}`}>
-              {result.skore}
-            </div>
-            <div className="text-gray-500 text-sm mb-4">/100 Görünürlük Puanı</div>
-            <p className="text-gray-700 text-sm leading-relaxed">{result.ozet}</p>
-          </ResultCard>
-
-          {/* Breakdown */}
-          <ResultCard>
-            <ResultSection title="Detaylı Analiz">
-              <div className="flex flex-col gap-3">
-                {Object.entries(result.detayli_analiz).map(([key, val]) => (
-                  <div key={key} className="flex items-start gap-3">
-                    <div className="w-20 shrink-0">
-                      <div className="text-xs text-gray-500 mb-1">
-                        {key.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())}
-                      </div>
-                      <div className={`text-lg font-bold ${scoreColor(val.puan)}`}>{val.puan}</div>
-                    </div>
-                    <div className="h-1.5 flex-1 self-center bg-gray-100 rounded-full overflow-hidden">
-                      <div
-                        className={`h-full rounded-full ${val.puan >= 70 ? 'bg-green-500' : val.puan >= 40 ? 'bg-amber-400' : 'bg-red-400'}`}
-                        style={{ width: `${val.puan}%` }}
-                      />
-                    </div>
-                    <p className="text-xs text-gray-600 w-48 shrink-0 self-center">{val.yorum}</p>
-                  </div>
-                ))}
+          {/* Score card */}
+          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 flex items-center gap-6">
+            <div className="relative w-24 h-24 shrink-0">
+              <svg className="w-24 h-24 -rotate-90" viewBox="0 0 96 96">
+                <circle cx="48" cy="48" r="40" fill="none" stroke="#f3f4f6" strokeWidth="8" />
+                <circle
+                  cx="48" cy="48" r="40" fill="none"
+                  className={colors.ring}
+                  strokeWidth="8"
+                  strokeDasharray={`${(result.score / 100) * 251} 251`}
+                  strokeLinecap="round"
+                />
+              </svg>
+              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <span className={`text-2xl font-bold ${colors.text}`}>{result.score}</span>
+                <span className="text-xs text-gray-400">/100</span>
               </div>
-            </ResultSection>
-          </ResultCard>
-
-          {/* Actions */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <ResultCard>
-              <ResultSection title="Güçlü Yönler">
-                <ul className="flex flex-col gap-2">
-                  {result.guclu_yonler.map((item, i) => (
-                    <li key={i} className="flex gap-2 text-sm text-gray-700">
-                      <span className="text-green-500 shrink-0">✓</span>
-                      {item}
-                    </li>
-                  ))}
-                </ul>
-              </ResultSection>
-            </ResultCard>
-            <ResultCard>
-              <ResultSection title="Geliştirme Alanları">
-                <ul className="flex flex-col gap-2">
-                  {result.zayif_yonler.map((item, i) => (
-                    <li key={i} className="flex gap-2 text-sm text-gray-700">
-                      <span className="text-red-400 shrink-0">✗</span>
-                      {item}
-                    </li>
-                  ))}
-                </ul>
-              </ResultSection>
-            </ResultCard>
+            </div>
+            <div>
+              <p className={`text-lg font-bold ${colors.text}`}>{result.level}</p>
+              <p className="text-sm text-gray-600 mt-1 leading-relaxed">{result.summary}</p>
+            </div>
           </div>
 
-          <ResultCard>
-            <ResultSection title="Öncelikli Aksiyonlar">
-              <ol className="flex flex-col gap-3">
-                {result.oncelikli_aksiyonlar.map((item, i) => (
-                  <li key={i} className="flex gap-3 text-sm text-gray-700">
-                    <span className="flex-none w-6 h-6 rounded-full bg-[#1D9E75]/10 text-[#1D9E75] font-bold text-xs flex items-center justify-center">
-                      {i + 1}
-                    </span>
-                    {item}
-                  </li>
-                ))}
-              </ol>
-            </ResultSection>
-          </ResultCard>
+          {/* Items */}
+          <div className="flex flex-col gap-3">
+            {result.items.map((item, i) => {
+              const cfg = statusConfig(item.status)
+              return (
+                <div key={i} className="bg-white rounded-xl border border-gray-200 px-5 py-4 flex gap-4 items-start">
+                  <span className={`w-2.5 h-2.5 rounded-full mt-1 shrink-0 ${cfg.dot}`} />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <span className="text-sm font-semibold text-gray-900">{item.name}</span>
+                      <span className={`text-xs px-2 py-0.5 rounded border ${cfg.badge}`}>
+                        {item.badge}
+                      </span>
+                    </div>
+                    <p className="text-sm text-gray-600">{item.desc}</p>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+
+          {result.ctaText && (
+            <div className="bg-[#1D9E75]/5 border border-[#1D9E75]/20 rounded-2xl p-5 text-center">
+              <p className="text-sm text-[#1D9E75] font-medium">{result.ctaText}</p>
+            </div>
+          )}
+
+          <button
+            onClick={() => setResult(null)}
+            className="text-sm text-gray-400 underline text-center"
+          >
+            Yeni analiz yap
+          </button>
         </div>
       )}
     </div>

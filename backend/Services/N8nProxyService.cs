@@ -9,20 +9,21 @@ public class N8nProxyService(HttpClient http, IConfiguration config, ILogger<N8n
     private readonly string _baseUrl = config["N8n:BaseUrl"]
         ?? throw new InvalidOperationException("N8n:BaseUrl not configured");
 
-    // Tool ID → n8n webhook path mapping (matches existing webhook paths)
+    // Tool ID → n8n webhook path mapping
+    // Paths match workflow JSON files in /n8n-workflows/
     private static readonly Dictionary<string, string> WebhookPaths = new()
     {
-        ["gorunurluk-skoru"]  = "/webhook/isletme-gorunurluk-skoru",
-        ["musteri-persona"]   = "/webhook/musteri-persona-olusturucu",
-        ["icerik-takvimi"]    = "/webhook/icerik-takvimi-uretici",
-        ["whatsapp-script"]   = "/webhook/whatsapp-satis-script",
-        ["reklam-butce"]      = "/webhook/reklam-butce-optimize",
-        ["musteri-geri-donus"]= "/webhook/musteri-geri-donus-sistemi",
-        ["rakip-analiz"]      = "/webhook/rakip-analiz-araci",
-        ["chatbot-senaryo"]   = "/webhook/chatbot-senaryo-uretici",
-        ["ai-gorunurluk"]     = "/webhook/ai-gorunurluk-optimize",
-        ["viral-video"]       = "/webhook/viral-video-script",
-        ["trend-video"]       = "/webhook/trend-video-bulucu"
+        ["gorunurluk-skoru"]  = "/webhook/kolay-kobi-skor",
+        ["musteri-persona"]   = "/webhook/kolay-kobi-persona",
+        ["icerik-takvimi"]    = "/webhook/kolay-kobi-takvim",
+        ["whatsapp-script"]   = "/webhook/kolay-kobi-wa",
+        ["reklam-butce"]      = "/webhook/kolay-kobi-butce",
+        ["musteri-geri-donus"]= "/webhook/kolay-kobi-geri-donus",
+        ["rakip-analiz"]      = "/webhook/kolay-kobi-rakip",
+        ["chatbot-senaryo"]   = "/webhook/kolay-kobi-chatbot",
+        ["ai-gorunurluk"]     = "/webhook/kolay-kobi-ai-visibility",
+        ["viral-video"]       = "/webhook/kolay-kobi-viral-uyarlayici",
+        ["trend-video"]       = "/webhook/kolay-kobi-trend-video"
     };
 
     // Async tools use job polling
