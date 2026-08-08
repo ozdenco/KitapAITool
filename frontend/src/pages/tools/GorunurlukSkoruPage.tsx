@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
 import { FormPersistButtons } from '@/components/ui/FormPersistButtons'
+import { ToolShell } from '@/components/ui/ToolShell'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -143,231 +144,228 @@ export function GorunurlukSkoruPage() {
     mutationFn: async () => {
       const prompt = buildPrompt({ name, sector, city, web, platforms, liExists, liActive, goal })
       const res = await api.post('/tools/gorunurluk-skoru/run', { prompt })
-      // n8n returns { content: [{ type: "text", text: "{...json...}" }] }
       const content = res.data?.content?.[0]?.text ?? res.data
-      if (typeof content === 'string') {
-        return JSON.parse(content) as ScoreResult
-      }
+      if (typeof content === 'string') return JSON.parse(content) as ScoreResult
       return content as ScoreResult
     },
     onSuccess: (data) => {
       setResult(data)
-      // Dashboard'daki kullanım sayacını güncelle
       void queryClient.invalidateQueries({ queryKey: ['tool-usage'] })
     },
   })
 
   const canSubmit = name.trim() && sector && city.trim() && !mutation.isPending
-
   const colors = result ? scoreColor(result.score) : null
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-8">
-      {/* Header */}
-      <div className="mb-8">
-        <div className="flex items-center gap-3 mb-2">
-          <span className="text-3xl">📊</span>
-          <h1 className="text-2xl font-bold text-gray-900">İşletme Görünürlük Skoru</h1>
-        </div>
-        <p className="text-gray-500 text-sm">
-          İşletmenizin Google, sosyal medya ve web'deki varlığını analiz edip 0–100 arası görünürlük puanı ve öncelikli aksiyon listesi hazırlıyoruz.
-        </p>
-      </div>
-
-      {/* Form */}
-      <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm mb-6">
-        <div className="flex flex-col gap-5">
-          <Input
-            label="İşletme adı *"
-            placeholder="Örn: Yıldız Muhasebe Ofisi"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-          />
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Select
-              label="Sektör *"
-              value={sector}
-              onChange={(e) => setSector(e.target.value)}
-              options={[
-                { value: '', label: 'Seçin...' },
-                ...SEKTORLER.map((s) => ({ value: s, label: s })),
-              ]}
-            />
-            <Input
-              label="Şehir *"
-              placeholder="Örn: İzmir"
-              value={city}
-              onChange={(e) => setCity(e.target.value)}
-            />
-          </div>
-
-          <Input
-            label="Web sitesi (varsa)"
-            placeholder="Örn: www.yildizmuhasebe.com"
-            value={web}
-            onChange={(e) => setWeb(e.target.value)}
-          />
-
-          {/* Platform checkboxes */}
-          <div>
-            <p className="text-sm font-medium text-gray-700 mb-2">
-              Hangi platformlarda varlığınız var?
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {PLATFORMLAR.map(({ value, label }) => {
-                const checked = platforms.includes(value)
-                return (
-                  <button
-                    key={value}
-                    type="button"
-                    onClick={() => togglePlatform(value)}
-                    className={`px-3 py-1.5 rounded-lg border text-sm transition-colors ${
-                      checked
-                        ? 'bg-[#1D9E75] border-[#1D9E75] text-white'
-                        : 'bg-white border-gray-200 text-gray-600 hover:border-[#1D9E75]/40'
-                    }`}
-                  >
-                    {checked ? '✓ ' : ''}{label}
-                  </button>
-                )
-              })}
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Select
-              label="LinkedIn sayfanız var mı?"
-              value={liExists}
-              onChange={(e) => { setLiExists(e.target.value); if (e.target.value !== 'evet') setLiActive('') }}
-              options={[
-                { value: '', label: 'Seçin...' },
-                { value: 'evet', label: 'Evet' },
-                { value: 'hayir', label: 'Hayır' },
-              ]}
-            />
-            <Select
-              label="LinkedIn'de düzenli paylaşım?"
-              value={liActive}
-              onChange={(e) => setLiActive(e.target.value)}
-              options={[
-                { value: '', label: 'Seçin...' },
-                { value: 'evet', label: 'Evet, düzenli paylaşım var' },
-                { value: 'hayir', label: 'Hayır, aktif değil' },
-              ]}
-            />
-          </div>
-
-          <Select
-            label="Aylık ortalama kaç yeni müşteri hedefliyorsunuz?"
-            value={goal}
-            onChange={(e) => setGoal(e.target.value)}
-            options={[
-              { value: '', label: 'Seçin...' },
-              ...MUSTERI_HEDEFLERI.map((g) => ({ value: g, label: g })),
-            ]}
-          />
-
-          <FormPersistButtons
-            filename="gorunurluk-skoru-formu.json"
-            getData={() => ({ name, sector, city, web, platforms, liExists, liActive, goal })}
-            onLoad={(d) => {
-              if (typeof d.name === 'string') setName(d.name)
-              if (typeof d.sector === 'string') setSector(d.sector)
-              if (typeof d.city === 'string') setCity(d.city)
-              if (typeof d.web === 'string') setWeb(d.web)
-              if (Array.isArray(d.platforms)) setPlatforms(d.platforms as string[])
-              if (typeof d.liExists === 'string') setLiExists(d.liExists)
-              if (typeof d.liActive === 'string') setLiActive(d.liActive)
-              if (typeof d.goal === 'string') setGoal(d.goal)
-            }}
-          />
-
-          {mutation.isError && (
-            <p className="text-sm text-red-500">
-              Bir hata oluştu. Lütfen tekrar deneyin.
-            </p>
-          )}
-
-          <Button
-            onClick={() => mutation.mutate()}
-            disabled={!canSubmit}
-            loading={mutation.isPending}
-            className="mt-1 w-full"
-          >
-            📊 Skoru Hesapla
-          </Button>
-
-          {mutation.isPending && (
-            <p className="text-center text-sm text-gray-400 animate-pulse">
-              Yapay zeka analiz ediyor — bu işlem 1-2 dakika sürebilir...
-            </p>
-          )}
-        </div>
-      </div>
-
-      {/* Results */}
-      {result && colors && (
-        <div className="flex flex-col gap-4">
-          {/* Score card */}
-          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 flex items-center gap-6">
-            <div className="relative w-24 h-24 shrink-0">
-              <svg className="w-24 h-24 -rotate-90" viewBox="0 0 96 96">
-                <circle cx="48" cy="48" r="40" fill="none" stroke="#f3f4f6" strokeWidth="8" />
-                <circle
-                  cx="48" cy="48" r="40" fill="none"
-                  className={colors.ring}
-                  strokeWidth="8"
-                  strokeDasharray={`${(result.score / 100) * 251} 251`}
-                  strokeLinecap="round"
+    <ToolShell
+      toolId="gorunurluk-skoru"
+      title="İşletme Görünürlük Skoru"
+      icon="📊"
+      description="İşletmenizin Google, sosyal medya ve web'deki varlığını analiz edip 0–100 arası görünürlük puanı ve öncelikli aksiyon listesi hazırlıyoruz."
+      hasResult={!!result}
+      formHasInput={!!name.trim()}
+    >
+      {({ isFormOpen }) => (
+        <>
+          {/* ── Form ───────────────────────────────────────────── */}
+          {isFormOpen && (
+            <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm mb-6">
+              <div className="flex flex-col gap-5">
+                <Input
+                  label="İşletme adı *"
+                  placeholder="Örn: Yıldız Muhasebe Ofisi"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
                 />
-              </svg>
-              <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className={`text-2xl font-bold ${colors.text}`}>{result.score}</span>
-                <span className="text-xs text-gray-400">/100</span>
-              </div>
-            </div>
-            <div>
-              <p className={`text-lg font-bold ${colors.text}`}>{result.level}</p>
-              <p className="text-sm text-gray-600 mt-1 leading-relaxed">{result.summary}</p>
-            </div>
-          </div>
 
-          {/* Items */}
-          <div className="flex flex-col gap-3">
-            {result.items.map((item, i) => {
-              const cfg = statusConfig(item.status)
-              return (
-                <div key={i} className="bg-white rounded-xl border border-gray-200 px-5 py-4 flex gap-4 items-start">
-                  <span className={`w-2.5 h-2.5 rounded-full mt-1 shrink-0 ${cfg.dot}`} />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-0.5">
-                      <span className="text-sm font-semibold text-gray-900">{item.name}</span>
-                      <span className={`text-xs px-2 py-0.5 rounded border ${cfg.badge}`}>
-                        {item.badge}
-                      </span>
-                    </div>
-                    <p className="text-sm text-gray-600">{item.desc}</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <Select
+                    label="Sektör *"
+                    value={sector}
+                    onChange={(e) => setSector(e.target.value)}
+                    options={[
+                      { value: '', label: 'Seçin...' },
+                      ...SEKTORLER.map((s) => ({ value: s, label: s })),
+                    ]}
+                  />
+                  <Input
+                    label="Şehir *"
+                    placeholder="Örn: İzmir"
+                    value={city}
+                    onChange={(e) => setCity(e.target.value)}
+                  />
+                </div>
+
+                <Input
+                  label="Web sitesi (varsa)"
+                  placeholder="Örn: www.yildizmuhasebe.com"
+                  value={web}
+                  onChange={(e) => setWeb(e.target.value)}
+                />
+
+                <div>
+                  <p className="text-sm font-medium text-gray-700 mb-2">
+                    Hangi platformlarda varlığınız var?
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {PLATFORMLAR.map(({ value, label }) => {
+                      const checked = platforms.includes(value)
+                      return (
+                        <button
+                          key={value}
+                          type="button"
+                          onClick={() => togglePlatform(value)}
+                          className={`px-3 py-1.5 rounded-lg border text-sm transition-colors ${
+                            checked
+                              ? 'bg-[#1D9E75] border-[#1D9E75] text-white'
+                              : 'bg-white border-gray-200 text-gray-600 hover:border-[#1D9E75]/40'
+                          }`}
+                        >
+                          {checked ? '✓ ' : ''}{label}
+                        </button>
+                      )
+                    })}
                   </div>
                 </div>
-              )
-            })}
-          </div>
 
-          {result.ctaText && (
-            <div className="bg-[#1D9E75]/5 border border-[#1D9E75]/20 rounded-2xl p-5 text-center">
-              <p className="text-sm text-[#1D9E75] font-medium">{result.ctaText}</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <Select
+                    label="LinkedIn sayfanız var mı?"
+                    value={liExists}
+                    onChange={(e) => {
+                      setLiExists(e.target.value)
+                      if (e.target.value !== 'evet') setLiActive('')
+                    }}
+                    options={[
+                      { value: '', label: 'Seçin...' },
+                      { value: 'evet', label: 'Evet' },
+                      { value: 'hayir', label: 'Hayır' },
+                    ]}
+                  />
+                  <Select
+                    label="LinkedIn'de düzenli paylaşım?"
+                    value={liActive}
+                    onChange={(e) => setLiActive(e.target.value)}
+                    options={[
+                      { value: '', label: 'Seçin...' },
+                      { value: 'evet', label: 'Evet, düzenli paylaşım var' },
+                      { value: 'hayir', label: 'Hayır, aktif değil' },
+                    ]}
+                  />
+                </div>
+
+                <Select
+                  label="Aylık ortalama kaç yeni müşteri hedefliyorsunuz?"
+                  value={goal}
+                  onChange={(e) => setGoal(e.target.value)}
+                  options={[
+                    { value: '', label: 'Seçin...' },
+                    ...MUSTERI_HEDEFLERI.map((g) => ({ value: g, label: g })),
+                  ]}
+                />
+
+                <FormPersistButtons
+                  filename="gorunurluk-skoru-formu.json"
+                  getData={() => ({ name, sector, city, web, platforms, liExists, liActive, goal })}
+                  onLoad={(d) => {
+                    if (typeof d.name === 'string') setName(d.name)
+                    if (typeof d.sector === 'string') setSector(d.sector)
+                    if (typeof d.city === 'string') setCity(d.city)
+                    if (typeof d.web === 'string') setWeb(d.web)
+                    if (Array.isArray(d.platforms)) setPlatforms(d.platforms as string[])
+                    if (typeof d.liExists === 'string') setLiExists(d.liExists)
+                    if (typeof d.liActive === 'string') setLiActive(d.liActive)
+                    if (typeof d.goal === 'string') setGoal(d.goal)
+                  }}
+                />
+
+                {mutation.isError && (
+                  <p className="text-sm text-red-500">Bir hata oluştu. Lütfen tekrar deneyin.</p>
+                )}
+
+                <Button
+                  onClick={() => mutation.mutate()}
+                  disabled={!canSubmit}
+                  loading={mutation.isPending}
+                  className="mt-1 w-full"
+                >
+                  📊 Skoru Hesapla
+                </Button>
+
+                {mutation.isPending && (
+                  <p className="text-center text-sm text-gray-400 animate-pulse">
+                    Yapay zeka analiz ediyor — bu işlem 1-2 dakika sürebilir...
+                  </p>
+                )}
+              </div>
             </div>
           )}
 
-          <button
-            onClick={() => setResult(null)}
-            className="text-sm text-gray-400 underline text-center"
-          >
-            Yeni analiz yap
-          </button>
-        </div>
+          {/* ── Sonuçlar ────────────────────────────────────────── */}
+          {result && colors && (
+            <div className="flex flex-col gap-4">
+              {/* Skor kartı */}
+              <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 flex items-center gap-6">
+                <div className="relative w-24 h-24 shrink-0">
+                  <svg className="w-24 h-24 -rotate-90" viewBox="0 0 96 96">
+                    <circle cx="48" cy="48" r="40" fill="none" stroke="#f3f4f6" strokeWidth="8" />
+                    <circle
+                      cx="48" cy="48" r="40" fill="none"
+                      className={colors.ring}
+                      strokeWidth="8"
+                      strokeDasharray={`${(result.score / 100) * 251} 251`}
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center">
+                    <span className={`text-2xl font-bold ${colors.text}`}>{result.score}</span>
+                    <span className="text-xs text-gray-400">/100</span>
+                  </div>
+                </div>
+                <div>
+                  <p className={`text-lg font-bold ${colors.text}`}>{result.level}</p>
+                  <p className="text-sm text-gray-600 mt-1 leading-relaxed">{result.summary}</p>
+                </div>
+              </div>
+
+              {/* Maddeler */}
+              <div className="flex flex-col gap-3">
+                {result.items.map((item, i) => {
+                  const cfg = statusConfig(item.status)
+                  return (
+                    <div key={i} className="bg-white rounded-xl border border-gray-200 px-5 py-4 flex gap-4 items-start">
+                      <span className={`w-2.5 h-2.5 rounded-full mt-1 shrink-0 ${cfg.dot}`} />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-0.5">
+                          <span className="text-sm font-semibold text-gray-900">{item.name}</span>
+                          <span className={`text-xs px-2 py-0.5 rounded border ${cfg.badge}`}>
+                            {item.badge}
+                          </span>
+                        </div>
+                        <p className="text-sm text-gray-600">{item.desc}</p>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+
+              {result.ctaText && (
+                <div className="bg-[#1D9E75]/5 border border-[#1D9E75]/20 rounded-2xl p-5 text-center">
+                  <p className="text-sm text-[#1D9E75] font-medium">{result.ctaText}</p>
+                </div>
+              )}
+
+              <button
+                onClick={() => setResult(null)}
+                className="text-sm text-gray-400 underline text-center no-print"
+              >
+                Yeni analiz yap
+              </button>
+            </div>
+          )}
+        </>
       )}
-    </div>
+    </ToolShell>
   )
 }

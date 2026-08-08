@@ -31,3 +31,69 @@ body {
   color: var(--color-text);
   -webkit-font-smoothing: antialiased;
 }
+
+/* ── Print / PDF ────────────────────────────────────────────────────────────── */
+@media print {
+  /* Sayfa kenar boşlukları — template ile aynı */
+  @page { margin: 2cm 1.5cm 1.5cm 1.5cm; }
+
+  html, body {
+    width: 100% !important;
+    background: #fff !important;
+  }
+
+  /* 1. Adım: her şeyi gizle */
+  body * { visibility: hidden; }
+
+  /* 2. Adım: sadece <main> içeriğini göster */
+  main, main * { visibility: visible; }
+
+  /* main baskı tuvali olur */
+  main {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  /* Chrome elemanları tamamen kaldır */
+  header, footer, nav, aside { display: none !important; }
+
+  /* .no-print → main içinde bile gizle */
+  .no-print {
+    display: none !important;
+    visibility: hidden !important;
+  }
+
+  /* Yükleniyor animasyonları */
+  .animate-pulse { display: none !important; }
+
+  /* Arka plan renkleri baskıya geçsin */
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+  /* Metin taşmaları */
+  a, span, div, p {
+    word-break: break-word !important;
+    overflow-wrap: break-word !important;
+    white-space: normal !important;
+  }
+
+  /* Bağlantıların URL'ini yazdırma */
+  a[href]::after { content: none !important; }
+
+  /* Sayfa kırılma yardımcıları */
+  .print-break-before { break-before: page; }
+  .print-results { break-before: page; }
+
+  /* Seçili toggle butonlar (platform seçimi vb.) → baskıda yeşil etiket göster */
+  /* Tailwind'in bg-[#1D9E75] sınıfını tanıyoruz */
+  button.bg-\[\#1D9E75\] {
+    border: 0.5px solid #1D9E75 !important;
+    background: #F0FAF6 !important;
+    color: #085041 !important;
+    display: inline-flex !important;
+  }
+}
