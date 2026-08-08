@@ -59,7 +59,8 @@ services:
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
     ports:
-      - "80:80"
+      # Sadece localhost:3001'e bağla — Hostinger nginx dışarıdan proxy yapıyor
+      - "127.0.0.1:3001:80"
 
 volumes:
   postgres_data:

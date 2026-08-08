@@ -1,0 +1,190 @@
+<!--
+  KolayKOBİ Uygulaması — WordPress CTA Bölümü
+  ──────────────────────────────────────────────
+  Yapıştırma yeri: kolaykobi.com/kobi-asistanlari/ sayfası
+  Elementor → Widget ekle → HTML
+  Veya Gutenberg → Özel HTML bloğu
+
+  URL'yi değiştir: APP_URL değişkenindeki "https://app.kolaykobi.com"
+-->
+
+<style>
+.kkb-app-section {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  background: #f8faff;
+  border-top: 1px solid #e2e8f7;
+  padding: 72px 24px;
+  text-align: center;
+}
+
+.kkb-app-section .kkb-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #eef2ff;
+  color: #1a3a8f;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 6px 14px;
+  border-radius: 100px;
+  margin-bottom: 20px;
+}
+
+.kkb-app-section h2 {
+  font-size: clamp(28px, 4vw, 42px);
+  font-weight: 800;
+  color: #0f1f5c;
+  line-height: 1.2;
+  margin: 0 auto 16px;
+  max-width: 640px;
+}
+
+.kkb-app-section h2 span {
+  color: #f97316;
+}
+
+.kkb-app-section p {
+  font-size: 17px;
+  color: #475569;
+  line-height: 1.65;
+  max-width: 520px;
+  margin: 0 auto 40px;
+}
+
+/* Araç kartları */
+.kkb-tools-grid {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+  max-width: 680px;
+  margin: 0 auto 48px;
+}
+
+.kkb-tool-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #fff;
+  border: 1px solid #dde4f5;
+  border-radius: 10px;
+  padding: 10px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #1e3a8a;
+  box-shadow: 0 1px 3px rgba(15,31,92,0.06);
+}
+
+.kkb-tool-chip .chip-icon {
+  font-size: 18px;
+}
+
+/* CTA butonları */
+.kkb-cta-group {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 14px;
+  margin-bottom: 28px;
+}
+
+.kkb-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #f97316;
+  color: #fff !important;
+  font-size: 16px;
+  font-weight: 700;
+  padding: 15px 32px;
+  border-radius: 12px;
+  text-decoration: none !important;
+  box-shadow: 0 4px 16px rgba(249,115,22,0.35);
+  transition: all .18s ease;
+}
+
+.kkb-btn-primary:hover {
+  background: #ea6c0a;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 24px rgba(249,115,22,0.4);
+}
+
+.kkb-btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: transparent;
+  color: #1a3a8f !important;
+  font-size: 15px;
+  font-weight: 600;
+  padding: 14px 28px;
+  border-radius: 12px;
+  border: 2px solid #c7d2ee;
+  text-decoration: none !important;
+  transition: all .18s ease;
+}
+
+.kkb-btn-secondary:hover {
+  border-color: #1a3a8f;
+  background: #eef2ff;
+}
+
+.kkb-plan-note {
+  font-size: 13px;
+  color: #94a3b8;
+  margin: 0;
+}
+
+.kkb-plan-note strong {
+  color: #1a3a8f;
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+  .kkb-app-section { padding: 48px 16px; }
+  .kkb-cta-group { flex-direction: column; align-items: center; }
+  .kkb-btn-primary, .kkb-btn-secondary { width: 100%; justify-content: center; }
+}
+</style>
+
+<section class="kkb-app-section">
+
+  <div class="kkb-badge">
+    ✨ Yapay Zeka Destekli
+  </div>
+
+  <h2>KolayKOBİ <span>Uygulaması</span><br>Dijital Asistanınız Hazır</h2>
+
+  <p>
+    İşletmenizin görünürlüğünü artırın, müşteri personanızı keşfedin,
+    sosyal medya takviminizi otomatik oluşturun — hepsi tek platformda.
+  </p>
+
+  <!-- Araçlar -->
+  <div class="kkb-tools-grid">
+    <div class="kkb-tool-chip"><span class="chip-icon">📊</span> İşletme Görünürlük Skoru</div>
+    <div class="kkb-tool-chip"><span class="chip-icon">👥</span> Müşteri Persona Oluşturucu</div>
+    <div class="kkb-tool-chip"><span class="chip-icon">📅</span> İçerik Takvimi Üreticisi</div>
+    <div class="kkb-tool-chip"><span class="chip-icon">💬</span> WhatsApp Script Yazıcı</div>
+    <div class="kkb-tool-chip"><span class="chip-icon">💰</span> Reklam Bütçe Planlayıcı</div>
+    <div class="kkb-tool-chip"><span class="chip-icon">🔍</span> Rakip Analiz Aracı</div>
+  </div>
+
+  <!-- CTA Butonlar -->
+  <div class="kkb-cta-group">
+    <a href="https://app.kolaykobi.com" target="_blank" rel="noopener" class="kkb-btn-primary">
+      🚀 Uygulamayı Aç
+    </a>
+    <a href="https://app.kolaykobi.com/kayit" target="_blank" rel="noopener" class="kkb-btn-secondary">
+      Ücretsiz Hesap Oluştur
+    </a>
+  </div>
+
+  <p class="kkb-plan-note">
+    <strong>Ücretsiz plan</strong> ile hemen başla — kredi kartı gerekmez.
+    Aylık 3 kullanım, tüm araçlar dahil.
+  </p>
+
+</section>
