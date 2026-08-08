@@ -22,12 +22,13 @@ public class ToolsController(
     public async Task<IActionResult> GetUsage()
     {
         var summary = await usage.GetUsageSummaryAsync(CurrentUserId);
-        return Ok(summary.Select(s => new
+        var data = summary.Select(s => new
         {
             toolId = s.ToolId,
             usedCount = s.UsedCount,
             limit = s.Limit
-        }));
+        });
+        return Ok(new { success = true, data });
     }
 
     /// <summary>POST /api/tools/{toolId}/run — Proxy request to n8n and log usage.</summary>

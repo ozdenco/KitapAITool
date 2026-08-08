@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useMutation } from '@tanstack/react-query'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '@/lib/api'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -123,6 +123,7 @@ function statusConfig(status: string) {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function GorunurlukSkoruPage() {
+  const queryClient = useQueryClient()
   const [name, setName] = useState('')
   const [sector, setSector] = useState('')
   const [city, setCity] = useState('')
@@ -149,7 +150,11 @@ export function GorunurlukSkoruPage() {
       }
       return content as ScoreResult
     },
-    onSuccess: (data) => setResult(data),
+    onSuccess: (data) => {
+      setResult(data)
+      // Dashboard'daki kullanım sayacını güncelle
+      void queryClient.invalidateQueries({ queryKey: ['tool-usage'] })
+    },
   })
 
   const canSubmit = name.trim() && sector && city.trim() && !mutation.isPending

@@ -10,7 +10,7 @@ export function useToolUsage() {
       if (!data.success) throw new Error(data.error)
       return data.data ?? []
     },
-    staleTime: 60_000,
+    staleTime: 30_000,
   })
 }
 

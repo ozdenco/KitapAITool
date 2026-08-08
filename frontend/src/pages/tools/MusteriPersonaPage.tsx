@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useMutation } from '@tanstack/react-query'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '@/lib/api'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -115,6 +115,7 @@ SADECE JSON döndür, başka hiçbir şey yazma:
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function MusteriPersonaPage() {
+  const queryClient = useQueryClient()
   const [biz, setBiz] = useState('')
   const [sector, setSector] = useState('')
   const [city, setCity] = useState('')
@@ -146,6 +147,7 @@ export function MusteriPersonaPage() {
     onSuccess: (data) => {
       setParseError(false)
       setResult(data)
+      void queryClient.invalidateQueries({ queryKey: ['tool-usage'] })
     },
     onError: () => setParseError(true),
   })
