@@ -35,6 +35,14 @@ services:
       Jwt__ExpiryMinutes: "60"
       Jwt__RefreshExpiryDays: "30"
       N8n__BaseUrl: ${N8N_BASE_URL:-https://n8n.srv1492396.hstgr.cloud}
+      # SMTP (e-posta doğrulama)
+      Smtp__Host: ${SMTP__HOST:-smtp.gmail.com}
+      Smtp__Port: ${SMTP__PORT:-587}
+      Smtp__User: ${SMTP__USER:-}
+      Smtp__Password: ${SMTP__PASSWORD:-}
+      Smtp__FromEmail: ${SMTP__FROMEMAIL:-}
+      Smtp__FromName: ${SMTP__FROMNAME:-KolayKOBİ}
+      AppUrl: ${APP_URL:-https://app.kolaykobi.com}
     # Backend'i dışarıya açmıyoruz — nginx iç ağdan proxy yapıyor
     expose:
       - "5000"
