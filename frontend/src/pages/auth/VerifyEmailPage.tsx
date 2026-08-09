@@ -84,10 +84,20 @@ export function VerifyEmailPage() {
           <h2 className="text-lg font-semibold text-gray-900 mb-2">
             E-postanızı kontrol edin
           </h2>
-          <p className="text-sm text-gray-500 mb-6 leading-relaxed">
+          <p className="text-sm text-gray-500 mb-4 leading-relaxed">
             Hesabınıza doğrulama bağlantısı gönderdik.
             Araçları kullanmaya başlamak için e-postanızdaki bağlantıya tıklayın.
           </p>
+
+          {/* Spam uyarısı */}
+          <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 mb-6 text-left">
+            <span className="text-amber-500 text-base mt-0.5 shrink-0">⚠️</span>
+            <p className="text-xs text-amber-800 leading-relaxed">
+              E-posta birkaç dakika içinde gelmezse{' '}
+              <strong>spam / junk</strong> klasörünü kontrol edin.
+              Gönderen: <strong>info@kolaykobi.com</strong>
+            </p>
+          </div>
 
           {resendSent ? (
             <div className="p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-700 mb-4">
@@ -119,9 +129,6 @@ export function VerifyEmailPage() {
           </button>
         </div>
 
-        <p className="mt-4 text-center text-xs text-gray-400">
-          E-posta gelmediyse spam/junk klasörünü kontrol edin.
-        </p>
       </div>
     </div>
   )
