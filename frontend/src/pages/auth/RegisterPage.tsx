@@ -55,7 +55,6 @@ export function RegisterPage() {
                   onSuccess={handleGoogleSuccess}
                   onError={() => { /* popup kapatıldı veya izin verilmedi */ }}
                   text="signup_with"
-                  locale="tr"
                   width="320"
                 />
               </div>

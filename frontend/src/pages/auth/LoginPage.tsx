@@ -55,7 +55,6 @@ export function LoginPage() {
                   onSuccess={handleGoogleSuccess}
                   onError={() => { /* popup kapatıldı veya izin verilmedi */ }}
                   text="signin_with"
-                  locale="tr"
                   width="320"
                 />
               </div>
