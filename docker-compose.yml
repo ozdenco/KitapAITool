@@ -35,6 +35,9 @@ services:
       Jwt__ExpiryMinutes: "60"
       Jwt__RefreshExpiryDays: "30"
       N8n__BaseUrl: ${N8N_BASE_URL:-https://n8n.srv1492396.hstgr.cloud}
+      # Google OAuth
+      Google__ClientId: ${GOOGLE__CLIENTID:-}
+      Google__ClientSecret: ${GOOGLE__CLIENTSECRET:-}
       # SMTP (e-posta doğrulama)
       Smtp__Host: ${SMTP__HOST:-smtp.gmail.com}
       Smtp__Port: ${SMTP__PORT:-587}
@@ -51,6 +54,8 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        VITE_GOOGLE_CLIENT_ID: ${VITE_GOOGLE_CLIENT_ID:-}
     container_name: kkb-frontend
     restart: unless-stopped
     # Frontend'i dışarıya açmıyoruz — nginx proxy yapıyor
