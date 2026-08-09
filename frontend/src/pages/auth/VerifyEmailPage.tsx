@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useVerifyEmail, useResendVerification } from '@/hooks/useAuth'
 import { Button } from '@/components/ui/Button'
+import { Logo } from '@/components/ui/Logo'
 
 export function VerifyEmailPage() {
   const [params] = useSearchParams()
@@ -73,10 +74,7 @@ export function VerifyEmailPage() {
       <div className="w-full max-w-sm">
         {/* Logo */}
         <div className="text-center mb-8">
-          <span className="text-4xl">🤖</span>
-          <h1 className="mt-3 text-2xl font-bold text-gray-900">
-            Kolay<span className="text-[#1D9E75]">KOBİ</span>
-          </h1>
+          <Logo height={48} className="mx-auto" />
         </div>
 
         <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 text-center">

@@ -2,6 +2,7 @@ import { Outlet, NavLink, useNavigate } from 'react-router-dom'
 import { clsx } from 'clsx'
 import { useAuthStore } from '@/store/auth'
 import { useLogout } from '@/hooks/useAuth'
+import { Logo } from '@/components/ui/Logo'
 
 export function Layout() {
   const { user } = useAuthStore()
@@ -18,8 +19,7 @@ export function Layout() {
             onClick={() => navigate('/dashboard')}
             className="flex items-center gap-2 font-bold text-gray-900 hover:text-[#1D9E75] transition-colors"
           >
-            <span className="text-xl">🤖</span>
-            <span>Kolay<span className="text-[#1D9E75]">KOBİ</span></span>
+            <Logo height={32} />
           </button>
 
           {/* Nav */}

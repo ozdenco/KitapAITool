@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { useLogin, useGoogleAuth } from '@/hooks/useAuth'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
+import { Logo } from '@/components/ui/Logo'
 
 const GOOGLE_ENABLED = !!(import.meta.env.VITE_GOOGLE_CLIENT_ID)
 
@@ -25,11 +26,8 @@ export function LoginPage() {
       <div className="w-full max-w-sm">
         {/* Logo */}
         <div className="text-center mb-8">
-          <span className="text-4xl">🤖</span>
-          <h1 className="mt-3 text-2xl font-bold text-gray-900">
-            Kolay<span className="text-[#1D9E75]">KOBİ</span>
-          </h1>
-          <p className="mt-1 text-sm text-gray-500">Dijital ajansınız artık bir yazılım</p>
+          <Logo height={48} className="mx-auto" />
+          <p className="mt-3 text-sm text-gray-500">Dijital ajansınız artık bir yazılım</p>
         </div>
 
         {/* Card */}
