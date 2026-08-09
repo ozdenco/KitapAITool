@@ -1,14 +1,20 @@
 #!/usr/bin/env bash
 # ── KolayKOBİ Production Deploy ──────────────────────────────────────────────
-# Kullanım: bash scripts/deploy-prod.sh
-#
-# Ne yapar:
-#   1. Kodu Hostinger sunucusuna rsync ile gönderir
-#   2. Docker image'larını build eder
-#   3. Stack'i sıfırdan ayağa kaldırır
-#   4. Traefik routing'i doğrular (SSL otomatik, sistem nginx gerekmez)
+# Kullanım:
+#   bash scripts/deploy-prod.sh           → sadece değişen servisler build
+#   bash scripts/deploy-prod.sh --full    → hepsini sıfırdan build (ilk deploy)
+#   bash scripts/deploy-prod.sh --env     → sadece .env gönder, servis yeniden başlat
 
 set -euo pipefail
+
+FULL_BUILD=false
+ENV_ONLY=false
+for arg in "$@"; do
+  case $arg in
+    --full) FULL_BUILD=true ;;
+    --env)  ENV_ONLY=true  ;;
+  esac
+done
 
 # ─── Ayarlar ─────────────────────────────────────────────────────────────────
 REMOTE_HOST="${REMOTE_HOST:-root@srv1492396.hstgr.cloud}"
@@ -18,80 +24,99 @@ APP_DOMAIN="${APP_DOMAIN:-app.kolaykobi.com}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(dirname "$SCRIPT_DIR")"
 
-echo "🚀 KolayKOBİ Production Deploy"
+echo "🚀 KolayKOBİ Deploy  $([ "$FULL_BUILD" = true ] && echo '[TAM BUILD]' || echo '[HIZLI]')"
 echo "   Sunucu : $REMOTE_HOST"
-echo "   Dizin  : $REMOTE_DIR"
-echo "   Domain : $APP_DOMAIN"
 echo ""
 
-# ─── 1. Kod gönder ───────────────────────────────────────────────────────────
-echo "📦 [1/4] Kod sunucuya gönderiliyor..."
-rsync -avz --progress \
+# ─── Sadece .env değişmişse ───────────────────────────────────────────────────
+if [[ "$ENV_ONLY" = true ]]; then
+  echo "🔑 .env gönderiliyor..."
+  rsync -az "$ROOT_DIR/.env" "$REMOTE_HOST:$REMOTE_DIR/.env"
+  echo "🔄 Backend yeniden başlatılıyor (yeni env ile)..."
+  ssh "$REMOTE_HOST" "cd $REMOTE_DIR && docker compose up -d --no-deps --no-recreate backend && docker compose restart backend"
+  echo "✅ Tamamlandı — env değişkenleri güncellendi."
+  exit 0
+fi
+
+# ─── 1. Hangi servisler değişti? ─────────────────────────────────────────────
+echo "🔍 [1/4] Değişiklikler tespit ediliyor..."
+CHANGED=$(git -C "$ROOT_DIR" diff --name-only HEAD~1 HEAD 2>/dev/null || echo "all")
+
+BUILD_FRONTEND=false
+BUILD_BACKEND=false
+
+if [[ "$FULL_BUILD" = true || "$CHANGED" == "all" ]]; then
+  BUILD_FRONTEND=true
+  BUILD_BACKEND=true
+else
+  echo "$CHANGED" | grep -q "^frontend/" && BUILD_FRONTEND=true || true
+  echo "$CHANGED" | grep -q "^backend/"  && BUILD_BACKEND=true  || true
+  # docker-compose, nginx config veya .env değişmişse her ikisini de build et
+  echo "$CHANGED" | grep -qE "^(docker-compose|nginx/nginx)" && BUILD_FRONTEND=true && BUILD_BACKEND=true || true
+fi
+
+echo "   Frontend build: $([ "$BUILD_FRONTEND" = true ] && echo '✓' || echo 'atlandı (değişiklik yok)')"
+echo "   Backend  build: $([ "$BUILD_BACKEND"  = true ] && echo '✓' || echo 'atlandı (değişiklik yok)')"
+echo ""
+
+# ─── 2. Kod + .env gönder ────────────────────────────────────────────────────
+echo "📦 [2/4] Kod sunucuya gönderiliyor..."
+rsync -az --checksum \
   --exclude='.git' \
   --exclude='frontend/node_modules' \
   --exclude='backend/bin' \
   --exclude='backend/obj' \
   --exclude='.env' \
-  --exclude='scripts/dev-start.sh' \
   "$ROOT_DIR/" "$REMOTE_HOST:$REMOTE_DIR/"
 
-echo ""
-
-# ─── 2. .env dosyasını gönder ─────────────────────────────────────────────────
 if [[ -f "$ROOT_DIR/.env" ]]; then
-  echo "🔑 [2/4] .env gönderiliyor..."
-  rsync -avz "$ROOT_DIR/.env" "$REMOTE_HOST:$REMOTE_DIR/.env"
-else
-  echo "⚠️  .env bulunamadı — sunucuda manuel oluştur:"
-  echo "   ssh $REMOTE_HOST 'nano $REMOTE_DIR/.env'"
+  rsync -az "$ROOT_DIR/.env" "$REMOTE_HOST:$REMOTE_DIR/.env"
 fi
-
 echo ""
 
-# ─── 3. Docker stack başlat ──────────────────────────────────────────────────
-echo "🐳 [3/4] Docker stack ayağa kaldırılıyor..."
+# ─── 3. Docker build + restart ───────────────────────────────────────────────
+echo "🐳 [3/4] Docker servisleri güncelleniyor..."
 ssh "$REMOTE_HOST" bash <<REMOTE_SCRIPT
   set -e
   cd "$REMOTE_DIR"
+  export DOCKER_BUILDKIT=1
 
-  echo "  → Image'lar build ediliyor..."
-  docker compose build --no-cache
+  BUILD_FRONTEND=$BUILD_FRONTEND
+  BUILD_BACKEND=$BUILD_BACKEND
 
-  echo "  → Stack yeniden başlatılıyor..."
-  docker compose down --remove-orphans || true
-  docker compose up -d
+  # Hangi servisleri build edeceğimizi belirle
+  SERVICES=""
+  [[ "\$BUILD_FRONTEND" = true ]] && SERVICES="\$SERVICES frontend"
+  [[ "\$BUILD_BACKEND"  = true ]] && SERVICES="\$SERVICES backend"
 
-  echo "  → Sağlık kontrolü (30s)..."
-  sleep 30
-  docker compose ps
+  if [[ -n "\$SERVICES" ]]; then
+    echo "  → Build ediliyor:\$SERVICES (cache kullanılıyor)..."
+    # --parallel: frontend ve backend aynı anda build edilir
+    docker compose build --parallel \$SERVICES
+
+    echo "  → Servisler yeniden başlatılıyor..."
+    # Sadece değişen servisleri restart et — postgres ve nginx dokunulmaz
+    docker compose up -d --no-deps \$SERVICES
+  else
+    echo "  → Kod değişikliği yok, servisler olduğu gibi çalışıyor."
+  fi
+
+  echo "  → Durum:"
+  docker compose ps --format "table {{.Name}}\t{{.Status}}\t{{.Ports}}"
 REMOTE_SCRIPT
-
 echo ""
 
 # ─── 4. Traefik routing doğrula ──────────────────────────────────────────────
-# Sistem nginx gerekmez — Traefik (n8n stack'i) Docker label'lardan
-# kkb-nginx'i otomatik keşfeder ve SSL sertifikasını Let's Encrypt'ten alır.
-echo "🌐 [4/4] Traefik routing doğrulanıyor..."
+echo "🌐 [4/4] Erişim kontrol ediliyor..."
 ssh "$REMOTE_HOST" bash <<VERIFY_SCRIPT
-  # kkb-nginx'in Traefik ağında olduğunu kontrol et
-  NETWORKS=\$(docker inspect kkb-nginx --format '{{range \$k,\$v := .NetworkSettings.Networks}}{{\$k}} {{end}}' 2>/dev/null || echo "")
-  if echo "\$NETWORKS" | grep -q "n8n_default"; then
-    echo "  ✓ kkb-nginx Traefik ağında (n8n_default)"
-  else
-    echo "  ⚠️  kkb-nginx Traefik ağında değil — docker compose up -d nginx çalıştırılıyor..."
-    cd "$REMOTE_DIR" && docker compose up -d --no-deps nginx
-  fi
-
-  # HTTP yanıtı kontrol et (Traefik HTTPS'e yönlendirmeli)
-  sleep 3
+  sleep 5
   STATUS=\$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "https://$APP_DOMAIN" 2>/dev/null || echo "000")
   if [[ "\$STATUS" =~ ^[23] ]]; then
-    echo "  ✓ https://$APP_DOMAIN yanıt veriyor (HTTP \$STATUS)"
+    echo "  ✓ https://$APP_DOMAIN → HTTP \$STATUS"
   else
-    echo "  ⚠️  https://$APP_DOMAIN yanıt kodu: \$STATUS (DNS yayılımı bekleniyor olabilir)"
+    echo "  ⚠️  https://$APP_DOMAIN → HTTP \$STATUS"
   fi
 VERIFY_SCRIPT
 
 echo ""
-echo "✅ Deploy tamamlandı!"
-echo "   → https://$APP_DOMAIN adresini kontrol et"
+echo "✅ Deploy tamamlandı! → https://$APP_DOMAIN"
