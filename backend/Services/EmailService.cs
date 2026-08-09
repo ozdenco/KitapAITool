@@ -105,7 +105,11 @@ public class EmailService(IConfiguration config, ILogger<EmailService> logger)
         try
         {
             using var smtp = new SmtpClient();
-            await smtp.ConnectAsync(s.Host, s.Port, SecureSocketOptions.StartTls);
+            // Port 465 → SslOnConnect, Port 587 → StartTls
+            var secureOption = s.Port == 465
+                ? SecureSocketOptions.SslOnConnect
+                : SecureSocketOptions.StartTls;
+            await smtp.ConnectAsync(s.Host, s.Port, secureOption);
             await smtp.AuthenticateAsync(s.User, s.Password);
             await smtp.SendAsync(message);
             await smtp.DisconnectAsync(true);
