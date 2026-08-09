@@ -149,7 +149,7 @@ export function TrendVideoPage() {
                   label="Sektör *"
                   value={sektor}
                   onChange={(e) => setSektor(e.target.value)}
-                  options={[{ value: '', label: 'Seçin...' }, ...SEKTORLER.map((s) => ({ value: s, label: s }))}
+                  options={[{ value: '', label: 'Seçin...' }, ...SEKTORLER.map((s) => ({ value: s, label: s }))]}
                 />
 
                 <div>
