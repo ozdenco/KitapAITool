@@ -48,6 +48,12 @@ api.interceptors.response.use(
       }
     }
 
+    // Backend'den gelen Türkçe hata mesajını çıkar
+    const backendMessage = error.response?.data?.error
+    if (backendMessage) {
+      return Promise.reject(new Error(backendMessage))
+    }
+
     return Promise.reject(error)
   },
 )
