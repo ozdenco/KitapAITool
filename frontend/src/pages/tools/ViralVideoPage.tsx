@@ -10,92 +10,97 @@ import { ToolShell } from '@/components/ui/ToolShell'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-interface ScriptAdim {
-  sure: string
-  sahne: string
-  seslendirme: string
-  gorseller: string
+interface UyarlamaFikir {
+  numara: number
+  baslik: string
+  senaryo: string
+  kanca?: string
+  ipucu?: string
+  platformlar?: string[]
+  format?: string
 }
 
-interface ViralResult {
-  video_konsepti: string
-  script: ScriptAdim[]
-  hashtags: string[]
-  muzik_onerileri?: string[]
-  ipuclari?: string[]
+interface ViralVideoResult {
+  kaynak_analiz?: string
+  uyarlamalar: UyarlamaFikir[]
   ctaText?: string
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const SEKTORLER = [
-  'Muhasebe / Finans', 'Sağlık / Klinik', 'Eğitim / Kurs',
-  'İnşaat / Mühendislik', 'Hukuk / Danışmanlık', 'Perakende / Mağaza',
-  'Yiyecek / İçecek', 'Güzellik / Estetik', 'Lojistik / Taşımacılık',
-  'Teknoloji / Yazılım', 'Diğer',
+  'Lojistik / Taşımacılık', 'E-ticaret / Perakende', 'Restoran / Kafe / Yiyecek',
+  'Güzellik / Kuaför / Estetik', 'Sağlık / Klinik / Eczane', 'İnşaat / Gayrimenkul',
+  'Muhasebe / Finans / Danışmanlık', 'Eğitim / Kurs / Koçluk', 'Teknoloji / Yazılım',
+  'Turizm / Otel / Seyahat', 'Hukuk / Avukatlık', 'Temizlik / Hizmet', 'Diğer',
 ]
 
-const PLATFORMLAR = ['TikTok', 'Instagram Reels', 'YouTube Shorts', 'Facebook Reels']
-const SURELER = ['15 saniye', '30 saniye', '60 saniye', '1-3 dakika']
+const TONLAR = [
+  'Eğlenceli / Komik',
+  'Bilgilendirici',
+  'İlham Verici',
+  'Duygusal / Samimi',
+  'Profesyonel / Kurumsal',
+  'Merak Uyandıran',
+]
 
 // ─── Prompt builder ────────────────────────────────────────────────────────────
 
 function buildPrompt(f: {
-  isletme: string; sektor: string; platform: string
-  sure: string; viral_video: string; hizmet: string
+  videoUrl: string; videoDesc: string; bizName: string
+  sector: string; tones: string[]; extra: string
 }): string {
-  return `Sen viral video içerik stratejisti ve sosyal medya uzmanısın. Trend olan video formatlarını işletmeler için uyarlıyorsun.
+  return `Sen sosyal medya içerik uzmanısın. Viral videoları KOBİ'lere özgü uyarlamalara dönüştürüyorsun.
 
-İŞLETME: ${f.isletme}
-SEKTÖR: ${f.sektor}
-PLATFORM: ${f.platform}
-VİDEO SÜRESİ: ${f.sure}
-UYARLANACAK VİRAL VİDEO / TREND FORMAT: ${f.viral_video}
-TANITILACAK HİZMET/ÜRÜN: ${f.hizmet}
+Viral Video Linki: ${f.videoUrl}
+Videonun Konusu: ${f.videoDesc}
+İşletme: ${f.bizName || 'belirtilmemiş'}
+Sektör: ${f.sector}
+Tercih edilen ton: ${f.tones.length > 0 ? f.tones.join(', ') : 'serbest'}
+Ek bağlam: ${f.extra || 'yok'}
 
-Bu viral video formatını ${f.isletme} için uyarla.
-- ${f.platform} için optimize et
-- ${f.sure} süreye sığdır
-- Sahici, özgün ve paylaşılabilir olsun
-- Müşterilerin dikkatini ilk 3 saniyede çek (hook)
+Bu viral videonun formatını ve yapısını analiz et. Ardından ${f.bizName || 'bu işletme'} için 3 farklı uyarlama fikri üret. Her fikir videonun viral elementini koruyarak sektöre özgü olmalı.
 
 SADECE JSON döndür:
 {
-  "video_konsepti": "<videonun ana fikri ve neden viral olacağı, 2-3 cümle>",
-  "script": [
+  "kaynak_analiz": "<videonun neden viral olduğuna dair 1-2 cümle analiz>",
+  "uyarlamalar": [
     {
-      "sure": "<zaman aralığı, örn: 0:00-0:03>",
-      "sahne": "<sahnede ne oluyor, görsel açıklama>",
-      "seslendirme": "<söylenecek metin veya anlatı>",
-      "gorseller": "<kullanılacak görsel/çekim önerisi>"
+      "numara": 1,
+      "baslik": "<uyarlama başlığı>",
+      "senaryo": "<tam senaryo açıklaması, ne çekileceği, nasıl kurgulanacağı>",
+      "kanca": "<ilk 3 saniyedeki dikkat çekici kanca cümlesi>",
+      "ipucu": "<çekim veya kurgu için pratik ipucu>",
+      "platformlar": ["<ör: TikTok>", "<ör: Instagram Reels>"],
+      "format": "<ör: 15-30 sn, dikey video>"
     }
   ],
-  "hashtags": ["<10-15 hashtag, # ile başlasın>"],
-  "muzik_onerileri": ["<2-3 müzik/ses önerisi>"],
-  "ipuclari": ["<çekim ve yayınlama ipuçları, 3-4 madde>"],
-  "ctaText": "<${f.isletme} için motivasyon cümlesi>"
+  "ctaText": "<${f.bizName || 'işletme'} için motivasyon cümlesi>"
 }
-Script 4-8 sahne olsun. Türkçe olsun.`
+3 uyarlama olsun. Türkçe, yaratıcı ve uygulanabilir olsun.`
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function ViralVideoPage() {
   const queryClient = useQueryClient()
-  const [isletme, setIsletme] = useState('')
-  const [sektor, setSektor] = useState('')
-  const [platform, setPlatform] = useState('')
-  const [sure, setSure] = useState('')
-  const [viral_video, setViralVideo] = useState('')
-  const [hizmet, setHizmet] = useState('')
-  const [result, setResult] = useState<ViralResult | null>(null)
+  const [videoUrl, setVideoUrl] = useState('')
+  const [videoDesc, setVideoDesc] = useState('')
+  const [bizName, setBizName] = useState('')
+  const [sector, setSector] = useState('')
+  const [tones, setTones] = useState<string[]>([])
+  const [extra, setExtra] = useState('')
+  const [result, setResult] = useState<ViralVideoResult | null>(null)
+
+  const toggleTone = (t: string) =>
+    setTones((prev) => prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t])
 
   const mutation = useMutation({
     mutationFn: async () => {
-      const prompt = buildPrompt({ isletme, sektor, platform, sure, viral_video, hizmet })
+      const prompt = buildPrompt({ videoUrl, videoDesc, bizName, sector, tones, extra })
       const res = await api.post('/tools/viral-video/run', { prompt })
       const content = res.data?.content?.[0]?.text ?? res.data
-      return (typeof content === 'string' ? JSON.parse(content) : content) as ViralResult
+      return (typeof content === 'string' ? JSON.parse(content) : content) as ViralVideoResult
     },
     onSuccess: (data) => {
       setResult(data)
@@ -103,16 +108,16 @@ export function ViralVideoPage() {
     },
   })
 
-  const canSubmit = isletme.trim() && sektor && platform && viral_video.trim() && !mutation.isPending
+  const canSubmit = videoUrl.trim() && videoDesc.trim() && sector && !mutation.isPending
 
   return (
     <ToolShell
       toolId="viral-video"
       title="Viral Video Uyarlayıcı"
       icon="🎬"
-      description="Viral videoları kendi işletmeniz için uyarlayın. Platform ve süreye özel hazır script ve çekim önerileri."
+      description="Sosyal medyada gördüğün viral bir videoyu yapıştır. Yapay zeka videonun formatını analiz edip işletmene özel uyarlama fikirleri üretir."
       hasResult={!!result}
-      formHasInput={!!isletme.trim()}
+      formHasInput={!!videoUrl.trim()}
     >
       {({ isFormOpen }) => (
         <>
@@ -120,74 +125,73 @@ export function ViralVideoPage() {
             <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm mb-6">
               <div className="flex flex-col gap-5">
                 <Input
-                  label="İşletme adı *"
-                  placeholder="Örn: Pasta Atölyesi Berna"
-                  value={isletme}
-                  onChange={(e) => setIsletme(e.target.value)}
+                  label="Video Linki *"
+                  placeholder="https://www.tiktok.com/@... veya https://www.instagram.com/reel/..."
+                  value={videoUrl}
+                  onChange={(e) => setVideoUrl(e.target.value)}
+                  type="url"
                 />
 
-                <Select
-                  label="Sektör *"
-                  value={sektor}
-                  onChange={(e) => setSektor(e.target.value)}
-                  options={[{ value: '', label: 'Seçin...' }, ...SEKTORLER.map((s) => ({ value: s, label: s }))]}
+                <Textarea
+                  label="Video Ne Hakkında? *"
+                  placeholder="Videonun konusunu kısaca açıkla. Örn: Bir penguen tuhaf şekilde yürüyor, üzerine komik müzik eklenmiş ve sonunda bir iş yerinde çalışıyormuş gibi sahne geliyor."
+                  value={videoDesc}
+                  onChange={(e) => setVideoDesc(e.target.value)}
+                  rows={3}
                 />
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-sm font-medium text-gray-700 mb-2">Platform *</p>
-                    <div className="flex flex-col gap-2">
-                      {PLATFORMLAR.map((p) => (
-                        <button key={p} type="button" onClick={() => setPlatform(p)}
-                          className={`px-3 py-2 rounded-lg border text-sm text-left transition-colors ${
-                            platform === p ? 'bg-[#1D9E75] border-[#1D9E75] text-white' : 'bg-white border-gray-200 text-gray-600 hover:border-[#1D9E75]/40'
-                          }`}>
-                          {p === 'TikTok' ? '🎵' : p === 'Instagram Reels' ? '📸' : p === 'YouTube Shorts' ? '▶️' : '👍'} {p}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-700 mb-2">Video süresi</p>
-                    <div className="flex flex-col gap-2">
-                      {SURELER.map((s) => (
-                        <button key={s} type="button" onClick={() => setSure(s)}
-                          className={`px-3 py-2 rounded-lg border text-sm text-left transition-colors ${
-                            sure === s ? 'bg-[#1D9E75] border-[#1D9E75] text-white' : 'bg-white border-gray-200 text-gray-600 hover:border-[#1D9E75]/40'
-                          }`}>
-                          ⏱ {s}
-                        </button>
-                      ))}
-                    </div>
+                  <Input
+                    label="İşletme Adı"
+                    placeholder="Logvance Lojistik"
+                    value={bizName}
+                    onChange={(e) => setBizName(e.target.value)}
+                  />
+                  <Select
+                    label="Sektör *"
+                    value={sector}
+                    onChange={(e) => setSector(e.target.value)}
+                    options={[{ value: '', label: 'Seçin...' }, ...SEKTORLER.map((s) => ({ value: s, label: s }))]}
+                  />
+                </div>
+
+                <div>
+                  <p className="text-sm font-medium text-[#6B6963] mb-2">Video Tonu</p>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    {TONLAR.map((t) => (
+                      <label
+                        key={t}
+                        className={`flex items-center gap-2 px-3 py-2 border rounded-lg cursor-pointer text-sm select-none transition-colors ${
+                          tones.includes(t)
+                            ? 'border-[#1D9E75] bg-[#F0FAF6] text-[#085041]'
+                            : 'border-[#D3D1C7] bg-white text-[#1C1B19] hover:border-gray-300'
+                        }`}
+                      >
+                        <input type="checkbox" className="w-auto" checked={tones.includes(t)} onChange={() => toggleTone(t)} />
+                        {t}
+                      </label>
+                    ))}
                   </div>
                 </div>
 
                 <Textarea
-                  label="Uyarlamak istediğiniz viral video / trend format *"
-                  placeholder="Örn: 'Müşteri öncesi-sonrası dönüşüm' trendi, veya 'Bir günüm nasıl geçiyor' vlog formatı, ya da TikTok'ta gördüğüm şef pasta yapım videosu"
-                  value={viral_video}
-                  onChange={(e) => setViralVideo(e.target.value)}
-                  rows={3}
-                />
-
-                <Textarea
-                  label="Tanıtılacak hizmet / ürün"
-                  placeholder="Örn: El yapımı butik pastalar, özel tasarım doğum günü pastaları"
-                  value={hizmet}
-                  onChange={(e) => setHizmet(e.target.value)}
+                  label="Ek Bağlam (isteğe bağlı)"
+                  placeholder="Hedef kitlen, öne çıkarmak istediğin ürün/hizmet, ya da özellikle değinmek istediğin bir konu varsa yaz."
+                  value={extra}
+                  onChange={(e) => setExtra(e.target.value)}
                   rows={2}
                 />
 
                 <FormPersistButtons
                   filename="viral-video-formu.json"
-                  getData={() => ({ isletme, sektor, platform, sure, viral_video, hizmet })}
+                  getData={() => ({ videoUrl, videoDesc, bizName, sector, tones, extra })}
                   onLoad={(d) => {
-                    if (typeof d.isletme === 'string') setIsletme(d.isletme)
-                    if (typeof d.sektor === 'string') setSektor(d.sektor)
-                    if (typeof d.platform === 'string') setPlatform(d.platform)
-                    if (typeof d.sure === 'string') setSure(d.sure)
-                    if (typeof d.viral_video === 'string') setViralVideo(d.viral_video)
-                    if (typeof d.hizmet === 'string') setHizmet(d.hizmet)
+                    if (typeof d.videoUrl === 'string') setVideoUrl(d.videoUrl)
+                    if (typeof d.videoDesc === 'string') setVideoDesc(d.videoDesc)
+                    if (typeof d.bizName === 'string') setBizName(d.bizName)
+                    if (typeof d.sector === 'string') setSector(d.sector)
+                    if (Array.isArray(d.tones)) setTones(d.tones as string[])
+                    if (typeof d.extra === 'string') setExtra(d.extra)
                   }}
                 />
 
@@ -196,10 +200,10 @@ export function ViralVideoPage() {
                 )}
 
                 <Button onClick={() => mutation.mutate()} disabled={!canSubmit} loading={mutation.isPending} className="mt-1 w-full">
-                  🎬 Script Oluştur
+                  🎬 Uyarlama Fikirlerini Üret
                 </Button>
                 {mutation.isPending && (
-                  <p className="text-center text-sm text-gray-400 animate-pulse">Video scripti hazırlanıyor — 1-2 dakika sürebilir...</p>
+                  <p className="text-center text-sm text-gray-400 animate-pulse">Format analiz ediliyor, uyarlama fikirleri üretiliyor — 10–30 saniye sürebilir...</p>
                 )}
               </div>
             </div>
@@ -207,86 +211,54 @@ export function ViralVideoPage() {
 
           {result && (
             <div className="flex flex-col gap-4">
-              {/* Konsept */}
-              <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
-                <h3 className="text-sm font-semibold text-gray-700 mb-2">🎬 Video Konsepti</h3>
-                <p className="text-sm text-gray-700 leading-relaxed">{result.video_konsepti}</p>
-              </div>
-
-              {/* Script */}
-              <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
-                <h3 className="text-sm font-semibold text-gray-700 mb-4">🎥 Video Script</h3>
-                <div className="flex flex-col gap-3">
-                  {result.script.map((adim, i) => (
-                    <div key={i} className="border border-gray-100 rounded-xl overflow-hidden">
-                      <div className="flex items-center gap-2 px-4 py-2 bg-gray-50 border-b border-gray-100">
-                        <span className="text-xs font-mono font-bold text-[#1D9E75] bg-[#1D9E75]/10 px-2 py-0.5 rounded">
-                          {adim.sure}
-                        </span>
-                        <span className="text-xs text-gray-500">{adim.sahne}</span>
-                      </div>
-                      <div className="p-4 flex flex-col gap-2">
-                        {adim.seslendirme && (
-                          <p className="text-sm text-gray-800">
-                            <span className="font-medium text-gray-500 text-xs uppercase tracking-wide mr-2">🎤 Metin:</span>
-                            {adim.seslendirme}
-                          </p>
-                        )}
-                        {adim.gorseller && (
-                          <p className="text-sm text-gray-500">
-                            <span className="font-medium text-xs uppercase tracking-wide mr-2">📷 Görsel:</span>
-                            {adim.gorseller}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Hashtag */}
-              {result.hashtags.length > 0 && (
+              {result.kaynak_analiz && (
                 <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
-                  <h3 className="text-sm font-semibold text-gray-700 mb-3"># Hashtag Önerileri</h3>
-                  <div className="flex flex-wrap gap-1.5">
-                    {result.hashtags.map((tag, i) => (
-                      <span key={i} className="px-2.5 py-1 rounded-full bg-[#1D9E75]/10 text-xs text-[#1D9E75] font-medium">
-                        {tag}
-                      </span>
-                    ))}
+                  <h3 className="text-sm font-semibold text-gray-700 mb-2">🔍 Viral Analiz</h3>
+                  <p className="text-sm text-gray-600 leading-relaxed">{result.kaynak_analiz}</p>
+                </div>
+              )}
+
+              {result.uyarlamalar.map((u, i) => (
+                <div key={i} className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+                  <div className="flex items-center gap-3 px-5 py-3.5 bg-[#1D9E75]/5 border-b border-gray-100">
+                    <div className="w-7 h-7 rounded-full bg-[#1D9E75] text-white text-xs font-bold flex items-center justify-center shrink-0">
+                      {u.numara}
+                    </div>
+                    <span className="font-semibold text-sm text-[#085041]">{u.baslik}</span>
+                  </div>
+                  <div className="p-5 flex flex-col gap-3">
+                    {/* Senaryo balonu */}
+                    <div className="relative bg-[#DCF8C6] rounded-tr-xl rounded-b-xl px-4 py-3 text-sm text-[#1C1B19] leading-relaxed whitespace-pre-wrap">
+                      <div className="absolute left-0 top-0 w-0 h-0" style={{ borderTop: '8px solid #DCF8C6', borderLeft: '8px solid transparent', left: '-8px' }} />
+                      {u.senaryo}
+                    </div>
+
+                    {u.kanca && (
+                      <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2.5">
+                        <p className="text-xs font-semibold text-amber-700 mb-0.5">🎣 İlk 3 Saniye Kancası</p>
+                        <p className="text-sm text-amber-800">{u.kanca}</p>
+                      </div>
+                    )}
+
+                    {u.ipucu && (
+                      <div className="flex gap-2 bg-gray-50 rounded-lg px-3 py-2 text-xs text-gray-500">
+                        <span className="text-[#1D9E75] shrink-0">💡</span>{u.ipucu}
+                      </div>
+                    )}
+
+                    {(u.platformlar || u.format) && (
+                      <div className="flex gap-2 flex-wrap">
+                        {u.platformlar?.map((p) => (
+                          <span key={p} className="text-xs px-2.5 py-1 bg-[#E1F5EE] text-[#085041] font-medium rounded-full">{p}</span>
+                        ))}
+                        {u.format && (
+                          <span className="text-xs px-2.5 py-1 bg-blue-50 text-blue-700 font-medium rounded-full">{u.format}</span>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
-              )}
-
-              {/* Müzik + İpuçları */}
-              {((result.muzik_onerileri && result.muzik_onerileri.length > 0) || (result.ipuclari && result.ipuclari.length > 0)) && (
-                <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
-                  {result.muzik_onerileri && result.muzik_onerileri.length > 0 && (
-                    <div className="mb-4">
-                      <h3 className="text-sm font-semibold text-gray-700 mb-2">🎵 Müzik Önerileri</h3>
-                      <ul className="flex flex-col gap-1">
-                        {result.muzik_onerileri.map((m, i) => (
-                          <li key={i} className="text-sm text-gray-600 flex gap-2">
-                            <span className="shrink-0">♪</span>{m}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                  {result.ipuclari && result.ipuclari.length > 0 && (
-                    <div>
-                      <h3 className="text-sm font-semibold text-gray-700 mb-2">💡 Çekim İpuçları</h3>
-                      <ul className="flex flex-col gap-1.5">
-                        {result.ipuclari.map((ip, i) => (
-                          <li key={i} className="flex gap-2 text-sm text-gray-600">
-                            <span className="text-[#1D9E75] shrink-0">✓</span>{ip}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                </div>
-              )}
+              ))}
 
               {result.ctaText && (
                 <div className="bg-[#1D9E75]/5 border border-[#1D9E75]/20 rounded-2xl p-5 text-center">
@@ -295,7 +267,7 @@ export function ViralVideoPage() {
               )}
 
               <button onClick={() => setResult(null)} className="text-sm text-gray-400 underline text-center no-print">
-                Yeni script oluştur
+                Yeni uyarlama üret
               </button>
             </div>
           )}
