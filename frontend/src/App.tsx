@@ -7,7 +7,12 @@ import { LoginPage } from '@/pages/auth/LoginPage'
 import { RegisterPage } from '@/pages/auth/RegisterPage'
 import { VerifyEmailPage } from '@/pages/auth/VerifyEmailPage'
 import { DashboardPage } from '@/pages/dashboard/DashboardPage'
-import { HesabimPage } from '@/pages/account/HesabimPage'
+import { HesabimLayout } from '@/pages/account/HesabimLayout'
+import { AbonelikPage } from '@/pages/account/AbonelikPage'
+import { AraclarimPage } from '@/pages/account/AraclarimPage'
+import { ProfilBilgileriPage } from '@/pages/account/ProfilBilgileriPage'
+import { SifreDegistirPage } from '@/pages/account/SifreDegistirPage'
+import { KullanimGecmisiPage } from '@/pages/account/KullanimGecmisiPage'
 import { ToolPage } from '@/pages/tools/ToolPage'
 
 const queryClient = new QueryClient({
@@ -40,7 +45,14 @@ function AppRoutes() {
             }
           >
             <Route path="/dashboard" element={<DashboardPage />} />
-            <Route path="/hesabim" element={<HesabimPage />} />
+            <Route path="/hesabim" element={<HesabimLayout />}>
+              <Route index element={<Navigate to="abonelik" replace />} />
+              <Route path="abonelik" element={<AbonelikPage />} />
+              <Route path="araclarim" element={<AraclarimPage />} />
+              <Route path="profil" element={<ProfilBilgileriPage />} />
+              <Route path="sifre" element={<SifreDegistirPage />} />
+              <Route path="kullanim-gecmisi" element={<KullanimGecmisiPage />} />
+            </Route>
             <Route path="/arac/:toolId" element={<ToolPage />} />
           </Route>
 
