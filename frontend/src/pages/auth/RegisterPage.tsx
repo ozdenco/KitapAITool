@@ -8,6 +8,32 @@ import { Logo } from '@/components/ui/Logo'
 
 const GOOGLE_ENABLED = !!(import.meta.env.VITE_GOOGLE_CLIENT_ID)
 
+// HTTP hatalarını kayıt sayfasına özel kullanıcı dostu mesajlara çevirir
+function getRegisterErrorMessage(error: unknown): string {
+  if (error && typeof error === 'object') {
+    const err = error as Record<string, unknown>
+    const response = err.response as Record<string, unknown> | undefined
+    const status = response?.status as number | undefined
+    const backendMsg = (response?.data as Record<string, unknown> | undefined)?.error as string | undefined
+
+    if (status === 403 || status === 409) {
+      return 'Bu e-posta adresi zaten kayıtlı. Giriş yapmayı deneyin veya farklı bir e-posta kullanın.'
+    }
+    if (status === 400 || status === 422) {
+      return backendMsg ?? 'Girdiğiniz bilgiler geçersiz. Lütfen kontrol edin.'
+    }
+    if (status === 429) {
+      return 'Çok fazla deneme yaptınız. Lütfen birkaç dakika bekleyin.'
+    }
+    if (status === 500) {
+      return 'Sunucu hatası oluştu. Lütfen daha sonra tekrar deneyin.'
+    }
+    if (backendMsg) return backendMsg
+  }
+  if (error instanceof Error) return error.message
+  return 'Kayıt yapılamadı. Lütfen tekrar deneyin.'
+}
+
 const STRENGTH_LEVELS = [
   { label: 'Çok Zayıf', color: 'bg-red-500' },
   { label: 'Zayıf',     color: 'bg-orange-400' },
@@ -54,7 +80,7 @@ export function RegisterPage() {
     }
   }
 
-  const regError = error instanceof Error ? error.message : error ? 'Kayıt yapılamadı.' : null
+  const regError = error ? getRegisterErrorMessage(error) : null
   const gError = googleError instanceof Error ? googleError.message : null
 
   return (
