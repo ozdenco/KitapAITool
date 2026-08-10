@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { GoogleLogin, type CredentialResponse } from '@react-oauth/google'
 import { useLogin, useGoogleAuth } from '@/hooks/useAuth'
 import { Button } from '@/components/ui/Button'
@@ -8,11 +8,32 @@ import { Logo } from '@/components/ui/Logo'
 
 const GOOGLE_ENABLED = !!(import.meta.env.VITE_GOOGLE_CLIENT_ID)
 
+function getLoginErrorMessage(error: unknown): string | null {
+  if (!error) return null
+  if (error && typeof error === 'object') {
+    const err = error as Record<string, unknown>
+    const response = err.response as Record<string, unknown> | undefined
+    const status = response?.status as number | undefined
+    if (status === 401 || status === 403) {
+      return 'E-posta veya şifre hatalı. Lütfen kontrol edin.'
+    }
+    if (status === 429) {
+      return 'Çok fazla deneme yaptınız. Lütfen birkaç dakika bekleyin.'
+    }
+    if (status === 500) {
+      return 'Sunucu hatası oluştu. Lütfen daha sonra tekrar deneyin.'
+    }
+  }
+  if (error instanceof Error) return error.message
+  return 'Giriş yapılamadı. Lütfen tekrar deneyin.'
+}
+
 export function LoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const { mutate: login, isPending, error } = useLogin()
   const { mutate: googleAuth, isPending: googlePending, error: googleError } = useGoogleAuth()
+  const location = useLocation()
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -25,8 +46,9 @@ export function LoginPage() {
     }
   }
 
-  const loginError = error instanceof Error ? error.message : error ? 'Giriş yapılamadı.' : null
+  const loginError = getLoginErrorMessage(error)
   const gError = googleError instanceof Error ? googleError.message : null
+  const passwordWasReset = (location.state as Record<string, unknown> | null)?.passwordReset === true
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-[#1D9E75]/5 flex items-center justify-center p-4">
@@ -40,6 +62,13 @@ export function LoginPage() {
         {/* Card */}
         <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-5">Giriş Yap</h2>
+
+          {/* Şifre sıfırlama başarı mesajı */}
+          {passwordWasReset && (
+            <div className="mb-4 p-3 bg-[#F0FAF6] border border-[#9FE1CB] rounded-lg text-sm text-[#085041]">
+              ✓ Şifreniz başarıyla güncellendi. Yeni şifrenizle giriş yapabilirsiniz.
+            </div>
+          )}
 
           {(loginError ?? gError) && (
             <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
@@ -77,16 +106,26 @@ export function LoginPage() {
               required
               autoComplete="email"
             />
-            <Input
-              id="password"
-              type="password"
-              label="Şifre"
-              placeholder="••••••••"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              autoComplete="current-password"
-            />
+            <div className="flex flex-col gap-[6px]">
+              <Input
+                id="password"
+                type="password"
+                label="Şifre"
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                autoComplete="current-password"
+              />
+              <div className="flex justify-end">
+                <Link
+                  to="/sifremi-unuttum"
+                  className="text-[12px] text-[#1D9E75] hover:underline"
+                >
+                  Şifremi unuttum
+                </Link>
+              </div>
+            </div>
             <Button type="submit" loading={isPending} size="lg" className="mt-1 w-full">
               Giriş Yap
             </Button>

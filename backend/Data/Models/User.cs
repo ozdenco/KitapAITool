@@ -16,6 +16,10 @@ public class User
     public string? EmailVerificationToken { get; set; }
     public DateTime? EmailVerificationExpiry { get; set; }
 
+    // ── Şifre sıfırlama ──────────────────────────────────────────────────────
+    public string? PasswordResetToken { get; set; }
+    public DateTime? PasswordResetExpiry { get; set; }
+
     // ── Google OAuth ──────────────────────────────────────────────────────────
     public string? GoogleId { get; set; }
 

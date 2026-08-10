@@ -6,6 +6,8 @@ import { AuthGuard } from '@/components/AuthGuard'
 import { LoginPage } from '@/pages/auth/LoginPage'
 import { RegisterPage } from '@/pages/auth/RegisterPage'
 import { VerifyEmailPage } from '@/pages/auth/VerifyEmailPage'
+import { ForgotPasswordPage } from '@/pages/auth/ForgotPasswordPage'
+import { ResetPasswordPage } from '@/pages/auth/ResetPasswordPage'
 import { DashboardPage } from '@/pages/dashboard/DashboardPage'
 import { HesabimLayout } from '@/pages/account/HesabimLayout'
 import { AbonelikPage } from '@/pages/account/AbonelikPage'
@@ -35,6 +37,8 @@ function AppRoutes() {
           <Route path="/giris" element={<LoginPage />} />
           <Route path="/kayit" element={<RegisterPage />} />
           <Route path="/e-posta-dogrula" element={<VerifyEmailPage />} />
+          <Route path="/sifremi-unuttum" element={<ForgotPasswordPage />} />
+          <Route path="/sifre-sifirla" element={<ResetPasswordPage />} />
 
           {/* Protected */}
           <Route

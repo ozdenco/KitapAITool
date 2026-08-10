@@ -175,6 +175,46 @@ public class UserService(AppDbContext db, TokenService tokens, EmailService emai
         return (user, tokens.GenerateAccessToken(user), newRefresh);
     }
 
+    // ── Şifre sıfırlama: mail gönder ─────────────────────────────────────────
+    /// <returns>Her zaman true döner (e-posta enum attack'ı önlemek için)</returns>
+    public async Task<bool> ForgotPasswordAsync(string emailAddr)
+    {
+        var user = await db.Users.FirstOrDefaultAsync(u => u.Email == emailAddr.ToLower());
+        if (user is null) return true; // kullanıcı yok ama bunu ifşa etme
+
+        user.PasswordResetToken  = Guid.NewGuid().ToString("N");
+        user.PasswordResetExpiry = DateTime.UtcNow.AddHours(1);
+        user.UpdatedAt           = DateTime.UtcNow;
+
+        await db.SaveChangesAsync();
+
+        try { await email.SendPasswordResetEmailAsync(user.Email, user.Name, user.PasswordResetToken!); }
+        catch { /* log already done in EmailService */ }
+
+        return true;
+    }
+
+    // ── Şifre sıfırlama: yeni şifre kaydet ───────────────────────────────────
+    public async Task<bool> ResetPasswordAsync(string token, string newPassword)
+    {
+        var user = await db.Users.FirstOrDefaultAsync(u =>
+            u.PasswordResetToken == token &&
+            u.PasswordResetExpiry > DateTime.UtcNow);
+
+        if (user is null) return false;
+
+        user.PasswordHash        = BCrypt.Net.BCrypt.HashPassword(newPassword);
+        user.PasswordResetToken  = null;
+        user.PasswordResetExpiry = null;
+        // Aktif refresh token'ları geçersiz kıl (güvenlik)
+        user.RefreshToken        = null;
+        user.RefreshTokenExpiry  = null;
+        user.UpdatedAt           = DateTime.UtcNow;
+
+        await db.SaveChangesAsync();
+        return true;
+    }
+
     // ── Yardımcılar ───────────────────────────────────────────────────────────
     public async Task<User?> GetByIdAsync(Guid id) =>
         await db.Users.Include(u => u.Subscription)

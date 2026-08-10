@@ -93,6 +93,31 @@ export function useResendVerification() {
   })
 }
 
+// ─── Şifremi unuttum ─────────────────────────────────────────────────────────
+export function useForgotPassword() {
+  return useMutation({
+    mutationFn: async (email: string) => {
+      const { data } = await api.post<ApiResponse>('/auth/forgot-password', { email })
+      if (!data.success) throw new Error(data.error ?? 'İstek gönderilemedi')
+    },
+  })
+}
+
+// ─── Şifre sıfırla ───────────────────────────────────────────────────────────
+export function useResetPassword() {
+  const navigate = useNavigate()
+
+  return useMutation({
+    mutationFn: async ({ token, newPassword }: { token: string; newPassword: string }) => {
+      const { data } = await api.post<ApiResponse>('/auth/reset-password', { token, newPassword })
+      if (!data.success) throw new Error(data.error ?? 'Şifre sıfırlanamadı')
+    },
+    onSuccess: () => {
+      navigate('/giris', { state: { passwordReset: true } })
+    },
+  })
+}
+
 // ─── Çıkış ───────────────────────────────────────────────────────────────────
 export function useLogout() {
   const { logout } = useAuthStore()

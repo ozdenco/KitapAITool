@@ -25,6 +25,13 @@ public class AuthController(UserService users) : ControllerBase
 
     public record GoogleRequest([Required] string IdToken);
 
+    public record ForgotPasswordRequest(
+        [Required, EmailAddress] string Email);
+
+    public record ResetPasswordRequest(
+        [Required] string Token,
+        [Required, MinLength(8)] string NewPassword);
+
     // ── Kayıt ─────────────────────────────────────────────────────────────────
     [HttpPost("register")]
     public async Task<IActionResult> Register([FromBody] RegisterRequest req)
@@ -110,6 +117,26 @@ public class AuthController(UserService users) : ControllerBase
         return ok
             ? Ok(new { success = true })
             : BadRequest(new { success = false, error = "E-posta gönderilemedi veya zaten doğrulanmış." });
+    }
+
+    // ── Şifremi unuttum ───────────────────────────────────────────────────────
+    [HttpPost("forgot-password")]
+    public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequest req)
+    {
+        await users.ForgotPasswordAsync(req.Email);
+        // Kullanıcı var/yok bilgisini verme — her zaman aynı yanıt
+        return Ok(new { success = true, message = "Şifre sıfırlama bağlantısı e-posta adresinize gönderildi." });
+    }
+
+    // ── Şifre sıfırla ────────────────────────────────────────────────────────
+    [HttpPost("reset-password")]
+    public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequest req)
+    {
+        var ok = await users.ResetPasswordAsync(req.Token, req.NewPassword);
+        if (!ok)
+            return BadRequest(new { success = false, error = "Bağlantı geçersiz veya süresi dolmuş. Lütfen tekrar şifre sıfırlama isteği gönderin." });
+
+        return Ok(new { success = true, message = "Şifreniz başarıyla güncellendi. Giriş yapabilirsiniz." });
     }
 
     // ── Token yenile ──────────────────────────────────────────────────────────
