@@ -11,6 +11,32 @@ interface PasswordChangeBody {
   newPassword: string
 }
 
+// HTTP hatalarını kullanıcı dostu Türkçe mesajlara dönüştür
+function getApiErrorMessage(error: unknown): string {
+  if (error && typeof error === 'object') {
+    const err = error as Record<string, unknown>
+    const response = err.response as Record<string, unknown> | undefined
+    const status = response?.status as number | undefined
+    const backendMsg = (response?.data as Record<string, unknown> | undefined)?.error as string | undefined
+
+    if (status === 404) {
+      return 'Şifre değiştirme servisi henüz etkin değil. Lütfen destek ekibiyle iletişime geçin veya şifrenizi sıfırlayın.'
+    }
+    if (status === 401) {
+      return 'Mevcut şifreniz hatalı. Lütfen tekrar kontrol edin.'
+    }
+    if (status === 400 || status === 422) {
+      return backendMsg ?? 'Girdiğiniz bilgiler geçersiz. Lütfen kontrol edin.'
+    }
+    if (status === 429) {
+      return 'Çok fazla deneme yaptınız. Lütfen birkaç dakika bekleyin.'
+    }
+    if (backendMsg) return backendMsg
+  }
+  if (error instanceof Error) return error.message
+  return 'Beklenmeyen bir hata oluştu. Lütfen tekrar deneyin.'
+}
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function SifreDegistirPage() {
@@ -103,14 +129,9 @@ export function SifreDegistirPage() {
           )}
 
           {/* Errors */}
-          {validationError && (
+          {(validationError || changeMutation.isError) && (
             <p className="text-[13px] text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
-              {validationError}
-            </p>
-          )}
-          {changeMutation.isError && (
-            <p className="text-[13px] text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
-              {(changeMutation.error as Error).message}
+              {validationError || getApiErrorMessage(changeMutation.error)}
             </p>
           )}
 

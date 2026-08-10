@@ -8,15 +8,43 @@ import { Logo } from '@/components/ui/Logo'
 
 const GOOGLE_ENABLED = !!(import.meta.env.VITE_GOOGLE_CLIENT_ID)
 
+const STRENGTH_LEVELS = [
+  { label: 'Çok Zayıf', color: 'bg-red-500' },
+  { label: 'Zayıf',     color: 'bg-orange-400' },
+  { label: 'Orta',      color: 'bg-amber-400' },
+  { label: 'İyi',       color: 'bg-[#1D9E75]' },
+  { label: 'Güçlü',     color: 'bg-[#1D9E75]' },
+]
+
+function getStrengthScore(pwd: string): number {
+  let score = 0
+  if (pwd.length >= 8) score++
+  if (pwd.length >= 12) score++
+  if (/[A-Z]/.test(pwd) && /[a-z]/.test(pwd)) score++
+  if (/\d/.test(pwd)) score++
+  if (/[^A-Za-z0-9]/.test(pwd)) score++
+  return Math.min(score, 4)
+}
+
 export function RegisterPage() {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [pwError, setPwError] = useState('')
   const { mutate: register, isPending, error } = useRegister()
   const { mutate: googleAuth, isPending: googlePending, error: googleError } = useGoogleAuth()
 
+  const pwScore = password.length > 0 ? getStrengthScore(password) : -1
+  const pwLevel = pwScore >= 0 ? STRENGTH_LEVELS[pwScore] : null
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
+    setPwError('')
+
+    if (pwScore >= 0 && pwScore < 2) {
+      setPwError('Şifre çok zayıf. Büyük-küçük harf, rakam veya özel karakter ekleyin.')
+      return
+    }
     register({ name, email, password })
   }
 
@@ -41,9 +69,9 @@ export function RegisterPage() {
           <h2 className="text-lg font-semibold text-gray-900 mb-1">Ücretsiz Hesap Oluştur</h2>
           <p className="text-sm text-gray-500 mb-5">Her araç için aylık 3 ücretsiz kullanım</p>
 
-          {(regError ?? gError) && (
+          {(regError ?? gError ?? pwError) && (
             <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
-              {regError ?? gError}
+              {pwError || (regError ?? gError)}
             </div>
           )}
 
@@ -86,17 +114,38 @@ export function RegisterPage() {
               required
               autoComplete="email"
             />
-            <Input
-              id="password"
-              type="password"
-              label="Şifre"
-              placeholder="En az 8 karakter"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              minLength={8}
-              autoComplete="new-password"
-            />
+            <div className="flex flex-col gap-[6px]">
+              <Input
+                id="password"
+                type="password"
+                label="Şifre"
+                placeholder="En az 8 karakter"
+                value={password}
+                onChange={(e) => { setPassword(e.target.value); setPwError('') }}
+                required
+                minLength={8}
+                autoComplete="new-password"
+              />
+              {/* Strength bar */}
+              {pwLevel && (
+                <div className="flex flex-col gap-[4px]">
+                  <div className="flex gap-1">
+                    {[0, 1, 2, 3].map((i) => (
+                      <div
+                        key={i}
+                        className={`flex-1 h-[3px] rounded-full transition-all ${
+                          i < pwScore ? pwLevel.color : 'bg-gray-200'
+                        }`}
+                      />
+                    ))}
+                  </div>
+                  <p className="text-[11px] text-gray-400">
+                    Şifre gücü: <strong className={pwScore < 2 ? 'text-red-500' : 'text-gray-600'}>{pwLevel.label}</strong>
+                    {pwScore < 2 && <span className="text-red-500"> — büyük harf, rakam veya özel karakter ekleyin</span>}
+                  </p>
+                </div>
+              )}
+            </div>
             <Button type="submit" loading={isPending} size="lg" className="mt-1 w-full">
               Ücretsiz Başla
             </Button>
