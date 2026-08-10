@@ -170,7 +170,7 @@ export function WhatsappSatisPage() {
                 </div>
 
                 <div>
-                  <p className="text-sm font-medium text-[#6B6963] mb-2">En sık karşılaştığınız itirazlar</p>
+                  <p className="text-sm font-medium text-[#6B6963] mb-3">En sık karşılaştığınız itirazlar</p>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                     {ITIRAZLAR.map((it) => (
                       <label

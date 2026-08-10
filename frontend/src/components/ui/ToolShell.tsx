@@ -21,7 +21,7 @@ export function ToolShell({
   formHasInput,
   children,
 }: ToolShellProps) {
-  const { usage } = useToolUsageById(toolId)
+  const { usage, isLoading: usageLoading } = useToolUsageById(toolId)
   const [isFormOpen, setIsFormOpen] = useState(true)
 
   useEffect(() => {
@@ -34,9 +34,9 @@ export function ToolShell({
 
   // ── header: title + description, rendered at the top of each page's form card ─
   const header: ReactNode = (
-    <div className="mb-[1.5rem]">
+    <div className="pt-[6px] mb-[24px]">
       {/* Emoji icon + title row */}
-      <div className="flex items-center gap-[10px] mb-[6px]">
+      <div className="flex items-center gap-[10px] mb-[10px]">
         <span className="text-[26px] leading-none">{icon}</span>
         <h1 className="text-[22px] font-medium text-[#1C1B19]">{title}</h1>
       </div>
@@ -45,7 +45,10 @@ export function ToolShell({
   )
 
   // ── rateBar: plan limitine göre otomatik ölçeklenen kullanım göstergesi ──────
-  const rateBar: ReactNode = usage != null ? (() => {
+  // Loading skeleton → boşluğu rezerv eder, veri gelince gösterir
+  const rateBar: ReactNode = usageLoading ? (
+    <div className="h-[38px] bg-[#F7F6F2] border border-[#E2E0D8] rounded-lg animate-pulse" />
+  ) : usage != null ? (() => {
     const { limit, usedCount: used, planLabel } = usage
 
     const badgeCls = isAtLimit
