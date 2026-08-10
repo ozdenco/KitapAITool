@@ -4,6 +4,8 @@ export interface User {
   email: string
   name: string
   emailVerified: boolean
+  isAdmin: boolean   // Admin kullanıcılar sınırsız kullanım hakkı alır (backend limit=null gönderir)
+  planType: PlanType // Aktif abonelik planı
   createdAt?: string
 }
 
@@ -24,6 +26,16 @@ export interface RegisterRequest {
 }
 
 // ─── Plans & Subscriptions ───────────────────────────────────────────────────
+
+/**
+ * Abonelik plan tipleri:
+ *  free       → 3 kullanım/araç/ay,  sınırlı araç erişimi
+ *  standard   → 10 kullanım/araç/ay, tüm araçlar
+ *  premium    → 25 kullanım/araç/ay, tüm araçlar + öncelikli destek
+ *  enterprise → Özel müzakere edilen limit (ör. 100/ay), tüm araçlar
+ *  admin      → Sınırsız (dahili kullanıcılar — veritabanında saklanmaz,
+ *               users.is_admin alanından türetilir)
+ */
 export type PlanType = 'free' | 'standard' | 'premium' | 'enterprise'
 
 export interface Plan {
@@ -31,7 +43,13 @@ export interface Plan {
   name: string
   type: PlanType
   priceMonthly: number
-  toolLimitPerMonth: number | null  // null = unlimited (enterprise)
+  /**
+   * Araç başına aylık kullanım limiti:
+   * - free/standard/premium: sabit sayı (3 | 10 | 25)
+   * - enterprise: kullanıcıya özel müzakere edilen sayı (ör. 100)
+   * - null: sadece admin — sınırsız
+   */
+  toolLimitPerMonth: number | null
   description: string
   features: string[]
 }
@@ -72,7 +90,20 @@ export interface Tool {
 export interface ToolUsage {
   toolId: ToolId
   usedCount: number
+  /**
+   * Backend'in çözümlediği efektif limit.
+   * Tüm mantık (plan mi, tekil araç mı, enterprise özel limit mi)
+   * backend tarafında halledilir — frontend sadece bu sayıyı gösterir.
+   *
+   * null = sınırsız (yalnızca admin kullanıcılar)
+   */
   limit: number | null
+  /**
+   * Rate-bar'da gösterilecek kısa etiket.
+   * Backend tarafından üretilir — frontend olduğu gibi gösterir.
+   * Örnekler: "Ücretsiz" | "Standart" | "Premium" | "Kurumsal" | "Tekil" | "Admin"
+   */
+  planLabel: string
   monthYear: string  // "2026-08"
 }
 

@@ -44,68 +44,68 @@ export function ToolShell({
     </div>
   )
 
-  // ── rateBar: abonelik modeline göre dinamik kullanım göstergesi ──────────────
+  // ── rateBar: plan limitine göre otomatik ölçeklenen kullanım göstergesi ──────
   const rateBar: ReactNode = usage != null ? (() => {
-    const limit = usage.limit
-    const used = usage.usedCount
+    const { limit, usedCount: used, planLabel } = usage
 
-    // Sınırsız plan (Enterprise / null limit)
+    const badgeCls = isAtLimit
+      ? 'px-[8px] py-[2px] rounded-full bg-red-100 border border-red-300 text-red-700 text-[11px] font-medium'
+      : 'px-[8px] py-[2px] rounded-full bg-[#F0FAF6] border border-[#9FE1CB] text-[#085041] text-[11px] font-medium'
+    const containerCls = `px-[14px] py-[9px] rounded-lg border text-[12px] ${
+      isAtLimit ? 'bg-red-50 border-red-200' : 'bg-[#F7F6F2] border-[#E2E0D8]'
+    }`
+
+    // Admin → sınırsız (limit = null)
     if (limit == null) {
       return (
-        <div className="flex items-center gap-[12px] px-[14px] py-[9px] rounded-lg border border-[#E2E0D8] bg-[#F7F6F2] text-[12px]">
-          <span className="text-[16px]">∞</span>
-          <span className="text-[#6B6963]">
-            Bu ay <strong className="text-[#1C1B19]">{used}</strong> kullanım · Sınırsız plan
+        <div className={`${containerCls} flex items-center gap-[12px]`}>
+          <span className="text-[15px] font-bold text-[#1D9E75]">∞</span>
+          <span className="text-[#6B6963] flex-1">
+            Bu ay <strong className="text-[#1C1B19]">{used}</strong> kullanım · Sınırsız
           </span>
+          <span className={badgeCls}>{planLabel}</span>
         </div>
       )
     }
 
     const pct = Math.min((used / limit) * 100, 100)
     const barColor = isAtLimit ? 'bg-red-500' : pct >= 70 ? 'bg-amber-400' : 'bg-[#1D9E75]'
-    const containerCls = `flex items-center gap-[12px] px-[14px] py-[9px] rounded-lg border text-[12px] ${
-      isAtLimit ? 'bg-red-50 border-red-200' : 'bg-[#F7F6F2] border-[#E2E0D8]'
-    }`
-    const labelCls = isAtLimit ? 'text-red-600 font-medium flex-1' : 'text-[#6B6963] flex-1'
+    const textCls = isAtLimit ? 'text-red-600 font-medium flex-1' : 'text-[#6B6963] flex-1'
 
-    // Nokta gösterimi: limit ≤ 10 (Ücretsiz / Standart)
+    // Nokta gösterimi: limit ≤ 10
     if (limit <= 10) {
       return (
-        <div className={containerCls}>
+        <div className={`${containerCls} flex items-center gap-[12px]`}>
           <span className="flex gap-[5px]">
             {Array.from({ length: limit }).map((_, i) => (
-              <span
-                key={i}
-                className={`w-[10px] h-[10px] rounded-full transition-colors ${
-                  i < used ? (isAtLimit ? 'bg-red-500' : 'bg-[#1D9E75]') : 'bg-[#D3D1C7]'
-                }`}
-              />
+              <span key={i} className={`w-[10px] h-[10px] rounded-full transition-colors ${
+                i < used ? (isAtLimit ? 'bg-red-500' : 'bg-[#1D9E75]') : 'bg-[#D3D1C7]'
+              }`} />
             ))}
           </span>
-          <span className={labelCls}>
+          <span className={textCls}>
             Aylık <strong className="text-[#1C1B19]">{used} / {limit}</strong> kullanım
           </span>
-          {isAtLimit && <span className="text-[11px] text-red-600 font-medium whitespace-nowrap">Limit doldu</span>}
+          <span className={badgeCls}>{planLabel}</span>
+          {isAtLimit && <span className="text-[11px] text-red-600 font-medium">Doldu</span>}
         </div>
       )
     }
 
-    // Progress bar: limit > 10 (Premium ve üzeri)
+    // Progress bar: limit > 10 (Premium / Enterprise)
     return (
-      <div className={containerCls}>
-        <div className="flex-1">
-          <div className="flex items-center justify-between mb-[5px]">
-            <span className={labelCls}>
-              Aylık <strong className="text-[#1C1B19]">{used} / {limit}</strong> kullanım
-            </span>
-            {isAtLimit && <span className="text-[11px] text-red-600 font-medium whitespace-nowrap ml-2">Limit doldu</span>}
+      <div className={`${containerCls} flex flex-col gap-[6px]`}>
+        <div className="flex items-center justify-between">
+          <span className={textCls}>
+            Aylık <strong className="text-[#1C1B19]">{used} / {limit}</strong> kullanım
+          </span>
+          <div className="flex items-center gap-[6px]">
+            <span className={badgeCls}>{planLabel}</span>
+            {isAtLimit && <span className="text-[11px] text-red-600 font-medium">Doldu</span>}
           </div>
-          <div className="h-[5px] bg-[#E2E0D8] rounded-full overflow-hidden">
-            <div
-              className={`h-full rounded-full transition-all ${barColor}`}
-              style={{ width: `${pct}%` }}
-            />
-          </div>
+        </div>
+        <div className="h-[5px] bg-[#E2E0D8] rounded-full overflow-hidden">
+          <div className={`h-full rounded-full transition-all ${barColor}`} style={{ width: `${pct}%` }} />
         </div>
       </div>
     )
