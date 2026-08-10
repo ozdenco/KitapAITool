@@ -34,7 +34,7 @@ export function ToolShell({
 
   // ── header: title + description, rendered at the top of each page's form card ─
   const header: ReactNode = (
-    <div className="pt-[6px] mb-[24px]">
+    <div className="pt-[6px] mb-[8px]">
       {/* Emoji icon + title row */}
       <div className="flex items-center gap-[10px] mb-[10px]">
         <span className="text-[26px] leading-none">{icon}</span>
