@@ -1,6 +1,19 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useForgotPassword } from '@/hooks/useAuth'
+
+function getForgotPasswordErrorMessage(error: unknown): string | null {
+  if (!error) return null
+  if (error && typeof error === 'object') {
+    const err = error as Record<string, unknown>
+    const response = err.response as Record<string, unknown> | undefined
+    const status = response?.status as number | undefined
+    if (status === 429) return 'Çok fazla deneme yaptınız. Lütfen birkaç dakika bekleyin.'
+    if (status === 500) return 'Sunucu hatası oluştu. Lütfen daha sonra tekrar deneyin.'
+  }
+  if (error instanceof Error) return error.message
+  return 'İstek gönderilemedi. Lütfen tekrar deneyin.'
+}
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Logo } from '@/components/ui/Logo'
@@ -14,7 +27,7 @@ export function ForgotPasswordPage() {
     forgotPassword(email)
   }
 
-  const errorMsg = error instanceof Error ? error.message : null
+  const errorMsg = getForgotPasswordErrorMessage(error)
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-[#1D9E75]/5 flex items-center justify-center p-4">
