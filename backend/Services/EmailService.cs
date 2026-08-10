@@ -105,8 +105,8 @@ public class EmailService(IConfiguration config, ILogger<EmailService> logger)
                         Merhaba {toName}, 👋
                       </h2>
                       <p style="margin:0;color:#475569;line-height:1.65;">
-                        KolayKOBİ hesabınız için şifre sıfırlama talebi aldık.
-                        Aşağıdaki butona tıklayarak yeni şifrenizi oluşturabilirsiniz.
+                        KolayKOBİ hesabınıza erişim için bir bağlantı talep edildi.
+                        Aşağıdaki butona tıklayarak yeni giriş bilgilerinizi belirleyebilirsiniz.
                       </p>
                     </td></tr>
                     <tr><td align="center" style="padding:24px 0;">
@@ -114,7 +114,7 @@ public class EmailService(IConfiguration config, ILogger<EmailService> logger)
                          style="display:inline-block;background:#1D9E75;color:#fff;font-weight:700;
                                 font-size:16px;padding:14px 32px;border-radius:10px;
                                 text-decoration:none;letter-spacing:0.01em;">
-                        🔑 Şifremi Sıfırla
+                        Hesabıma Eriş
                       </a>
                     </td></tr>
                     <tr><td style="padding-top:8px;">
@@ -125,8 +125,7 @@ public class EmailService(IConfiguration config, ILogger<EmailService> logger)
                       </p>
                       <hr style="border:none;border-top:1px solid #f1f5f9;margin:24px 0;">
                       <p style="margin:0;font-size:12px;color:#cbd5e1;text-align:center;">
-                        Bu isteği siz yapmadıysanız bu e-postayı görmezden gelebilirsiniz.
-                        Hesabınız güvende.
+                        Bu işlemi siz başlatmadıysanız bu e-postayı görmezden gelebilirsiniz.
                       </p>
                     </td></tr>
                   </table>
@@ -136,7 +135,7 @@ public class EmailService(IConfiguration config, ILogger<EmailService> logger)
             </html>
             """;
 
-        await SendAsync(toEmail, toName, "Şifre Sıfırlama — KolayKOBİ", html);
+        await SendAsync(toEmail, toName, "KolayKOBİ — Hesabınıza erişim bağlantısı", html);
     }
 
     // ── Ortak SMTP gönderici ─────────────────────────────────────────────────
