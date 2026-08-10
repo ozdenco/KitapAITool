@@ -9,17 +9,16 @@ import { ToolShell } from '@/components/ui/ToolShell'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-interface PlatformDagilim {
-  platform: string
+interface KanalDagilim {
+  kanal: string
   yuzde: number
   tutar: number
-  icerik: string
-  gerekce: string
+  tahminiTiklama?: string
+  tahminiLead?: string
 }
 
 interface ReklamResult {
-  toplam_butce: number
-  dagilim: PlatformDagilim[]
+  dagilim: KanalDagilim[]
   strateji: string
   uyarilar?: string[]
   ctaText?: string
@@ -34,82 +33,73 @@ const SEKTORLER = [
   'Teknoloji / Yazılım', 'Diğer',
 ]
 
-const HEDEFLER = ['Marka Farkındalığı', 'Satış / Dönüşüm', 'Web Sitesi Trafiği', 'Müşteri Adayı (Lead)', 'Uygulama İndirme']
-const YAS_ARALIKLARI = ['18–25', '25–35', '35–50', '50+', 'Tüm yaşlar']
-const BUTCE_ARALIK = ['1.000–3.000 ₺', '3.000–5.000 ₺', '5.000–10.000 ₺', '10.000–25.000 ₺', '25.000 ₺+']
+const HEDEFLER = ['Marka Bilinirliği', 'Lead Toplama', 'Satış Artırma']
 
-const PLATFORM_EMOJIS: Record<string, string> = {
-  'Google Ads': '🔍',
-  'Meta (Facebook & Instagram)': '📱',
-  'Instagram': '📸',
-  'Facebook': '👍',
-  'TikTok': '🎵',
-  'LinkedIn': '💼',
-  'YouTube': '▶️',
-  'Twitter/X': '✖️',
-}
-
-function platformEmoji(name: string): string {
-  for (const [key, emoji] of Object.entries(PLATFORM_EMOJIS)) {
-    if (name.toLowerCase().includes(key.toLowerCase())) return emoji
-  }
-  return '📊'
-}
+const KANALLAR = [
+  { value: 'Google Arama', label: 'Google Arama' },
+  { value: 'Google Display', label: 'Google Display' },
+  { value: 'Meta (FB+IG)', label: 'Meta (FB+IG)' },
+  { value: 'Instagram', label: 'Instagram' },
+  { value: 'LinkedIn', label: 'LinkedIn' },
+  { value: 'TikTok', label: 'TikTok' },
+  { value: 'YouTube', label: 'YouTube' },
+]
 
 // ─── Prompt builder ────────────────────────────────────────────────────────────
 
 function buildPrompt(f: {
-  isletme: string; sektor: string; butce: string
-  hedef: string; sehir: string; yas: string
+  biz: string; sector: string; budget: string
+  goal: string; audience: string; channels: string[]
 }): string {
-  return `Sen dijital reklam stratejisti ve medya planlamacısısın. Türkiye piyasasını iyi biliyorsun.
+  return `Sen dijital reklam bütçesi uzmanısın. KOBİ'ler için reklam kanalı dağılımı ve tahmini performans hesaplıyorsun.
 
-İŞLETME:
-- Ad: ${f.isletme}
-- Sektör: ${f.sektor}
-- Aylık reklam bütçesi: ${f.butce} TL
-- Kampanya hedefi: ${f.hedef}
-- Şehir / Coğrafi hedef: ${f.sehir || 'Türkiye geneli'}
-- Hedef yaş aralığı: ${f.yas || 'belirtilmemiş'}
+İşletme: ${f.biz}
+Sektör: ${f.sector}
+Aylık Bütçe: ${f.budget} TL
+Hedef: ${f.goal}
+Hedef Kitle: ${f.audience || 'belirtilmemiş'}
+Seçilen Kanallar: ${f.channels.join(', ')}
 
-Bu bilgilere göre aylık reklam bütçesini en verimli şekilde platformlara dağıt.
-Türkiye'deki dijital reklam maliyetleri ve kullanıcı davranışlarını dikkate al.
-Sektöre özel platform tercihlerini yansıt.
+Bu bütçeyi ${f.goal} hedefine göre seçilen kanallar arasında dağıt.
+Her kanal için tahmini tıklama ve lead sayısı ver.
+Türkiye dijital reklam maliyetlerini esas al (Google Arama CPC: 3-8₺, Meta CPM: 25-60₺, LinkedIn CPC: 15-40₺ vb.).
 
 SADECE JSON döndür:
 {
-  "toplam_butce": <sayı, TL>,
   "dagilim": [
     {
-      "platform": "<platform adı>",
-      "yuzde": <0-100 arası tam sayı>,
-      "tutar": <TL tutarı>,
-      "icerik": "<ne tür reklam öneriyorsun, 1 satır>",
-      "gerekce": "<neden bu platform, 1 cümle>"
+      "kanal": "<kanal adı>",
+      "yuzde": <0-100 arası sayı>,
+      "tutar": <TL cinsinden tam sayı>,
+      "tahminiTiklama": "<tahmini tıklama aralığı, ör: 800-1.200>",
+      "tahminiLead": "<tahmini lead sayısı, ör: 15-30>"
     }
   ],
-  "strateji": "<genel strateji özeti, 2-3 cümle>",
-  "uyarilar": ["<önemli uyarı veya öneri, 2-3 madde>"],
-  "ctaText": "<${f.isletme} için kişisel 1 cümle teşvik>"
+  "strateji": "<genel bütçe strateji açıklaması, 2-3 cümle>",
+  "uyarilar": ["<dikkat edilmesi gereken 2-3 önemli nokta>"],
+  "ctaText": "<${f.biz} için motivasyon cümlesi>"
 }
-Toplam yüzde 100 olsun. 3-5 platform öner. Türkçe olsun.`
+Yüzdeler toplamı 100 olsun. Türkçe olsun.`
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function ReklamButcePage() {
   const queryClient = useQueryClient()
-  const [isletme, setIsletme] = useState('')
-  const [sektor, setSektor] = useState('')
-  const [butce, setButce] = useState('')
-  const [hedef, setHedef] = useState('')
-  const [sehir, setSehir] = useState('')
-  const [yas, setYas] = useState('')
+  const [biz, setBiz] = useState('')
+  const [sector, setSector] = useState('')
+  const [budget, setBudget] = useState('')
+  const [goal, setGoal] = useState('')
+  const [audience, setAudience] = useState('')
+  const [channels, setChannels] = useState<string[]>([])
   const [result, setResult] = useState<ReklamResult | null>(null)
+
+  const toggleChannel = (v: string) =>
+    setChannels((prev) => prev.includes(v) ? prev.filter((x) => x !== v) : [...prev, v])
 
   const mutation = useMutation({
     mutationFn: async () => {
-      const prompt = buildPrompt({ isletme, sektor, butce, hedef, sehir, yas })
+      const prompt = buildPrompt({ biz, sector, budget, goal, audience, channels })
       const res = await api.post('/tools/reklam-butce/run', { prompt })
       const content = res.data?.content?.[0]?.text ?? res.data
       return (typeof content === 'string' ? JSON.parse(content) : content) as ReklamResult
@@ -120,76 +110,117 @@ export function ReklamButcePage() {
     },
   })
 
-  const canSubmit = isletme.trim() && sektor && butce && hedef && !mutation.isPending
+  const canSubmit = biz.trim() && sector && budget && goal && channels.length > 0 && !mutation.isPending
 
   return (
     <ToolShell
       toolId="reklam-butce"
       title="Reklam Bütçe Dağıtıcı"
-      icon="💰"
-      description="Aylık reklam bütçenizi hangi platforma ne kadar vermeniz gerektiğini yapay zeka ile optimize edin."
+      icon="📊"
+      description="Aylık reklam bütçenizi girin; kanal bazlı dağılım, tahmini tıklama ve beklenen lead sayısını hesaplayalım."
       hasResult={!!result}
-      formHasInput={!!isletme.trim()}
+      formHasInput={!!biz.trim()}
     >
       {({ isFormOpen }) => (
         <>
           {isFormOpen && (
-            <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm mb-6">
+            <div className="bg-white rounded-2xl border border-[#E2E0D8] p-6 shadow-sm mb-6">
               <div className="flex flex-col gap-5">
                 <Input
                   label="İşletme adı *"
-                  placeholder="Örn: Anadolu Klinik"
-                  value={isletme}
-                  onChange={(e) => setIsletme(e.target.value)}
+                  placeholder="Örn: Yıldız Dijital Ajans"
+                  value={biz}
+                  onChange={(e) => setBiz(e.target.value)}
                 />
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <Select
                     label="Sektör *"
-                    value={sektor}
-                    onChange={(e) => setSektor(e.target.value)}
+                    value={sector}
+                    onChange={(e) => setSector(e.target.value)}
                     options={[{ value: '', label: 'Seçin...' }, ...SEKTORLER.map((s) => ({ value: s, label: s }))]}
                   />
-                  <Select
-                    label="Aylık bütçe aralığı *"
-                    value={butce}
-                    onChange={(e) => setButce(e.target.value)}
-                    options={[{ value: '', label: 'Seçin...' }, ...BUTCE_ARALIK.map((b) => ({ value: b, label: b }))]}
-                  />
+                  <div>
+                    <label className="block text-sm font-medium text-[#6B6963] mb-1.5">
+                      Aylık toplam bütçe (TL) *
+                    </label>
+                    <input
+                      type="number"
+                      min="500"
+                      placeholder="Örn: 10000"
+                      value={budget}
+                      onChange={(e) => setBudget(e.target.value)}
+                      className="w-full px-3 py-2.5 text-sm border border-[#D3D1C7] rounded-lg bg-white text-[#1C1B19] placeholder:text-[#9A9792] outline-none focus:border-[#1D9E75] focus:ring-2 focus:ring-[#1D9E75]/10"
+                    />
+                  </div>
                 </div>
 
-                <Select
-                  label="Kampanya hedefi *"
-                  value={hedef}
-                  onChange={(e) => setHedef(e.target.value)}
-                  options={[{ value: '', label: 'Seçin...' }, ...HEDEFLER.map((h) => ({ value: h, label: h }))]}
+                <div>
+                  <p className="text-sm font-medium text-[#6B6963] mb-2">Reklam hedefi *</p>
+                  <div className="flex flex-wrap gap-2">
+                    {HEDEFLER.map((h) => (
+                      <label
+                        key={h}
+                        className={`flex items-center gap-2 px-4 py-2.5 border rounded-lg cursor-pointer text-sm select-none transition-colors ${
+                          goal === h
+                            ? 'border-[#1D9E75] bg-[#F0FAF6] text-[#085041]'
+                            : 'border-[#D3D1C7] bg-white text-[#1C1B19] hover:border-[#B4B2A9]'
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="goal"
+                          className="w-auto"
+                          checked={goal === h}
+                          onChange={() => setGoal(h)}
+                        />
+                        {h}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                <Input
+                  label="Hedef kitle (yaş, konum, ilgi alanı)"
+                  placeholder="Örn: 25-45 yaş, İstanbul, girişimci ve KOBİ sahipleri"
+                  value={audience}
+                  onChange={(e) => setAudience(e.target.value)}
                 />
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <Input
-                    label="Şehir / Bölge hedefi"
-                    placeholder="Örn: İstanbul, Anadolu Yakası"
-                    value={sehir}
-                    onChange={(e) => setSehir(e.target.value)}
-                  />
-                  <Select
-                    label="Hedef yaş aralığı"
-                    value={yas}
-                    onChange={(e) => setYas(e.target.value)}
-                    options={[{ value: '', label: 'Seçin...' }, ...YAS_ARALIKLARI.map((y) => ({ value: y, label: y }))]}
-                  />
+                <div>
+                  <p className="text-sm font-medium text-[#6B6963] mb-2">Tercih edilen kanallar (en az 1 seçin) *</p>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    {KANALLAR.map((k) => (
+                      <label
+                        key={k.value}
+                        className={`flex items-center gap-2 px-3 py-2.5 border rounded-lg cursor-pointer text-sm select-none transition-colors ${
+                          channels.includes(k.value)
+                            ? 'border-[#1D9E75] bg-[#F0FAF6] text-[#085041]'
+                            : 'border-[#D3D1C7] bg-white text-[#1C1B19] hover:border-[#B4B2A9]'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          className="w-auto"
+                          checked={channels.includes(k.value)}
+                          onChange={() => toggleChannel(k.value)}
+                        />
+                        {k.label}
+                      </label>
+                    ))}
+                  </div>
                 </div>
 
                 <FormPersistButtons
                   filename="reklam-butce-formu.json"
-                  getData={() => ({ isletme, sektor, butce, hedef, sehir, yas })}
+                  getData={() => ({ biz, sector, budget, goal, audience, channels })}
                   onLoad={(d) => {
-                    if (typeof d.isletme === 'string') setIsletme(d.isletme)
-                    if (typeof d.sektor === 'string') setSektor(d.sektor)
-                    if (typeof d.butce === 'string') setButce(d.butce)
-                    if (typeof d.hedef === 'string') setHedef(d.hedef)
-                    if (typeof d.sehir === 'string') setSehir(d.sehir)
-                    if (typeof d.yas === 'string') setYas(d.yas)
+                    if (typeof d.biz === 'string') setBiz(d.biz)
+                    if (typeof d.sector === 'string') setSector(d.sector)
+                    if (typeof d.budget === 'string') setBudget(d.budget)
+                    if (typeof d.goal === 'string') setGoal(d.goal)
+                    if (typeof d.audience === 'string') setAudience(d.audience)
+                    if (Array.isArray(d.channels)) setChannels(d.channels as string[])
                   }}
                 />
 
@@ -198,10 +229,10 @@ export function ReklamButcePage() {
                 )}
 
                 <Button onClick={() => mutation.mutate()} disabled={!canSubmit} loading={mutation.isPending} className="mt-1 w-full">
-                  💰 Bütçeyi Dağıt
+                  📊 Bütçe Dağılımını Hesapla
                 </Button>
                 {mutation.isPending && (
-                  <p className="text-center text-sm text-gray-400 animate-pulse">Analiz ediliyor — 1-2 dakika sürebilir...</p>
+                  <p className="text-center text-sm text-gray-400 animate-pulse">Bütçe dağılımı hesaplanıyor — 1-2 dakika sürebilir...</p>
                 )}
               </div>
             </div>
@@ -209,46 +240,51 @@ export function ReklamButcePage() {
 
           {result && (
             <div className="flex flex-col gap-4">
-              {/* Platform dağılımı */}
-              <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
-                <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-4">Platform Dağılımı</h3>
-                <div className="flex flex-col gap-3">
-                  {result.dagilim.map((item, i) => (
-                    <div key={i} className="flex flex-col gap-1">
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="font-medium text-gray-800 flex items-center gap-1.5">
-                          {platformEmoji(item.platform)} {item.platform}
-                        </span>
-                        <span className="font-bold text-[#1D9E75]">
-                          {item.tutar.toLocaleString('tr-TR')} ₺ ({item.yuzde}%)
-                        </span>
+              {/* Kanal dağılımı */}
+              <div className="bg-white rounded-2xl border border-[#E2E0D8] shadow-sm p-5">
+                <h3 className="text-sm font-semibold text-[#1C1B19] mb-4">📊 Kanal Bazlı Dağılım</h3>
+                <div className="flex flex-col gap-4">
+                  {result.dagilim.map((k, i) => (
+                    <div key={i}>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <span className="text-sm font-medium text-gray-800">{k.kanal}</span>
+                        <div className="flex items-center gap-3">
+                          {k.tahminiLead && (
+                            <span className="text-xs text-gray-500">~{k.tahminiLead} lead</span>
+                          )}
+                          <span className="text-sm font-bold text-gray-900">
+                            {k.tutar.toLocaleString('tr-TR')} ₺
+                          </span>
+                          <span className="text-xs text-gray-400 w-10 text-right">%{k.yuzde}</span>
+                        </div>
                       </div>
-                      {/* Progress bar */}
                       <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
                         <div
                           className="h-2 bg-[#1D9E75] rounded-full transition-all"
-                          style={{ width: `${item.yuzde}%` }}
+                          style={{ width: `${k.yuzde}%` }}
                         />
                       </div>
-                      <p className="text-xs text-gray-500">{item.icerik} · {item.gerekce}</p>
+                      {k.tahminiTiklama && (
+                        <p className="text-xs text-gray-400 mt-1">{k.tahminiTiklama} tıklama/ay</p>
+                      )}
                     </div>
                   ))}
                 </div>
               </div>
 
               {/* Strateji */}
-              <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
-                <h3 className="text-sm font-semibold text-gray-700 mb-2">📋 Genel Strateji</h3>
+              <div className="bg-white rounded-2xl border border-[#E2E0D8] shadow-sm p-5">
+                <h3 className="text-sm font-semibold text-[#1C1B19] mb-2">💡 Strateji</h3>
                 <p className="text-sm text-gray-600 leading-relaxed">{result.strateji}</p>
               </div>
 
               {/* Uyarılar */}
               {result.uyarilar && result.uyarilar.length > 0 && (
                 <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5">
-                  <h3 className="text-sm font-semibold text-amber-800 mb-3">⚠️ Önemli Notlar</h3>
-                  <ul className="flex flex-col gap-2">
+                  <h3 className="text-sm font-semibold text-amber-700 mb-2">⚠️ Dikkat Edilmesi Gerekenler</h3>
+                  <ul className="flex flex-col gap-1.5">
                     {result.uyarilar.map((u, i) => (
-                      <li key={i} className="flex gap-2 text-sm text-amber-700">
+                      <li key={i} className="text-sm text-amber-700 flex gap-2">
                         <span className="shrink-0">•</span>{u}
                       </li>
                     ))}
@@ -263,7 +299,7 @@ export function ReklamButcePage() {
               )}
 
               <button onClick={() => setResult(null)} className="text-sm text-gray-400 underline text-center no-print">
-                Yeni bütçe planı oluştur
+                Yeni hesaplama yap
               </button>
             </div>
           )}

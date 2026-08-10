@@ -10,17 +10,16 @@ import { ToolShell } from '@/components/ui/ToolShell'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-interface Senaryo {
+interface TakipAdim {
+  adim: number
   kanal: string
-  baslik: string
-  mesaj: string
   zamanlama: string
-  ipucu?: string
+  mesaj: string
+  ipucu: string
 }
 
 interface GeriDonusResult {
-  senaryolar: Senaryo[]
-  strateji?: string
+  adimlar: TakipAdim[]
   ctaText?: string
 }
 
@@ -33,70 +32,84 @@ const SEKTORLER = [
   'Teknoloji / Yazılım', 'Diğer',
 ]
 
-const AYRILMA_SEBEPLERI = [
-  'Fiyat çok yüksekti', 'Rakip aldılar', 'Kötü deneyim / şikayet',
-  'Bizi unuttular', 'İhtiyaçları değişti', 'Kalite beklentisi karşılanmadı',
+const SIKLIKLLAR = [
+  { value: 'Tek seferlik', label: 'Tek seferlik' },
+  { value: 'Aylık', label: 'Aylık' },
+  { value: '3 ayda bir', label: '3 ayda bir' },
+  { value: '6 ayda bir', label: '6 ayda bir' },
+  { value: 'Yıllık', label: 'Yıllık' },
 ]
 
-const KANALLAR = ['WhatsApp', 'E-posta', 'SMS', 'Telefon Araması']
-const SURELER = ['1-3 ay', '3-6 ay', '6-12 ay', '1 yıldan fazla']
+const TAKIP_YONTEMLERI = [
+  { value: 'Hiç takip yapmıyorum', label: 'Hiç takip yapmıyorum' },
+  { value: 'Manuel hatırlatma', label: 'Manuel hatırlatma' },
+  { value: 'CRM var', label: 'CRM var' },
+  { value: 'Başka bir yöntem', label: 'Başka bir yöntem' },
+]
+
+const KANALLAR = [
+  { value: 'WhatsApp', label: '💬 WhatsApp' },
+  { value: 'E-posta', label: '📧 E-posta' },
+  { value: 'SMS', label: '📱 SMS' },
+  { value: 'Telefon', label: '📞 Telefon' },
+]
 
 // ─── Prompt builder ────────────────────────────────────────────────────────────
 
 function buildPrompt(f: {
-  isletme: string; sektor: string; hizmet: string
-  sebep: string; kanal: string; sure: string
+  biz: string; sector: string; frequency: string
+  service: string; channels: string[]; currentMethod: string; note: string
 }): string {
-  return `Sen müşteri ilişkileri ve satış uzmanısın. Kaybedilen müşterileri geri kazanmak için iletişim senaryoları oluştur.
+  return `Sen müşteri ilişkileri ve satış otomasyonu uzmanısın. KOBİ'ler için etkili müşteri takip senaryoları oluşturuyorsun.
 
-İŞLETME: ${f.isletme}
-SEKTÖR: ${f.sektor}
-HİZMET/ÜRÜN: ${f.hizmet}
-AYRILMA SEBEBİ: ${f.sebep}
-İLETİŞİM KANALI: ${f.kanal}
-SON ALIMDAN GEÇEN SÜRE: ${f.sure || 'belirtilmemiş'}
+İşletme: ${f.biz}
+Sektör: ${f.sector}
+Müşteri satın alma sıklığı: ${f.frequency}
+Hizmet/Ürün: ${f.service}
+Tercih edilen takip kanalları: ${f.channels.join(', ')}
+Mevcut takip yöntemi: ${f.currentMethod || 'belirtilmemiş'}
+Özel not: ${f.note || 'belirtilmemiş'}
 
-Bu müşteri profiline göre geri kazanım senaryoları yaz.
-- İçtenlikle yaklaş, satışa saldırmadan bağlantı kur
-- Ayrılma sebebine özel çözüm veya teklif sun
-- Mesajlar ${f.kanal} formatına uygun olsun
+${f.biz} için 5 adımlı müşteri takip senaryosu oluştur.
+- Satın alma sıklığına göre zamanlama ayarla (${f.frequency})
+- ${f.channels.join(' ve ')} kanallarını kullan
+- Her adımda somut mesaj örneği ver
 
 SADECE JSON döndür:
 {
-  "senaryolar": [
+  "adimlar": [
     {
-      "kanal": "${f.kanal}",
-      "baslik": "<adım başlığı, örn: 1. Temas - İçten Merhaba>",
-      "mesaj": "<tam mesaj metni, gönderilebilir halde>",
-      "zamanlama": "<ne zaman gönderilmeli>",
-      "ipucu": "<bu adım için 1 cümle ipucu>"
+      "adim": 1,
+      "kanal": "<hangi kanal>",
+      "zamanlama": "<ne zaman, ör: Hizmetten 1 hafta sonra>",
+      "mesaj": "<tam mesaj metni, emoji kullanabilirsin>",
+      "ipucu": "<bu adım için pratik ipucu>"
     }
   ],
-  "strateji": "<genel geri kazanım stratejisi, 2 cümle>",
-  "ctaText": "<${f.isletme} için motivasyon cümlesi>"
+  "ctaText": "<${f.biz} için motivasyon cümlesi>"
 }
-3 aşamalı bir senaryo oluştur (ilk temas, takip, son teklif). Türkçe olsun.`
+5 adım olsun. Türkçe, samimi ve uygulanabilir olsun.`
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-const KANAL_EMOJIS: Record<string, string> = {
-  WhatsApp: '💬', 'E-posta': '📧', SMS: '📱', 'Telefon Araması': '📞',
-}
-
 export function MusteriGeriDonusPage() {
   const queryClient = useQueryClient()
-  const [isletme, setIsletme] = useState('')
-  const [sektor, setSektor] = useState('')
-  const [hizmet, setHizmet] = useState('')
-  const [sebep, setSebep] = useState('')
-  const [kanal, setKanal] = useState('')
-  const [sure, setSure] = useState('')
+  const [biz, setBiz] = useState('')
+  const [sector, setSector] = useState('')
+  const [frequency, setFrequency] = useState('')
+  const [service, setService] = useState('')
+  const [channels, setChannels] = useState<string[]>([])
+  const [currentMethod, setCurrentMethod] = useState('')
+  const [note, setNote] = useState('')
   const [result, setResult] = useState<GeriDonusResult | null>(null)
+
+  const toggleChannel = (v: string) =>
+    setChannels((prev) => prev.includes(v) ? prev.filter((x) => x !== v) : [...prev, v])
 
   const mutation = useMutation({
     mutationFn: async () => {
-      const prompt = buildPrompt({ isletme, sektor, hizmet, sebep, kanal, sure })
+      const prompt = buildPrompt({ biz, sector, frequency, service, channels, currentMethod, note })
       const res = await api.post('/tools/musteri-geri-donus/run', { prompt })
       const content = res.data?.content?.[0]?.text ?? res.data
       return (typeof content === 'string' ? JSON.parse(content) : content) as GeriDonusResult
@@ -107,89 +120,101 @@ export function MusteriGeriDonusPage() {
     },
   })
 
-  const canSubmit = isletme.trim() && sektor && hizmet.trim() && sebep && kanal && !mutation.isPending
+  const canSubmit = biz.trim() && sector && frequency && service.trim() && channels.length > 0 && !mutation.isPending
 
   return (
     <ToolShell
       toolId="musteri-geri-donus"
       title="Müşteri Geri Dönüş Senaryosu"
       icon="🔄"
-      description="Kaybettiğiniz müşterileri geri kazanmak için adım adım iletişim senaryoları oluşturun."
+      description="Sektörünüzü ve müşteri profilinizi girin; 5 adımlık otomatik müşteri takip senaryosu oluşturalım."
       hasResult={!!result}
-      formHasInput={!!isletme.trim()}
+      formHasInput={!!biz.trim()}
     >
       {({ isFormOpen }) => (
         <>
           {isFormOpen && (
-            <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm mb-6">
+            <div className="bg-white rounded-2xl border border-[#E2E0D8] p-6 shadow-sm mb-6">
               <div className="flex flex-col gap-5">
                 <Input
-                  label="İşletme adı *"
-                  placeholder="Örn: Delta Hukuk Bürosu"
-                  value={isletme}
-                  onChange={(e) => setIsletme(e.target.value)}
+                  label="İşletme / hizmet adı *"
+                  placeholder="Örn: Güneş Diş Kliniği"
+                  value={biz}
+                  onChange={(e) => setBiz(e.target.value)}
                 />
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <Select
                     label="Sektör *"
-                    value={sektor}
-                    onChange={(e) => setSektor(e.target.value)}
+                    value={sector}
+                    onChange={(e) => setSector(e.target.value)}
                     options={[{ value: '', label: 'Seçin...' }, ...SEKTORLER.map((s) => ({ value: s, label: s }))]}
                   />
                   <Select
-                    label="Son alımdan geçen süre"
-                    value={sure}
-                    onChange={(e) => setSure(e.target.value)}
-                    options={[{ value: '', label: 'Seçin...' }, ...SURELER.map((s) => ({ value: s, label: s }))]}
+                    label="Müşteri satın alma sıklığı *"
+                    value={frequency}
+                    onChange={(e) => setFrequency(e.target.value)}
+                    options={[{ value: '', label: 'Seçin...' }, ...SIKLIKLLAR.map((s) => ({ value: s.value, label: s.label }))]}
                   />
                 </div>
 
                 <Textarea
-                  label="Hizmet / Ürün *"
-                  placeholder="Örn: Kurumsal hukuki danışmanlık ve sözleşme hazırlama hizmetleri"
-                  value={hizmet}
-                  onChange={(e) => setHizmet(e.target.value)}
+                  label="Hizmet / ürün açıklaması *"
+                  placeholder="Örn: Diş muayenesi, kanal tedavisi, implant ve estetik diş hizmetleri sunuyoruz."
+                  value={service}
+                  onChange={(e) => setService(e.target.value)}
+                  rows={3}
                 />
 
                 <div>
-                  <p className="text-sm font-medium text-gray-700 mb-2">Müşterinin ayrılma sebebi *</p>
-                  <div className="flex flex-wrap gap-2">
-                    {AYRILMA_SEBEPLERI.map((s) => (
-                      <button key={s} type="button" onClick={() => setSebep(s)}
-                        className={`px-3 py-1.5 rounded-lg border text-sm transition-colors ${
-                          sebep === s ? 'bg-[#1D9E75] border-[#1D9E75] text-white' : 'bg-white border-gray-200 text-gray-600 hover:border-[#1D9E75]/40'
-                        }`}>
-                        {s}
-                      </button>
+                  <p className="text-sm font-medium text-[#6B6963] mb-2">Tercih edilen takip kanalları (en az 1) *</p>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    {KANALLAR.map((k) => (
+                      <label
+                        key={k.value}
+                        className={`flex items-center gap-2 px-3 py-2.5 border rounded-lg cursor-pointer text-sm select-none transition-colors ${
+                          channels.includes(k.value)
+                            ? 'border-[#1D9E75] bg-[#F0FAF6] text-[#085041]'
+                            : 'border-[#D3D1C7] bg-white text-[#1C1B19] hover:border-[#B4B2A9]'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          className="w-auto"
+                          checked={channels.includes(k.value)}
+                          onChange={() => toggleChannel(k.value)}
+                        />
+                        {k.label}
+                      </label>
                     ))}
                   </div>
                 </div>
 
-                <div>
-                  <p className="text-sm font-medium text-gray-700 mb-2">İletişim kanalı *</p>
-                  <div className="flex flex-wrap gap-2">
-                    {KANALLAR.map((k) => (
-                      <button key={k} type="button" onClick={() => setKanal(k)}
-                        className={`px-3 py-1.5 rounded-lg border text-sm transition-colors ${
-                          kanal === k ? 'bg-[#1D9E75] border-[#1D9E75] text-white' : 'bg-white border-gray-200 text-gray-600 hover:border-[#1D9E75]/40'
-                        }`}>
-                        {KANAL_EMOJIS[k]} {k}
-                      </button>
-                    ))}
-                  </div>
-                </div>
+                <Select
+                  label="Mevcut müşteri takip yöntemi"
+                  value={currentMethod}
+                  onChange={(e) => setCurrentMethod(e.target.value)}
+                  options={[{ value: '', label: 'Seçin...' }, ...TAKIP_YONTEMLERI.map((t) => ({ value: t.value, label: t.label }))]}
+                />
+
+                <Input
+                  label="Özel not (opsiyonel)"
+                  placeholder="Örn: Müşterilerimiz genellikle 30-50 yaş arası, zaman sıkıntısı var"
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                />
 
                 <FormPersistButtons
-                  filename="geri-donus-formu.json"
-                  getData={() => ({ isletme, sektor, hizmet, sebep, kanal, sure })}
+                  filename="musteri-geri-donus-formu.json"
+                  getData={() => ({ biz, sector, frequency, service, channels, currentMethod, note })}
                   onLoad={(d) => {
-                    if (typeof d.isletme === 'string') setIsletme(d.isletme)
-                    if (typeof d.sektor === 'string') setSektor(d.sektor)
-                    if (typeof d.hizmet === 'string') setHizmet(d.hizmet)
-                    if (typeof d.sebep === 'string') setSebep(d.sebep)
-                    if (typeof d.kanal === 'string') setKanal(d.kanal)
-                    if (typeof d.sure === 'string') setSure(d.sure)
+                    if (typeof d.biz === 'string') setBiz(d.biz)
+                    if (typeof d.sector === 'string') setSector(d.sector)
+                    if (typeof d.frequency === 'string') setFrequency(d.frequency)
+                    if (typeof d.service === 'string') setService(d.service)
+                    if (Array.isArray(d.channels)) setChannels(d.channels as string[])
+                    if (typeof d.currentMethod === 'string') setCurrentMethod(d.currentMethod)
+                    if (typeof d.note === 'string') setNote(d.note)
                   }}
                 />
 
@@ -201,7 +226,7 @@ export function MusteriGeriDonusPage() {
                   🔄 Senaryo Oluştur
                 </Button>
                 {mutation.isPending && (
-                  <p className="text-center text-sm text-gray-400 animate-pulse">Senaryolar hazırlanıyor — 1-2 dakika sürebilir...</p>
+                  <p className="text-center text-sm text-gray-400 animate-pulse">Takip senaryosu hazırlanıyor — 1-2 dakika sürebilir...</p>
                 )}
               </div>
             </div>
@@ -209,33 +234,32 @@ export function MusteriGeriDonusPage() {
 
           {result && (
             <div className="flex flex-col gap-4">
-              {result.strateji && (
-                <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4">
-                  <p className="text-sm font-semibold text-blue-800 mb-1">🎯 Geri Kazanım Stratejisi</p>
-                  <p className="text-sm text-blue-700">{result.strateji}</p>
-                </div>
-              )}
-
-              {result.senaryolar.map((s, i) => (
-                <div key={i} className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-                  <div className="flex items-center gap-3 px-5 py-3 border-b border-gray-100 bg-gray-50">
-                    <span className="w-6 h-6 rounded-full bg-[#1D9E75] text-white text-xs font-bold flex items-center justify-center shrink-0">
-                      {i + 1}
-                    </span>
-                    <span className="text-sm font-semibold text-gray-800">{s.baslik}</span>
-                    <span className="ml-auto text-xs text-gray-400">{KANAL_EMOJIS[s.kanal] ?? '📨'} {s.kanal}</span>
-                  </div>
-                  <div className="p-5">
-                    <div className="bg-gray-50 rounded-xl px-4 py-3 mb-3 text-sm text-gray-800 leading-relaxed whitespace-pre-wrap border border-gray-100">
-                      {s.mesaj}
+              <div className="bg-white rounded-2xl border border-[#E2E0D8] shadow-sm p-5">
+                <h3 className="text-sm font-semibold text-[#1C1B19] mb-4">🔄 5 Adımlı Müşteri Takip Senaryosu</h3>
+                <div className="flex flex-col gap-4">
+                  {result.adimlar.map((adim, i) => (
+                    <div key={i} className="border border-[#F1EFE8] rounded-xl overflow-hidden">
+                      <div className="flex items-center gap-3 px-4 py-3 bg-[#1D9E75]/5 border-b border-[#F1EFE8]">
+                        <div className="w-6 h-6 rounded-full bg-[#1D9E75] text-white text-xs font-bold flex items-center justify-center shrink-0">
+                          {adim.adim}
+                        </div>
+                        <div className="flex-1 flex items-center gap-2 flex-wrap">
+                          <span className="text-xs font-semibold text-[#085041]">{adim.kanal}</span>
+                          <span className="text-xs text-gray-400">• {adim.zamanlama}</span>
+                        </div>
+                      </div>
+                      <div className="p-4">
+                        <p className="text-sm text-gray-800 whitespace-pre-wrap leading-relaxed mb-3">{adim.mesaj}</p>
+                        {adim.ipucu && (
+                          <p className="text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2">
+                            💡 {adim.ipucu}
+                          </p>
+                        )}
+                      </div>
                     </div>
-                    <div className="flex flex-wrap gap-4 text-xs text-gray-500">
-                      <span>⏰ {s.zamanlama}</span>
-                      {s.ipucu && <span>💡 {s.ipucu}</span>}
-                    </div>
-                  </div>
+                  ))}
                 </div>
-              ))}
+              </div>
 
               {result.ctaText && (
                 <div className="bg-[#1D9E75]/5 border border-[#1D9E75]/20 rounded-2xl p-5 text-center">

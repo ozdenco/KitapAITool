@@ -48,7 +48,7 @@ function RadioGroup({ name, value, onChange, options }: {
           className={`flex items-center gap-2 px-3 py-2 border rounded-lg cursor-pointer text-sm select-none transition-colors ${
             value === o.value
               ? 'border-[#1D9E75] bg-[#F0FAF6] text-[#085041]'
-              : 'border-[#D3D1C7] bg-white text-[#1C1B19] hover:border-gray-300'
+              : 'border-[#D3D1C7] bg-white text-[#1C1B19] hover:border-[#B4B2A9]'
           }`}
         >
           <input type="radio" name={name} value={o.value} checked={value === o.value} onChange={() => onChange(o.value)} className="w-auto" />
@@ -75,7 +75,7 @@ function CheckGroup({ values, onChange, options }: {
           className={`flex items-center gap-2 px-3 py-2 border rounded-lg cursor-pointer text-sm select-none transition-colors ${
             values.includes(o)
               ? 'border-[#1D9E75] bg-[#F0FAF6] text-[#085041]'
-              : 'border-[#D3D1C7] bg-white text-[#1C1B19] hover:border-gray-300'
+              : 'border-[#D3D1C7] bg-white text-[#1C1B19] hover:border-[#B4B2A9]'
           }`}
         >
           <input type="checkbox" checked={values.includes(o)} onChange={() => toggle(o)} className="w-auto" />
@@ -88,7 +88,7 @@ function CheckGroup({ values, onChange, options }: {
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider border-t border-gray-100 pt-4 mt-1">
+    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider border-t border-[#F1EFE8] pt-4 mt-1">
       {children}
     </p>
   )
@@ -238,7 +238,7 @@ export function AiGorunurlukPage() {
       {({ isFormOpen }) => (
         <>
           {isFormOpen && (
-            <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm mb-6">
+            <div className="bg-white rounded-2xl border border-[#E2E0D8] p-6 shadow-sm mb-6">
               <div className="flex flex-col gap-5">
 
                 {/* ── İşletme Bilgileri ── */}
@@ -423,7 +423,7 @@ export function AiGorunurlukPage() {
           {result && genelColor && (
             <div className="flex flex-col gap-4">
               {/* Genel skor */}
-              <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 flex items-center gap-6">
+              <div className="bg-white rounded-2xl border border-[#E2E0D8] shadow-sm p-6 flex items-center gap-6">
                 <div className="relative w-24 h-24 shrink-0">
                   <svg className="w-24 h-24 -rotate-90" viewBox="0 0 96 96">
                     <circle cx="48" cy="48" r="40" fill="none" stroke="#f3f4f6" strokeWidth="8" />
@@ -467,8 +467,8 @@ export function AiGorunurlukPage() {
 
               {/* Öncelikli adımlar */}
               {result.oncelikli_adimlar.length > 0 && (
-                <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
-                  <h3 className="text-sm font-semibold text-gray-700 mb-3">🚀 Öncelikli Aksiyonlar</h3>
+                <div className="bg-white rounded-2xl border border-[#E2E0D8] shadow-sm p-5">
+                  <h3 className="text-sm font-semibold text-[#1C1B19] mb-3">🚀 Öncelikli Aksiyonlar</h3>
                   <ul className="flex flex-col gap-2">
                     {result.oncelikli_adimlar.map((a, i) => (
                       <li key={i} className="flex gap-2 text-sm text-gray-600">

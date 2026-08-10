@@ -10,17 +10,14 @@ import { ToolShell } from '@/components/ui/ToolShell'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-interface WaScript {
-  amac: string
-  ton: string
-  mesaj: string
-  zamanlama?: string
-  not?: string
+interface ScriptAdim {
+  label: string
+  message: string
+  timing: string
 }
 
-interface WaResult {
-  scripts: WaScript[]
-  ipuclari?: string[]
+interface WhatsappResult {
+  scripts: ScriptAdim[]
   ctaText?: string
 }
 
@@ -33,67 +30,83 @@ const SEKTORLER = [
   'Teknoloji / Yazılım', 'Diğer',
 ]
 
-const AMACLAR = ['Satış', 'Randevu', 'Bilgi / Tanıtım', 'Kampanya / İndirim', 'Takip / Hatırlatma']
-const TONLAR = ['Samimi / Sıcak', 'Profesyonel', 'Acil / Fırsatçı', 'Arkadaşça / Esprili']
+const ITIRAZLAR = [
+  { value: 'Fiyatı pahalı', label: 'Fiyatı pahalı' },
+  { value: 'Düşüneyim / bekleyeyim', label: 'Düşüneyim' },
+  { value: 'Başka biriyle çalışıyorum', label: 'Başkası var' },
+  { value: 'Şu an ihtiyacım yok', label: 'İhtiyacım yok' },
+  { value: 'Riski bilmiyorum / güvenmiyorum', label: 'Güvenmiyorum' },
+  { value: 'Bütçem yok', label: 'Bütçem yok' },
+]
+
+const SCRIPT_LABELS = [
+  { label: '1 · İlk Temas', tip: 'Potansiyel müşteri formu doldurunca veya sizi bulunca gönderin' },
+  { label: '2 · Takip', tip: 'İlk mesajdan 24-48 saat cevap gelmezse gönderin' },
+  { label: '3 · İtiraz Kırma', tip: 'Müşteri tereddüt ettiğinde veya itiraz gösterdiğinde kullanın' },
+  { label: '4 · Teklif', tip: 'Müşteri ilgilendiğini gösterdiğinde somut teklif yapın' },
+  { label: '5 · Kapanış', tip: 'Teklif sonrası karar beklerken gönderin' },
+]
 
 // ─── Prompt builder ────────────────────────────────────────────────────────────
 
 function buildPrompt(f: {
-  isletme: string; sektor: string; hizmet: string
-  hedef: string; amaclar: string[]; tonlar: string[]
+  biz: string; sector: string; service: string
+  price: string; target: string; itirazlar: string[]; advantage: string
 }): string {
-  return `Sen WhatsApp pazarlama ve satış uzmanısın. Aşağıdaki işletme için hazır WhatsApp mesaj scriptleri oluştur.
+  return `Sen WhatsApp satış uzmanısın. KOBİ'ler için etkili, doğal ve dönüşüm odaklı WhatsApp mesajları yazıyorsun.
 
-İşletme: ${f.isletme}
-Sektör: ${f.sektor}
-Hizmet/Ürün: ${f.hizmet}
-Hedef Kitle: ${f.hedef || 'belirtilmemiş'}
-Mesaj Amacı: ${f.amaclar.join(', ') || 'Genel'}
-Ton: ${f.tonlar.join(', ') || 'Profesyonel'}
+İşletme adı: ${f.biz}
+Sektör: ${f.sector}
+Hizmet/Ürün: ${f.service}
+Fiyat aralığı: ${f.price || 'belirtilmemiş'}
+Hedef müşteri: ${f.target || 'KOBİ sahipleri'}
+Sık karşılaşılan itirazlar: ${f.itirazlar.length ? f.itirazlar.join(', ') : 'genel itirazlar'}
+Özel avantajlar/notlar: ${f.advantage || 'belirtilmemiş'}
 
-Her seçilen amaç için 1 ayrı WhatsApp mesajı oluştur. Mesajlar:
-- 150-250 karakter arası olsun
-- Emoji kullan (ama abartma)
-- Türkçe konuşma diline uygun olsun
-- Net bir CTA (harekete geçirme) içersin
+Kurallar:
+1. İşletme adını (${f.biz}) ilk mesajda mutlaka geçir.
+2. Her mesaj kısa, net ve WhatsApp'a uygun olsun (max 3 paragraf).
+3. Fiyat aralığı (${f.price || 'belirtilmemiş'}) belirtilmişse, teklif ve kapanış mesajlarında bu fiyatı doğrudan zikret.
+4. Hedef müşteri (${f.target || 'KOBİ sahipleri'}) profiline uygun dil ve ton kullan.
+5. İtiraz kırma mesajında seçilen itirazlardan birini ("${f.itirazlar[0] || 'genel itiraz'}") içerik olarak karşıla.
+6. Özel avantajlar belirtilmişse ("${f.advantage || '—'}"), bunları teklif ve kapanış mesajlarında somut argüman olarak kullan.
 
 SADECE JSON döndür:
 {
   "scripts": [
-    {
-      "amac": "<amaç>",
-      "ton": "<kullanılan ton>",
-      "mesaj": "<WhatsApp mesajı, emoji dahil>",
-      "zamanlama": "<ne zaman göndermeli, örn: Pazartesi sabahı>",
-      "not": "<kullanım ipucu, 1 cümle>"
-    }
+    { "label": "1 · İlk Temas", "message": "<mesaj metni, emoji kullanabilirsin>", "timing": "<ne zaman gönderin>" },
+    { "label": "2 · Takip",     "message": "<mesaj metni>", "timing": "<ne zaman>" },
+    { "label": "3 · İtiraz Kırma", "message": "<mesaj metni>", "timing": "<ne zaman>" },
+    { "label": "4 · Teklif",    "message": "<mesaj metni>", "timing": "<ne zaman>" },
+    { "label": "5 · Kapanış",   "message": "<mesaj metni>", "timing": "<ne zaman>" }
   ],
-  "ipuclari": ["<3-4 WhatsApp pazarlama ipucu>"],
-  "ctaText": "<${f.isletme} için 1 cümle motivasyon>"
-}`
+  "ctaText": "<${f.biz} için motivasyon cümlesi>"
+}
+Türkçe olsun. Samimi ama profesyonel bir ton kullan.`
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function WhatsappSatisPage() {
   const queryClient = useQueryClient()
-  const [isletme, setIsletme] = useState('')
-  const [sektor, setSektor] = useState('')
-  const [hizmet, setHizmet] = useState('')
-  const [hedef, setHedef] = useState('')
-  const [amaclar, setAmaclar] = useState<string[]>([])
-  const [tonlar, setTonlar] = useState<string[]>([])
-  const [result, setResult] = useState<WaResult | null>(null)
+  const [biz, setBiz] = useState('')
+  const [sector, setSector] = useState('')
+  const [service, setService] = useState('')
+  const [price, setPrice] = useState('')
+  const [target, setTarget] = useState('')
+  const [itirazlar, setItirazlar] = useState<string[]>([])
+  const [advantage, setAdvantage] = useState('')
+  const [result, setResult] = useState<WhatsappResult | null>(null)
 
-  const toggle = (list: string[], setList: (v: string[]) => void, val: string) =>
-    setList(list.includes(val) ? list.filter((x) => x !== val) : [...list, val])
+  const toggleItiraz = (v: string) =>
+    setItirazlar((prev) => prev.includes(v) ? prev.filter((x) => x !== v) : [...prev, v])
 
   const mutation = useMutation({
     mutationFn: async () => {
-      const prompt = buildPrompt({ isletme, sektor, hizmet, hedef, amaclar, tonlar })
+      const prompt = buildPrompt({ biz, sector, service, price, target, itirazlar, advantage })
       const res = await api.post('/tools/whatsapp-satis/run', { prompt })
       const content = res.data?.content?.[0]?.text ?? res.data
-      return (typeof content === 'string' ? JSON.parse(content) : content) as WaResult
+      return (typeof content === 'string' ? JSON.parse(content) : content) as WhatsappResult
     },
     onSuccess: (data) => {
       setResult(data)
@@ -101,88 +114,102 @@ export function WhatsappSatisPage() {
     },
   })
 
-  const canSubmit = isletme.trim() && sektor && hizmet.trim() && !mutation.isPending
+  const canSubmit = biz.trim() && sector && service.trim() && !mutation.isPending
 
   return (
     <ToolShell
       toolId="whatsapp-satis"
       title="WhatsApp Satış Script Üretici"
       icon="💬"
-      description="Müşterilerinize göndermek için hazır WhatsApp satış mesajları üretin. Farklı amaç ve tonlarda kişiselleştirilmiş scriptler."
+      description="Ürün/hizmetiniz ve en sık karşılaştığınız itirazları girin — ilk temastan kapanışa kadar 5 hazır WhatsApp mesajı oluşturalım."
       hasResult={!!result}
-      formHasInput={!!isletme.trim()}
+      formHasInput={!!biz.trim()}
     >
       {({ isFormOpen }) => (
         <>
           {isFormOpen && (
-            <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm mb-6">
+            <div className="bg-white rounded-2xl border border-[#E2E0D8] p-6 shadow-sm mb-6">
               <div className="flex flex-col gap-5">
-                <Input
-                  label="İşletme adı *"
-                  placeholder="Örn: Yıldız Güzellik Salonu"
-                  value={isletme}
-                  onChange={(e) => setIsletme(e.target.value)}
-                />
-
-                <Select
-                  label="Sektör *"
-                  value={sektor}
-                  onChange={(e) => setSektor(e.target.value)}
-                  options={[{ value: '', label: 'Seçin...' }, ...SEKTORLER.map((s) => ({ value: s, label: s }))]}
-                />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <Input
+                    label="İşletme / hizmet adı *"
+                    placeholder="Örn: Yıldız Muhasebe"
+                    value={biz}
+                    onChange={(e) => setBiz(e.target.value)}
+                  />
+                  <Select
+                    label="Sektör *"
+                    value={sector}
+                    onChange={(e) => setSector(e.target.value)}
+                    options={[{ value: '', label: 'Seçin...' }, ...SEKTORLER.map((s) => ({ value: s, label: s }))]}
+                  />
+                </div>
 
                 <Textarea
-                  label="Hizmet / Ürün *"
-                  placeholder="Örn: Saç boyama, manikür, kalıcı makyaj hizmetleri sunuyoruz."
-                  value={hizmet}
-                  onChange={(e) => setHizmet(e.target.value)}
+                  label="Sunduğunuz hizmet / ürün *"
+                  placeholder="Örn: KOBİ'lere aylık muhasebe, vergi beyannamesi ve e-fatura hizmetleri. Paketler 3.000₺'den başlıyor, 3 gün içinde kurulum yapılıyor."
+                  value={service}
+                  onChange={(e) => setService(e.target.value)}
+                  rows={3}
                 />
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <Input
+                    label="Fiyat aralığı"
+                    placeholder="Örn: 3.000₺ – 8.000₺/ay"
+                    value={price}
+                    onChange={(e) => setPrice(e.target.value)}
+                  />
+                  <Input
+                    label="Hedef müşteri"
+                    placeholder="Örn: 5-20 kişilik KOBİ sahipleri"
+                    value={target}
+                    onChange={(e) => setTarget(e.target.value)}
+                  />
+                </div>
+
+                <div>
+                  <p className="text-sm font-medium text-[#6B6963] mb-2">En sık karşılaştığınız itirazlar</p>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    {ITIRAZLAR.map((it) => (
+                      <label
+                        key={it.value}
+                        className={`flex items-center gap-2 px-3 py-2.5 border rounded-lg cursor-pointer text-sm select-none transition-colors ${
+                          itirazlar.includes(it.value)
+                            ? 'border-[#1D9E75] bg-[#F0FAF6] text-[#085041]'
+                            : 'border-[#D3D1C7] bg-white text-[#1C1B19] hover:border-[#B4B2A9]'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          className="w-auto"
+                          checked={itirazlar.includes(it.value)}
+                          onChange={() => toggleItiraz(it.value)}
+                        />
+                        {it.label}
+                      </label>
+                    ))}
+                  </div>
+                </div>
 
                 <Input
-                  label="Hedef müşteri kitlesi"
-                  placeholder="Örn: 25-45 yaş arası kadınlar, çalışan anneler"
-                  value={hedef}
-                  onChange={(e) => setHedef(e.target.value)}
+                  label="Özel not / avantaj (opsiyonel)"
+                  placeholder="Örn: İlk ay ücretsiz deneme, 7/24 WhatsApp destek, sertifikalı mali müşavir ekibi"
+                  value={advantage}
+                  onChange={(e) => setAdvantage(e.target.value)}
                 />
-
-                <div>
-                  <p className="text-sm font-medium text-gray-700 mb-2">Mesaj amacı (birden fazla seçebilirsiniz)</p>
-                  <div className="flex flex-wrap gap-2">
-                    {AMACLAR.map((a) => (
-                      <button key={a} type="button" onClick={() => toggle(amaclar, setAmaclar, a)}
-                        className={`px-3 py-1.5 rounded-lg border text-sm transition-colors ${
-                          amaclar.includes(a) ? 'bg-[#1D9E75] border-[#1D9E75] text-white' : 'bg-white border-gray-200 text-gray-600 hover:border-[#1D9E75]/40'
-                        }`}>
-                        {amaclar.includes(a) ? '✓ ' : ''}{a}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div>
-                  <p className="text-sm font-medium text-gray-700 mb-2">Mesaj tonu</p>
-                  <div className="flex flex-wrap gap-2">
-                    {TONLAR.map((t) => (
-                      <button key={t} type="button" onClick={() => toggle(tonlar, setTonlar, t)}
-                        className={`px-3 py-1.5 rounded-lg border text-sm transition-colors ${
-                          tonlar.includes(t) ? 'bg-[#1D9E75] border-[#1D9E75] text-white' : 'bg-white border-gray-200 text-gray-600 hover:border-[#1D9E75]/40'
-                        }`}>
-                        {tonlar.includes(t) ? '✓ ' : ''}{t}
-                      </button>
-                    ))}
-                  </div>
-                </div>
 
                 <FormPersistButtons
                   filename="whatsapp-satis-formu.json"
-                  getData={() => ({ isletme, sektor, hizmet, hedef, amaclar, tonlar })}
+                  getData={() => ({ biz, sector, service, price, target, itirazlar, advantage })}
                   onLoad={(d) => {
-                    if (typeof d.isletme === 'string') setIsletme(d.isletme)
-                    if (typeof d.sektor === 'string') setSektor(d.sektor)
-                    if (typeof d.hizmet === 'string') setHizmet(d.hizmet)
-                    if (typeof d.hedef === 'string') setHedef(d.hedef)
-                    if (Array.isArray(d.amaclar)) setAmaclar(d.amaclar as string[])
-                    if (Array.isArray(d.tonlar)) setTonlar(d.tonlar as string[])
+                    if (typeof d.biz === 'string') setBiz(d.biz)
+                    if (typeof d.sector === 'string') setSector(d.sector)
+                    if (typeof d.service === 'string') setService(d.service)
+                    if (typeof d.price === 'string') setPrice(d.price)
+                    if (typeof d.target === 'string') setTarget(d.target)
+                    if (Array.isArray(d.itirazlar)) setItirazlar(d.itirazlar as string[])
+                    if (typeof d.advantage === 'string') setAdvantage(d.advantage)
                   }}
                 />
 
@@ -194,7 +221,7 @@ export function WhatsappSatisPage() {
                   💬 Scriptleri Oluştur
                 </Button>
                 {mutation.isPending && (
-                  <p className="text-center text-sm text-gray-400 animate-pulse">Yapay zeka yazıyor — 1-2 dakika sürebilir...</p>
+                  <p className="text-center text-sm text-gray-400 animate-pulse">WhatsApp scriptleri hazırlanıyor — 1-2 dakika sürebilir...</p>
                 )}
               </div>
             </div>
@@ -202,40 +229,26 @@ export function WhatsappSatisPage() {
 
           {result && (
             <div className="flex flex-col gap-4">
-              {result.scripts.map((script, i) => (
-                <div key={i} className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-                  <div className="flex items-center gap-3 px-5 py-3 border-b border-gray-100 bg-gray-50">
-                    <span className="text-lg">💬</span>
-                    <div>
-                      <span className="text-sm font-semibold text-gray-800">{script.amac}</span>
-                      <span className="mx-2 text-gray-300">·</span>
-                      <span className="text-xs text-gray-500">{script.ton}</span>
+              {result.scripts.map((script, i) => {
+                const meta = SCRIPT_LABELS[i] ?? { label: script.label, tip: '' }
+                return (
+                  <div key={i} className="bg-white rounded-2xl border border-[#E2E0D8] shadow-sm overflow-hidden">
+                    <div className="px-5 py-3 border-b border-[#F1EFE8] bg-[#1D9E75]/5 flex items-center gap-2">
+                      <span className="text-xs font-semibold text-[#085041] bg-[#1D9E75]/15 px-2.5 py-1 rounded-full">
+                        💬 {meta.label}
+                      </span>
                     </div>
+                    <div className="p-5">
+                      <p className="text-sm text-gray-800 whitespace-pre-wrap leading-relaxed">{script.message}</p>
+                    </div>
+                    {(script.timing || meta.tip) && (
+                      <div className="px-5 py-3 border-t border-[#F1EFE8] bg-gray-50">
+                        <p className="text-xs text-gray-500">⏰ {script.timing || meta.tip}</p>
+                      </div>
+                    )}
                   </div>
-                  <div className="p-5">
-                    <div className="bg-[#DCF8C6] rounded-xl px-4 py-3 mb-3 text-sm text-gray-800 leading-relaxed whitespace-pre-wrap border border-green-200">
-                      {script.mesaj}
-                    </div>
-                    <div className="flex flex-wrap gap-4 text-xs text-gray-500">
-                      {script.zamanlama && <span>⏰ {script.zamanlama}</span>}
-                      {script.not && <span>💡 {script.not}</span>}
-                    </div>
-                  </div>
-                </div>
-              ))}
-
-              {result.ipuclari && result.ipuclari.length > 0 && (
-                <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
-                  <h3 className="text-sm font-semibold text-gray-700 mb-3">📋 WhatsApp Pazarlama İpuçları</h3>
-                  <ul className="flex flex-col gap-2">
-                    {result.ipuclari.map((ip, i) => (
-                      <li key={i} className="flex gap-2 text-sm text-gray-600">
-                        <span className="text-[#1D9E75] shrink-0">✓</span>{ip}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
+                )
+              })}
 
               {result.ctaText && (
                 <div className="bg-[#1D9E75]/5 border border-[#1D9E75]/20 rounded-2xl p-5 text-center">

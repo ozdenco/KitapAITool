@@ -122,7 +122,7 @@ export function ViralVideoPage() {
       {({ isFormOpen }) => (
         <>
           {isFormOpen && (
-            <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm mb-6">
+            <div className="bg-white rounded-2xl border border-[#E2E0D8] p-6 shadow-sm mb-6">
               <div className="flex flex-col gap-5">
                 <Input
                   label="Video Linki *"
@@ -164,7 +164,7 @@ export function ViralVideoPage() {
                         className={`flex items-center gap-2 px-3 py-2 border rounded-lg cursor-pointer text-sm select-none transition-colors ${
                           tones.includes(t)
                             ? 'border-[#1D9E75] bg-[#F0FAF6] text-[#085041]'
-                            : 'border-[#D3D1C7] bg-white text-[#1C1B19] hover:border-gray-300'
+                            : 'border-[#D3D1C7] bg-white text-[#1C1B19] hover:border-[#B4B2A9]'
                         }`}
                       >
                         <input type="checkbox" className="w-auto" checked={tones.includes(t)} onChange={() => toggleTone(t)} />
@@ -212,15 +212,15 @@ export function ViralVideoPage() {
           {result && (
             <div className="flex flex-col gap-4">
               {result.kaynak_analiz && (
-                <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
-                  <h3 className="text-sm font-semibold text-gray-700 mb-2">🔍 Viral Analiz</h3>
+                <div className="bg-white rounded-2xl border border-[#E2E0D8] shadow-sm p-5">
+                  <h3 className="text-sm font-semibold text-[#1C1B19] mb-2">🔍 Viral Analiz</h3>
                   <p className="text-sm text-gray-600 leading-relaxed">{result.kaynak_analiz}</p>
                 </div>
               )}
 
               {result.uyarlamalar.map((u, i) => (
-                <div key={i} className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-                  <div className="flex items-center gap-3 px-5 py-3.5 bg-[#1D9E75]/5 border-b border-gray-100">
+                <div key={i} className="bg-white rounded-2xl border border-[#E2E0D8] shadow-sm overflow-hidden">
+                  <div className="flex items-center gap-3 px-5 py-3.5 bg-[#1D9E75]/5 border-b border-[#F1EFE8]">
                     <div className="w-7 h-7 rounded-full bg-[#1D9E75] text-white text-xs font-bold flex items-center justify-center shrink-0">
                       {u.numara}
                     </div>

@@ -170,7 +170,7 @@ export function GorunurlukSkoruPage() {
         <>
           {/* ── Form ───────────────────────────────────────────── */}
           {isFormOpen && (
-            <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm mb-6">
+            <div className="bg-white rounded-2xl border border-[#E2E0D8] p-6 shadow-sm mb-6">
               <div className="flex flex-col gap-5">
                 <Input
                   label="İşletme adı *"
@@ -205,25 +205,24 @@ export function GorunurlukSkoruPage() {
                 />
 
                 <div>
-                  <p className="text-sm font-medium text-gray-700 mb-2">
+                  <p className="text-sm font-medium text-[#6B6963] mb-2">
                     Hangi platformlarda varlığınız var?
                   </p>
-                  <div className="flex flex-wrap gap-2">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                     {PLATFORMLAR.map(({ value, label }) => {
                       const checked = platforms.includes(value)
                       return (
-                        <button
+                        <label
                           key={value}
-                          type="button"
-                          onClick={() => togglePlatform(value)}
-                          className={`px-3 py-1.5 rounded-lg border text-sm transition-colors ${
+                          className={`flex items-center gap-2 px-3 py-2 border rounded-lg cursor-pointer text-sm select-none transition-colors ${
                             checked
-                              ? 'bg-[#1D9E75] border-[#1D9E75] text-white'
-                              : 'bg-white border-gray-200 text-gray-600 hover:border-[#1D9E75]/40'
+                              ? 'border-[#1D9E75] bg-[#F0FAF6] text-[#085041]'
+                              : 'border-[#D3D1C7] bg-white text-[#1C1B19] hover:border-[#B4B2A9]'
                           }`}
                         >
-                          {checked ? '✓ ' : ''}{label}
-                        </button>
+                          <input type="checkbox" className="w-auto" checked={checked} onChange={() => togglePlatform(value)} />
+                          {label}
+                        </label>
                       )
                     })}
                   </div>
@@ -306,7 +305,7 @@ export function GorunurlukSkoruPage() {
           {result && colors && (
             <div className="flex flex-col gap-4">
               {/* Skor kartı */}
-              <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 flex items-center gap-6">
+              <div className="bg-white rounded-2xl border border-[#E2E0D8] shadow-sm p-6 flex items-center gap-6">
                 <div className="relative w-24 h-24 shrink-0">
                   <svg className="w-24 h-24 -rotate-90" viewBox="0 0 96 96">
                     <circle cx="48" cy="48" r="40" fill="none" stroke="#f3f4f6" strokeWidth="8" />
@@ -334,7 +333,7 @@ export function GorunurlukSkoruPage() {
                 {result.items.map((item, i) => {
                   const cfg = statusConfig(item.status)
                   return (
-                    <div key={i} className="bg-white rounded-xl border border-gray-200 px-5 py-4 flex gap-4 items-start">
+                    <div key={i} className="bg-white rounded-xl border border-[#E2E0D8] px-5 py-4 flex gap-4 items-start">
                       <span className={`w-2.5 h-2.5 rounded-full mt-1 shrink-0 ${cfg.dot}`} />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-0.5">

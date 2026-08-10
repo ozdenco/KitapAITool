@@ -8,14 +8,14 @@ export function Textarea({ label, error, hint, className = '', ...rest }: Textar
   return (
     <div className="flex flex-col gap-1">
       {label && (
-        <label className="text-sm font-medium text-gray-700">{label}</label>
+        <label className="text-sm font-medium text-[#6B6963]">{label}</label>
       )}
-      {hint && <p className="text-xs text-gray-500">{hint}</p>}
+      {hint && <p className="text-xs text-[#9A9792]">{hint}</p>}
       <textarea
         rows={4}
-        className={`rounded-lg border px-3 py-2.5 text-sm shadow-sm outline-none transition resize-none
-          focus:ring-2 focus:ring-[#1D9E75]/40
-          ${error ? 'border-red-400' : 'border-gray-300 focus:border-[#1D9E75]'}
+        className={`rounded-lg border px-3 py-2.5 text-sm text-[#1C1B19] bg-white outline-none transition resize-y leading-relaxed
+          focus:ring-2 focus:ring-[#1D9E75]/20 focus:border-[#1D9E75]
+          ${error ? 'border-red-400' : 'border-[#D3D1C7] hover:border-[#B4B2A9]'}
           ${className}`}
         {...rest}
       />

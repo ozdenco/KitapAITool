@@ -166,7 +166,7 @@ export function MusteriPersonaPage() {
         <>
           {/* ── Form ───────────────────────────────────────────── */}
           {isFormOpen && (
-            <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm mb-6">
+            <div className="bg-white rounded-2xl border border-[#E2E0D8] p-6 shadow-sm mb-6">
               <div className="flex flex-col gap-5">
                 <Input
                   label="İşletme / hizmet adı *"
@@ -230,25 +230,24 @@ export function MusteriPersonaPage() {
 
                 {/* Pain points */}
                 <div>
-                  <p className="text-sm font-medium text-gray-700 mb-2">
+                  <p className="text-sm font-medium text-[#6B6963] mb-2">
                     Müşterilerinizin en sık amaçları / sorunları neler?
                   </p>
-                  <div className="flex flex-wrap gap-2">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                     {PAIN_OPTIONS.map((option) => {
                       const checked = pains.includes(option)
                       return (
-                        <button
+                        <label
                           key={option}
-                          type="button"
-                          onClick={() => togglePain(option)}
-                          className={`px-3 py-1.5 rounded-lg border text-sm transition-colors ${
+                          className={`flex items-center gap-2 px-3 py-2 border rounded-lg cursor-pointer text-sm select-none transition-colors ${
                             checked
-                              ? 'bg-[#1D9E75] border-[#1D9E75] text-white'
-                              : 'bg-white border-gray-200 text-gray-600 hover:border-[#1D9E75]/40'
+                              ? 'border-[#1D9E75] bg-[#F0FAF6] text-[#085041]'
+                              : 'border-[#D3D1C7] bg-white text-[#1C1B19] hover:border-[#B4B2A9]'
                           }`}
                         >
-                          {checked ? '✓ ' : ''}{option}
-                        </button>
+                          <input type="checkbox" className="w-auto" checked={checked} onChange={() => togglePain(option)} />
+                          {option}
+                        </label>
                       )
                     })}
                   </div>
@@ -303,10 +302,10 @@ export function MusteriPersonaPage() {
                 return (
                   <div
                     key={idx}
-                    className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden"
+                    className="bg-white rounded-2xl border border-[#E2E0D8] shadow-sm overflow-hidden"
                   >
                     {/* Persona başlık */}
-                    <div className="p-6 border-b border-gray-100">
+                    <div className="p-6 border-b border-[#F1EFE8]">
                       <div className="flex items-center gap-4 mb-4">
                         <div
                           className="w-14 h-14 rounded-full flex items-center justify-center text-2xl font-bold"
@@ -334,7 +333,7 @@ export function MusteriPersonaPage() {
                         </h4>
                         <ul className="flex flex-col gap-1.5">
                           {persona.motivations.map((m, i) => (
-                            <li key={i} className="flex gap-2 text-sm text-gray-700">
+                            <li key={i} className="flex gap-2 text-sm text-[#1C1B19]">
                               <span className="text-[#1D9E75] shrink-0">✓</span> {m}
                             </li>
                           ))}
@@ -346,7 +345,7 @@ export function MusteriPersonaPage() {
                         </h4>
                         <ul className="flex flex-col gap-1.5">
                           {persona.objections.map((o, i) => (
-                            <li key={i} className="flex gap-2 text-sm text-gray-700">
+                            <li key={i} className="flex gap-2 text-sm text-[#1C1B19]">
                               <span className="text-red-400 shrink-0">✗</span> {o}
                             </li>
                           ))}
@@ -354,7 +353,7 @@ export function MusteriPersonaPage() {
                       </div>
                     </div>
 
-                    <div className="px-5 pb-5 pt-0 border-t border-gray-100">
+                    <div className="px-5 pb-5 pt-0 border-t border-[#F1EFE8]">
                       <div className="flex flex-wrap gap-2 mt-4">
                         {persona.platforms.map((p, i) => (
                           <span key={i} className="px-2.5 py-1 rounded-full bg-gray-100 text-xs text-gray-600">

@@ -151,7 +151,7 @@ export function IcerikTakvimiPage() {
       {({ isFormOpen }) => (
         <>
           {isFormOpen && (
-            <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm mb-6">
+            <div className="bg-white rounded-2xl border border-[#E2E0D8] p-6 shadow-sm mb-6">
               <div className="flex flex-col gap-5">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <Input
@@ -187,7 +187,7 @@ export function IcerikTakvimiPage() {
                         className={`flex items-center gap-2 px-3 py-2 border rounded-lg cursor-pointer text-sm select-none transition-colors ${
                           platform === p
                             ? 'border-[#1D9E75] bg-[#F0FAF6] text-[#085041]'
-                            : 'border-[#D3D1C7] bg-white text-[#1C1B19] hover:border-gray-300'
+                            : 'border-[#D3D1C7] bg-white text-[#1C1B19] hover:border-[#B4B2A9]'
                         }`}
                       >
                         <input
@@ -215,7 +215,7 @@ export function IcerikTakvimiPage() {
                         className={`flex flex-col items-center justify-center gap-1 py-2 border rounded-lg cursor-pointer text-sm select-none transition-colors ${
                           gunler === g.value
                             ? 'border-[#1D9E75] bg-[#F0FAF6] text-[#085041]'
-                            : 'border-[#D3D1C7] bg-white text-[#1C1B19] hover:border-gray-300'
+                            : 'border-[#D3D1C7] bg-white text-[#1C1B19] hover:border-[#B4B2A9]'
                         }`}
                       >
                         <input type="radio" name="gunler" className="sr-only" checked={gunler === g.value} onChange={() => setGunler(g.value)} />
@@ -292,17 +292,17 @@ export function IcerikTakvimiPage() {
           {result && (
             <div className="flex flex-col gap-4">
               {result.ozet && (
-                <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
-                  <h3 className="text-sm font-semibold text-gray-700 mb-2">📊 Strateji Özeti</h3>
+                <div className="bg-white rounded-2xl border border-[#E2E0D8] shadow-sm p-5">
+                  <h3 className="text-sm font-semibold text-[#1C1B19] mb-2">📊 Strateji Özeti</h3>
                   <p className="text-sm text-gray-600 leading-relaxed">{result.ozet}</p>
                 </div>
               )}
 
-              <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
-                <h3 className="text-sm font-semibold text-gray-700 mb-4">📅 {result.icerik_takvimi.length} İçerik Planı</h3>
+              <div className="bg-white rounded-2xl border border-[#E2E0D8] shadow-sm p-5">
+                <h3 className="text-sm font-semibold text-[#1C1B19] mb-4">📅 {result.icerik_takvimi.length} İçerik Planı</h3>
                 <div className="flex flex-col gap-3">
                   {result.icerik_takvimi.map((item, i) => (
-                    <div key={i} className="rounded-xl border border-gray-100 p-4 hover:border-[#1D9E75]/30 transition">
+                    <div key={i} className="rounded-xl border border-[#F1EFE8] p-4 hover:border-[#1D9E75]/30 transition">
                       <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
                         <div className="flex items-center gap-2">
                           <span>{PLATFORM_EMOJIS[item.platform] ?? '📝'}</span>
@@ -316,7 +316,7 @@ export function IcerikTakvimiPage() {
                       {item.konu && item.konu !== item.baslik && (
                         <p className="text-xs text-gray-400 mb-2 italic">{item.konu}</p>
                       )}
-                      <p className="text-sm text-gray-700 leading-relaxed mb-3 whitespace-pre-wrap">{item.icerik}</p>
+                      <p className="text-sm text-[#1C1B19] leading-relaxed mb-3 whitespace-pre-wrap">{item.icerik}</p>
                       <div className="flex flex-wrap gap-1 mb-2">
                         {item.hashtag.map((tag, j) => (
                           <span key={j} className="text-xs text-[#1D9E75]">{tag}</span>
@@ -331,8 +331,8 @@ export function IcerikTakvimiPage() {
               </div>
 
               {result.ipuclari && result.ipuclari.length > 0 && (
-                <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
-                  <h3 className="text-sm font-semibold text-gray-700 mb-3">💡 Pratik İpuçları</h3>
+                <div className="bg-white rounded-2xl border border-[#E2E0D8] shadow-sm p-5">
+                  <h3 className="text-sm font-semibold text-[#1C1B19] mb-3">💡 Pratik İpuçları</h3>
                   <ul className="flex flex-col gap-2">
                     {result.ipuclari.map((ip, i) => (
                       <li key={i} className="flex gap-2 text-sm text-gray-600">
