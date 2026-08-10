@@ -184,7 +184,7 @@ export function IcerikTakvimiPage() {
                     {PLATFORMLAR.map((p) => (
                       <label
                         key={p}
-                        className={`flex items-center gap-2 px-3 py-2 border rounded-lg cursor-pointer text-sm select-none transition-colors ${
+                        className={`flex items-center gap-2 px-[11px] py-[9px] border-[0.5px] rounded-lg cursor-pointer text-[13px] select-none transition-colors ${
                           platform === p
                             ? 'border-[#1D9E75] bg-[#F0FAF6] text-[#085041]'
                             : 'border-[#D3D1C7] bg-white text-[#1C1B19] hover:border-[#B4B2A9]'

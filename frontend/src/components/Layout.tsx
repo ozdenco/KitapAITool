@@ -10,9 +10,9 @@ export function Layout() {
   const navigate = useNavigate()
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="min-h-screen bg-[#F7F6F2] flex flex-col">
       {/* Header */}
-      <header className="sticky top-0 z-50 bg-white border-b border-gray-200">
+      <header className="sticky top-0 z-50 bg-white border-b border-[#E2E0D8]">
         <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
           {/* Logo */}
           <button
@@ -67,7 +67,7 @@ export function Layout() {
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-gray-200 bg-white">
+      <footer className="border-t border-[#E2E0D8] bg-white">
         <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
           <span className="text-xs text-gray-400">© 2026 KolayKOBİ — kolaykobi.com</span>
           <span className="text-xs text-gray-400">Dijital ajansınız artık bir yazılım</span>

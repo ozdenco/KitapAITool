@@ -6,16 +6,17 @@ interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement
 
 export function Textarea({ label, error, hint, className = '', ...rest }: TextareaProps) {
   return (
-    <div className="flex flex-col gap-1">
+    <div className="flex flex-col gap-[6px]">
       {label && (
-        <label className="text-sm font-medium text-[#6B6963]">{label}</label>
+        <label className="text-[13px] font-medium text-[#6B6963]">{label}</label>
       )}
-      {hint && <p className="text-xs text-[#9A9792]">{hint}</p>}
+      {hint && <p className="text-[12px] text-[#9A9792]">{hint}</p>}
       <textarea
         rows={4}
-        className={`rounded-lg border px-3 py-2.5 text-sm text-[#1C1B19] bg-white outline-none transition resize-y leading-relaxed
-          focus:ring-2 focus:ring-[#1D9E75]/20 focus:border-[#1D9E75]
-          ${error ? 'border-red-400' : 'border-[#D3D1C7] hover:border-[#B4B2A9]'}
+        className={`rounded-lg border-[0.5px] px-[12px] py-[10px] text-[14px] text-[#1C1B19] bg-white outline-none transition resize-y leading-relaxed min-h-[80px]
+          focus:ring-2 focus:ring-[#1D9E75]/10 focus:border-[#1D9E75]
+          placeholder:text-[#A9A8A3]
+          ${error ? 'border-red-400' : 'border-[#D3D1C7]'}
           ${className}`}
         {...rest}
       />

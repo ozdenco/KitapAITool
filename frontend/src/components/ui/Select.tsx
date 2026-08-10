@@ -6,14 +6,14 @@ interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
 
 export function Select({ label, error, options, className = '', ...rest }: SelectProps) {
   return (
-    <div className="flex flex-col gap-1">
+    <div className="flex flex-col gap-[6px]">
       {label && (
-        <label className="text-sm font-medium text-[#6B6963]">{label}</label>
+        <label className="text-[13px] font-medium text-[#6B6963]">{label}</label>
       )}
       <select
-        className={`rounded-lg border px-3 py-2.5 text-sm text-[#1C1B19] bg-white outline-none transition
-          focus:ring-2 focus:ring-[#1D9E75]/20 focus:border-[#1D9E75]
-          ${error ? 'border-red-400' : 'border-[#D3D1C7] hover:border-[#B4B2A9]'}
+        className={`rounded-lg border-[0.5px] px-[12px] py-[10px] text-[14px] text-[#1C1B19] bg-white outline-none transition
+          focus:ring-2 focus:ring-[#1D9E75]/10 focus:border-[#1D9E75]
+          ${error ? 'border-red-400' : 'border-[#D3D1C7]'}
           ${className}`}
         {...rest}
       >

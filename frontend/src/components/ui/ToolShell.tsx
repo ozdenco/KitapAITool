@@ -54,8 +54,8 @@ export function ToolShell({
           <div className="flex items-center gap-3">
             <span className="text-3xl">{icon}</span>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">{title}</h1>
-              <p className="text-gray-500 text-sm mt-0.5">{description}</p>
+              <h1 className="text-[22px] font-medium text-[#1C1B19]">{title}</h1>
+              <p className="text-[14px] text-[#6B6963] mt-0.5 leading-relaxed">{description}</p>
             </div>
           </div>
         </div>
@@ -65,20 +65,20 @@ export function ToolShell({
       {usage != null && (
         <div className="mb-5 no-print">
           <div
-            className={`flex items-center gap-2.5 px-4 py-2.5 rounded-xl border text-sm
+            className={`flex items-center gap-2.5 px-[14px] py-[9px] rounded-lg border text-[12px]
               ${isAtLimit
                 ? 'bg-red-50 border-red-200'
-                : 'bg-gray-50 border-gray-200'}`}
+                : 'bg-[#F7F6F2] border-[#E2E0D8]'}`}
           >
             {/* Renk noktaları */}
-            <span className="flex gap-1">
+            <span className="flex gap-[5px]">
               {Array.from({ length: usage.limit ?? 3 }).map((_, i) => (
                 <span
                   key={i}
-                  className={`w-2 h-2 rounded-full ${
+                  className={`w-[10px] h-[10px] rounded-full transition-colors ${
                     i < usage.usedCount
                       ? isAtLimit ? 'bg-red-500' : 'bg-[#1D9E75]'
-                      : 'bg-gray-300'
+                      : 'bg-[#D3D1C7]'
                   }`}
                 />
               ))}
@@ -89,9 +89,9 @@ export function ToolShell({
               showLabel={false}
               className="w-24"
             />
-            <span className={isAtLimit ? 'text-red-600 font-medium' : 'text-gray-500'}>
+            <span className={isAtLimit ? 'text-red-600 font-medium' : 'text-[#6B6963]'}>
               Aylık{' '}
-              <strong className="text-gray-700">
+              <strong className="text-[#1C1B19]">
                 {usage.usedCount} / {usage.limit ?? '∞'}
               </strong>{' '}
               kullanım hakkınız var
@@ -141,9 +141,9 @@ export function ToolShell({
           <button
             type="button"
             onClick={() => window.print()}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-200
-              text-sm font-medium text-gray-600 bg-white hover:bg-gray-50
-              hover:border-gray-300 transition-colors"
+            className="inline-flex items-center gap-2 px-[14px] py-[8px] rounded-lg border border-[#D3D1C7]
+              text-[13px] font-medium text-[#6B6963] bg-white hover:bg-[#F7F6F2]
+              transition-colors"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round"
