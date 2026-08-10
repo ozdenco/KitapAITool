@@ -131,11 +131,12 @@ export function MusteriGeriDonusPage() {
       hasResult={!!result}
       formHasInput={!!biz.trim()}
     >
-      {({ isFormOpen }) => (
+      {({ isFormOpen, header, rateBar }) => (
         <>
           {isFormOpen && (
-            <div className="bg-white rounded-2xl border border-[#E2E0D8] p-6 shadow-sm mb-6">
+            <div className="bg-white rounded-2xl border border-[#E2E0D8] p-8 mb-6">
               <div className="flex flex-col gap-5">
+                  {header}
                 <Input
                   label="İşletme / hizmet adı *"
                   placeholder="Örn: Güneş Diş Kliniği"
@@ -143,7 +144,7 @@ export function MusteriGeriDonusPage() {
                   onChange={(e) => setBiz(e.target.value)}
                 />
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <Select
                     label="Sektör *"
                     value={sector}
@@ -172,7 +173,7 @@ export function MusteriGeriDonusPage() {
                     {KANALLAR.map((k) => (
                       <label
                         key={k.value}
-                        className={`flex items-center gap-2 px-3 py-2.5 border rounded-lg cursor-pointer text-sm select-none transition-colors ${
+                        className={`flex items-center gap-2 px-[11px] py-[9px] border rounded-lg cursor-pointer text-[13px] select-none transition-colors ${
                           channels.includes(k.value)
                             ? 'border-[#1D9E75] bg-[#F0FAF6] text-[#085041]'
                             : 'border-[#D3D1C7] bg-white text-[#1C1B19] hover:border-[#B4B2A9]'
@@ -217,6 +218,7 @@ export function MusteriGeriDonusPage() {
                     if (typeof d.note === 'string') setNote(d.note)
                   }}
                 />
+                {rateBar}
 
                 {mutation.isError && (
                   <p className="text-sm text-red-500">Bir hata oluştu. Lütfen tekrar deneyin.</p>

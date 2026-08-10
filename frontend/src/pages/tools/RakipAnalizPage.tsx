@@ -142,11 +142,12 @@ export function RakipAnalizPage() {
       hasResult={!!result}
       formHasInput={!!biz.trim()}
     >
-      {({ isFormOpen }) => (
+      {({ isFormOpen, header, rateBar }) => (
         <>
           {isFormOpen && (
-            <div className="bg-white rounded-2xl border border-[#E2E0D8] p-6 shadow-sm mb-6">
+            <div className="bg-white rounded-2xl border border-[#E2E0D8] p-8 mb-6">
               <div className="flex flex-col gap-5">
+                  {header}
 
                 {/* ── Kendi işletme bölümü ── */}
                 <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Kendi İşletmeniz</p>
@@ -158,7 +159,7 @@ export function RakipAnalizPage() {
                   onChange={(e) => setBiz(e.target.value)}
                 />
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <Select
                     label="Sektör *"
                     value={sector}
@@ -197,7 +198,7 @@ export function RakipAnalizPage() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <Textarea
                     label="Güçlü yönleriniz"
                     placeholder="Örn: 10 yıllık deneyim, geniş müşteri portföyü, uzman ekip"
@@ -286,6 +287,7 @@ export function RakipAnalizPage() {
                     if (d.rakip3 && typeof d.rakip3 === 'object') setRakip3(d.rakip3 as RakipBlok)
                   }}
                 />
+                {rateBar}
 
                 {mutation.isError && (
                   <p className="text-sm text-red-500">Bir hata oluştu. Lütfen tekrar deneyin.</p>

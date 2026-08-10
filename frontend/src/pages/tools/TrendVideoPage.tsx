@@ -130,11 +130,12 @@ export function TrendVideoPage() {
       hasResult={!!result}
       formHasInput={!!sector}
     >
-      {({ isFormOpen }) => (
+      {({ isFormOpen, header, rateBar }) => (
         <>
           {isFormOpen && (
-            <div className="bg-white rounded-2xl border border-[#E2E0D8] p-6 shadow-sm mb-6">
+            <div className="bg-white rounded-2xl border border-[#E2E0D8] p-8 mb-6">
               <div className="flex flex-col gap-5">
+                  {header}
                 <Input
                   label="İşletme / hizmet adı (opsiyonel)"
                   placeholder="Örn: Hızlı Kargo Lojistik"
@@ -196,6 +197,7 @@ export function TrendVideoPage() {
                     if (typeof d.note === 'string') setNote(d.note)
                   }}
                 />
+                {rateBar}
 
                 {mutation.isError && (
                   <p className="text-sm text-red-500">Bir hata oluştu. Lütfen tekrar deneyin.</p>

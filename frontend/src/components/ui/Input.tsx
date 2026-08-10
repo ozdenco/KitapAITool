@@ -19,7 +19,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
           ref={ref}
           id={id}
           className={clsx(
-            'w-full px-[12px] py-[10px] rounded-lg border-[0.5px] text-[14px] text-[#1C1B19]',
+            'w-full px-[12px] py-[10px] rounded-lg border text-[14px] text-[#1C1B19]',
             'transition-all duration-150',
             'placeholder:text-[#A9A8A3]',
             'focus:outline-none focus:ring-2 focus:ring-[#1D9E75]/10 focus:border-[#1D9E75]',

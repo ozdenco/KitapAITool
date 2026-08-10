@@ -125,12 +125,13 @@ export function WhatsappSatisPage() {
       hasResult={!!result}
       formHasInput={!!biz.trim()}
     >
-      {({ isFormOpen }) => (
+      {({ isFormOpen, header, rateBar }) => (
         <>
           {isFormOpen && (
-            <div className="bg-white rounded-2xl border border-[#E2E0D8] p-6 shadow-sm mb-6">
+            <div className="bg-white rounded-2xl border border-[#E2E0D8] p-8 mb-6">
               <div className="flex flex-col gap-5">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {header}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <Input
                     label="İşletme / hizmet adı *"
                     placeholder="Örn: Yıldız Muhasebe"
@@ -153,7 +154,7 @@ export function WhatsappSatisPage() {
                   rows={3}
                 />
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <Input
                     label="Fiyat aralığı"
                     placeholder="Örn: 3.000₺ – 8.000₺/ay"
@@ -174,7 +175,7 @@ export function WhatsappSatisPage() {
                     {ITIRAZLAR.map((it) => (
                       <label
                         key={it.value}
-                        className={`flex items-center gap-2 px-3 py-2.5 border rounded-lg cursor-pointer text-sm select-none transition-colors ${
+                        className={`flex items-center gap-2 px-[11px] py-[9px] border rounded-lg cursor-pointer text-[13px] select-none transition-colors ${
                           itirazlar.includes(it.value)
                             ? 'border-[#1D9E75] bg-[#F0FAF6] text-[#085041]'
                             : 'border-[#D3D1C7] bg-white text-[#1C1B19] hover:border-[#B4B2A9]'
@@ -212,6 +213,7 @@ export function WhatsappSatisPage() {
                     if (typeof d.advantage === 'string') setAdvantage(d.advantage)
                   }}
                 />
+                {rateBar}
 
                 {mutation.isError && (
                   <p className="text-sm text-red-500">Bir hata oluştu. Lütfen tekrar deneyin.</p>

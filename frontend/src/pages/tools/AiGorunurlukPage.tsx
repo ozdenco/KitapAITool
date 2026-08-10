@@ -235,16 +235,17 @@ export function AiGorunurlukPage() {
       hasResult={!!result}
       formHasInput={!!biz.trim()}
     >
-      {({ isFormOpen }) => (
+      {({ isFormOpen, header, rateBar }) => (
         <>
           {isFormOpen && (
-            <div className="bg-white rounded-2xl border border-[#E2E0D8] p-6 shadow-sm mb-6">
+            <div className="bg-white rounded-2xl border border-[#E2E0D8] p-8 mb-6">
               <div className="flex flex-col gap-5">
+                  {header}
 
                 {/* ── İşletme Bilgileri ── */}
                 <SectionLabel>İşletme Bilgileri</SectionLabel>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <Input label="İşletme Adı *" placeholder="Örn: Logvance Lojistik" value={biz} onChange={(e) => setBiz(e.target.value)} />
                   <Select
                     label="Sektör *"
@@ -254,7 +255,7 @@ export function AiGorunurlukPage() {
                   />
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <Input label="Şehir *" placeholder="Örn: İzmir" value={city} onChange={(e) => setCity(e.target.value)} />
                   <Input label="Web Sitesi URL (isteğe bağlı)" placeholder="https://firmaniz.com" value={web} onChange={(e) => setWeb(e.target.value)} />
                 </div>
@@ -405,6 +406,7 @@ export function AiGorunurlukPage() {
                     if (typeof d.extra === 'string') setExtra(d.extra)
                   }}
                 />
+                {rateBar}
 
                 {mutation.isError && (
                   <p className="text-sm text-red-500">Bir hata oluştu. Lütfen tekrar deneyin.</p>

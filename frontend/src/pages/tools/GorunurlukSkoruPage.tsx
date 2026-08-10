@@ -166,12 +166,13 @@ export function GorunurlukSkoruPage() {
       hasResult={!!result}
       formHasInput={!!name.trim()}
     >
-      {({ isFormOpen }) => (
+      {({ isFormOpen, header, rateBar }) => (
         <>
           {/* ── Form ───────────────────────────────────────────── */}
           {isFormOpen && (
-            <div className="bg-white rounded-2xl border border-[#E2E0D8] p-6 shadow-sm mb-6">
+            <div className="bg-white rounded-2xl border border-[#E2E0D8] p-8 mb-6">
               <div className="flex flex-col gap-5">
+                  {header}
                 <Input
                   label="İşletme adı *"
                   placeholder="Örn: Yıldız Muhasebe Ofisi"
@@ -179,7 +180,7 @@ export function GorunurlukSkoruPage() {
                   onChange={(e) => setName(e.target.value)}
                 />
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <Select
                     label="Sektör *"
                     value={sector}
@@ -228,7 +229,7 @@ export function GorunurlukSkoruPage() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <Select
                     label="LinkedIn sayfanız var mı?"
                     value={liExists}
@@ -278,6 +279,7 @@ export function GorunurlukSkoruPage() {
                     if (typeof d.goal === 'string') setGoal(d.goal)
                   }}
                 />
+                {rateBar}
 
                 {mutation.isError && (
                   <p className="text-sm text-red-500">Bir hata oluştu. Lütfen tekrar deneyin.</p>

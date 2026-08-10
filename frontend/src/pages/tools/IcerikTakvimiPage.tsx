@@ -148,12 +148,13 @@ export function IcerikTakvimiPage() {
       hasResult={!!result}
       formHasInput={!!bizName.trim() || !!sector}
     >
-      {({ isFormOpen }) => (
+      {({ isFormOpen, header, rateBar }) => (
         <>
           {isFormOpen && (
-            <div className="bg-white rounded-2xl border border-[#E2E0D8] p-6 shadow-sm mb-6">
+            <div className="bg-white rounded-2xl border border-[#E2E0D8] p-8 mb-6">
               <div className="flex flex-col gap-5">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {header}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <Input
                     label="İşletme / marka adı"
                     placeholder="Örn: Yıldız Muhasebe"
@@ -225,7 +226,7 @@ export function IcerikTakvimiPage() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <Select
                     label="Marka tonu"
                     value={ton}
@@ -274,6 +275,7 @@ export function IcerikTakvimiPage() {
                     if (typeof d.startDate === 'string') setStartDate(d.startDate)
                   }}
                 />
+                {rateBar}
 
                 {mutation.isError && (
                   <p className="text-sm text-red-500">Bir hata oluştu. Lütfen tekrar deneyin.</p>

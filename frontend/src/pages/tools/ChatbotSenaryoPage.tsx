@@ -122,12 +122,13 @@ export function ChatbotSenaryoPage() {
       hasResult={!!result}
       formHasInput={!!biz.trim()}
     >
-      {({ isFormOpen }) => (
+      {({ isFormOpen, header, rateBar }) => (
         <>
           {isFormOpen && (
-            <div className="bg-white rounded-2xl border border-[#E2E0D8] p-6 shadow-sm mb-6">
+            <div className="bg-white rounded-2xl border border-[#E2E0D8] p-8 mb-6">
               <div className="flex flex-col gap-5">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {header}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <Input
                     label="İşletme adı *"
                     placeholder="Örn: Demir Otomotiv"
@@ -181,7 +182,7 @@ export function ChatbotSenaryoPage() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <Select
                     label="Yönlendirme hedefi *"
                     value={redirectGoal}
@@ -209,6 +210,7 @@ export function ChatbotSenaryoPage() {
                     if (typeof d.redirectLink === 'string') setRedirectLink(d.redirectLink)
                   }}
                 />
+                {rateBar}
 
                 {mutation.isError && (
                   <p className="text-sm text-red-500">Bir hata oluştu. Lütfen tekrar deneyin.</p>
