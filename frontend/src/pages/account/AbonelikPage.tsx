@@ -17,15 +17,6 @@ interface Subscription {
   usagePerToolPerMonth: number | null
 }
 
-interface Plan {
-  id: number
-  type: string
-  name: string
-  description: string
-  priceMonthly: number
-  usagePerToolPerMonth: number | null
-}
-
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const PLAN_BADGE: Record<string, string> = {
@@ -53,12 +44,6 @@ export function AbonelikPage() {
     queryKey: ['subscription'],
     queryFn: () =>
       api.get<Subscription>('/subscriptions/me').then((r: { data: Subscription }) => r.data),
-  })
-
-  const { data: plans } = useQuery({
-    queryKey: ['plans'],
-    queryFn: () =>
-      api.get<Plan[]>('/subscriptions/plans').then((r: { data: Plan[] }) => r.data),
   })
 
   const { data: usages } = useToolUsage()
@@ -183,57 +168,6 @@ export function AbonelikPage() {
           })}
         </div>
       </div>
-
-      {/* ── Plan options ── */}
-      {plans && plans.length > 0 && (
-        <div>
-          <h2 className="text-[11px] font-semibold uppercase tracking-widest text-[#9A9792] mb-3">
-            Paket Seçenekleri
-          </h2>
-          <div className="grid grid-cols-2 gap-3">
-            {plans.map((plan: Plan) => {
-              const isActive = sub?.plan === plan.type
-              return (
-                <div
-                  key={plan.id}
-                  className={`rounded-2xl border p-4 ${
-                    isActive
-                      ? 'border-[#1D9E75] bg-[#F0FAF6]'
-                      : 'border-[#E2E0D8] bg-white'
-                  }`}
-                >
-                  <div className="flex justify-between items-start mb-1">
-                    <h3 className="text-[14px] font-semibold text-[#1C1B19]">{plan.name}</h3>
-                    {isActive && (
-                      <span className="text-[11px] text-[#1D9E75] font-semibold">Aktif</span>
-                    )}
-                  </div>
-                  <p className="text-[12px] text-[#6B6963] mb-2 leading-snug">{plan.description}</p>
-                  <p className="text-[16px] font-bold text-[#1C1B19] mb-3">
-                    {plan.priceMonthly === 0
-                      ? 'Ücretsiz'
-                      : `₺${plan.priceMonthly.toLocaleString('tr-TR')}/ay`}
-                  </p>
-                  {!isActive && (
-                    <button
-                      type="button"
-                      className={`w-full py-[7px] rounded-lg text-[12px] font-medium transition-colors ${
-                        plan.type === 'premium'
-                          ? 'bg-[#1D9E75] text-white hover:bg-[#178a65]'
-                          : 'bg-[#F7F6F2] border border-[#D3D1C7] text-[#1C1B19] hover:bg-[#EDECE6]'
-                      }`}
-                    >
-                      {plan.priceMonthly < (sub?.usagePerToolPerMonth ?? 0)
-                        ? 'Düşür'
-                        : 'Yükselt'}
-                    </button>
-                  )}
-                </div>
-              )
-            })}
-          </div>
-        </div>
-      )}
 
       {/* ── Danger zone ── */}
       {sub?.status === 'active' && !user?.isAdmin && (

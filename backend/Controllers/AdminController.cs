@@ -218,10 +218,11 @@ public class AdminController(AppDbContext db, EmailService email) : ControllerBa
             .Distinct()
             .CountAsync();
 
-        var now        = DateTime.UtcNow;
+        var now          = DateTime.UtcNow;
         var sixMonthsAgo = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc)
                                .AddMonths(-5);
 
+        // Monthly tool usage + active users
         var rawMonthly = await db.ToolUsageLogs
             .Where(l => l.UsedAt >= sixMonthsAgo)
             .GroupBy(l => new { l.UsedAt.Year, l.UsedAt.Month })
@@ -234,22 +235,38 @@ public class AdminController(AppDbContext db, EmailService email) : ControllerBa
             })
             .ToListAsync();
 
+        // Monthly new registrations
+        var rawRegistrations = await db.Users
+            .Where(u => u.CreatedAt >= sixMonthsAgo)
+            .GroupBy(u => new { u.CreatedAt.Year, u.CreatedAt.Month })
+            .Select(g => new { g.Key.Year, g.Key.Month, Count = g.Count() })
+            .ToListAsync();
+
         var monthlyStats = Enumerable.Range(0, 6).Select(i =>
         {
-            var ms = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc).AddMonths(-(5 - i));
+            var ms  = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc).AddMonths(-(5 - i));
             var row = rawMonthly.FirstOrDefault(m => m.Year == ms.Year && m.Month == ms.Month);
+            var reg = rawRegistrations.FirstOrDefault(r => r.Year == ms.Year && r.Month == ms.Month);
             return new
             {
-                monthYear   = ms.ToString("yyyy-MM"),
-                totalUsed   = row?.TotalUsed   ?? 0,
-                activeUsers = row?.ActiveUsers  ?? 0,
+                monthYear          = ms.ToString("yyyy-MM"),
+                totalUsed          = row?.TotalUsed   ?? 0,
+                activeUsers        = row?.ActiveUsers  ?? 0,
+                newRegistrations   = reg?.Count        ?? 0,
             };
         }).ToList();
+
+        // Per-tool breakdown (all-time)
+        var toolBreakdown = await db.ToolUsageLogs
+            .GroupBy(l => l.ToolId)
+            .Select(g => new { toolId = g.Key, totalUsed = g.Count() })
+            .OrderByDescending(x => x.totalUsed)
+            .ToListAsync();
 
         return Ok(new
         {
             success = true,
-            data = new { totalUsers, totalEvaluations, activeUsers, monthlyStats }
+            data = new { totalUsers, totalEvaluations, activeUsers, monthlyStats, toolBreakdown }
         });
     }
 

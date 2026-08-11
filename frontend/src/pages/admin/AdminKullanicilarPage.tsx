@@ -3,36 +3,29 @@ import { useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import api from '@/lib/api'
 import type { ApiResponse } from '@/types'
+import { EditModal, ResetPasswordModal, CreateUserModal } from './AdminModals'
+import type { AdminUser } from './AdminModals'
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// ─── Stats types ──────────────────────────────────────────────────────────────
 
-interface AdminUser {
-  id: string
-  name: string
-  email: string
-  company: string
-  isAdmin: boolean
-  isActive: boolean
-  planType: 'free' | 'standard' | 'premium' | 'enterprise'
-  createdAt: string
-  lastLoginAt: string | null
-  toolsUsed: string[]
-  totalToolUses: number
+interface MonthlyStat {
+  monthYear: string
+  totalUsed: number
+  activeUsers: number
+  newRegistrations: number
 }
 
-interface UpdateUserPayload {
-  name?: string
-  company?: string
-  isAdmin?: boolean
+interface ToolBreakdown {
+  toolId: string
+  totalUsed: number
 }
 
-interface CreateUserPayload {
-  name: string
-  email: string
-  company: string
-  password: string
-  isAdmin: boolean
-  plan: string
+interface AdminStats {
+  totalUsers: number
+  totalEvaluations: number
+  activeUsers: number
+  monthlyStats: MonthlyStat[]
+  toolBreakdown: ToolBreakdown[]
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -52,10 +45,7 @@ const TOOL_LABELS: Record<string, string> = {
 }
 
 const PLAN_LABELS: Record<string, string> = {
-  free:       'Ücretsiz',
-  standard:   'Standart',
-  premium:    'Premium',
-  enterprise: 'Kurumsal',
+  free: 'Ücretsiz', standard: 'Standart', premium: 'Premium', enterprise: 'Kurumsal',
 }
 
 const PLAN_COLORS: Record<string, string> = {
@@ -65,576 +55,127 @@ const PLAN_COLORS: Record<string, string> = {
   enterprise: 'bg-amber-100 text-amber-700',
 }
 
-// ─── Admin Stats Types ────────────────────────────────────────────────────────
-
-interface MonthlyStat {
-  monthYear: string
-  totalUsed: number
-  activeUsers: number
-}
-
-interface AdminStats {
-  totalUsers: number
-  totalEvaluations: number
-  activeUsers: number
-  monthlyStats: MonthlyStat[]
-}
-
-// ─── Dual-Axis Chart ──────────────────────────────────────────────────────────
-
-function SystemUsageChart({ data }: { data: MonthlyStat[] }) {
-  if (data.length === 0) return null
-
-  const maxUsed   = Math.max(...data.map((d) => d.totalUsed), 1)
-  const maxActive = Math.max(...data.map((d) => d.activeUsers), 1)
-  const chartH    = 140
-  const barW      = 36
-  const gap       = 20
-  const padX      = 36
-  const padRight  = 36
-  const totalW    = data.length * (barW + gap) - gap + padX + padRight
-
-  const toY = (val: number, max: number) => chartH - (val / max) * chartH
-
-  // Y-axis labels (left = totalUsed, right = activeUsers)
-  const leftTicks  = [0, Math.round(maxUsed / 2), maxUsed]
-  const rightTicks = [0, Math.round(maxActive / 2), maxActive]
-
-  return (
-    <svg viewBox={`0 0 ${totalW} ${chartH + 52}`} className="w-full overflow-visible">
-      {/* Legend */}
-      <g transform={`translate(${padX}, 0)`}>
-        <rect width={12} height={12} rx={2} fill="#B45309" opacity={0.85} />
-        <text x={16} y={10} fontSize={10} fill="#6B6963" fontFamily="inherit">Toplam Kullanım</text>
-        <rect x={130} width={12} height={12} rx={2} fill="none" stroke="#1D9E75" strokeWidth={2} />
-        <text x={146} y={10} fontSize={10} fill="#6B6963" fontFamily="inherit">Aktif Kullanıcı</text>
-      </g>
-
-      {/* Grid + left Y labels */}
-      {leftTicks.map((v) => {
-        const y = chartH + 18 - (v / maxUsed) * chartH
-        return (
-          <g key={`lt-${v}`}>
-            <line x1={padX} y1={y} x2={totalW - padRight} y2={y} stroke="#F2F1ED" strokeWidth={1} />
-            <text x={padX - 4} y={y + 4} textAnchor="end" fontSize={9} fill="#9A9792" fontFamily="inherit">{v}</text>
-          </g>
-        )
-      })}
-
-      {/* Right Y labels */}
-      {rightTicks.map((v) => {
-        const y = chartH + 18 - (v / maxActive) * chartH
-        return (
-          <text key={`rt-${v}`} x={totalW - padRight + 4} y={y + 4} textAnchor="start" fontSize={9} fill="#6B6963" fontFamily="inherit">
-            {v}
-          </text>
-        )
-      })}
-
-      {/* Bars + line */}
-      {data.map((d, i) => {
-        const x    = padX + i * (barW + gap)
-        const barH = Math.max((d.totalUsed / maxUsed) * chartH, d.totalUsed > 0 ? 4 : 0)
-        const y    = chartH + 18 - barH
-        return (
-          <g key={d.monthYear}>
-            <rect x={x} y={y} width={barW} height={barH} rx={4} fill="#B45309" opacity={0.75} />
-            {d.totalUsed > 0 && (
-              <text x={x + barW / 2} y={y - 4} textAnchor="middle" fontSize={9} fill="#6B6963" fontFamily="inherit">
-                {d.totalUsed}
-              </text>
-            )}
-            <text x={x + barW / 2} y={chartH + 34} textAnchor="middle" fontSize={10} fill="#9A9792" fontFamily="inherit">
-              {new Date(d.monthYear + '-01').toLocaleDateString('tr-TR', { month: 'short', year: '2-digit' })}
-            </text>
-          </g>
-        )
-      })}
-
-      {/* Active users line */}
-      {(() => {
-        const points = data.map((d, i) => {
-          const cx = padX + i * (barW + gap) + barW / 2
-          const cy = chartH + 18 - (d.activeUsers / maxActive) * chartH
-          return { cx, cy, v: d.activeUsers }
-        })
-        const linePath = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.cx} ${p.cy}`).join(' ')
-        const areaPath = `${linePath} L ${points[points.length - 1].cx} ${chartH + 18} L ${points[0].cx} ${chartH + 18} Z`
-        return (
-          <>
-            <path d={areaPath} fill="#1D9E75" opacity={0.08} />
-            <path d={linePath} fill="none" stroke="#1D9E75" strokeWidth={2} strokeLinejoin="round" />
-            {points.map((p, i) => (
-              <g key={i}>
-                <circle cx={p.cx} cy={p.cy} r={4} fill="white" stroke="#1D9E75" strokeWidth={2} />
-                {p.v > 0 && (
-                  <text x={p.cx} y={p.cy - 7} textAnchor="middle" fontSize={9} fill="#1D9E75" fontFamily="inherit">{p.v}</text>
-                )}
-              </g>
-            ))}
-          </>
-        )
-      })()}
-    </svg>
-  )
-}
-
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function formatDate(iso: string | null): string {
   if (!iso) return '—'
-  const d = new Date(iso)
-  return d.toLocaleDateString('tr-TR', {
-    day: '2-digit', month: '2-digit', year: 'numeric',
-    hour: '2-digit', minute: '2-digit',
-  })
+  return new Date(iso).toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
 }
 
 function timeAgo(iso: string | null): string {
   if (!iso) return '—'
-  const ms = Date.now() - new Date(iso).getTime()
+  const ms  = Date.now() - new Date(iso).getTime()
   const min = Math.floor(ms / 60000)
-  if (min < 1) return 'Az önce'
+  if (min < 1)  return 'Az önce'
   if (min < 60) return `${min} dk önce`
-  const hr = Math.floor(min / 60)
-  if (hr < 24) return `${hr} saat önce`
+  const hr  = Math.floor(min / 60)
+  if (hr  < 24) return `${hr} saat önce`
   const day = Math.floor(hr / 24)
   if (day < 30) return `${day} gün önce`
   return formatDate(iso)
 }
 
-// ─── Edit Modal ───────────────────────────────────────────────────────────────
-
-interface EditModalProps {
-  user: AdminUser
-  onClose: () => void
-  onSaved: () => void
+function shortMonth(monthYear: string) {
+  const [y, m] = monthYear.split('-')
+  return new Date(Number(y), Number(m) - 1, 1).toLocaleDateString('tr-TR', { month: 'short', year: '2-digit' })
 }
 
-function EditModal({ user, onClose, onSaved }: EditModalProps) {
-  const [name, setName] = useState(user.name)
-  const [company, setCompany] = useState(user.company)
-  const [isAdmin, setIsAdmin] = useState(user.isAdmin)
-  const [error, setError] = useState('')
+// ─── Chart 1: Aktif + Yeni Kayıt grouped bars ────────────────────────────────
 
-  const mutation = useMutation({
-    mutationFn: async (payload: UpdateUserPayload) => {
-      const { data } = await api.patch<ApiResponse>(`/admin/users/${user.id}`, payload)
-      if (!data.success) throw new Error((data as { error?: string }).error ?? 'Güncelleme başarısız')
-    },
-    onSuccess: () => {
-      onSaved()
-      onClose()
-    },
-    onError: (err: Error) => setError(err.message),
-  })
+function UserActivityChart({ data }: { data: MonthlyStat[] }) {
+  if (data.length === 0) return null
 
-  const handleSave = () => {
-    setError('')
-    mutation.mutate({
-      name:    name.trim() || undefined,
-      company: company.trim(),
-      isAdmin,
-    })
-  }
+  const barW    = 13
+  const gapIn   = 3            // gap between bars in a group
+  const gapOut  = 14           // gap between groups
+  const groupW  = barW * 2 + gapIn
+  const padX    = 28
+  const chartH  = 90
+  const totalW  = data.length * (groupW + gapOut) - gapOut + padX * 2
+
+  const maxVal  = Math.max(...data.flatMap((d) => [d.activeUsers, d.newRegistrations]), 1)
+  const toBarH  = (v: number) => Math.max((v / maxVal) * chartH, v > 0 ? 3 : 0)
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onClose}>
-      <div
-        className="bg-white rounded-2xl shadow-xl p-7 w-full max-w-md"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <h3 className="text-lg font-bold text-gray-900 mb-5">Kullanıcıyı Düzenle</h3>
-
-        <div className="flex flex-col gap-4">
-          {/* Name */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Ad Soyad</label>
-            <input
-              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1D9E75]/40"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-            />
-          </div>
-
-          {/* Company */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Şirket</label>
-            <input
-              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1D9E75]/40"
-              value={company}
-              onChange={(e) => setCompany(e.target.value)}
-              placeholder="Şirket adı (opsiyonel)"
-            />
-          </div>
-
-          {/* Email (read-only) */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">E-posta</label>
-            <input
-              className="w-full px-3 py-2 border border-gray-100 rounded-lg text-sm text-gray-400 bg-gray-50"
-              value={user.email}
-              disabled
-            />
-          </div>
-
-          {/* Role */}
-          <div className="flex items-center gap-3">
-            <input
-              id="isAdmin"
-              type="checkbox"
-              className="w-4 h-4 accent-[#1D9E75]"
-              checked={isAdmin}
-              onChange={(e) => setIsAdmin(e.target.checked)}
-            />
-            <label htmlFor="isAdmin" className="text-sm font-medium text-gray-700">
-              Admin yetkisi
-            </label>
-            <span className="text-xs text-gray-400">(sınırsız kullanım + kullanıcı yönetimi)</span>
-          </div>
-        </div>
-
-        {error && <p className="mt-3 text-sm text-red-500">{error}</p>}
-
-        <div className="flex gap-3 mt-6 justify-end">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 rounded-lg text-sm text-gray-600 hover:bg-gray-100 transition-colors"
-          >
-            İptal
-          </button>
-          <button
-            onClick={handleSave}
-            disabled={mutation.isPending}
-            className="px-4 py-2 rounded-lg text-sm font-medium bg-[#1D9E75] text-white hover:bg-[#178a65] transition-colors disabled:opacity-50"
-          >
-            {mutation.isPending ? 'Kaydediliyor…' : 'Kaydet'}
-          </button>
-        </div>
-      </div>
-    </div>
+    <svg viewBox={`0 0 ${totalW} ${chartH + 44}`} className="w-full overflow-visible">
+      {/* Legend */}
+      <g transform={`translate(${padX}, 0)`}>
+        <rect width={10} height={10} rx={2} fill="#1D9E75" />
+        <text x={14} y={9} fontSize={9} fill="#6B6963" fontFamily="inherit">Aktif Kullanıcı</text>
+        <rect x={110} width={10} height={10} rx={2} fill="#3B82F6" />
+        <text x={124} y={9} fontSize={9} fill="#6B6963" fontFamily="inherit">Yeni Kayıt</text>
+      </g>
+      {/* Baseline */}
+      <line x1={padX} y1={chartH + 14} x2={totalW - padX} y2={chartH + 14} stroke="#E2E0D8" strokeWidth={1} />
+      {data.map((d, i) => {
+        const gx     = padX + i * (groupW + gapOut)
+        const hActive = toBarH(d.activeUsers)
+        const hNew    = toBarH(d.newRegistrations)
+        return (
+          <g key={d.monthYear}>
+            {/* Active bar */}
+            <rect x={gx} y={chartH + 14 - hActive} width={barW} height={hActive} rx={3} fill="#1D9E75" opacity={0.85} />
+            {d.activeUsers > 0 && (
+              <text x={gx + barW / 2} y={chartH + 14 - hActive - 3} textAnchor="middle" fontSize={8} fill="#1D9E75" fontFamily="inherit">{d.activeUsers}</text>
+            )}
+            {/* New registrations bar */}
+            <rect x={gx + barW + gapIn} y={chartH + 14 - hNew} width={barW} height={hNew} rx={3} fill="#3B82F6" opacity={0.85} />
+            {d.newRegistrations > 0 && (
+              <text x={gx + barW + gapIn + barW / 2} y={chartH + 14 - hNew - 3} textAnchor="middle" fontSize={8} fill="#3B82F6" fontFamily="inherit">{d.newRegistrations}</text>
+            )}
+            {/* Month label */}
+            <text x={gx + groupW / 2} y={chartH + 27} textAnchor="middle" fontSize={9} fill="#9A9792" fontFamily="inherit">
+              {shortMonth(d.monthYear)}
+            </text>
+          </g>
+        )
+      })}
+    </svg>
   )
 }
 
-// ─── Reset Password Modal ─────────────────────────────────────────────────────
+// ─── Chart 2: Tool breakdown horizontal bars ──────────────────────────────────
 
-interface ResetPasswordModalProps {
-  user: AdminUser
-  onClose: () => void
-}
+function ToolBreakdownChart({ data }: { data: ToolBreakdown[] }) {
+  if (data.length === 0) return (
+    <p className="text-[12px] text-[#9A9792] text-center py-6">Henüz kullanım verisi yok.</p>
+  )
 
-function ResetPasswordModal({ user, onClose }: ResetPasswordModalProps) {
-  const [password, setPassword] = useState('')
-  const [confirm, setConfirm] = useState('')
-  const [error, setError] = useState('')
-  const [success, setSuccess] = useState(false)
-  const [showPassword, setShowPassword] = useState(false)
-  const [showConfirm, setShowConfirm] = useState(false)
-
-  const mutation = useMutation({
-    mutationFn: async (newPassword: string) => {
-      const { data } = await api.post<ApiResponse>(`/admin/users/${user.id}/reset-password`, { newPassword })
-      if (!data.success) throw new Error((data as { error?: string }).error ?? 'Şifre sıfırlama başarısız')
-    },
-    onSuccess: () => setSuccess(true),
-    onError: (err: Error) => setError(err.message),
-  })
-
-  const PASSWORD_RE = /^(?=.*[A-Z])(?=.*[a-z])(?=.*\d).{8,}$/
-
-  const handleReset = () => {
-    setError('')
-    if (!PASSWORD_RE.test(password)) {
-      setError('Şifre en az 8 karakter, bir büyük harf, bir küçük harf ve bir rakam içermelidir.')
-      return
-    }
-    if (password !== confirm) {
-      setError('Şifreler eşleşmiyor.')
-      return
-    }
-    mutation.mutate(password)
-  }
+  const rowH   = 22
+  const labelW = 120
+  const padX   = 8
+  const maxVal = Math.max(...data.map((d) => d.totalUsed), 1)
+  const svgW   = 320
+  const barMaxW = svgW - labelW - padX * 2 - 30
+  const svgH   = data.length * rowH
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onClose}>
-      <div
-        className="bg-white rounded-2xl shadow-xl p-7 w-full max-w-md"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <h3 className="text-lg font-bold text-gray-900 mb-1">Şifre Sıfırla</h3>
-        <p className="text-sm text-gray-500 mb-5">
-          {user.name} ({user.email}) için yeni şifre belirleyin.
-        </p>
-
-        {success ? (
-          <div className="flex flex-col items-center gap-3 py-4">
-            <span className="text-3xl">✅</span>
-            <p className="text-sm text-green-700 font-medium">Şifre başarıyla güncellendi.</p>
-            <p className="text-xs text-gray-400">Kullanıcının mevcut oturumları sonlandırıldı.</p>
-            <button
-              onClick={onClose}
-              className="mt-2 px-4 py-2 rounded-lg text-sm font-medium bg-[#1D9E75] text-white"
-            >
-              Kapat
-            </button>
-          </div>
-        ) : (
-          <div className="flex flex-col gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Yeni Şifre</label>
-              <div className="relative">
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  className="w-full px-3 py-2 pr-10 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1D9E75]/40"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="En az 8 karakter, büyük/küçük harf + rakam"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword((v) => !v)}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                  tabIndex={-1}
-                >
-                  {showPassword ? '🙈' : '👁️'}
-                </button>
-              </div>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Şifre Tekrar</label>
-              <div className="relative">
-                <input
-                  type={showConfirm ? 'text' : 'password'}
-                  className="w-full px-3 py-2 pr-10 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1D9E75]/40"
-                  value={confirm}
-                  onChange={(e) => setConfirm(e.target.value)}
-                  placeholder="Şifreyi tekrar girin"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowConfirm((v) => !v)}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                  tabIndex={-1}
-                >
-                  {showConfirm ? '🙈' : '👁️'}
-                </button>
-              </div>
-            </div>
-
-            {error && <p className="text-sm text-red-500">{error}</p>}
-
-            <div className="flex gap-3 justify-end mt-2">
-              <button
-                onClick={onClose}
-                className="px-4 py-2 rounded-lg text-sm text-gray-600 hover:bg-gray-100 transition-colors"
-              >
-                İptal
-              </button>
-              <button
-                onClick={handleReset}
-                disabled={mutation.isPending}
-                className="px-4 py-2 rounded-lg text-sm font-medium bg-red-500 text-white hover:bg-red-600 transition-colors disabled:opacity-50"
-              >
-                {mutation.isPending ? 'Sıfırlanıyor…' : 'Şifreyi Sıfırla'}
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
+    <svg viewBox={`0 0 ${svgW} ${svgH}`} className="w-full overflow-visible">
+      {data.map((d, i) => {
+        const y      = i * rowH
+        const barW   = Math.max((d.totalUsed / maxVal) * barMaxW, d.totalUsed > 0 ? 4 : 0)
+        const label  = TOOL_LABELS[d.toolId] ?? d.toolId
+        return (
+          <g key={d.toolId}>
+            <text x={padX} y={y + rowH * 0.7} fontSize={9} fill="#6B6963" fontFamily="inherit">{label}</text>
+            <rect x={labelW} y={y + 4} width={barW} height={rowH - 10} rx={3} fill="#1D9E75" opacity={0.75} />
+            {d.totalUsed > 0 && (
+              <text x={labelW + barW + 4} y={y + rowH * 0.7} fontSize={9} fill="#1D9E75" fontFamily="inherit" fontWeight={600}>{d.totalUsed}</text>
+            )}
+          </g>
+        )
+      })}
+    </svg>
   )
 }
 
-// ─── Create User Modal ────────────────────────────────────────────────────────
-
-interface CreateUserModalProps {
-  onClose: () => void
-  onCreated: () => void
-}
-
-const PASSWORD_RE = /^(?=.*[A-Z])(?=.*[a-z])(?=.*\d).{8,}$/
-
-const PLAN_OPTIONS = [
-  { value: 'free',       label: 'Ücretsiz (Free)' },
-  { value: 'standard',   label: 'Standart' },
-  { value: 'premium',    label: 'Premium' },
-  { value: 'enterprise', label: 'Kurumsal (Enterprise)' },
-]
-
-function CreateUserModal({ onClose, onCreated }: CreateUserModalProps) {
-  const [name, setName] = useState('')
-  const [email, setEmail] = useState('')
-  const [company, setCompany] = useState('')
-  const [plan, setPlan] = useState('free')
-  const [isAdmin, setIsAdmin] = useState(false)
-  const [password, setPassword] = useState('')
-  const [confirm, setConfirm] = useState('')
-  const [showPassword, setShowPassword] = useState(false)
-  const [showConfirm, setShowConfirm] = useState(false)
-  const [error, setError] = useState('')
-
-  const mutation = useMutation({
-    mutationFn: async (payload: CreateUserPayload) => {
-      const { data } = await api.post<ApiResponse>('/admin/users', payload)
-      if (!data.success) throw new Error((data as { error?: string }).error ?? 'Kullanıcı oluşturulamadı')
-    },
-    onSuccess: () => {
-      onCreated()
-      onClose()
-    },
-    onError: (err: Error) => setError(err.message),
-  })
-
-  const handleCreate = () => {
-    setError('')
-    if (!name.trim()) { setError('Ad Soyad zorunludur.'); return }
-    if (!email.trim()) { setError('E-posta zorunludur.'); return }
-    if (!PASSWORD_RE.test(password)) {
-      setError('Şifre en az 8 karakter, bir büyük harf, bir küçük harf ve bir rakam içermelidir.')
-      return
-    }
-    if (password !== confirm) { setError('Şifreler eşleşmiyor.'); return }
-
-    mutation.mutate({ name: name.trim(), email: email.trim(), company: company.trim(), plan, isAdmin, password })
-  }
-
-  const inputCls = 'w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1D9E75]/40'
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onClose}>
-      <div
-        className="bg-white rounded-2xl shadow-xl p-7 w-full max-w-lg max-h-[90vh] overflow-y-auto"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <h3 className="text-lg font-bold text-gray-900 mb-5">➕ Yeni Kullanıcı Oluştur</h3>
-
-        <div className="flex flex-col gap-4">
-          {/* Name */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Ad Soyad *</label>
-            <input className={inputCls} value={name} onChange={(e) => setName(e.target.value)} placeholder="Ahmet Yılmaz" />
-          </div>
-
-          {/* Email */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">E-posta *</label>
-            <input type="email" className={inputCls} value={email} onChange={(e) => setEmail(e.target.value)} placeholder="kullanici@ornek.com" />
-          </div>
-
-          {/* Company */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Şirket</label>
-            <input className={inputCls} value={company} onChange={(e) => setCompany(e.target.value)} placeholder="Şirket adı (opsiyonel)" />
-          </div>
-
-          {/* Plan + Role row */}
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Plan</label>
-              <select
-                className={inputCls}
-                value={plan}
-                onChange={(e) => setPlan(e.target.value)}
-              >
-                {PLAN_OPTIONS.map((o) => (
-                  <option key={o.value} value={o.value}>{o.label}</option>
-                ))}
-              </select>
-            </div>
-            <div className="flex flex-col justify-end">
-              <label className="flex items-center gap-2 cursor-pointer pb-2">
-                <input
-                  type="checkbox"
-                  className="w-4 h-4 accent-[#1D9E75]"
-                  checked={isAdmin}
-                  onChange={(e) => setIsAdmin(e.target.checked)}
-                />
-                <span className="text-sm font-medium text-gray-700">Admin yetkisi</span>
-              </label>
-            </div>
-          </div>
-
-          {/* Password */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Şifre *</label>
-            <div className="relative">
-              <input
-                type={showPassword ? 'text' : 'password'}
-                className={`${inputCls} pr-10`}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="En az 8 karakter, büyük/küçük harf + rakam"
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword((v) => !v)}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                tabIndex={-1}
-              >
-                {showPassword ? '🙈' : '👁️'}
-              </button>
-            </div>
-          </div>
-
-          {/* Confirm password */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Şifre Tekrar *</label>
-            <div className="relative">
-              <input
-                type={showConfirm ? 'text' : 'password'}
-                className={`${inputCls} pr-10`}
-                value={confirm}
-                onChange={(e) => setConfirm(e.target.value)}
-                placeholder="Şifreyi tekrar girin"
-              />
-              <button
-                type="button"
-                onClick={() => setShowConfirm((v) => !v)}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                tabIndex={-1}
-              >
-                {showConfirm ? '🙈' : '👁️'}
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {error && <p className="mt-3 text-sm text-red-500">{error}</p>}
-
-        <p className="mt-3 text-xs text-gray-400">
-          * Admin tarafından oluşturulan hesaplar e-posta doğrulaması olmadan aktif olur.
-        </p>
-
-        <div className="flex gap-3 mt-6 justify-end">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 rounded-lg text-sm text-gray-600 hover:bg-gray-100 transition-colors"
-          >
-            İptal
-          </button>
-          <button
-            onClick={handleCreate}
-            disabled={mutation.isPending}
-            className="px-4 py-2 rounded-lg text-sm font-medium bg-[#1D9E75] text-white hover:bg-[#178a65] transition-colors disabled:opacity-50"
-          >
-            {mutation.isPending ? 'Oluşturuluyor…' : '➕ Kullanıcı Oluştur'}
-          </button>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// ─── Tool Usage Popover ───────────────────────────────────────────────────────
+// ─── Tool Badges ──────────────────────────────────────────────────────────────
 
 function ToolBadges({ toolIds }: { toolIds: string[] }) {
   const [expanded, setExpanded] = useState(false)
-
   if (toolIds.length === 0) return <span className="text-gray-400 text-xs">—</span>
-
-  const shown = expanded ? toolIds : toolIds.slice(0, 2)
+  const shown     = expanded ? toolIds : toolIds.slice(0, 2)
   const remaining = toolIds.length - 2
-
   return (
     <div className="flex flex-wrap gap-1">
       {shown.map((id) => (
@@ -643,22 +184,82 @@ function ToolBadges({ toolIds }: { toolIds: string[] }) {
         </span>
       ))}
       {!expanded && remaining > 0 && (
-        <button
-          onClick={() => setExpanded(true)}
-          className="px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 text-xs hover:bg-gray-200"
-        >
-          +{remaining}
-        </button>
+        <button onClick={() => setExpanded(true)} className="px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 text-xs hover:bg-gray-200">+{remaining}</button>
       )}
       {expanded && toolIds.length > 2 && (
-        <button
-          onClick={() => setExpanded(false)}
-          className="px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 text-xs hover:bg-gray-200"
-        >
-          gizle
-        </button>
+        <button onClick={() => setExpanded(false)} className="px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 text-xs hover:bg-gray-200">gizle</button>
       )}
     </div>
+  )
+}
+
+// ─── User Action Sidebar ──────────────────────────────────────────────────────
+
+interface UserActionSidebarProps {
+  user: AdminUser | null
+  onEdit: () => void
+  onResetPassword: () => void
+  onToggleStatus: () => void
+  onDelete: () => void
+  onDetail: () => void
+  isPending: boolean
+}
+
+function UserActionSidebar({ user, onEdit, onResetPassword, onToggleStatus, onDelete, onDetail, isPending }: UserActionSidebarProps) {
+  return (
+    <aside className="shrink-0 w-[190px] sticky top-4">
+      <div className="bg-white rounded-2xl border border-[#E2E0D8]">
+        <div className="px-4 pt-4 pb-3">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-[#9A9792]">
+            👤 Kullanıcı İşlemleri
+          </p>
+        </div>
+
+        {!user ? (
+          <p className="px-4 pb-4 text-[12px] text-[#9A9792]">Bir kullanıcıya tıklayın</p>
+        ) : (
+          <>
+            {/* Selected user info */}
+            <div className="px-4 pb-3 border-b border-[#F2F1ED]">
+              <p className="text-[12px] font-medium text-[#1C1B19] truncate">{user.name}</p>
+              <p className="text-[11px] text-[#9A9792] truncate">{user.email}</p>
+              <div className="flex items-center gap-1 mt-1">
+                <span className={`w-1.5 h-1.5 rounded-full ${user.isActive ? 'bg-green-500' : 'bg-gray-300'}`} />
+                <span className="text-[10px] text-[#9A9792]">{user.isActive ? 'Aktif' : 'Pasif'}</span>
+                {user.isAdmin && <span className="ml-1 text-[10px] text-[#1D9E75] font-semibold">Admin</span>}
+              </div>
+            </div>
+
+            {/* Action buttons */}
+            <nav className="flex flex-col gap-[2px] px-2 pb-3 pt-2">
+              {[
+                { icon: '✎', label: 'Düzenle',          onClick: onEdit,           cls: 'text-[#3A3935] hover:bg-[#F0FAF6] hover:text-[#085041]' },
+                { icon: '📊', label: 'Kullanım Geçmişi', onClick: onDetail,         cls: 'text-[#3A3935] hover:bg-[#F0FAF6] hover:text-[#085041]' },
+                { icon: '🔑', label: 'Şifre Sıfırla',    onClick: onResetPassword,  cls: 'text-amber-700 hover:bg-amber-50' },
+                {
+                  icon:  user.isActive ? '⏸' : '▶',
+                  label: user.isActive ? 'Pasife Al'  : 'Aktif Et',
+                  onClick: onToggleStatus,
+                  cls:   user.isActive ? 'text-amber-700 hover:bg-amber-50 disabled:opacity-50' : 'text-green-700 hover:bg-green-50 disabled:opacity-50',
+                  disabled: isPending,
+                },
+                { icon: '🗑', label: 'Kullanıcıyı Sil', onClick: onDelete,         cls: 'text-red-600 hover:bg-red-50' },
+              ].map(({ icon, label, onClick, cls, disabled }) => (
+                <button
+                  key={label}
+                  onClick={onClick}
+                  disabled={disabled}
+                  className={`flex items-center gap-[9px] px-[11px] py-[8px] rounded-xl text-[12px] font-medium transition-colors select-none ${cls}`}
+                >
+                  <span className="text-[14px] leading-none">{icon}</span>
+                  <span>{label}</span>
+                </button>
+              ))}
+            </nav>
+          </>
+        )}
+      </div>
+    </aside>
   )
 }
 
@@ -667,11 +268,13 @@ function ToolBadges({ toolIds }: { toolIds: string[] }) {
 export function AdminKullanicilarPage() {
   const queryClient = useQueryClient()
   const navigate    = useNavigate()
-  const [editUser, setEditUser] = useState<AdminUser | null>(null)
-  const [resetUser, setResetUser] = useState<AdminUser | null>(null)
-  const [createOpen, setCreateOpen] = useState(false)
+
+  const [selectedUser,  setSelectedUser]  = useState<AdminUser | null>(null)
+  const [editUser,      setEditUser]      = useState<AdminUser | null>(null)
+  const [resetUser,     setResetUser]     = useState<AdminUser | null>(null)
+  const [createOpen,    setCreateOpen]    = useState(false)
   const [deleteConfirm, setDeleteConfirm] = useState<AdminUser | null>(null)
-  const [search, setSearch] = useState('')
+  const [search,        setSearch]        = useState('')
 
   const { data: stats } = useQuery<AdminStats>({
     queryKey: ['admin-stats'],
@@ -694,16 +297,13 @@ export function AdminKullanicilarPage() {
   const filtered = (data ?? []).filter((u) => {
     if (!search.trim()) return true
     const q = search.toLowerCase()
-    return (
-      u.name.toLowerCase().includes(q) ||
-      u.email.toLowerCase().includes(q) ||
-      (u.company && u.company.toLowerCase().includes(q))
-    )
+    return u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q) || (u.company && u.company.toLowerCase().includes(q))
   })
 
   const handleSaved = () => {
     void queryClient.invalidateQueries({ queryKey: ['admin-users'] })
     void queryClient.invalidateQueries({ queryKey: ['admin-stats'] })
+    setSelectedUser(null)
   }
 
   const toggleStatusMutation = useMutation({
@@ -719,35 +319,23 @@ export function AdminKullanicilarPage() {
       const { data: res } = await api.delete<ApiResponse>(`/admin/users/${userId}`)
       if (!res.success) throw new Error((res as { error?: string }).error ?? 'Kullanıcı silinemedi')
     },
-    onSuccess: () => {
-      setDeleteConfirm(null)
-      handleSaved()
-    },
+    onSuccess: () => { setDeleteConfirm(null); handleSaved() },
   })
 
   return (
     <div className="w-full max-w-7xl mx-auto px-4 py-8">
-      {/* Header */}
+
+      {/* ── Header ── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">👥 Tüm Kullanıcılar</h1>
           <p className="text-sm text-gray-500 mt-1">Sistem geneli kullanım istatistikleri</p>
         </div>
-
         <div className="flex items-center gap-2 w-full sm:w-auto">
-          {/* Search */}
-          <input
-            type="text"
-            placeholder="Ad, e-posta veya şirket ara…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="px-4 py-2 border border-gray-200 rounded-lg text-sm flex-1 sm:w-64 focus:outline-none focus:ring-2 focus:ring-[#1D9E75]/40"
-          />
-          {/* Create */}
-          <button
-            onClick={() => setCreateOpen(true)}
-            className="px-3 py-2 rounded-lg text-sm font-medium bg-[#1D9E75] text-white hover:bg-[#178a65] transition-colors whitespace-nowrap shrink-0"
-          >
+          <input type="text" placeholder="Ad, e-posta veya şirket ara…" value={search} onChange={(e) => setSearch(e.target.value)}
+            className="px-4 py-2 border border-gray-200 rounded-lg text-sm flex-1 sm:w-64 focus:outline-none focus:ring-2 focus:ring-[#1D9E75]/40" />
+          <button onClick={() => setCreateOpen(true)}
+            className="px-3 py-2 rounded-lg text-sm font-medium bg-[#1D9E75] text-white hover:bg-[#178a65] transition-colors whitespace-nowrap shrink-0">
             ➕ Yeni Kullanıcı
           </button>
         </div>
@@ -756,252 +344,159 @@ export function AdminKullanicilarPage() {
       {/* ── Stats cards ── */}
       <div className="grid grid-cols-3 gap-3 mb-5">
         {[
-          { icon: '👤', label: 'Toplam Kullanıcı',  value: stats?.totalUsers       ?? '—' },
-          { icon: '📊', label: 'Toplam Kullanım',   value: stats?.totalEvaluations ?? '—' },
-          { icon: '📈', label: 'Aktif Kullanıcı',   value: stats?.activeUsers      ?? '—' },
+          { icon: '👤', label: 'Toplam Kullanıcı', value: stats?.totalUsers       ?? '—' },
+          { icon: '📊', label: 'Toplam Kullanım',  value: stats?.totalEvaluations ?? '—' },
+          { icon: '📈', label: 'Aktif Kullanıcı',  value: stats?.activeUsers      ?? '—' },
         ].map(({ icon, label, value }) => (
-          <div key={label} className="bg-white rounded-2xl border border-[#E2E0D8] p-5 flex items-center gap-4">
-            <span className="text-3xl">{icon}</span>
+          <div key={label} className="bg-white rounded-2xl border border-[#E2E0D8] p-4 flex items-center gap-3">
+            <span className="text-2xl">{icon}</span>
             <div>
-              <p className="text-[26px] font-bold text-[#1C1B19] leading-none">{value}</p>
-              <p className="text-[12px] text-[#9A9792] mt-0.5">{label}</p>
+              <p className="text-[22px] font-bold text-[#1C1B19] leading-none">{value}</p>
+              <p className="text-[11px] text-[#9A9792] mt-0.5">{label}</p>
             </div>
           </div>
         ))}
       </div>
 
-      {/* ── System usage chart ── */}
-      {stats?.monthlyStats && stats.monthlyStats.length > 0 && (
-        <div className="bg-white rounded-2xl border border-[#E2E0D8] p-5 mb-5">
-          <h2 className="text-[13px] font-semibold text-[#6B6963] uppercase tracking-wider mb-4">
-            Aylık Sistem Kullanımı
-          </h2>
-          <SystemUsageChart data={stats.monthlyStats} />
-        </div>
-      )}
+      {/* ── Charts ── */}
+      {stats && (
+        <div className="grid grid-cols-2 gap-4 mb-5">
+          {/* Chart 1: User activity */}
+          <div className="bg-white rounded-2xl border border-[#E2E0D8] p-4">
+            <h2 className="text-[11px] font-semibold text-[#9A9792] uppercase tracking-wider mb-3">
+              Kullanıcı Aktivitesi (Aylık)
+            </h2>
+            <UserActivityChart data={stats.monthlyStats} />
+          </div>
 
-      {/* Loading */}
-      {isLoading && (
-        <div className="flex items-center justify-center py-24">
-          <div className="w-8 h-8 border-2 border-[#1D9E75] border-t-transparent rounded-full animate-spin" />
-        </div>
-      )}
-
-      {/* Error */}
-      {isError && (
-        <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-center text-sm text-red-600">
-          Kullanıcılar yüklenemedi. Lütfen sayfayı yenileyin.
-        </div>
-      )}
-
-      {/* Table */}
-      {!isLoading && !isError && (
-        <div className="bg-white rounded-2xl border border-[#E2E0D8] shadow-sm overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-[#E2E0D8] bg-[#F7F6F2]">
-                  <th className="text-left px-4 py-3 font-semibold text-gray-600">Ad / E-posta</th>
-                  <th className="text-left px-4 py-3 font-semibold text-gray-600">Şirket</th>
-                  <th className="text-left px-4 py-3 font-semibold text-gray-600">Plan</th>
-                  <th className="text-left px-4 py-3 font-semibold text-gray-600">Kayıt</th>
-                  <th className="text-left px-4 py-3 font-semibold text-gray-600">Son Giriş</th>
-                  <th className="text-left px-4 py-3 font-semibold text-gray-600">Kullandığı Araçlar</th>
-                  <th className="text-left px-4 py-3 font-semibold text-gray-600">Toplam</th>
-                  <th className="text-left px-4 py-3 font-semibold text-gray-600">Durum / Rol</th>
-                  <th className="text-left px-4 py-3 font-semibold text-gray-600">İşlemler</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.length === 0 ? (
-                  <tr>
-                    <td colSpan={9} className="text-center py-12 text-gray-400">
-                      {search ? 'Arama sonucu bulunamadı.' : 'Henüz kayıtlı kullanıcı yok.'}
-                    </td>
-                  </tr>
-                ) : (
-                  filtered.map((user) => (
-                    <tr
-                      key={user.id}
-                      className={`border-b border-[#F1EFE8] hover:bg-[#F7F6F2]/60 transition-colors ${
-                        !user.isActive ? 'opacity-50' : ''
-                      }`}
-                    >
-                      {/* Name / Email */}
-                      <td className="px-4 py-3">
-                        <div className="font-medium text-gray-900">{user.name}</div>
-                        <div className="text-xs text-gray-400">{user.email}</div>
-                      </td>
-
-                      {/* Company */}
-                      <td className="px-4 py-3 text-gray-600">
-                        {user.company || <span className="text-gray-300">—</span>}
-                      </td>
-
-                      {/* Plan */}
-                      <td className="px-4 py-3">
-                        <span
-                          className={`px-2.5 py-1 rounded-full text-xs font-medium ${
-                            PLAN_COLORS[user.planType] ?? 'bg-gray-100 text-gray-600'
-                          }`}
-                        >
-                          {PLAN_LABELS[user.planType] ?? user.planType}
-                        </span>
-                      </td>
-
-                      {/* Registered */}
-                      <td className="px-4 py-3 text-xs text-gray-500 whitespace-nowrap">
-                        {formatDate(user.createdAt)}
-                      </td>
-
-                      {/* Last Login */}
-                      <td className="px-4 py-3 text-xs text-gray-500 whitespace-nowrap">
-                        <span title={formatDate(user.lastLoginAt)}>
-                          {timeAgo(user.lastLoginAt)}
-                        </span>
-                      </td>
-
-                      {/* Tools Used */}
-                      <td className="px-4 py-3 max-w-[200px]">
-                        <ToolBadges toolIds={user.toolsUsed} />
-                      </td>
-
-                      {/* Total Uses */}
-                      <td className="px-4 py-3 text-center">
-                        <span className="font-semibold text-gray-700">{user.totalToolUses}</span>
-                        <div className="text-[10px] text-gray-400">kullanım</div>
-                      </td>
-
-                      {/* Status + Role */}
-                      <td className="px-4 py-3">
-                        <div className="flex flex-col gap-1">
-                          {user.isActive ? (
-                            <span className="inline-flex items-center gap-1 text-xs font-medium text-green-600">
-                              <span className="w-1.5 h-1.5 rounded-full bg-green-500 inline-block" />
-                              Aktif
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1 text-xs font-medium text-gray-400">
-                              <span className="w-1.5 h-1.5 rounded-full bg-gray-300 inline-block" />
-                              Pasif
-                            </span>
-                          )}
-                          {user.isAdmin ? (
-                            <span className="flex items-center gap-1 text-[#1D9E75] font-medium text-xs">
-                              🔐 Admin
-                            </span>
-                          ) : (
-                            <span className="text-gray-400 text-xs">User</span>
-                          )}
-                        </div>
-                      </td>
-
-                      {/* Actions */}
-                      <td className="px-4 py-3">
-                        <div className="flex flex-wrap items-center gap-1.5">
-                          <button
-                            onClick={() => setEditUser(user)}
-                            className="px-2 py-1 rounded-lg bg-gray-100 text-gray-600 text-xs hover:bg-gray-200 transition-colors"
-                            title="Düzenle"
-                          >
-                            ✎ Düzenle
-                          </button>
-                          <button
-                            onClick={() => setResetUser(user)}
-                            className="px-2 py-1 rounded-lg bg-red-50 text-red-500 text-xs hover:bg-red-100 transition-colors"
-                            title="Şifre Sıfırla"
-                          >
-                            🔑 Şifre
-                          </button>
-                          <button
-                            onClick={() => toggleStatusMutation.mutate(user.id)}
-                            disabled={toggleStatusMutation.isPending}
-                            className={`px-2 py-1 rounded-lg text-xs transition-colors disabled:opacity-50 ${
-                              user.isActive
-                                ? 'bg-amber-50 text-amber-600 hover:bg-amber-100'
-                                : 'bg-green-50 text-green-600 hover:bg-green-100'
-                            }`}
-                            title={user.isActive ? 'Pasife Al' : 'Aktif Et'}
-                          >
-                            {user.isActive ? '⏸ Pasif' : '▶ Aktif'}
-                          </button>
-                          <button
-                            onClick={() => setDeleteConfirm(user)}
-                            className="px-2 py-1 rounded-lg bg-red-100 text-red-700 text-xs hover:bg-red-200 transition-colors"
-                            title="Kullanıcıyı Sil"
-                          >
-                            🗑 Sil
-                          </button>
-                          <button
-                            onClick={() => navigate(`/admin/kullanici/${user.id}/gecmis`)}
-                            className="px-2 py-1 rounded-lg bg-[#1D9E75]/10 text-[#085041] text-xs hover:bg-[#1D9E75]/20 transition-colors"
-                            title="Kullanım Geçmişi"
-                          >
-                            📊 Detay
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+          {/* Chart 2: Tool breakdown */}
+          <div className="bg-white rounded-2xl border border-[#E2E0D8] p-4">
+            <h2 className="text-[11px] font-semibold text-[#9A9792] uppercase tracking-wider mb-3">
+              Araç Bazlı Kullanım
+            </h2>
+            <ToolBreakdownChart data={stats.toolBreakdown ?? []} />
           </div>
         </div>
       )}
 
-      {/* Modals */}
-      {editUser && (
-        <EditModal user={editUser} onClose={() => setEditUser(null)} onSaved={handleSaved} />
-      )}
-      {resetUser && (
-        <ResetPasswordModal user={resetUser} onClose={() => setResetUser(null)} />
-      )}
-      {createOpen && (
-        <CreateUserModal onClose={() => setCreateOpen(false)} onCreated={handleSaved} />
-      )}
+      {/* ── Table + Sidebar ── */}
+      <div className="flex items-start gap-4">
+
+        {/* Table */}
+        <div className="flex-1 min-w-0">
+          {isLoading && (
+            <div className="flex items-center justify-center py-24">
+              <div className="w-8 h-8 border-2 border-[#1D9E75] border-t-transparent rounded-full animate-spin" />
+            </div>
+          )}
+          {isError && (
+            <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-center text-sm text-red-600">
+              Kullanıcılar yüklenemedi. Lütfen sayfayı yenileyin.
+            </div>
+          )}
+          {!isLoading && !isError && (
+            <div className="bg-white rounded-2xl border border-[#E2E0D8] shadow-sm overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-[#E2E0D8] bg-[#F7F6F2]">
+                      {['Ad / E-posta', 'Şirket', 'Plan', 'Kayıt', 'Son Giriş', 'Kullandığı Araçlar', 'Toplam', 'Durum / Rol'].map((col) => (
+                        <th key={col} className="text-left px-4 py-3 text-[11px] font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">{col}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filtered.length === 0 ? (
+                      <tr>
+                        <td colSpan={8} className="text-center py-12 text-gray-400">
+                          {search ? 'Arama sonucu bulunamadı.' : 'Henüz kayıtlı kullanıcı yok.'}
+                        </td>
+                      </tr>
+                    ) : filtered.map((user) => (
+                      <tr
+                        key={user.id}
+                        onClick={() => setSelectedUser((prev) => prev?.id === user.id ? null : user)}
+                        className={`border-b border-[#F1EFE8] cursor-pointer transition-colors ${
+                          selectedUser?.id === user.id
+                            ? 'bg-[#F0FAF6] hover:bg-[#E8F7F2]'
+                            : `hover:bg-[#F7F6F2]/60 ${!user.isActive ? 'opacity-50' : ''}`
+                        }`}
+                      >
+                        <td className="px-4 py-3">
+                          <div className="font-medium text-gray-900">{user.name}</div>
+                          <div className="text-xs text-gray-400">{user.email}</div>
+                        </td>
+                        <td className="px-4 py-3 text-gray-600">{user.company || <span className="text-gray-300">—</span>}</td>
+                        <td className="px-4 py-3">
+                          <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${PLAN_COLORS[user.planType] ?? 'bg-gray-100 text-gray-600'}`}>
+                            {PLAN_LABELS[user.planType] ?? user.planType}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-xs text-gray-500 whitespace-nowrap">{formatDate(user.createdAt)}</td>
+                        <td className="px-4 py-3 text-xs text-gray-500 whitespace-nowrap" title={formatDate(user.lastLoginAt)}>{timeAgo(user.lastLoginAt)}</td>
+                        <td className="px-4 py-3 max-w-[180px]"><ToolBadges toolIds={user.toolsUsed} /></td>
+                        <td className="px-4 py-3 text-center">
+                          <span className="font-semibold text-gray-700">{user.totalToolUses}</span>
+                          <div className="text-[10px] text-gray-400">kullanım</div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex flex-col gap-1">
+                            <span className={`inline-flex items-center gap-1 text-xs font-medium ${user.isActive ? 'text-green-600' : 'text-gray-400'}`}>
+                              <span className={`w-1.5 h-1.5 rounded-full ${user.isActive ? 'bg-green-500' : 'bg-gray-300'}`} />
+                              {user.isActive ? 'Aktif' : 'Pasif'}
+                            </span>
+                            {user.isAdmin
+                              ? <span className="flex items-center gap-1 text-[#1D9E75] font-medium text-xs">🔐 Admin</span>
+                              : <span className="text-gray-400 text-xs">User</span>
+                            }
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Action sidebar */}
+        <UserActionSidebar
+          user={selectedUser}
+          isPending={toggleStatusMutation.isPending}
+          onEdit={() => { if (selectedUser) setEditUser(selectedUser) }}
+          onResetPassword={() => { if (selectedUser) setResetUser(selectedUser) }}
+          onToggleStatus={() => { if (selectedUser) toggleStatusMutation.mutate(selectedUser.id) }}
+          onDelete={() => { if (selectedUser) setDeleteConfirm(selectedUser) }}
+          onDetail={() => { if (selectedUser) navigate(`/admin/kullanici/${selectedUser.id}/gecmis`) }}
+        />
+      </div>
+
+      {/* ── Modals ── */}
+      {editUser  && <EditModal user={editUser} onClose={() => setEditUser(null)} onSaved={handleSaved} />}
+      {resetUser && <ResetPasswordModal user={resetUser} onClose={() => setResetUser(null)} />}
+      {createOpen && <CreateUserModal onClose={() => setCreateOpen(false)} onCreated={handleSaved} />}
 
       {/* Delete Confirmation */}
       {deleteConfirm && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
-          onClick={() => setDeleteConfirm(null)}
-        >
-          <div
-            className="bg-white rounded-2xl shadow-xl p-7 w-full max-w-md"
-            onClick={(e) => e.stopPropagation()}
-          >
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setDeleteConfirm(null)}>
+          <div className="bg-white rounded-2xl shadow-xl p-7 w-full max-w-md" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center gap-3 mb-4">
               <span className="text-3xl">⚠️</span>
               <h3 className="text-lg font-bold text-gray-900">Kullanıcıyı Sil</h3>
             </div>
             <p className="text-sm text-gray-600 mb-2">
-              <strong>{deleteConfirm.name}</strong> ({deleteConfirm.email}) kullanıcısını silmek
-              istediğinizden emin misiniz?
+              <strong>{deleteConfirm.name}</strong> ({deleteConfirm.email}) kullanıcısını silmek istediğinizden emin misiniz?
             </p>
-            <p className="text-xs text-red-500 mb-6">
-              Bu işlem geri alınamaz. Kullanıcının tüm verileri (abonelik, kullanım geçmişi) silinecektir.
-            </p>
-
+            <p className="text-xs text-red-500 mb-6">Bu işlem geri alınamaz. Kullanıcının tüm verileri (abonelik, kullanım geçmişi) silinecektir.</p>
             {deleteMutation.isError && (
-              <p className="text-sm text-red-500 mb-4">
-                {(deleteMutation.error as Error)?.message ?? 'Silme işlemi başarısız.'}
-              </p>
+              <p className="text-sm text-red-500 mb-4">{(deleteMutation.error as Error)?.message ?? 'Silme işlemi başarısız.'}</p>
             )}
-
             <div className="flex gap-3 justify-end">
-              <button
-                onClick={() => setDeleteConfirm(null)}
-                className="px-4 py-2 rounded-lg text-sm text-gray-600 hover:bg-gray-100 transition-colors"
-              >
-                İptal
-              </button>
-              <button
-                onClick={() => deleteMutation.mutate(deleteConfirm.id)}
-                disabled={deleteMutation.isPending}
-                className="px-4 py-2 rounded-lg text-sm font-medium bg-red-600 text-white hover:bg-red-700 transition-colors disabled:opacity-50"
-              >
-                {deleteMutation.isPending ? 'Siliniyor…' : '🗑 Evet, Sil'}
+              <button onClick={() => setDeleteConfirm(null)} className="px-4 py-2 rounded-lg text-sm text-gray-600 hover:bg-gray-100 transition-colors">İptal</button>
+              <button onClick={() => deleteMutation.mutate(deleteConfirm.id)} disabled={deleteMutation.isPending}
+                className="px-4 py-2 rounded-lg text-sm font-medium bg-red-600 text-white hover:bg-red-700 transition-colors disabled:opacity-50">
+                {deleteMutation.isPending ? 'Siliniyor…' : '🗑 Sil'}
               </button>
             </div>
           </div>
