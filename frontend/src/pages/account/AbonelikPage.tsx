@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import api from '@/lib/api'
 import { useToolUsage } from '@/hooks/useToolUsage'
 import { UsageBar } from '@/components/ui/UsageBar'
@@ -38,7 +38,6 @@ const STATUS_LABEL: Record<string, string> = {
 
 export function AbonelikPage() {
   const { user } = useAuthStore()
-  const queryClient = useQueryClient()
 
   const { data: sub, isLoading: subLoading } = useQuery({
     queryKey: ['subscription'],
@@ -47,18 +46,6 @@ export function AbonelikPage() {
   })
 
   const { data: usages } = useToolUsage()
-
-  const cancelMutation = useMutation({
-    mutationFn: () =>
-      api.post<ApiResponse>('/subscriptions/cancel').then((r: { data: ApiResponse }) => r.data),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['subscription'] }),
-  })
-
-  const pauseMutation = useMutation({
-    mutationFn: () =>
-      api.post<ApiResponse>('/subscriptions/pause').then((r: { data: ApiResponse }) => r.data),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['subscription'] }),
-  })
 
   // Derived stats
   const toolLimit = user?.isAdmin ? null : (sub?.usagePerToolPerMonth ?? 3)
@@ -169,43 +156,6 @@ export function AbonelikPage() {
         </div>
       </div>
 
-      {/* ── Danger zone ── */}
-      {sub?.status === 'active' && !user?.isAdmin && (
-        <div className="bg-white rounded-2xl border border-[#E2E0D8] p-5">
-          <h2 className="text-[13px] font-semibold text-[#6B6963] uppercase tracking-wider mb-3">
-            Abonelik Yönetimi
-          </h2>
-          <div className="flex gap-3 flex-wrap">
-            <button
-              type="button"
-              disabled={pauseMutation.isPending}
-              onClick={() => {
-                if (confirm('Aboneliğinizi duraklatmak istediğinize emin misiniz?')) {
-                  pauseMutation.mutate()
-                }
-              }}
-              className="px-[14px] py-[7px] rounded-lg border border-[#D3D1C7] text-[13px] font-medium text-[#6B6963] bg-white hover:bg-[#F7F6F2] disabled:opacity-50 transition-colors"
-            >
-              {pauseMutation.isPending ? 'Duraklatılıyor…' : 'Aboneliği Duraklat'}
-            </button>
-            <button
-              type="button"
-              disabled={cancelMutation.isPending}
-              onClick={() => {
-                if (confirm('Aboneliğinizi iptal etmek istediğinize emin misiniz? Bu işlem geri alınamaz.')) {
-                  cancelMutation.mutate()
-                }
-              }}
-              className="px-[14px] py-[7px] rounded-lg border border-red-200 text-[13px] font-medium text-red-600 bg-red-50 hover:bg-red-100 disabled:opacity-50 transition-colors"
-            >
-              {cancelMutation.isPending ? 'İptal ediliyor…' : 'Aboneliği İptal Et'}
-            </button>
-          </div>
-          {(cancelMutation.isError || pauseMutation.isError) && (
-            <p className="mt-2 text-[12px] text-red-600">İşlem başarısız. Lütfen tekrar deneyin.</p>
-          )}
-        </div>
-      )}
     </div>
   )
 }
