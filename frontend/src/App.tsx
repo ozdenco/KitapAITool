@@ -15,9 +15,11 @@ import { AraclarimPage } from '@/pages/account/AraclarimPage'
 import { ProfilBilgileriPage } from '@/pages/account/ProfilBilgileriPage'
 import { SifreDegistirPage } from '@/pages/account/SifreDegistirPage'
 import { KullanimGecmisiPage } from '@/pages/account/KullanimGecmisiPage'
+import { PaketSecPage } from '@/pages/account/PaketSecPage'
 import { ToolPage } from '@/pages/tools/ToolPage'
 import { AdminGuard } from '@/components/AdminGuard'
 import { AdminKullanicilarPage } from '@/pages/admin/AdminKullanicilarPage'
+import { AdminKullaniciGecmisiPage } from '@/pages/admin/AdminKullaniciGecmisiPage'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -58,6 +60,7 @@ function AppRoutes() {
               <Route path="profil" element={<ProfilBilgileriPage />} />
               <Route path="sifre" element={<SifreDegistirPage />} />
               <Route path="kullanim-gecmisi" element={<KullanimGecmisiPage />} />
+              <Route path="paket-sec" element={<PaketSecPage />} />
             </Route>
             <Route path="/arac/:toolId" element={<ToolPage />} />
             <Route
@@ -65,6 +68,14 @@ function AppRoutes() {
               element={
                 <AdminGuard>
                   <AdminKullanicilarPage />
+                </AdminGuard>
+              }
+            />
+            <Route
+              path="/admin/kullanici/:userId/gecmis"
+              element={
+                <AdminGuard>
+                  <AdminKullaniciGecmisiPage />
                 </AdminGuard>
               }
             />

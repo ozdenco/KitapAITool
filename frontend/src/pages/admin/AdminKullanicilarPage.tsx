@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import api from '@/lib/api'
 import type { ApiResponse } from '@/types'
@@ -62,6 +63,120 @@ const PLAN_COLORS: Record<string, string> = {
   standard:   'bg-blue-100 text-blue-700',
   premium:    'bg-purple-100 text-purple-700',
   enterprise: 'bg-amber-100 text-amber-700',
+}
+
+// ─── Admin Stats Types ────────────────────────────────────────────────────────
+
+interface MonthlyStat {
+  monthYear: string
+  totalUsed: number
+  activeUsers: number
+}
+
+interface AdminStats {
+  totalUsers: number
+  totalEvaluations: number
+  activeUsers: number
+  monthlyStats: MonthlyStat[]
+}
+
+// ─── Dual-Axis Chart ──────────────────────────────────────────────────────────
+
+function SystemUsageChart({ data }: { data: MonthlyStat[] }) {
+  if (data.length === 0) return null
+
+  const maxUsed   = Math.max(...data.map((d) => d.totalUsed), 1)
+  const maxActive = Math.max(...data.map((d) => d.activeUsers), 1)
+  const chartH    = 140
+  const barW      = 36
+  const gap       = 20
+  const padX      = 36
+  const padRight  = 36
+  const totalW    = data.length * (barW + gap) - gap + padX + padRight
+
+  const toY = (val: number, max: number) => chartH - (val / max) * chartH
+
+  // Y-axis labels (left = totalUsed, right = activeUsers)
+  const leftTicks  = [0, Math.round(maxUsed / 2), maxUsed]
+  const rightTicks = [0, Math.round(maxActive / 2), maxActive]
+
+  return (
+    <svg viewBox={`0 0 ${totalW} ${chartH + 52}`} className="w-full overflow-visible">
+      {/* Legend */}
+      <g transform={`translate(${padX}, 0)`}>
+        <rect width={12} height={12} rx={2} fill="#B45309" opacity={0.85} />
+        <text x={16} y={10} fontSize={10} fill="#6B6963" fontFamily="inherit">Toplam Kullanım</text>
+        <rect x={130} width={12} height={12} rx={2} fill="none" stroke="#1D9E75" strokeWidth={2} />
+        <text x={146} y={10} fontSize={10} fill="#6B6963" fontFamily="inherit">Aktif Kullanıcı</text>
+      </g>
+
+      {/* Grid + left Y labels */}
+      {leftTicks.map((v) => {
+        const y = chartH + 18 - (v / maxUsed) * chartH
+        return (
+          <g key={`lt-${v}`}>
+            <line x1={padX} y1={y} x2={totalW - padRight} y2={y} stroke="#F2F1ED" strokeWidth={1} />
+            <text x={padX - 4} y={y + 4} textAnchor="end" fontSize={9} fill="#9A9792" fontFamily="inherit">{v}</text>
+          </g>
+        )
+      })}
+
+      {/* Right Y labels */}
+      {rightTicks.map((v) => {
+        const y = chartH + 18 - (v / maxActive) * chartH
+        return (
+          <text key={`rt-${v}`} x={totalW - padRight + 4} y={y + 4} textAnchor="start" fontSize={9} fill="#6B6963" fontFamily="inherit">
+            {v}
+          </text>
+        )
+      })}
+
+      {/* Bars + line */}
+      {data.map((d, i) => {
+        const x    = padX + i * (barW + gap)
+        const barH = Math.max((d.totalUsed / maxUsed) * chartH, d.totalUsed > 0 ? 4 : 0)
+        const y    = chartH + 18 - barH
+        return (
+          <g key={d.monthYear}>
+            <rect x={x} y={y} width={barW} height={barH} rx={4} fill="#B45309" opacity={0.75} />
+            {d.totalUsed > 0 && (
+              <text x={x + barW / 2} y={y - 4} textAnchor="middle" fontSize={9} fill="#6B6963" fontFamily="inherit">
+                {d.totalUsed}
+              </text>
+            )}
+            <text x={x + barW / 2} y={chartH + 34} textAnchor="middle" fontSize={10} fill="#9A9792" fontFamily="inherit">
+              {new Date(d.monthYear + '-01').toLocaleDateString('tr-TR', { month: 'short', year: '2-digit' })}
+            </text>
+          </g>
+        )
+      })}
+
+      {/* Active users line */}
+      {(() => {
+        const points = data.map((d, i) => {
+          const cx = padX + i * (barW + gap) + barW / 2
+          const cy = chartH + 18 - (d.activeUsers / maxActive) * chartH
+          return { cx, cy, v: d.activeUsers }
+        })
+        const linePath = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.cx} ${p.cy}`).join(' ')
+        const areaPath = `${linePath} L ${points[points.length - 1].cx} ${chartH + 18} L ${points[0].cx} ${chartH + 18} Z`
+        return (
+          <>
+            <path d={areaPath} fill="#1D9E75" opacity={0.08} />
+            <path d={linePath} fill="none" stroke="#1D9E75" strokeWidth={2} strokeLinejoin="round" />
+            {points.map((p, i) => (
+              <g key={i}>
+                <circle cx={p.cx} cy={p.cy} r={4} fill="white" stroke="#1D9E75" strokeWidth={2} />
+                {p.v > 0 && (
+                  <text x={p.cx} y={p.cy - 7} textAnchor="middle" fontSize={9} fill="#1D9E75" fontFamily="inherit">{p.v}</text>
+                )}
+              </g>
+            ))}
+          </>
+        )
+      })()}
+    </svg>
+  )
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -551,11 +666,21 @@ function ToolBadges({ toolIds }: { toolIds: string[] }) {
 
 export function AdminKullanicilarPage() {
   const queryClient = useQueryClient()
+  const navigate    = useNavigate()
   const [editUser, setEditUser] = useState<AdminUser | null>(null)
   const [resetUser, setResetUser] = useState<AdminUser | null>(null)
   const [createOpen, setCreateOpen] = useState(false)
   const [deleteConfirm, setDeleteConfirm] = useState<AdminUser | null>(null)
   const [search, setSearch] = useState('')
+
+  const { data: stats } = useQuery<AdminStats>({
+    queryKey: ['admin-stats'],
+    queryFn: async () => {
+      const res = await api.get<{ success: boolean; data: AdminStats }>('/admin/stats')
+      if (!res.data.success) throw new Error('İstatistikler yüklenemedi')
+      return res.data.data
+    },
+  })
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ['admin-users'],
@@ -578,6 +703,7 @@ export function AdminKullanicilarPage() {
 
   const handleSaved = () => {
     void queryClient.invalidateQueries({ queryKey: ['admin-users'] })
+    void queryClient.invalidateQueries({ queryKey: ['admin-stats'] })
   }
 
   const toggleStatusMutation = useMutation({
@@ -604,12 +730,8 @@ export function AdminKullanicilarPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">🔐 Kullanıcı Yönetimi</h1>
-          {data && (
-            <p className="text-sm text-gray-500 mt-1">
-              Toplam {data.length} kullanıcı · {data.filter((u) => u.isAdmin).length} admin
-            </p>
-          )}
+          <h1 className="text-2xl font-bold text-gray-900">👥 Tüm Kullanıcılar</h1>
+          <p className="text-sm text-gray-500 mt-1">Sistem geneli kullanım istatistikleri</p>
         </div>
 
         <div className="flex items-center gap-2 w-full sm:w-auto">
@@ -630,6 +752,33 @@ export function AdminKullanicilarPage() {
           </button>
         </div>
       </div>
+
+      {/* ── Stats cards ── */}
+      <div className="grid grid-cols-3 gap-3 mb-5">
+        {[
+          { icon: '👤', label: 'Toplam Kullanıcı',  value: stats?.totalUsers       ?? '—' },
+          { icon: '📊', label: 'Toplam Kullanım',   value: stats?.totalEvaluations ?? '—' },
+          { icon: '📈', label: 'Aktif Kullanıcı',   value: stats?.activeUsers      ?? '—' },
+        ].map(({ icon, label, value }) => (
+          <div key={label} className="bg-white rounded-2xl border border-[#E2E0D8] p-5 flex items-center gap-4">
+            <span className="text-3xl">{icon}</span>
+            <div>
+              <p className="text-[26px] font-bold text-[#1C1B19] leading-none">{value}</p>
+              <p className="text-[12px] text-[#9A9792] mt-0.5">{label}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* ── System usage chart ── */}
+      {stats?.monthlyStats && stats.monthlyStats.length > 0 && (
+        <div className="bg-white rounded-2xl border border-[#E2E0D8] p-5 mb-5">
+          <h2 className="text-[13px] font-semibold text-[#6B6963] uppercase tracking-wider mb-4">
+            Aylık Sistem Kullanımı
+          </h2>
+          <SystemUsageChart data={stats.monthlyStats} />
+        </div>
+      )}
 
       {/* Loading */}
       {isLoading && (
@@ -782,6 +931,13 @@ export function AdminKullanicilarPage() {
                             title="Kullanıcıyı Sil"
                           >
                             🗑 Sil
+                          </button>
+                          <button
+                            onClick={() => navigate(`/admin/kullanici/${user.id}/gecmis`)}
+                            className="px-2 py-1 rounded-lg bg-[#1D9E75]/10 text-[#085041] text-xs hover:bg-[#1D9E75]/20 transition-colors"
+                            title="Kullanım Geçmişi"
+                          >
+                            📊 Detay
                           </button>
                         </div>
                       </td>

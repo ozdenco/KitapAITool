@@ -2,11 +2,12 @@ import { NavLink, Outlet, Navigate, useLocation } from 'react-router-dom'
 import { useAuthStore } from '@/store/auth'
 
 const NAV_ITEMS = [
-  { to: 'abonelik', label: 'Paket Bilgilerim', icon: '📦' },
-  { to: 'araclarim', label: 'Satın Alınan Araçlar', icon: '🔧' },
-  { to: 'profil', label: 'Profil Bilgileri', icon: '👤' },
-  { to: 'sifre', label: 'Şifre Değiştir', icon: '🔒' },
-  { to: 'kullanim-gecmisi', label: 'Kullanım Geçmişi', icon: '📊' },
+  { to: 'abonelik',        label: 'Paket Bilgilerim',     icon: '📦' },
+  { to: 'paket-sec',       label: 'Paket Yükselt',        icon: '⬆️' },
+  { to: 'araclarim',       label: 'Satın Alınan Araçlar', icon: '🔧' },
+  { to: 'profil',          label: 'Profil Bilgileri',     icon: '👤' },
+  { to: 'sifre',           label: 'Şifre Değiştir',       icon: '🔒' },
+  { to: 'kullanim-gecmisi',label: 'Kullanım Geçmişi',     icon: '📊' },
 ] as const
 
 export function HesabimLayout() {
@@ -46,21 +47,15 @@ export function HesabimLayout() {
               </NavLink>
             ))}
 
-            {/* Admin-only */}
+            {/* Admin paneline link */}
             {user?.isAdmin && (
-              <NavLink
-                to="kullanicilar"
-                className={({ isActive }) =>
-                  `flex items-center gap-[9px] px-[11px] py-[8px] rounded-xl text-[13px] font-medium transition-colors select-none ${
-                    isActive
-                      ? 'bg-[#1D9E75] text-white'
-                      : 'text-[#3A3935] hover:bg-[#F0FAF6] hover:text-[#085041]'
-                  }`
-                }
+              <a
+                href="/admin"
+                className="flex items-center gap-[9px] px-[11px] py-[8px] rounded-xl text-[13px] font-medium transition-colors select-none text-[#3A3935] hover:bg-[#F0FAF6] hover:text-[#085041]"
               >
-                <span className="text-[15px] leading-none">👥</span>
-                <span>Tüm Kullanıcılar</span>
-              </NavLink>
+                <span className="text-[15px] leading-none">🔐</span>
+                <span>Admin Paneli</span>
+              </a>
             )}
           </nav>
         </div>

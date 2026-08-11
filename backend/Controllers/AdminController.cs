@@ -204,6 +204,94 @@ public class AdminController(AppDbContext db, EmailService email) : ControllerBa
         return Ok(new { success = true, isActive = user.IsActive });
     }
 
+    // ── GET /api/admin/stats ──────────────────────────────────────────────────
+    [HttpGet("stats")]
+    public async Task<IActionResult> GetStats()
+    {
+        var totalUsers        = await db.Users.CountAsync();
+        var totalEvaluations  = await db.ToolUsageLogs.CountAsync();
+
+        var thirtyDaysAgo = DateTime.UtcNow.AddDays(-30);
+        var activeUsers = await db.ToolUsageLogs
+            .Where(l => l.UsedAt >= thirtyDaysAgo)
+            .Select(l => l.UserId)
+            .Distinct()
+            .CountAsync();
+
+        var now        = DateTime.UtcNow;
+        var sixMonthsAgo = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc)
+                               .AddMonths(-5);
+
+        var rawMonthly = await db.ToolUsageLogs
+            .Where(l => l.UsedAt >= sixMonthsAgo)
+            .GroupBy(l => new { l.UsedAt.Year, l.UsedAt.Month })
+            .Select(g => new
+            {
+                g.Key.Year,
+                g.Key.Month,
+                TotalUsed   = g.Count(),
+                ActiveUsers = g.Select(l => l.UserId).Distinct().Count(),
+            })
+            .ToListAsync();
+
+        var monthlyStats = Enumerable.Range(0, 6).Select(i =>
+        {
+            var ms = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc).AddMonths(-(5 - i));
+            var row = rawMonthly.FirstOrDefault(m => m.Year == ms.Year && m.Month == ms.Month);
+            return new
+            {
+                monthYear   = ms.ToString("yyyy-MM"),
+                totalUsed   = row?.TotalUsed   ?? 0,
+                activeUsers = row?.ActiveUsers  ?? 0,
+            };
+        }).ToList();
+
+        return Ok(new
+        {
+            success = true,
+            data = new { totalUsers, totalEvaluations, activeUsers, monthlyStats }
+        });
+    }
+
+    // ── GET /api/admin/users/{id}/usage-history ───────────────────────────────
+    [HttpGet("users/{id:guid}/usage-history")]
+    public async Task<IActionResult> GetUserUsageHistory(Guid id, [FromQuery] int months = 6)
+    {
+        var user = await db.Users
+            .Include(u => u.Subscription).ThenInclude(s => s!.Plan)
+            .FirstOrDefaultAsync(u => u.Id == id);
+        if (user is null)
+            return NotFound(new { success = false, error = "Kullanıcı bulunamadı." });
+
+        months = Math.Clamp(months, 1, 12);
+        var now       = DateTime.UtcNow;
+        var startDate = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc)
+                            .AddMonths(-(months - 1));
+
+        var usageByMonth = await db.ToolUsageLogs
+            .Where(l => l.UserId == id && l.UsedAt >= startDate)
+            .GroupBy(l => new { l.UsedAt.Year, l.UsedAt.Month })
+            .Select(g => new { g.Key.Year, g.Key.Month, Count = g.Count() })
+            .ToDictionaryAsync(x => (x.Year, x.Month), x => x.Count);
+
+        const int toolCount  = 11;
+        var limitPerTool     = user.IsAdmin ? (int?)null : user.Subscription?.Plan.UsagePerToolPerMonth;
+        var totalLimit       = limitPerTool.HasValue ? limitPerTool.Value * toolCount : 0; // 0 = unlimited
+
+        var history = Enumerable.Range(0, months).Select(i =>
+        {
+            var ms = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc).AddMonths(-(months - 1 - i));
+            usageByMonth.TryGetValue((ms.Year, ms.Month), out var used);
+            return new { monthYear = ms.ToString("yyyy-MM"), totalUsed = used, totalLimit };
+        }).ToList();
+
+        return Ok(new
+        {
+            success = true,
+            data = new { user.Name, user.Email, history }
+        });
+    }
+
     // ── DELETE /api/admin/users/{id} ──────────────────────────────────────────
     [HttpDelete("users/{id:guid}")]
     public async Task<IActionResult> DeleteUser(Guid id)
