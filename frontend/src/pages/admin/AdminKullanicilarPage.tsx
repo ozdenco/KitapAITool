@@ -24,6 +24,15 @@ interface UpdateUserPayload {
   isAdmin?: boolean
 }
 
+interface CreateUserPayload {
+  name: string
+  email: string
+  company: string
+  password: string
+  isAdmin: boolean
+  plan: string
+}
+
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const TOOL_LABELS: Record<string, string> = {
@@ -203,6 +212,8 @@ function ResetPasswordModal({ user, onClose }: ResetPasswordModalProps) {
   const [confirm, setConfirm] = useState('')
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirm, setShowConfirm] = useState(false)
 
   const mutation = useMutation({
     mutationFn: async (newPassword: string) => {
@@ -213,10 +224,12 @@ function ResetPasswordModal({ user, onClose }: ResetPasswordModalProps) {
     onError: (err: Error) => setError(err.message),
   })
 
+  const PASSWORD_RE = /^(?=.*[A-Z])(?=.*[a-z])(?=.*\d).{8,}$/
+
   const handleReset = () => {
     setError('')
-    if (password.length < 8) {
-      setError('Şifre en az 8 karakter olmalı.')
+    if (!PASSWORD_RE.test(password)) {
+      setError('Şifre en az 8 karakter, bir büyük harf, bir küçük harf ve bir rakam içermelidir.')
       return
     }
     if (password !== confirm) {
@@ -253,23 +266,43 @@ function ResetPasswordModal({ user, onClose }: ResetPasswordModalProps) {
           <div className="flex flex-col gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Yeni Şifre</label>
-              <input
-                type="password"
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1D9E75]/40"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="En az 8 karakter"
-              />
+              <div className="relative">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  className="w-full px-3 py-2 pr-10 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1D9E75]/40"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="En az 8 karakter, büyük/küçük harf + rakam"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  tabIndex={-1}
+                >
+                  {showPassword ? '🙈' : '👁️'}
+                </button>
+              </div>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Şifre Tekrar</label>
-              <input
-                type="password"
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1D9E75]/40"
-                value={confirm}
-                onChange={(e) => setConfirm(e.target.value)}
-                placeholder="Şifreyi tekrar girin"
-              />
+              <div className="relative">
+                <input
+                  type={showConfirm ? 'text' : 'password'}
+                  className="w-full px-3 py-2 pr-10 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1D9E75]/40"
+                  value={confirm}
+                  onChange={(e) => setConfirm(e.target.value)}
+                  placeholder="Şifreyi tekrar girin"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirm((v) => !v)}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  tabIndex={-1}
+                >
+                  {showConfirm ? '🙈' : '👁️'}
+                </button>
+              </div>
             </div>
 
             {error && <p className="text-sm text-red-500">{error}</p>}
@@ -291,6 +324,186 @@ function ResetPasswordModal({ user, onClose }: ResetPasswordModalProps) {
             </div>
           </div>
         )}
+      </div>
+    </div>
+  )
+}
+
+// ─── Create User Modal ────────────────────────────────────────────────────────
+
+interface CreateUserModalProps {
+  onClose: () => void
+  onCreated: () => void
+}
+
+const PASSWORD_RE = /^(?=.*[A-Z])(?=.*[a-z])(?=.*\d).{8,}$/
+
+const PLAN_OPTIONS = [
+  { value: 'free',       label: 'Ücretsiz (Free)' },
+  { value: 'standard',   label: 'Standart' },
+  { value: 'premium',    label: 'Premium' },
+  { value: 'enterprise', label: 'Kurumsal (Enterprise)' },
+]
+
+function CreateUserModal({ onClose, onCreated }: CreateUserModalProps) {
+  const [name, setName] = useState('')
+  const [email, setEmail] = useState('')
+  const [company, setCompany] = useState('')
+  const [plan, setPlan] = useState('free')
+  const [isAdmin, setIsAdmin] = useState(false)
+  const [password, setPassword] = useState('')
+  const [confirm, setConfirm] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirm, setShowConfirm] = useState(false)
+  const [error, setError] = useState('')
+
+  const mutation = useMutation({
+    mutationFn: async (payload: CreateUserPayload) => {
+      const { data } = await api.post<ApiResponse>('/admin/users', payload)
+      if (!data.success) throw new Error((data as { error?: string }).error ?? 'Kullanıcı oluşturulamadı')
+    },
+    onSuccess: () => {
+      onCreated()
+      onClose()
+    },
+    onError: (err: Error) => setError(err.message),
+  })
+
+  const handleCreate = () => {
+    setError('')
+    if (!name.trim()) { setError('Ad Soyad zorunludur.'); return }
+    if (!email.trim()) { setError('E-posta zorunludur.'); return }
+    if (!PASSWORD_RE.test(password)) {
+      setError('Şifre en az 8 karakter, bir büyük harf, bir küçük harf ve bir rakam içermelidir.')
+      return
+    }
+    if (password !== confirm) { setError('Şifreler eşleşmiyor.'); return }
+
+    mutation.mutate({ name: name.trim(), email: email.trim(), company: company.trim(), plan, isAdmin, password })
+  }
+
+  const inputCls = 'w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1D9E75]/40'
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onClose}>
+      <div
+        className="bg-white rounded-2xl shadow-xl p-7 w-full max-w-lg max-h-[90vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h3 className="text-lg font-bold text-gray-900 mb-5">➕ Yeni Kullanıcı Oluştur</h3>
+
+        <div className="flex flex-col gap-4">
+          {/* Name */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Ad Soyad *</label>
+            <input className={inputCls} value={name} onChange={(e) => setName(e.target.value)} placeholder="Ahmet Yılmaz" />
+          </div>
+
+          {/* Email */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">E-posta *</label>
+            <input type="email" className={inputCls} value={email} onChange={(e) => setEmail(e.target.value)} placeholder="kullanici@ornek.com" />
+          </div>
+
+          {/* Company */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Şirket</label>
+            <input className={inputCls} value={company} onChange={(e) => setCompany(e.target.value)} placeholder="Şirket adı (opsiyonel)" />
+          </div>
+
+          {/* Plan + Role row */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Plan</label>
+              <select
+                className={inputCls}
+                value={plan}
+                onChange={(e) => setPlan(e.target.value)}
+              >
+                {PLAN_OPTIONS.map((o) => (
+                  <option key={o.value} value={o.value}>{o.label}</option>
+                ))}
+              </select>
+            </div>
+            <div className="flex flex-col justify-end">
+              <label className="flex items-center gap-2 cursor-pointer pb-2">
+                <input
+                  type="checkbox"
+                  className="w-4 h-4 accent-[#1D9E75]"
+                  checked={isAdmin}
+                  onChange={(e) => setIsAdmin(e.target.checked)}
+                />
+                <span className="text-sm font-medium text-gray-700">Admin yetkisi</span>
+              </label>
+            </div>
+          </div>
+
+          {/* Password */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Şifre *</label>
+            <div className="relative">
+              <input
+                type={showPassword ? 'text' : 'password'}
+                className={`${inputCls} pr-10`}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="En az 8 karakter, büyük/küçük harf + rakam"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((v) => !v)}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                tabIndex={-1}
+              >
+                {showPassword ? '🙈' : '👁️'}
+              </button>
+            </div>
+          </div>
+
+          {/* Confirm password */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Şifre Tekrar *</label>
+            <div className="relative">
+              <input
+                type={showConfirm ? 'text' : 'password'}
+                className={`${inputCls} pr-10`}
+                value={confirm}
+                onChange={(e) => setConfirm(e.target.value)}
+                placeholder="Şifreyi tekrar girin"
+              />
+              <button
+                type="button"
+                onClick={() => setShowConfirm((v) => !v)}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                tabIndex={-1}
+              >
+                {showConfirm ? '🙈' : '👁️'}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {error && <p className="mt-3 text-sm text-red-500">{error}</p>}
+
+        <p className="mt-3 text-xs text-gray-400">
+          * Admin tarafından oluşturulan hesaplar e-posta doğrulaması olmadan aktif olur.
+        </p>
+
+        <div className="flex gap-3 mt-6 justify-end">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 rounded-lg text-sm text-gray-600 hover:bg-gray-100 transition-colors"
+          >
+            İptal
+          </button>
+          <button
+            onClick={handleCreate}
+            disabled={mutation.isPending}
+            className="px-4 py-2 rounded-lg text-sm font-medium bg-[#1D9E75] text-white hover:bg-[#178a65] transition-colors disabled:opacity-50"
+          >
+            {mutation.isPending ? 'Oluşturuluyor…' : '➕ Kullanıcı Oluştur'}
+          </button>
+        </div>
       </div>
     </div>
   )
@@ -339,6 +552,7 @@ export function AdminKullanicilarPage() {
   const queryClient = useQueryClient()
   const [editUser, setEditUser] = useState<AdminUser | null>(null)
   const [resetUser, setResetUser] = useState<AdminUser | null>(null)
+  const [createOpen, setCreateOpen] = useState(false)
   const [search, setSearch] = useState('')
 
   const { data, isLoading, isError } = useQuery({
@@ -377,14 +591,23 @@ export function AdminKullanicilarPage() {
           )}
         </div>
 
-        {/* Search */}
-        <input
-          type="text"
-          placeholder="Ad, e-posta veya şirket ara…"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="px-4 py-2 border border-gray-200 rounded-lg text-sm w-full sm:w-64 focus:outline-none focus:ring-2 focus:ring-[#1D9E75]/40"
-        />
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          {/* Search */}
+          <input
+            type="text"
+            placeholder="Ad, e-posta veya şirket ara…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="px-4 py-2 border border-gray-200 rounded-lg text-sm flex-1 sm:w-64 focus:outline-none focus:ring-2 focus:ring-[#1D9E75]/40"
+          />
+          {/* Create */}
+          <button
+            onClick={() => setCreateOpen(true)}
+            className="px-3 py-2 rounded-lg text-sm font-medium bg-[#1D9E75] text-white hover:bg-[#178a65] transition-colors whitespace-nowrap shrink-0"
+          >
+            ➕ Yeni Kullanıcı
+          </button>
+        </div>
       </div>
 
       {/* Loading */}
@@ -522,6 +745,9 @@ export function AdminKullanicilarPage() {
       )}
       {resetUser && (
         <ResetPasswordModal user={resetUser} onClose={() => setResetUser(null)} />
+      )}
+      {createOpen && (
+        <CreateUserModal onClose={() => setCreateOpen(false)} onCreated={handleSaved} />
       )}
     </div>
   )

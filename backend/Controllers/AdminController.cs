@@ -32,8 +32,22 @@ public class AdminController(AppDbContext db) : ControllerBase
         [MaxLength(256)] string? Company,
         bool? IsAdmin);
 
+    public record CreateUserRequest(
+        [Required, MaxLength(128)] string Name,
+        [Required, EmailAddress, MaxLength(256)] string Email,
+        [MaxLength(256)] string? Company,
+        [Required, MinLength(8),
+         RegularExpression(@"^(?=.*[A-Z])(?=.*[a-z])(?=.*\d).{8,}$",
+             ErrorMessage = "Şifre en az 8 karakter, bir büyük harf, bir küçük harf ve bir rakam içermelidir.")]
+        string Password,
+        bool IsAdmin = false,
+        string Plan = "free");
+
     public record AdminResetPasswordRequest(
-        [Required, MinLength(8)] string NewPassword);
+        [Required, MinLength(8),
+         RegularExpression(@"^(?=.*[A-Z])(?=.*[a-z])(?=.*\d).{8,}$",
+             ErrorMessage = "Şifre en az 8 karakter, bir büyük harf, bir küçük harf ve bir rakam içermelidir.")]
+        string NewPassword);
 
     // ── GET /api/admin/users ──────────────────────────────────────────────────
     [HttpGet("users")]
@@ -69,8 +83,8 @@ public class AdminController(AppDbContext db) : ControllerBase
         if (user is null)
             return NotFound(new { success = false, error = "Kullanıcı bulunamadı." });
 
-        // Kendisinden adminliği kaldırma — en az bir admin kalsın
-        if (req.IsAdmin.HasValue && !req.IsAdmin.Value)
+        // Sadece mevcut admin'den yetki kaldırılıyorsa kontrol et
+        if (req.IsAdmin.HasValue && !req.IsAdmin.Value && user.IsAdmin)
         {
             var callerId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
             if (id == callerId)
@@ -88,6 +102,43 @@ public class AdminController(AppDbContext db) : ControllerBase
 
         await db.SaveChangesAsync();
         return Ok(new { success = true });
+    }
+
+    // ── POST /api/admin/users ─────────────────────────────────────────────────
+    [HttpPost("users")]
+    public async Task<IActionResult> CreateUser([FromBody] CreateUserRequest req)
+    {
+        if (await db.Users.AnyAsync(u => u.Email == req.Email.ToLower()))
+            return Conflict(new { success = false, error = "Bu e-posta adresi zaten kayıtlı." });
+
+        if (!Enum.TryParse<PlanType>(req.Plan, ignoreCase: true, out var planType))
+            planType = PlanType.Free;
+
+        var plan = await db.Plans.FirstOrDefaultAsync(p => p.Type == planType);
+        if (plan is null)
+            return BadRequest(new { success = false, error = "Geçersiz plan tipi." });
+
+        var user = new User
+        {
+            Name          = req.Name.Trim(),
+            Email         = req.Email.ToLower().Trim(),
+            Company       = string.IsNullOrWhiteSpace(req.Company) ? null : req.Company.Trim(),
+            PasswordHash  = BCrypt.Net.BCrypt.HashPassword(req.Password),
+            IsAdmin       = req.IsAdmin,
+            EmailVerified = true,  // Admin tarafından oluşturulan → doğrulanmış sayılır
+        };
+
+        db.Users.Add(user);
+
+        db.Subscriptions.Add(new Subscription
+        {
+            UserId = user.Id,
+            PlanId = plan.Id,
+            Status = SubscriptionStatus.Active,
+        });
+
+        await db.SaveChangesAsync();
+        return Ok(new { success = true, data = new { user.Id, user.Name, user.Email } });
     }
 
     // ── POST /api/admin/users/{id}/reset-password ─────────────────────────────

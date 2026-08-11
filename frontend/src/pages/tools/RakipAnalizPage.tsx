@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '@/lib/api'
+import { parseAiJson } from '@/lib/parseAiJson'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
@@ -123,7 +124,7 @@ export function RakipAnalizPage() {
       const prompt = buildPrompt({ biz, sector, web, platforms, strengths, myPrice, rakip1, rakip2, rakip3 })
       const res = await api.post('/tools/rakip-analiz/run', { prompt })
       const content = res.data?.content?.[0]?.text ?? res.data
-      return (typeof content === 'string' ? JSON.parse(content) : content) as RakipResult
+      return parseAiJson<RakipResult>(content)
     },
     onSuccess: (data) => {
       setResult(data)

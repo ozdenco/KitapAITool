@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '@/lib/api'
+import { parseAiJson } from '@/lib/parseAiJson'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
@@ -103,7 +104,7 @@ export function ChatbotSenaryoPage() {
       const prompt = buildPrompt({ biz, sector, services, hours, faqs, redirectGoal, redirectLink })
       const res = await api.post('/tools/chatbot-senaryo/run', { prompt })
       const content = res.data?.content?.[0]?.text ?? res.data
-      return (typeof content === 'string' ? JSON.parse(content) : content) as ChatbotResult
+      return parseAiJson<ChatbotResult>(content)
     },
     onSuccess: (data) => {
       setResult(data)

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '@/lib/api'
+import { parseAiJson } from '@/lib/parseAiJson'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
@@ -102,7 +103,7 @@ export function ReklamButcePage() {
       const prompt = buildPrompt({ biz, sector, budget, goal, audience, channels })
       const res = await api.post('/tools/reklam-butce/run', { prompt })
       const content = res.data?.content?.[0]?.text ?? res.data
-      return (typeof content === 'string' ? JSON.parse(content) : content) as ReklamResult
+      return parseAiJson<ReklamResult>(content)
     },
     onSuccess: (data) => {
       setResult(data)

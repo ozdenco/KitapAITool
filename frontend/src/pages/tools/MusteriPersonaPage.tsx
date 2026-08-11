@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '@/lib/api'
+import { parseAiJson } from '@/lib/parseAiJson'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
@@ -138,10 +139,7 @@ export function MusteriPersonaPage() {
       const prompt = buildPrompt({ biz, sector, city, service, age, price, current, pains })
       const res = await api.post('/tools/musteri-persona/run', { prompt })
       const content = res.data?.content?.[0]?.text ?? res.data
-      if (typeof content === 'string') {
-        return JSON.parse(content) as PersonaResponse
-      }
-      return content as PersonaResponse
+      return parseAiJson<PersonaResponse>(content)
     },
     onSuccess: (data) => {
       setParseError(false)

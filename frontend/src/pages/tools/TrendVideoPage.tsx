@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '@/lib/api'
+import { parseAiJson } from '@/lib/parseAiJson'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
@@ -111,7 +112,7 @@ export function TrendVideoPage() {
       const prompt = buildPrompt({ bizName, sector, tones, audience, note })
       const res = await api.post('/tools/trend-video/run', { prompt })
       const content = res.data?.content?.[0]?.text ?? res.data
-      return (typeof content === 'string' ? JSON.parse(content) : content) as TrendResult
+      return parseAiJson<TrendResult>(content)
     },
     onSuccess: (data) => {
       setResult(data)
