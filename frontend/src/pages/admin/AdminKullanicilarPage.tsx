@@ -11,6 +11,7 @@ interface AdminUser {
   email: string
   company: string
   isAdmin: boolean
+  isActive: boolean
   planType: 'free' | 'standard' | 'premium' | 'enterprise'
   createdAt: string
   lastLoginAt: string | null
@@ -553,6 +554,7 @@ export function AdminKullanicilarPage() {
   const [editUser, setEditUser] = useState<AdminUser | null>(null)
   const [resetUser, setResetUser] = useState<AdminUser | null>(null)
   const [createOpen, setCreateOpen] = useState(false)
+  const [deleteConfirm, setDeleteConfirm] = useState<AdminUser | null>(null)
   const [search, setSearch] = useState('')
 
   const { data, isLoading, isError } = useQuery({
@@ -577,6 +579,25 @@ export function AdminKullanicilarPage() {
   const handleSaved = () => {
     void queryClient.invalidateQueries({ queryKey: ['admin-users'] })
   }
+
+  const toggleStatusMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      const { data: res } = await api.patch<ApiResponse>(`/admin/users/${userId}/status`)
+      if (!res.success) throw new Error((res as { error?: string }).error ?? 'Durum güncellenemedi')
+    },
+    onSuccess: handleSaved,
+  })
+
+  const deleteMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      const { data: res } = await api.delete<ApiResponse>(`/admin/users/${userId}`)
+      if (!res.success) throw new Error((res as { error?: string }).error ?? 'Kullanıcı silinemedi')
+    },
+    onSuccess: () => {
+      setDeleteConfirm(null)
+      handleSaved()
+    },
+  })
 
   return (
     <div className="w-full max-w-7xl mx-auto px-4 py-8">
@@ -638,7 +659,7 @@ export function AdminKullanicilarPage() {
                   <th className="text-left px-4 py-3 font-semibold text-gray-600">Son Giriş</th>
                   <th className="text-left px-4 py-3 font-semibold text-gray-600">Kullandığı Araçlar</th>
                   <th className="text-left px-4 py-3 font-semibold text-gray-600">Toplam</th>
-                  <th className="text-left px-4 py-3 font-semibold text-gray-600">Rol</th>
+                  <th className="text-left px-4 py-3 font-semibold text-gray-600">Durum / Rol</th>
                   <th className="text-left px-4 py-3 font-semibold text-gray-600">İşlemler</th>
                 </tr>
               </thead>
@@ -653,7 +674,9 @@ export function AdminKullanicilarPage() {
                   filtered.map((user) => (
                     <tr
                       key={user.id}
-                      className="border-b border-[#F1EFE8] hover:bg-[#F7F6F2]/60 transition-colors"
+                      className={`border-b border-[#F1EFE8] hover:bg-[#F7F6F2]/60 transition-colors ${
+                        !user.isActive ? 'opacity-50' : ''
+                      }`}
                     >
                       {/* Name / Email */}
                       <td className="px-4 py-3">
@@ -700,33 +723,65 @@ export function AdminKullanicilarPage() {
                         <div className="text-[10px] text-gray-400">kullanım</div>
                       </td>
 
-                      {/* Role */}
+                      {/* Status + Role */}
                       <td className="px-4 py-3">
-                        {user.isAdmin ? (
-                          <span className="flex items-center gap-1 text-[#1D9E75] font-medium text-xs">
-                            <span>🔐</span> Admin
-                          </span>
-                        ) : (
-                          <span className="text-gray-400 text-xs">User</span>
-                        )}
+                        <div className="flex flex-col gap-1">
+                          {user.isActive ? (
+                            <span className="inline-flex items-center gap-1 text-xs font-medium text-green-600">
+                              <span className="w-1.5 h-1.5 rounded-full bg-green-500 inline-block" />
+                              Aktif
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 text-xs font-medium text-gray-400">
+                              <span className="w-1.5 h-1.5 rounded-full bg-gray-300 inline-block" />
+                              Pasif
+                            </span>
+                          )}
+                          {user.isAdmin ? (
+                            <span className="flex items-center gap-1 text-[#1D9E75] font-medium text-xs">
+                              🔐 Admin
+                            </span>
+                          ) : (
+                            <span className="text-gray-400 text-xs">User</span>
+                          )}
+                        </div>
                       </td>
 
                       {/* Actions */}
                       <td className="px-4 py-3">
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-wrap items-center gap-1.5">
                           <button
                             onClick={() => setEditUser(user)}
-                            className="px-2.5 py-1 rounded-lg bg-gray-100 text-gray-600 text-xs hover:bg-gray-200 transition-colors"
+                            className="px-2 py-1 rounded-lg bg-gray-100 text-gray-600 text-xs hover:bg-gray-200 transition-colors"
                             title="Düzenle"
                           >
                             ✎ Düzenle
                           </button>
                           <button
                             onClick={() => setResetUser(user)}
-                            className="px-2.5 py-1 rounded-lg bg-red-50 text-red-500 text-xs hover:bg-red-100 transition-colors"
+                            className="px-2 py-1 rounded-lg bg-red-50 text-red-500 text-xs hover:bg-red-100 transition-colors"
                             title="Şifre Sıfırla"
                           >
                             🔑 Şifre
+                          </button>
+                          <button
+                            onClick={() => toggleStatusMutation.mutate(user.id)}
+                            disabled={toggleStatusMutation.isPending}
+                            className={`px-2 py-1 rounded-lg text-xs transition-colors disabled:opacity-50 ${
+                              user.isActive
+                                ? 'bg-amber-50 text-amber-600 hover:bg-amber-100'
+                                : 'bg-green-50 text-green-600 hover:bg-green-100'
+                            }`}
+                            title={user.isActive ? 'Pasife Al' : 'Aktif Et'}
+                          >
+                            {user.isActive ? '⏸ Pasif' : '▶ Aktif'}
+                          </button>
+                          <button
+                            onClick={() => setDeleteConfirm(user)}
+                            className="px-2 py-1 rounded-lg bg-red-100 text-red-700 text-xs hover:bg-red-200 transition-colors"
+                            title="Kullanıcıyı Sil"
+                          >
+                            🗑 Sil
                           </button>
                         </div>
                       </td>
@@ -748,6 +803,53 @@ export function AdminKullanicilarPage() {
       )}
       {createOpen && (
         <CreateUserModal onClose={() => setCreateOpen(false)} onCreated={handleSaved} />
+      )}
+
+      {/* Delete Confirmation */}
+      {deleteConfirm && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+          onClick={() => setDeleteConfirm(null)}
+        >
+          <div
+            className="bg-white rounded-2xl shadow-xl p-7 w-full max-w-md"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-3 mb-4">
+              <span className="text-3xl">⚠️</span>
+              <h3 className="text-lg font-bold text-gray-900">Kullanıcıyı Sil</h3>
+            </div>
+            <p className="text-sm text-gray-600 mb-2">
+              <strong>{deleteConfirm.name}</strong> ({deleteConfirm.email}) kullanıcısını silmek
+              istediğinizden emin misiniz?
+            </p>
+            <p className="text-xs text-red-500 mb-6">
+              Bu işlem geri alınamaz. Kullanıcının tüm verileri (abonelik, kullanım geçmişi) silinecektir.
+            </p>
+
+            {deleteMutation.isError && (
+              <p className="text-sm text-red-500 mb-4">
+                {(deleteMutation.error as Error)?.message ?? 'Silme işlemi başarısız.'}
+              </p>
+            )}
+
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setDeleteConfirm(null)}
+                className="px-4 py-2 rounded-lg text-sm text-gray-600 hover:bg-gray-100 transition-colors"
+              >
+                İptal
+              </button>
+              <button
+                onClick={() => deleteMutation.mutate(deleteConfirm.id)}
+                disabled={deleteMutation.isPending}
+                className="px-4 py-2 rounded-lg text-sm font-medium bg-red-600 text-white hover:bg-red-700 transition-colors disabled:opacity-50"
+              >
+                {deleteMutation.isPending ? 'Siliniyor…' : '🗑 Evet, Sil'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )

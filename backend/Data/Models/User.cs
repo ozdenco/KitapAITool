@@ -25,6 +25,7 @@ public class User
 
     // ── Admin & Son Giriş ─────────────────────────────────────────────────────
     public bool IsAdmin { get; set; } = false;
+    public bool IsActive { get; set; } = true;
     public DateTime? LastLoginAt { get; set; }
 
     // ── Google OAuth ──────────────────────────────────────────────────────────

@@ -47,7 +47,7 @@ public class UserService(AppDbContext db, TokenService tokens, EmailService emai
         string emailAddr, string password)
     {
         var user = await db.Users.FirstOrDefaultAsync(u => u.Email == emailAddr.ToLower());
-        if (user is null || !BCrypt.Net.BCrypt.Verify(password, user.PasswordHash))
+        if (user is null || !BCrypt.Net.BCrypt.Verify(password, user.PasswordHash) || !user.IsActive)
             return null;
 
         var refreshToken = tokens.GenerateRefreshToken();
@@ -102,6 +102,9 @@ public class UserService(AppDbContext db, TokenService tokens, EmailService emai
         }
         else
         {
+            // Pasif hesap → giriş engellenir
+            if (!user.IsActive) return null;
+
             // Mevcut hesaba Google ID bağla + e-postayı doğrulanmış say
             user.GoogleId      = googleId;
             user.EmailVerified = true;

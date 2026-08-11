@@ -236,6 +236,9 @@ namespace KolayKobi.Api.Migrations
                     b.Property<string>("GoogleId")
                         .HasColumnType("text");
 
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
                     b.Property<bool>("IsAdmin")
                         .HasColumnType("boolean");
 

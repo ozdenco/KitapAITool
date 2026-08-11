@@ -2,6 +2,7 @@ using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
 using KolayKobi.Api.Data;
 using KolayKobi.Api.Data.Models;
+using KolayKobi.Api.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -21,6 +22,7 @@ public class AdminController(AppDbContext db, EmailService email) : ControllerBa
         string Email,
         string Company,
         bool IsAdmin,
+        bool IsActive,
         string PlanType,
         DateTime CreatedAt,
         DateTime? LastLoginAt,
@@ -65,6 +67,7 @@ public class AdminController(AppDbContext db, EmailService email) : ControllerBa
             u.Email,
             u.Company ?? string.Empty,
             u.IsAdmin,
+            u.IsActive,
             u.Subscription?.Plan.Type.ToString().ToLower() ?? "free",
             u.CreatedAt,
             u.LastLoginAt,
@@ -171,6 +174,49 @@ public class AdminController(AppDbContext db, EmailService email) : ControllerBa
         user.RefreshTokenExpiry  = null;
         user.UpdatedAt           = DateTime.UtcNow;
 
+        await db.SaveChangesAsync();
+        return Ok(new { success = true });
+    }
+
+    // ── PATCH /api/admin/users/{id}/status ────────────────────────────────────
+    [HttpPatch("users/{id:guid}/status")]
+    public async Task<IActionResult> ToggleStatus(Guid id)
+    {
+        var callerId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        if (id == callerId)
+            return BadRequest(new { success = false, error = "Kendi hesabınızı devre dışı bırakamazsınız." });
+
+        var user = await db.Users.FindAsync(id);
+        if (user is null)
+            return NotFound(new { success = false, error = "Kullanıcı bulunamadı." });
+
+        user.IsActive  = !user.IsActive;
+        user.UpdatedAt = DateTime.UtcNow;
+
+        // Pasif yapılıyorsa mevcut oturumları sonlandır
+        if (!user.IsActive)
+        {
+            user.RefreshToken       = null;
+            user.RefreshTokenExpiry = null;
+        }
+
+        await db.SaveChangesAsync();
+        return Ok(new { success = true, isActive = user.IsActive });
+    }
+
+    // ── DELETE /api/admin/users/{id} ──────────────────────────────────────────
+    [HttpDelete("users/{id:guid}")]
+    public async Task<IActionResult> DeleteUser(Guid id)
+    {
+        var callerId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        if (id == callerId)
+            return BadRequest(new { success = false, error = "Kendi hesabınızı silemezsiniz." });
+
+        var user = await db.Users.FindAsync(id);
+        if (user is null)
+            return NotFound(new { success = false, error = "Kullanıcı bulunamadı." });
+
+        db.Users.Remove(user);   // Cascade: Subscription + UsageLogs + ToolPurchases silinir
         await db.SaveChangesAsync();
         return Ok(new { success = true });
     }
