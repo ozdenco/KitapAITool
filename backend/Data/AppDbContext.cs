@@ -10,6 +10,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<Subscription> Subscriptions => Set<Subscription>();
     public DbSet<ToolUsageLog> ToolUsageLogs => Set<ToolUsageLog>();
     public DbSet<ToolPurchase> ToolPurchases => Set<ToolPurchase>();
+    public DbSet<ToolResult> ToolResults => Set<ToolResult>();
 
     protected override void OnModelCreating(ModelBuilder m)
     {
@@ -65,6 +66,16 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.HasOne(p => p.User).WithMany(u => u.ToolPurchases).HasForeignKey(p => p.UserId);
             e.Property(p => p.ToolId).HasMaxLength(64).IsRequired();
             e.Property(p => p.AmountPaid).HasColumnType("decimal(10,2)");
+        });
+
+        // ── ToolResults ────────────────────────────────────────────────────────
+        m.Entity<ToolResult>(e =>
+        {
+            e.HasKey(r => r.Id);
+            e.HasIndex(r => new { r.UserId, r.CreatedAt });
+            e.HasOne(r => r.User).WithMany(u => u.ToolResults).HasForeignKey(r => r.UserId);
+            e.Property(r => r.ToolId).HasMaxLength(64).IsRequired();
+            e.Property(r => r.InputSummary).HasMaxLength(200);
         });
     }
 }

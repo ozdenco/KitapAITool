@@ -15,6 +15,7 @@ import { AraclarimPage } from '@/pages/account/AraclarimPage'
 import { ProfilBilgileriPage } from '@/pages/account/ProfilBilgileriPage'
 import { SifreDegistirPage } from '@/pages/account/SifreDegistirPage'
 import { KullanimGecmisiPage } from '@/pages/account/KullanimGecmisiPage'
+import { GecmisCiktilarPage } from '@/pages/account/GecmisCiktilarPage'
 import { PaketSecPage } from '@/pages/account/PaketSecPage'
 import { ToolPage } from '@/pages/tools/ToolPage'
 import { AdminGuard } from '@/components/AdminGuard'
@@ -60,6 +61,7 @@ function AppRoutes() {
               <Route path="profil" element={<ProfilBilgileriPage />} />
               <Route path="sifre" element={<SifreDegistirPage />} />
               <Route path="kullanim-gecmisi" element={<KullanimGecmisiPage />} />
+              <Route path="gecmis-ciktilar" element={<GecmisCiktilarPage />} />
               <Route path="paket-sec" element={<PaketSecPage />} />
             </Route>
             <Route path="/arac/:toolId" element={<ToolPage />} />

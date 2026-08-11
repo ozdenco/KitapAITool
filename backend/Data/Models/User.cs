@@ -35,4 +35,5 @@ public class User
     public Subscription? Subscription { get; set; }
     public ICollection<ToolUsageLog> UsageLogs { get; set; } = [];
     public ICollection<ToolPurchase> ToolPurchases { get; set; } = [];
+    public ICollection<ToolResult> ToolResults { get; set; } = [];
 }

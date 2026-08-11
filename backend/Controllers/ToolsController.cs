@@ -1,8 +1,12 @@
 using System.Security.Claims;
 using System.Text.Json;
+using System.Text.RegularExpressions;
+using KolayKobi.Api.Data;
+using KolayKobi.Api.Data.Models;
 using KolayKobi.Api.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace KolayKobi.Api.Controllers;
 
@@ -12,6 +16,7 @@ namespace KolayKobi.Api.Controllers;
 public class ToolsController(
     ToolUsageService usage,
     N8nProxyService n8n,
+    AppDbContext db,
     ILogger<ToolsController> logger) : ControllerBase
 {
     private Guid CurrentUserId =>
@@ -42,7 +47,42 @@ public class ToolsController(
             totalUsed  = h.TotalUsed,
             totalLimit = h.TotalLimit,
         });
-        return Ok(data);   // Frontend direkt dizi bekliyor
+        return Ok(data);
+    }
+
+    /// <summary>GET /api/tools/results — Kullanıcının kayıtlı çıktıları (son 50 kayıt).</summary>
+    [HttpGet("results")]
+    public async Task<IActionResult> GetResults([FromQuery] int limit = 50)
+    {
+        var clampedLimit = Math.Min(limit, 100);
+        var results = await db.ToolResults
+            .Where(r => r.UserId == CurrentUserId)
+            .OrderByDescending(r => r.CreatedAt)
+            .Take(clampedLimit)
+            .Select(r => new
+            {
+                r.Id,
+                r.ToolId,
+                r.InputSummary,
+                r.CreatedAt,
+            })
+            .ToListAsync();
+        return Ok(new { success = true, data = results });
+    }
+
+    /// <summary>GET /api/tools/results/{id} — Tek bir çıktının tam JSON içeriği.</summary>
+    [HttpGet("results/{id:guid}")]
+    public async Task<IActionResult> GetResult(Guid id)
+    {
+        var result = await db.ToolResults
+            .Where(r => r.UserId == CurrentUserId && r.Id == id)
+            .Select(r => new { r.Id, r.ToolId, r.InputSummary, r.OutputJson, r.CreatedAt })
+            .FirstOrDefaultAsync();
+
+        if (result is null)
+            return NotFound(new { error = "Kayıt bulunamadı." });
+
+        return Ok(new { success = true, data = result });
     }
 
     /// <summary>POST /api/tools/{toolId}/run — Proxy request to n8n and log usage.</summary>
@@ -78,7 +118,10 @@ public class ToolsController(
 
             await usage.RecordUsageAsync(userId, toolId, success: true);
 
-            // For async tools, return job_id for polling
+            // Auto-save result for all successful runs (fire-and-forget for performance)
+            await SaveToolResultAsync(userId, toolId, payload, content, ct);
+
+            // Async tools return 202 Accepted; frontend reads the body the same way
             if (n8n.IsAsync(toolId))
                 return Accepted(JsonSerializer.Deserialize<object>(content));
 
@@ -93,6 +136,26 @@ public class ToolsController(
         {
             return StatusCode(408, new { error = "İstek zaman aşımına uğradı. Lütfen tekrar deneyin." });
         }
+    }
+
+    /// <summary>POST /api/tools/{toolId}/results/save — Async araç sonuçlarını kaydet.</summary>
+    [HttpPost("{toolId}/results/save")]
+    public async Task<IActionResult> SaveAsyncResult(
+        string toolId,
+        [FromBody] SaveResultRequest request,
+        CancellationToken ct)
+    {
+        var userId = CurrentUserId;
+        var summary = ExtractSummary(toolId, request.InputSummary);
+        db.ToolResults.Add(new ToolResult
+        {
+            UserId       = userId,
+            ToolId       = toolId,
+            InputSummary = summary,
+            OutputJson   = request.OutputJson,
+        });
+        await db.SaveChangesAsync(ct);
+        return Ok(new { success = true });
     }
 
     /// <summary>GET /api/tools/{toolId}/status/{jobId} — Poll async tool result.</summary>
@@ -111,4 +174,54 @@ public class ToolsController(
             return StatusCode(503, new { error = "Sonuç alınamadı. Lütfen tekrar deneyin." });
         }
     }
+
+    // ─── Helpers ──────────────────────────────────────────────────────────────
+
+    private async Task SaveToolResultAsync(
+        Guid userId,
+        string toolId,
+        JsonElement payload,
+        string outputJson,
+        CancellationToken ct)
+    {
+        try
+        {
+            // Extract input summary from payload
+            var promptText = payload.TryGetProperty("prompt", out var p) ? p.GetString() ?? "" : "";
+            var summary = ExtractSummary(toolId, promptText);
+
+            db.ToolResults.Add(new ToolResult
+            {
+                UserId       = userId,
+                ToolId       = toolId,
+                InputSummary = summary,
+                OutputJson   = outputJson,
+            });
+            await db.SaveChangesAsync(ct);
+        }
+        catch (Exception ex)
+        {
+            // Saving history must not break the main request
+            logger.LogWarning(ex, "Failed to save tool result for {ToolId}", toolId);
+        }
+    }
+
+    private static readonly Regex BusinessNamePattern =
+        new(@"(?:İşletme adı|Şirket adı|işletme adı|şirket adı)\s*:\s*(.+?)(?:\n|$)",
+            RegexOptions.Compiled | RegexOptions.IgnoreCase);
+
+    private static string ExtractSummary(string toolId, string text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+            return toolId;
+
+        var match = BusinessNamePattern.Match(text);
+        if (match.Success)
+            return match.Groups[1].Value.Trim()[..Math.Min(match.Groups[1].Value.Trim().Length, 150)];
+
+        var clean = text.Replace("\n", " ").Trim();
+        return clean.Length <= 120 ? clean : clean[..120].TrimEnd() + "…";
+    }
 }
+
+public record SaveResultRequest(string InputSummary, string OutputJson);

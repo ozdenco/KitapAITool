@@ -5,6 +5,7 @@ const NAV_ITEMS = [
   { to: 'abonelik',        label: 'Paket Bilgilerim',     icon: '📦' },
   { to: 'paket-sec',       label: 'Paket Yükselt',        icon: '⬆️' },
   { to: 'araclarim',       label: 'Satın Alınan Araçlar', icon: '🔧' },
+  { to: 'gecmis-ciktilar', label: 'Geçmiş Çıktılarım',   icon: '📋' },
   { to: 'profil',          label: 'Profil Bilgileri',     icon: '👤' },
   { to: 'sifre',           label: 'Şifre Değiştir',       icon: '🔒' },
   { to: 'kullanim-gecmisi',label: 'Kullanım Geçmişi',     icon: '📊' },
