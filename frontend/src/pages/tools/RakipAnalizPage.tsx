@@ -122,7 +122,11 @@ export function RakipAnalizPage() {
   const mutation = useMutation({
     mutationFn: async () => {
       const prompt = buildPrompt({ biz, sector, web, platforms, strengths, myPrice, rakip1, rakip2, rakip3 })
-      const res = await api.post('/tools/rakip-analiz/run', { prompt })
+      // Rakip listesini ayrı dizi olarak gönder — n8n Gemini sosyal medya araştırması için gerekli
+      const competitors = [rakip1, rakip2, rakip3]
+        .filter((r) => r.ad.trim())
+        .map((r) => ({ name: r.ad, ...(r.web ? { web: r.web } : {}) }))
+      const res = await api.post('/tools/rakip-analiz/run', { prompt, competitors })
       const content = res.data?.content?.[0]?.text ?? res.data
       return parseAiJson<RakipResult>(content)
     },
