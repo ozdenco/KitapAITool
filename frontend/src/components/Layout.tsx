@@ -1,4 +1,4 @@
-import { Outlet, NavLink, useNavigate } from 'react-router-dom'
+import { Outlet, NavLink } from 'react-router-dom'
 import { clsx } from 'clsx'
 import { useAuthStore } from '@/store/auth'
 import { useLogout } from '@/hooks/useAuth'
@@ -7,7 +7,6 @@ import { Logo } from '@/components/ui/Logo'
 export function Layout() {
   const { user } = useAuthStore()
   const logout = useLogout()
-  const navigate = useNavigate()
 
   return (
     <div className="min-h-screen bg-[#F7F6F2] flex flex-col">
@@ -15,12 +14,14 @@ export function Layout() {
       <header className="sticky top-0 z-50 bg-white border-b border-[#E2E0D8]">
         <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
           {/* Logo */}
-          <button
-            onClick={() => navigate('/dashboard')}
-            className="flex items-center gap-2 font-bold text-gray-900 hover:text-[#1D9E75] transition-colors"
+          <a
+            href="https://kolaykobi.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center"
           >
-            <Logo height={32} />
-          </button>
+            <Logo height={46} />
+          </a>
 
           {/* Nav */}
           <nav className="hidden md:flex items-center gap-1">
