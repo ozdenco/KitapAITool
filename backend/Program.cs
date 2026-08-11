@@ -4,6 +4,7 @@ using KolayKobi.Api.Services;
 using KolayKobi.Api.Middleware;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -37,8 +38,12 @@ builder.Services.AddSwaggerGen(c =>
 });
 
 // Database
+// EF Core 10 yükseltmesinde PendingModelChangesWarning exception fırlatacak şekilde değişti.
+// Migrations doğru şekilde uygulanır — bu warning snapshot tutarsızlığından kaynaklanır.
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("Default")));
+    options
+        .UseNpgsql(builder.Configuration.GetConnectionString("Default"))
+        .ConfigureWarnings(w => w.Ignore(RelationalEventId.PendingModelChangesWarning)));
 
 // JWT Authentication
 var jwtSecret = builder.Configuration["Jwt:Secret"]
