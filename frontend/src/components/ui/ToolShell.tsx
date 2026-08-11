@@ -32,6 +32,19 @@ export function ToolShell({
 
   const isAtLimit = usage != null && usage.limit != null && usage.usedCount >= usage.limit
 
+  // PDF/Yazdır — tarayıcı başlığını geçici olarak araç adına çekeriz
+  // böylece "KolayKOBİ Frontend" yerine "İşletme Görünürlük Skoru_Sonuç" çıkar.
+  const handlePrint = () => {
+    const prev = document.title
+    document.title = `${title}_Sonuç`
+    const restore = () => {
+      document.title = prev
+      window.removeEventListener('afterprint', restore)
+    }
+    window.addEventListener('afterprint', restore)
+    window.print()
+  }
+
   // ── header: title + description, rendered at the top of each page's form card ─
   const header: ReactNode = (
     <div className="pt-[6px] mb-[8px]">
@@ -45,7 +58,6 @@ export function ToolShell({
   )
 
   // ── rateBar: plan limitine göre otomatik ölçeklenen kullanım göstergesi ──────
-  // Loading skeleton → boşluğu rezerv eder, veri gelince gösterir
   const rateBar: ReactNode = usageLoading ? (
     <div className="h-[38px] bg-[#F7F6F2] border border-[#E2E0D8] rounded-lg animate-pulse" />
   ) : usage != null ? (() => {
@@ -116,19 +128,24 @@ export function ToolShell({
 
   return (
     <div className="w-full max-w-[720px] px-4 py-8">
-      {/* Collapsed bar — shown when form is closed and result exists */}
-      {hasResult && !isFormOpen && (
-        <div className="bg-white rounded-2xl border border-[#E2E0D8] px-6 py-4 mb-5 flex items-center justify-between">
+      {/*
+        Sonuç varsa daima bir toggle çubuğu göster.
+        Form açıkken → "▲ Formu Gizle"
+        Form kapalıyken → "▼ Formu Düzenle"
+        Böylece kullanıcı istediği zaman açıp kapayabilir.
+      */}
+      {hasResult && (
+        <div className="bg-white rounded-2xl border border-[#E2E0D8] px-6 py-4 mb-5 flex items-center justify-between no-print">
           <div className="flex items-center gap-3">
             <span className="text-xl">{icon}</span>
             <p className="text-[14px] font-medium text-[#1C1B19]">{title}</p>
           </div>
           <button
             type="button"
-            onClick={() => setIsFormOpen(true)}
-            className="inline-flex items-center gap-[5px] px-[14px] py-[7px] bg-[#F0FAF6] border border-[#9FE1CB] rounded-lg text-[13px] font-medium text-[#085041] whitespace-nowrap hover:bg-[#E1F5EE]"
+            onClick={() => setIsFormOpen((v) => !v)}
+            className="inline-flex items-center gap-[5px] px-[14px] py-[7px] bg-[#F0FAF6] border border-[#9FE1CB] rounded-lg text-[13px] font-medium text-[#085041] whitespace-nowrap hover:bg-[#E1F5EE] transition-colors"
           >
-            Formu Düzenle
+            {isFormOpen ? '▲ Formu Gizle' : '▼ Formu Düzenle'}
           </button>
         </div>
       )}
@@ -141,7 +158,7 @@ export function ToolShell({
         <div className="mt-6 flex justify-end no-print">
           <button
             type="button"
-            onClick={() => window.print()}
+            onClick={handlePrint}
             className="inline-flex items-center gap-2 px-[14px] py-[8px] rounded-lg border border-[#D3D1C7]
               text-[13px] font-medium text-[#6B6963] bg-white hover:bg-[#F7F6F2] transition-colors"
           >

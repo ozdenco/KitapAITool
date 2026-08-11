@@ -141,6 +141,62 @@ public class EmailService(IConfiguration config, ILogger<EmailService> logger)
         await SendAsync(toEmail, toName, "KolayKOBİ — Hesabınıza erişim bağlantısı", html);
     }
 
+    // ── Admin tarafından oluşturulan kullanıcıya hoş geldiniz maili ──────────
+    public async Task SendWelcomeEmailAsync(string toEmail, string toName, string resetToken)
+    {
+        var appUrl  = config["AppUrl"] ?? "https://app.kolaykobi.com";
+        var resetUrl = $"{appUrl}/sifre-sifirla?token={Uri.EscapeDataString(resetToken)}";
+
+        var html = $"""
+            <!DOCTYPE html>
+            <html lang="tr">
+            <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+            <body style="margin:0;padding:0;background:#f4f7fb;font-family:'Inter',system-ui,sans-serif;">
+              <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f7fb;padding:40px 0;">
+                <tr><td align="center">
+                  <table width="480" cellpadding="0" cellspacing="0"
+                         style="background:#fff;border-radius:16px;padding:40px;border:1px solid #e2e8f0;max-width:480px;">
+                    <tr><td align="center" style="padding-bottom:24px;">
+                      {LogoHtml}
+                    </td></tr>
+                    <tr><td style="padding-bottom:20px;">
+                      <h2 style="margin:0 0 12px;font-size:18px;color:#0f172a;">
+                        Merhaba {toName}, 👋
+                      </h2>
+                      <p style="margin:0;color:#475569;line-height:1.65;">
+                        KolayKOBİ hesabınız oluşturuldu! Yapay zeka araçlarımızdan yararlanmak için
+                        aşağıdaki butona tıklayarak şifrenizi belirleyin ve hemen başlayın.
+                      </p>
+                    </td></tr>
+                    <tr><td align="center" style="padding:24px 0;">
+                      <a href="{resetUrl}"
+                         style="display:inline-block;background:#1D9E75;color:#fff;font-weight:700;
+                                font-size:16px;padding:14px 32px;border-radius:10px;
+                                text-decoration:none;letter-spacing:0.01em;">
+                        🔑 Şifremi Belirle &amp; Giriş Yap
+                      </a>
+                    </td></tr>
+                    <tr><td style="padding-top:8px;">
+                      <p style="margin:0;font-size:13px;color:#94a3b8;line-height:1.6;">
+                        Bu bağlantı <strong>24 saat</strong> geçerlidir.<br>
+                        Butona tıklayamazsanız bu bağlantıyı tarayıcınıza yapıştırın:<br>
+                        <a href="{resetUrl}" style="color:#1D9E75;word-break:break-all;">{resetUrl}</a>
+                      </p>
+                      <hr style="border:none;border-top:1px solid #f1f5f9;margin:24px 0;">
+                      <p style="margin:0;font-size:12px;color:#cbd5e1;text-align:center;">
+                        Bu e-posta KolayKOBİ yöneticisi tarafından hesap oluşturulduğundan gönderilmiştir.
+                      </p>
+                    </td></tr>
+                  </table>
+                </td></tr>
+              </table>
+            </body>
+            </html>
+            """;
+
+        await SendAsync(toEmail, toName, "KolayKOBİ — Hesabınız oluşturuldu, şifrenizi belirleyin", html);
+    }
+
     // ── Ortak SMTP gönderici ─────────────────────────────────────────────────
     private async Task SendAsync(string toEmail, string toName, string subject, string htmlBody)
     {

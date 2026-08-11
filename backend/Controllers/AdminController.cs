@@ -11,7 +11,7 @@ namespace KolayKobi.Api.Controllers;
 [ApiController]
 [Route("api/admin")]
 [Authorize(Policy = "AdminOnly")]
-public class AdminController(AppDbContext db) : ControllerBase
+public class AdminController(AppDbContext db, EmailService email) : ControllerBase
 {
     // ── DTOs ─────────────────────────────────────────────────────────────────
 
@@ -138,6 +138,23 @@ public class AdminController(AppDbContext db) : ControllerBase
         });
 
         await db.SaveChangesAsync();
+
+        // Hoş geldiniz maili: kullanıcı 24 saat geçerli şifre belirleme linki alır
+        var resetToken = Guid.NewGuid().ToString("N");
+        user.PasswordResetToken  = resetToken;
+        user.PasswordResetExpiry = DateTime.UtcNow.AddHours(24);
+        await db.SaveChangesAsync();
+
+        try
+        {
+            await email.SendWelcomeEmailAsync(user.Email, user.Name, resetToken);
+        }
+        catch (Exception ex)
+        {
+            // Mail hatası kullanıcı oluşturmayı geri almaz — loglayıp devam et
+            Console.Error.WriteLine($"[AdminController] Welcome email failed for {user.Email}: {ex.Message}");
+        }
+
         return Ok(new { success = true, data = new { user.Id, user.Name, user.Email } });
     }
 
