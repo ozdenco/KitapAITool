@@ -91,7 +91,7 @@ export function PaketSecPage() {
 
   const handleUpgrade = (planType: string) => {
     if (planType === 'enterprise') {
-      window.location.href = 'mailto:destek@kolaykobi.com?subject=Kurumsal Paket Talebi'
+      window.open('https://kolaykobi.com/iletisim/', '_blank', 'noopener,noreferrer')
       return
     }
     // TODO: ödeme entegrasyonu geldiğinde burada yönlendirme yapılacak

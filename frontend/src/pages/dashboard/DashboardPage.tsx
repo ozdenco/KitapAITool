@@ -31,13 +31,11 @@ const CATEGORY_ICONS: Record<string, string> = {
 
 function Chevron({ open }: { open: boolean }) {
   return (
-    <svg
-      viewBox="0 0 16 16"
-      fill="none"
-      className={`w-4 h-4 text-[#9A9792] transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
-    >
-      <path d="M3.5 6L8 10.5L12.5 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
+    <span className={`flex items-center justify-center w-6 h-6 rounded-full bg-white border border-[#D3D1C7] shadow-sm transition-transform duration-200 ${open ? 'rotate-180' : ''}`}>
+      <svg viewBox="0 0 16 16" fill="none" className="w-3.5 h-3.5 text-[#3A3935]">
+        <path d="M3.5 5.5L8 10L12.5 5.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    </span>
   )
 }
 
@@ -133,14 +131,14 @@ export function DashboardPage() {
                 <button
                   type="button"
                   onClick={() => toggleCategory(cat)}
-                  className="w-full flex items-center justify-between gap-2 group mb-3 py-1"
+                  className="w-full flex items-center justify-between gap-3 group mb-3 px-4 py-3 rounded-2xl bg-[#F2F1ED] border border-[#E2E0D8] hover:bg-[#EDECEA] transition-colors"
                 >
-                  <div className="flex items-center gap-2">
-                    <span className="text-base leading-none">{catIcon}</span>
-                    <span className="text-xs font-semibold uppercase tracking-widest text-[#6B6963] group-hover:text-[#3A3935] transition-colors">
+                  <div className="flex items-center gap-2.5">
+                    <span className="text-lg leading-none">{catIcon}</span>
+                    <span className="text-sm font-bold uppercase tracking-widest text-[#3A3935] group-hover:text-[#1C1B19] transition-colors">
                       {catLabel}
                     </span>
-                    <span className="text-[10px] text-[#9A9792] font-normal normal-case tracking-normal">
+                    <span className="text-xs text-[#9A9792] font-normal normal-case tracking-normal">
                       ({catTools.length} araç)
                     </span>
                   </div>
