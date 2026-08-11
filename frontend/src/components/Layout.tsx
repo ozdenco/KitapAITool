@@ -113,7 +113,7 @@ export function Layout() {
             rel="noopener noreferrer"
             className="flex items-center"
           >
-            <Logo height={46} />
+            <Logo height={40} />
           </a>
 
           {/* Nav */}
