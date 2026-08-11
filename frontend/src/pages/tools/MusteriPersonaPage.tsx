@@ -271,7 +271,7 @@ export function MusteriPersonaPage() {
 
                 {(mutation.isError || parseError) && (
                   <p className="text-sm text-red-500">
-                    Bir hata oluştu. Lütfen tekrar deneyin.
+                    {(mutation.error as Error)?.message || 'Bir hata oluştu. Lütfen tekrar deneyin.'}
                   </p>
                 )}
 

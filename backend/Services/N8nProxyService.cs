@@ -16,7 +16,7 @@ public class N8nProxyService(HttpClient http, IConfiguration config, ILogger<N8n
         ["gorunurluk-skoru"]  = "/webhook/kolay-kobi-skor",
         ["musteri-persona"]   = "/webhook/kolay-kobi-persona",
         ["icerik-takvimi"]    = "/webhook/kolay-kobi-takvim",
-        ["whatsapp-script"]   = "/webhook/kolay-kobi-wa",
+        ["whatsapp-satis"]    = "/webhook/kolay-kobi-wa",
         ["reklam-butce"]      = "/webhook/kolay-kobi-butce",
         ["musteri-geri-donus"]= "/webhook/kolay-kobi-geri-donus",
         ["rakip-analiz"]      = "/webhook/kolay-kobi-rakip",

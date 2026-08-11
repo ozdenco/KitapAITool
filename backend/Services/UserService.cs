@@ -53,6 +53,7 @@ public class UserService(AppDbContext db, TokenService tokens, EmailService emai
         var refreshToken = tokens.GenerateRefreshToken();
         user.RefreshToken       = refreshToken;
         user.RefreshTokenExpiry = tokens.RefreshTokenExpiry;
+        user.LastLoginAt        = DateTime.UtcNow;
         user.UpdatedAt          = DateTime.UtcNow;
 
         await db.SaveChangesAsync();
@@ -110,6 +111,7 @@ public class UserService(AppDbContext db, TokenService tokens, EmailService emai
         var refreshToken = tokens.GenerateRefreshToken();
         user.RefreshToken       = refreshToken;
         user.RefreshTokenExpiry = tokens.RefreshTokenExpiry;
+        user.LastLoginAt        = DateTime.UtcNow;
 
         await db.SaveChangesAsync();
 
@@ -210,6 +212,25 @@ public class UserService(AppDbContext db, TokenService tokens, EmailService emai
         user.RefreshToken        = null;
         user.RefreshTokenExpiry  = null;
         user.UpdatedAt           = DateTime.UtcNow;
+
+        await db.SaveChangesAsync();
+        return true;
+    }
+
+    // ── Şifre değiştir (giriş yapılı kullanıcı) ──────────────────────────────
+    /// <returns>null = mevcut şifre yanlış, true = başarılı</returns>
+    public async Task<bool?> ChangePasswordAsync(Guid userId, string currentPassword, string newPassword)
+    {
+        var user = await db.Users.FindAsync(userId);
+        if (user is null) return null;
+
+        if (!BCrypt.Net.BCrypt.Verify(currentPassword, user.PasswordHash))
+            return null; // mevcut şifre yanlış
+
+        user.PasswordHash       = BCrypt.Net.BCrypt.HashPassword(newPassword);
+        user.RefreshToken       = null;  // güvenlik: diğer oturumları sonlandır
+        user.RefreshTokenExpiry = null;
+        user.UpdatedAt          = DateTime.UtcNow;
 
         await db.SaveChangesAsync();
         return true;

@@ -47,6 +47,22 @@ export function Layout() {
               Hesabım
             </NavLink>
 
+            {user?.isAdmin && (
+              <NavLink
+                to="/admin"
+                className={({ isActive }) =>
+                  clsx(
+                    'px-3 py-1.5 rounded-lg text-sm font-medium transition-colors',
+                    isActive
+                      ? 'bg-amber-100 text-amber-700'
+                      : 'text-amber-600 hover:text-amber-800 hover:bg-amber-50',
+                  )
+                }
+              >
+                🔐 Admin
+              </NavLink>
+            )}
+
           </nav>
 
           {/* User */}

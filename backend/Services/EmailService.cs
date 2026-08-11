@@ -20,6 +20,15 @@ public class EmailService(IConfiguration config, ILogger<EmailService> logger)
         string User, string Password,
         string FromEmail, string FromName);
 
+    // Uygulamadaki Logo.tsx ile aynı URL
+    private const string LogoUrl =
+        "https://kolaykobi.com/wp-content/uploads/2025/07/3.png";
+
+    private static string LogoHtml => $"""
+        <img src="{LogoUrl}" alt="KolayKOBİ"
+             style="height:48px;width:auto;display:block;margin:0 auto;" />
+        """;
+
     // ── E-posta doğrulama ─────────────────────────────────────────────────────
     public async Task SendVerificationEmailAsync(string toEmail, string toName, string token)
     {
@@ -36,10 +45,7 @@ public class EmailService(IConfiguration config, ILogger<EmailService> logger)
                   <table width="480" cellpadding="0" cellspacing="0"
                          style="background:#fff;border-radius:16px;padding:40px;border:1px solid #e2e8f0;max-width:480px;">
                     <tr><td align="center" style="padding-bottom:24px;">
-                      <span style="font-size:40px;">🤖</span>
-                      <h1 style="margin:8px 0 0;font-size:22px;font-weight:800;color:#0f172a;">
-                        Kolay<span style="color:#1D9E75;">KOBİ</span>
-                      </h1>
+                      {LogoHtml}
                     </td></tr>
                     <tr><td style="padding-bottom:20px;">
                       <h2 style="margin:0 0 12px;font-size:18px;color:#0f172a;">
@@ -95,10 +101,7 @@ public class EmailService(IConfiguration config, ILogger<EmailService> logger)
                   <table width="480" cellpadding="0" cellspacing="0"
                          style="background:#fff;border-radius:16px;padding:40px;border:1px solid #e2e8f0;max-width:480px;">
                     <tr><td align="center" style="padding-bottom:24px;">
-                      <span style="font-size:40px;">🤖</span>
-                      <h1 style="margin:8px 0 0;font-size:22px;font-weight:800;color:#0f172a;">
-                        Kolay<span style="color:#1D9E75;">KOBİ</span>
-                      </h1>
+                      {LogoHtml}
                     </td></tr>
                     <tr><td style="padding-bottom:20px;">
                       <h2 style="margin:0 0 12px;font-size:18px;color:#0f172a;">

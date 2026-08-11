@@ -66,8 +66,8 @@ export function ResetPasswordPage() {
     e.preventDefault()
     setValidationError('')
 
-    if (pwScore >= 0 && pwScore < 2) {
-      setValidationError('Şifre çok zayıf. Büyük-küçük harf, rakam veya özel karakter ekleyin.')
+    if (pwScore >= 0 && pwScore < 3) {
+      setValidationError('Şifre çok zayıf. Büyük harf, küçük harf ve rakam birlikte kullanın.')
       return
     }
     if (password !== confirm) {

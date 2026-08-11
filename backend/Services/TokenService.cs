@@ -24,6 +24,7 @@ public class TokenService(IConfiguration config)
             new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
             new Claim(ClaimTypes.Email, user.Email),
             new Claim(ClaimTypes.Name, user.Name),
+            new Claim("is_admin", user.IsAdmin ? "true" : "false"),
         };
 
         var token = new JwtSecurityToken(

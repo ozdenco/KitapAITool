@@ -10,10 +10,16 @@ namespace KolayKobi.Api.Controllers;
 [Route("api/auth")]
 public class AuthController(UserService users) : ControllerBase
 {
+    // Şifre: en az 8 karakter, en az 1 büyük harf, 1 küçük harf, 1 rakam
+    private const string PasswordPattern =
+        @"^(?=.*[A-Z])(?=.*[a-z])(?=.*\d).{8,}$";
+    private const string PasswordPatternError =
+        "Şifre en az 8 karakter, en az bir büyük harf, bir küçük harf ve bir rakam içermelidir.";
+
     public record RegisterRequest(
         [Required, MaxLength(128)] string Name,
         [Required, EmailAddress] string Email,
-        [Required, MinLength(8)] string Password);
+        [Required, MinLength(8), RegularExpression(PasswordPattern, ErrorMessage = PasswordPatternError)] string Password);
 
     public record LoginRequest(
         [Required, EmailAddress] string Email,
@@ -25,12 +31,16 @@ public class AuthController(UserService users) : ControllerBase
 
     public record GoogleRequest([Required] string IdToken);
 
+    public record ChangePasswordRequest(
+        [Required] string CurrentPassword,
+        [Required, MinLength(8), RegularExpression(PasswordPattern, ErrorMessage = PasswordPatternError)] string NewPassword);
+
     public record ForgotPasswordRequest(
         [Required, EmailAddress] string Email);
 
     public record ResetPasswordRequest(
         [Required] string Token,
-        [Required, MinLength(8)] string NewPassword);
+        [Required, MinLength(8), RegularExpression(PasswordPattern, ErrorMessage = PasswordPatternError)] string NewPassword);
 
     // ── Kayıt ─────────────────────────────────────────────────────────────────
     [HttpPost("register")]
@@ -47,7 +57,7 @@ public class AuthController(UserService users) : ControllerBase
             data = new
             {
                 tokens = new { accessToken = access, refreshToken = refresh },
-                user   = new { user.Id, user.Name, user.Email, user.EmailVerified }
+                user   = new { user.Id, user.Name, user.Email, user.EmailVerified, user.IsAdmin, company = user.Company ?? string.Empty }
             }
         });
     }
@@ -67,7 +77,7 @@ public class AuthController(UserService users) : ControllerBase
             data = new
             {
                 tokens = new { accessToken = access, refreshToken = refresh },
-                user   = new { user.Id, user.Name, user.Email, user.EmailVerified }
+                user   = new { user.Id, user.Name, user.Email, user.EmailVerified, user.IsAdmin, company = user.Company ?? string.Empty }
             }
         });
     }
@@ -87,7 +97,7 @@ public class AuthController(UserService users) : ControllerBase
             data = new
             {
                 tokens = new { accessToken = access, refreshToken = refresh },
-                user   = new { user.Id, user.Name, user.Email, user.EmailVerified }
+                user   = new { user.Id, user.Name, user.Email, user.EmailVerified, user.IsAdmin, company = user.Company ?? string.Empty }
             }
         });
     }
@@ -117,6 +127,20 @@ public class AuthController(UserService users) : ControllerBase
         return ok
             ? Ok(new { success = true })
             : BadRequest(new { success = false, error = "E-posta gönderilemedi veya zaten doğrulanmış." });
+    }
+
+    // ── Şifre değiştir (giriş yapılı kullanıcı) ──────────────────────────────
+    [HttpPost("change-password")]
+    [Authorize]
+    public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequest req)
+    {
+        var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        var result = await users.ChangePasswordAsync(userId, req.CurrentPassword, req.NewPassword);
+
+        if (result is null)
+            return Unauthorized(new { success = false, error = "Mevcut şifreniz hatalı. Lütfen tekrar kontrol edin." });
+
+        return Ok(new { success = true, message = "Şifreniz başarıyla güncellendi." });
     }
 
     // ── Şifremi unuttum ───────────────────────────────────────────────────────

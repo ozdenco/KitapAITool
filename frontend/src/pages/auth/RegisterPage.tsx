@@ -67,8 +67,8 @@ export function RegisterPage() {
     e.preventDefault()
     setPwError('')
 
-    if (pwScore >= 0 && pwScore < 2) {
-      setPwError('Şifre çok zayıf. Büyük-küçük harf, rakam veya özel karakter ekleyin.')
+    if (pwScore >= 0 && pwScore < 3) {
+      setPwError('Şifre çok zayıf. Büyük harf, küçük harf ve rakam birlikte kullanın.')
       return
     }
     register({ name, email, password })

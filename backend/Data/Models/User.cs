@@ -20,6 +20,13 @@ public class User
     public string? PasswordResetToken { get; set; }
     public DateTime? PasswordResetExpiry { get; set; }
 
+    // ── Profil ────────────────────────────────────────────────────────────────
+    public string? Company { get; set; }
+
+    // ── Admin & Son Giriş ─────────────────────────────────────────────────────
+    public bool IsAdmin { get; set; } = false;
+    public DateTime? LastLoginAt { get; set; }
+
     // ── Google OAuth ──────────────────────────────────────────────────────────
     public string? GoogleId { get; set; }
 

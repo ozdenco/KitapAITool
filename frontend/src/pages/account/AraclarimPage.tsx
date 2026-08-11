@@ -31,7 +31,8 @@ export function AraclarimPage() {
   const { data: purchases, isLoading, isError } = useQuery<PurchasedTool[]>({
     queryKey: ['user-tool-purchases'],
     queryFn: () =>
-      api.get<PurchasedTool[]>('/user/tools/purchases').then((r: { data: PurchasedTool[] }) => r.data),
+      api.get<{ success: boolean; data: PurchasedTool[] }>('/users/me/purchases')
+        .then((r) => r.data.data ?? []),
   })
 
   return (

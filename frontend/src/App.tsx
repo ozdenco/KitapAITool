@@ -16,6 +16,8 @@ import { ProfilBilgileriPage } from '@/pages/account/ProfilBilgileriPage'
 import { SifreDegistirPage } from '@/pages/account/SifreDegistirPage'
 import { KullanimGecmisiPage } from '@/pages/account/KullanimGecmisiPage'
 import { ToolPage } from '@/pages/tools/ToolPage'
+import { AdminGuard } from '@/components/AdminGuard'
+import { AdminKullanicilarPage } from '@/pages/admin/AdminKullanicilarPage'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -58,6 +60,14 @@ function AppRoutes() {
               <Route path="kullanim-gecmisi" element={<KullanimGecmisiPage />} />
             </Route>
             <Route path="/arac/:toolId" element={<ToolPage />} />
+            <Route
+              path="/admin"
+              element={
+                <AdminGuard>
+                  <AdminKullanicilarPage />
+                </AdminGuard>
+              }
+            />
           </Route>
 
           {/* Default */}

@@ -57,7 +57,9 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         };
     });
 
-builder.Services.AddAuthorization();
+builder.Services.AddAuthorization(opts =>
+    opts.AddPolicy("AdminOnly", policy =>
+        policy.RequireClaim("is_admin", "true")));
 
 // CORS — allow frontend origin
 builder.Services.AddCors(opts =>
@@ -71,17 +73,12 @@ builder.Services.AddCors(opts =>
         .AllowCredentials()));
 
 // Application services
-// Retry: Traefik TLS aralıklı reset yapıyor — StandardResilienceHandler 3 deneme yapar.
-// AttemptTimeout ≤ SamplingDuration/2 kuralı: 25s attempt, 60s sampling, 120s toplam.
-builder.Services.AddHttpClient<N8nProxyService>()
-    .AddStandardResilienceHandler(opts =>
-    {
-        opts.Retry.MaxRetryAttempts = 3;
-        opts.Retry.Delay = TimeSpan.FromSeconds(2);
-        opts.TotalRequestTimeout.Timeout = TimeSpan.FromSeconds(120);
-        opts.AttemptTimeout.Timeout = TimeSpan.FromSeconds(25);
-        opts.CircuitBreaker.SamplingDuration = TimeSpan.FromSeconds(60);
-    });
+// n8n proxy: AI işlemleri 60s+ sürebilir. Retry YOK — idempotent değil (iki kez çağrılırsa
+// n8n iki kez çalışır, token harcar). Frontend 120s timeout ile eşleşmesi için 105s.
+builder.Services.AddHttpClient<N8nProxyService>(client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(105);
+});
 builder.Services.AddScoped<TokenService>();
 builder.Services.AddScoped<EmailService>();
 builder.Services.AddScoped<UserService>();

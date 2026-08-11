@@ -221,7 +221,7 @@ export function MusteriGeriDonusPage() {
                 {rateBar}
 
                 {mutation.isError && (
-                  <p className="text-sm text-red-500">Bir hata oluştu. Lütfen tekrar deneyin.</p>
+                  <p className="text-sm text-red-500">{(mutation.error as Error)?.message || 'Bir hata oluştu. Lütfen tekrar deneyin.'}</p>
                 )}
 
                 <Button onClick={() => mutation.mutate()} disabled={!canSubmit} loading={mutation.isPending} className="mt-1 w-full">

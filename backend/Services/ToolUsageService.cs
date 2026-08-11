@@ -17,7 +17,7 @@ public class ToolUsageService(AppDbContext db)
         "gorunurluk-skoru",
         "musteri-persona",
         "icerik-takvimi",
-        "whatsapp-script",
+        "whatsapp-satis",
         "reklam-butce",
         "musteri-geri-donus",
         "rakip-analiz",
