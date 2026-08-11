@@ -31,6 +31,20 @@ public class ToolsController(
         return Ok(new { success = true, data });
     }
 
+    /// <summary>GET /api/tools/usage/history?months=6 — Monthly usage history.</summary>
+    [HttpGet("usage/history")]
+    public async Task<IActionResult> GetUsageHistory([FromQuery] int months = 6)
+    {
+        var history = await usage.GetUsageHistoryAsync(CurrentUserId, months);
+        var data = history.Select(h => new
+        {
+            monthYear  = h.MonthYear,
+            totalUsed  = h.TotalUsed,
+            totalLimit = h.TotalLimit,
+        });
+        return Ok(data);   // Frontend direkt dizi bekliyor
+    }
+
     /// <summary>POST /api/tools/{toolId}/run — Proxy request to n8n and log usage.</summary>
     [HttpPost("{toolId}/run")]
     public async Task<IActionResult> RunTool(

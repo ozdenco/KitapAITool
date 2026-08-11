@@ -10,6 +10,12 @@ public record ToolUsageSummary(
     int? Limit  // null = unlimited
 );
 
+public record MonthlyUsageSummary(
+    string MonthYear,   // "2026-08"
+    int TotalUsed,
+    int TotalLimit      // 0 = unlimited (admin / enterprise)
+);
+
 public class ToolUsageService(AppDbContext db)
 {
     private static readonly string[] AllToolIds =
@@ -44,6 +50,43 @@ public class ToolUsageService(AppDbContext db)
             usageCounts.TryGetValue(toolId, out var used);
             return new ToolUsageSummary(toolId, used, plan?.UsagePerToolPerMonth);
         }).ToList();
+    }
+
+    // ── Son N aylık kullanım geçmişi ──────────────────────────────────────────
+    public async Task<List<MonthlyUsageSummary>> GetUsageHistoryAsync(Guid userId, int months = 6)
+    {
+        months = Math.Clamp(months, 1, 12);
+
+        var now       = DateTime.UtcNow;
+        var startDate = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc)
+                            .AddMonths(-(months - 1));
+
+        // Tüm ayları tek sorguda al
+        var usageByMonth = await db.ToolUsageLogs
+            .Where(l => l.UserId == userId && l.UsedAt >= startDate)
+            .GroupBy(l => new { l.UsedAt.Year, l.UsedAt.Month })
+            .Select(g => new { g.Key.Year, g.Key.Month, Count = g.Count() })
+            .ToDictionaryAsync(x => (x.Year, x.Month), x => x.Count);
+
+        var plan         = await GetUserPlanAsync(userId);
+        var limitPerTool = plan?.UsagePerToolPerMonth;         // null = sınırsız
+        var totalLimit   = limitPerTool.HasValue
+                            ? limitPerTool.Value * AllToolIds.Length
+                            : 0;  // 0 = sınırsız (frontend'de özel gösterilir)
+
+        var result = new List<MonthlyUsageSummary>(months);
+        for (var i = months - 1; i >= 0; i--)
+        {
+            var monthStart = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc)
+                                 .AddMonths(-i);
+            usageByMonth.TryGetValue((monthStart.Year, monthStart.Month), out var used);
+            result.Add(new MonthlyUsageSummary(
+                monthStart.ToString("yyyy-MM"),
+                used,
+                totalLimit));
+        }
+
+        return result;
     }
 
     public async Task<bool> CanUseToolAsync(Guid userId, string toolId)

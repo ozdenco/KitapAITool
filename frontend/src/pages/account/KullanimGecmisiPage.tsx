@@ -218,12 +218,12 @@ export function KullanimGecmisiPage() {
               </thead>
               <tbody>
                 {[...history].reverse().map((row) => {
-                  const remaining = Math.max(0, row.totalLimit - row.totalUsed)
-                  const pct =
-                    row.totalLimit > 0
-                      ? Math.min(100, Math.round((row.totalUsed / row.totalLimit) * 100))
-                      : 0
-                  const isHigh = pct >= 80
+                  const unlimited = row.totalLimit === 0
+                  const remaining = unlimited ? null : Math.max(0, row.totalLimit - row.totalUsed)
+                  const pct = !unlimited && row.totalLimit > 0
+                    ? Math.min(100, Math.round((row.totalUsed / row.totalLimit) * 100))
+                    : null
+                  const isHigh = (pct ?? 0) >= 80
 
                   return (
                     <tr
@@ -237,29 +237,33 @@ export function KullanimGecmisiPage() {
                         {row.totalUsed}
                       </td>
                       <td className="px-5 py-3 text-right text-[#6B6963]">
-                        {row.totalLimit}
+                        {unlimited ? <span className="text-[#1D9E75] font-medium">∞</span> : row.totalLimit}
                       </td>
                       <td className="px-5 py-3 text-right font-medium text-[#1D9E75]">
-                        {remaining}
+                        {unlimited ? '∞' : remaining}
                       </td>
                       <td className="px-5 py-3 text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <div className="w-20 h-[5px] bg-[#E2E0D8] rounded-full overflow-hidden">
-                            <div
-                              className={`h-full rounded-full transition-all ${
-                                isHigh ? 'bg-amber-400' : 'bg-[#1D9E75]'
+                        {unlimited ? (
+                          <span className="text-[12px] text-[#1D9E75] font-medium">Sınırsız</span>
+                        ) : (
+                          <div className="flex items-center justify-end gap-2">
+                            <div className="w-20 h-[5px] bg-[#E2E0D8] rounded-full overflow-hidden">
+                              <div
+                                className={`h-full rounded-full transition-all ${
+                                  isHigh ? 'bg-amber-400' : 'bg-[#1D9E75]'
+                                }`}
+                                style={{ width: `${pct ?? 0}%` }}
+                              />
+                            </div>
+                            <span
+                              className={`text-[12px] font-medium w-8 text-right tabular-nums ${
+                                isHigh ? 'text-amber-600' : 'text-[#6B6963]'
                               }`}
-                              style={{ width: `${pct}%` }}
-                            />
+                            >
+                              {pct ?? 0}%
+                            </span>
                           </div>
-                          <span
-                            className={`text-[12px] font-medium w-8 text-right tabular-nums ${
-                              isHigh ? 'text-amber-600' : 'text-[#6B6963]'
-                            }`}
-                          >
-                            {pct}%
-                          </span>
-                        </div>
+                        )}
                       </td>
                     </tr>
                   )
