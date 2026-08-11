@@ -42,6 +42,19 @@ public class UserService(AppDbContext db, TokenService tokens, EmailService emai
         return (user, tokens.GenerateAccessToken(user), refreshToken);
     }
 
+    // ── Hesap aktiflik durumu (login hata mesajı ayrıştırma için) ──────────────
+    // null  → kullanıcı bulunamadı
+    // false → hesap pasif
+    // true  → aktif
+    public async Task<bool?> GetUserActiveStatusAsync(string emailAddr)
+    {
+        var row = await db.Users
+            .Where(u => u.Email == emailAddr.ToLower())
+            .Select(u => new { u.IsActive })
+            .FirstOrDefaultAsync();
+        return row?.IsActive;
+    }
+
     // ── Giriş ─────────────────────────────────────────────────────────────────
     public async Task<(User user, string accessToken, string refreshToken)?> LoginAsync(
         string emailAddr, string password)

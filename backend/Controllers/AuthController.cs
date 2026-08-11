@@ -68,7 +68,14 @@ public class AuthController(UserService users) : ControllerBase
     {
         var result = await users.LoginAsync(req.Email, req.Password);
         if (result is null)
-            return Unauthorized(new { success = false, error = "E-posta veya şifre hatalı." });
+        {
+            // Pasif hesap mı, yoksa yanlış şifre/e-posta mı — farklı mesajlar ver
+            var isActive = await users.GetUserActiveStatusAsync(req.Email);
+            var errorMsg = isActive == false
+                ? "Bu hesap pasife alınmış. Yöneticinizle iletişime geçin."
+                : "E-posta veya şifre hatalı.";
+            return Unauthorized(new { success = false, error = errorMsg });
+        }
 
         var (user, access, refresh) = result.Value;
         return Ok(new
