@@ -45,8 +45,8 @@ const PLAN_FEATURES: Record<string, string[]> = {
     'Profesyonel rapor çıktısı',
   ],
   enterprise: [
-    'Sınırsız araç kullanımı',
-    'Tüm 11 araca erişim',
+    'Firmaya özel araç oluşturma',
+    'Kullanılacak araçların seçimi',
     'Özel entegrasyonlar',
     'Eğitim ve danışmanlık',
     'Özel geliştirmeler',
@@ -179,9 +179,11 @@ export function PaketSecPage() {
 
                   {/* Usage summary */}
                   <p className="text-[12px] text-[#6B6963] mt-1">
-                    {plan.usagePerToolPerMonth == null
-                      ? 'Sınırsız Kullanım'
-                      : `${plan.usagePerToolPerMonth} Kullanım Hakkı / Araç / Ay`}
+                    {isEnterprise
+                      ? 'İhtiyaç analizi ile başlayın'
+                      : plan.usagePerToolPerMonth == null
+                        ? 'Sınırsız Kullanım'
+                        : `${plan.usagePerToolPerMonth} Kullanım Hakkı / Araç / Ay`}
                   </p>
                 </div>
 

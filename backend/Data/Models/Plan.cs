@@ -8,6 +8,14 @@ public enum PlanType
     Enterprise
 }
 
+public enum PeriodType
+{
+    Monthly  = 0,
+    Daily    = 1,
+    Yearly   = 2,
+    DateRange = 3
+}
+
 public class Plan
 {
     public int Id { get; set; }
@@ -23,6 +31,18 @@ public class Plan
     public decimal? PricePerUse { get; set; }
 
     public bool IsActive { get; set; } = true;
+
+    // ── Dönem ayarları ──────────────────────────────────────────────────────
+    public PeriodType PeriodType { get; set; } = PeriodType.Monthly;
+
+    /// <summary>Günlük dönem için gün sayısı (null = varsayılan).</summary>
+    public int? PeriodDays { get; set; }
+
+    /// <summary>DateRange dönem başlangıcı.</summary>
+    public DateTime? PeriodStartDate { get; set; }
+
+    /// <summary>DateRange dönem bitişi.</summary>
+    public DateTime? PeriodEndDate { get; set; }
 
     // Navigation
     public ICollection<Subscription> Subscriptions { get; set; } = [];

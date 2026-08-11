@@ -325,4 +325,60 @@ public class AdminController(AppDbContext db, EmailService email) : ControllerBa
         await db.SaveChangesAsync();
         return Ok(new { success = true });
     }
+
+    // ── GET /api/admin/plans ──────────────────────────────────────────────────
+    [HttpGet("plans")]
+    public async Task<IActionResult> GetPlans()
+    {
+        var plans = await db.Plans.OrderBy(p => p.Id).ToListAsync();
+        var data = plans.Select(p => new
+        {
+            p.Id,
+            p.Type,
+            p.Name,
+            p.Description,
+            p.PriceMonthly,
+            p.UsagePerToolPerMonth,
+            p.PricePerUse,
+            p.IsActive,
+            p.PeriodType,
+            p.PeriodDays,
+            p.PeriodStartDate,
+            p.PeriodEndDate,
+        });
+        return Ok(new { success = true, data });
+    }
+
+    // ── PUT /api/admin/plans/{id} ─────────────────────────────────────────────
+    public record UpdatePlanRequest(
+        [MaxLength(64)] string Name,
+        [MaxLength(256)] string Description,
+        decimal PriceMonthly,
+        int? UsageLimit,
+        decimal? PricePerUse,
+        PeriodType PeriodType,
+        int? PeriodDays,
+        DateTime? PeriodStartDate,
+        DateTime? PeriodEndDate);
+
+    [HttpPut("plans/{id}")]
+    public async Task<IActionResult> UpdatePlan(int id, [FromBody] UpdatePlanRequest req)
+    {
+        var plan = await db.Plans.FindAsync(id);
+        if (plan is null)
+            return NotFound(new { success = false, error = "Paket bulunamadı." });
+
+        plan.Name                 = req.Name.Trim();
+        plan.Description          = req.Description.Trim();
+        plan.PriceMonthly         = req.PriceMonthly;
+        plan.UsagePerToolPerMonth = req.UsageLimit;
+        plan.PricePerUse          = req.PricePerUse;
+        plan.PeriodType           = req.PeriodType;
+        plan.PeriodDays           = req.PeriodDays;
+        plan.PeriodStartDate      = req.PeriodStartDate?.ToUniversalTime();
+        plan.PeriodEndDate        = req.PeriodEndDate?.ToUniversalTime();
+
+        await db.SaveChangesAsync();
+        return Ok(new { success = true });
+    }
 }

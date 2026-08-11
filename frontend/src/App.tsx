@@ -19,7 +19,11 @@ import { GecmisCiktilarPage } from '@/pages/account/GecmisCiktilarPage'
 import { PaketSecPage } from '@/pages/account/PaketSecPage'
 import { ToolPage } from '@/pages/tools/ToolPage'
 import { AdminGuard } from '@/components/AdminGuard'
-import { AdminKullanicilarPage } from '@/pages/admin/AdminKullanicilarPage'
+import { AdminLayout } from '@/pages/admin/AdminLayout'
+import { AdminIstatistiklerPage } from '@/pages/admin/AdminIstatistiklerPage'
+import { AdminKullaniciListesiPage } from '@/pages/admin/AdminKullaniciListesiPage'
+import { AdminKullaniciIslemleriPage } from '@/pages/admin/AdminKullaniciIslemleriPage'
+import { AdminPaketIslemleriPage } from '@/pages/admin/AdminPaketIslemleriPage'
 import { AdminKullaniciGecmisiPage } from '@/pages/admin/AdminKullaniciGecmisiPage'
 
 const queryClient = new QueryClient({
@@ -54,25 +58,38 @@ function AppRoutes() {
             }
           >
             <Route path="/dashboard" element={<DashboardPage />} />
+
+            {/* Account */}
             <Route path="/hesabim" element={<HesabimLayout />}>
               <Route index element={<Navigate to="abonelik" replace />} />
-              <Route path="abonelik" element={<AbonelikPage />} />
-              <Route path="araclarim" element={<AraclarimPage />} />
-              <Route path="profil" element={<ProfilBilgileriPage />} />
-              <Route path="sifre" element={<SifreDegistirPage />} />
+              <Route path="abonelik"         element={<AbonelikPage />} />
+              <Route path="araclarim"        element={<AraclarimPage />} />
+              <Route path="profil"           element={<ProfilBilgileriPage />} />
+              <Route path="sifre"            element={<SifreDegistirPage />} />
               <Route path="kullanim-gecmisi" element={<KullanimGecmisiPage />} />
-              <Route path="gecmis-ciktilar" element={<GecmisCiktilarPage />} />
-              <Route path="paket-sec" element={<PaketSecPage />} />
+              <Route path="gecmis-ciktilar"  element={<GecmisCiktilarPage />} />
+              <Route path="paket-sec"        element={<PaketSecPage />} />
             </Route>
+
             <Route path="/arac/:toolId" element={<ToolPage />} />
+
+            {/* Admin */}
             <Route
               path="/admin"
               element={
                 <AdminGuard>
-                  <AdminKullanicilarPage />
+                  <AdminLayout />
                 </AdminGuard>
               }
-            />
+            >
+              <Route index element={<Navigate to="istatistikler" replace />} />
+              <Route path="istatistikler"       element={<AdminIstatistiklerPage />} />
+              <Route path="kullanici-listesi"   element={<AdminKullaniciListesiPage />} />
+              <Route path="kullanici-islemleri" element={<AdminKullaniciIslemleriPage />} />
+              <Route path="paket-islemleri"     element={<AdminPaketIslemleriPage />} />
+            </Route>
+
+            {/* Admin: user usage history — outside AdminLayout (full-page) */}
             <Route
               path="/admin/kullanici/:userId/gecmis"
               element={
@@ -93,7 +110,6 @@ function AppRoutes() {
 }
 
 export default function App() {
-  // GoogleOAuthProvider yalnızca Client ID tanımlıysa wrap eder
   if (GOOGLE_CLIENT_ID) {
     return (
       <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
