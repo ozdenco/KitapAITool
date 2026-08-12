@@ -4,7 +4,7 @@ import type { ApiResponse, AuthTokens } from '@/types'
 const api = axios.create({
   baseURL: '/api',
   headers: { 'Content-Type': 'application/json' },
-  timeout: 210_000, // Orijinal toollar browser fetch (sonsuz); biz 3.5 dk güvenlik sınırı koyuyoruz
+  timeout: 300_000, // rakip-analiz: Gemini(90s)+MiniMax(120s)=210s max → 5 dk güvenlik sınırı
 })
 
 // ─── Request interceptor: JWT token ekle ─────────────────────────────────────

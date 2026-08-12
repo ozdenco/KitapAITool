@@ -78,11 +78,14 @@ builder.Services.AddCors(opts =>
         .AllowCredentials()));
 
 // Application services
-// n8n proxy: AI işlemleri 60s+ sürebilir. Retry YOK — idempotent değil (iki kez çağrılırsa
-// n8n iki kez çalışır, token harcar). Frontend 210s timeout; backend 180s (biraz önde biter).
+// n8n proxy: AI işlemleri uzun sürebilir. Retry YOK — idempotent değil (iki kez çağrılırsa
+// n8n iki kez çalışır, token harcar).
+// rakip-analiz: Gemini(90s) + MiniMax(120s) = 210s max → 240s ile yeterli marj.
+// Diğer sync araçlar: MiniMax 120s max → 240s fazlasıyla yeterli.
+// Async araçlar (takvim, trend-video): ilk webhook hızlı döner; bu timeout onları etkilemez.
 builder.Services.AddHttpClient<N8nProxyService>(client =>
 {
-    client.Timeout = TimeSpan.FromSeconds(180);
+    client.Timeout = TimeSpan.FromSeconds(240);
 });
 builder.Services.AddScoped<TokenService>();
 builder.Services.AddScoped<EmailService>();
