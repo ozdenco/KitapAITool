@@ -169,19 +169,38 @@ function ResultDetailPanel({ result: summary, onClose }: { result: ResultSummary
 
   let parsed: Record<string, unknown> | null = null
   try {
-    parsed = JSON.parse(data.outputJson)
-    if (Array.isArray(parsed) && parsed.length === 1) {
-      parsed = parsed[0] as Record<string, unknown>
-    }
+    let raw = JSON.parse(data.outputJson) as Record<string, unknown> | Record<string, unknown>[]
+    if (Array.isArray(raw) && raw.length === 1) raw = raw[0]
+    parsed = raw as Record<string, unknown>
+
     if (parsed && typeof parsed === 'object' && 'content' in parsed) {
       const content = (parsed as { content: unknown }).content
       if (Array.isArray(content) && content[0] && typeof (content[0] as { text?: string }).text === 'string') {
-        try { parsed = JSON.parse((content[0] as { text: string }).text) } catch { /* keep */ }
+        try {
+          const inner = JSON.parse((content[0] as { text: string }).text) as Record<string, unknown>
+          // Preserve top-level fields that live alongside content (e.g. geminiPlatforms)
+          const extras: Record<string, unknown> = {}
+          for (const k of Object.keys(parsed)) {
+            if (k !== 'content') extras[k] = parsed[k]
+          }
+          parsed = { ...inner, ...extras }
+        } catch { /* keep raw parsed */ }
       }
     }
   } catch { /* outputJson might be raw text */ }
 
-  const handlePrint = () => window.print()
+  const handlePrint = () => {
+    const prev = document.title
+    document.title = `${meta.name}_Sonuç`
+    document.body.setAttribute('data-printing-result', 'true')
+    const restore = () => {
+      document.body.removeAttribute('data-printing-result')
+      document.title = prev
+      window.removeEventListener('afterprint', restore)
+    }
+    window.addEventListener('afterprint', restore)
+    window.print()
+  }
 
   return (
     <div className="mt-3 bg-[#F7F6F2] rounded-xl border border-[#E2E0D8] overflow-hidden">
@@ -216,8 +235,8 @@ function ResultDetailPanel({ result: summary, onClose }: { result: ResultSummary
         </div>
       </div>
 
-      {/* Detail content */}
-      <div className="p-5">
+      {/* Detail content — .gecmis-print-target: targeted @media print */}
+      <div className="p-5 gecmis-print-target">
         {showRaw ? (
           <pre className="text-[11px] text-[#3A3935] bg-white border border-[#E2E0D8] rounded-xl p-4 overflow-x-auto leading-relaxed max-h-[500px] overflow-y-auto">
             {JSON.stringify(JSON.parse(data.outputJson), null, 2)}

@@ -98,4 +98,22 @@ body {
     color: #085041 !important;
     display: inline-flex !important;
   }
+
+  /* ── Geçmiş Çıktılarım — sadece seçili sonuç yazdırılır ── */
+  /* body[data-printing-result] aktifken tüm main içeriğini gizle,
+     .gecmis-print-target ve alt öğelerini göster */
+  body[data-printing-result] main * { visibility: hidden !important; }
+  body[data-printing-result] .gecmis-print-target,
+  body[data-printing-result] .gecmis-print-target * {
+    visibility: visible !important;
+  }
+  body[data-printing-result] .gecmis-print-target {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    padding: 1cm !important;
+    background: #fff !important;
+    z-index: 9999 !important;
+  }
 }

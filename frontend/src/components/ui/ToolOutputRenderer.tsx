@@ -603,11 +603,50 @@ function RenderTrendVideo({ data }: { data: Record<string, unknown> }) {
 
 // rakip-analiz
 interface Rakip { ad: string; tehdit: string; guclu: string[]; zayif: string[]; firsat: string }
-interface RakipResult { rakipler: Rakip[]; genel_degerlendirme?: string; oneriler?: string[]; ctaText?: string }
+interface GeminiPlatform {
+  name: string
+  instagram?: string | null
+  facebook?: string | null
+  linkedin?: string | null
+  google_business?: string | null
+  whatsapp?: string | null
+}
+interface RakipResult {
+  rakipler: Rakip[]
+  genel_degerlendirme?: string
+  oneriler?: string[]
+  ctaText?: string
+  geminiPlatforms?: GeminiPlatform[]
+}
+
+// Matrix rows — Web ve Fiyat form verisi gerektirdiğinden geçmişte gösterilmez
+const MATRIX_ROWS = [
+  { key: 'google_business', label: 'Google Business', icon: '🔍' },
+  { key: 'instagram',       label: 'Instagram',       icon: '📸' },
+  { key: 'facebook',        label: 'Facebook',        icon: '👍' },
+  { key: 'linkedin',        label: 'LinkedIn',        icon: '💼' },
+  { key: 'whatsapp',        label: 'WhatsApp İş',     icon: '💬' },
+]
+
+function CheckCell({ href }: { href?: string }) {
+  const cls = 'inline-flex items-center justify-center w-7 h-7 rounded-full bg-[#1D9E75]/10 text-[#1D9E75] text-[13px] font-bold'
+  if (href && href.startsWith('http')) {
+    return (
+      <a href={href} target="_blank" rel="noopener noreferrer" title={href} className={cls + ' hover:bg-[#1D9E75]/20 transition-colors'}>✓</a>
+    )
+  }
+  return <span className={cls}>✓</span>
+}
+
+function CrossCell() {
+  return <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-gray-100 text-gray-400 text-[13px]">✗</span>
+}
 
 function RenderRakipAnaliz({ data }: { data: Record<string, unknown> }) {
   const d = data as unknown as RakipResult
   if (!d.rakipler?.length) return null
+  const gemini = d.geminiPlatforms ?? []
+
   return (
     <div className="flex flex-col gap-4">
       {d.rakipler.map((rakip, i) => (
@@ -626,7 +665,7 @@ function RenderRakipAnaliz({ data }: { data: Record<string, unknown> }) {
                 <p className="text-xs font-semibold text-green-700 uppercase tracking-wider mb-2">💪 Güçlü Yönler</p>
                 <ul className="flex flex-col gap-1">
                   {rakip.guclu.map((g, j) => (
-                    <li key={j} className="text-xs text-gray-600 flex gap-1.5"><span className="text-green-500 shrink-0">•</span>{g}</li>
+                    <li key={j} className="text-xs text-gray-600 flex gap-1.5"><span className="text-green-500 shrink-0">✓</span>{g}</li>
                   ))}
                 </ul>
               </div>
@@ -653,16 +692,66 @@ function RenderRakipAnaliz({ data }: { data: Record<string, unknown> }) {
         </div>
       ))}
 
+      {/* ── Karşılaştırma Matrisi (Gemini sosyal medya araştırması) ── */}
+      {gemini.length > 0 && (
+        <div className="bg-white rounded-2xl border border-[#E2E0D8] shadow-sm overflow-hidden">
+          <div className="px-5 py-4 border-b border-[#F1EFE8] flex items-center gap-2">
+            <span className="text-base">⊞</span>
+            <div>
+              <h3 className="text-sm font-semibold text-[#1C1B19]">Karşılaştırma Tablosu</h3>
+              <p className="text-xs text-gray-400 mt-0.5">Sosyal medya varlıkları Gemini AI tarafından araştırıldı</p>
+            </div>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm border-collapse">
+              <thead>
+                <tr className="bg-[#F7F6F2] border-b border-[#E2E0D8]">
+                  <th className="text-left px-4 py-3 text-[11px] font-bold tracking-wider text-gray-500 uppercase min-w-[140px]">KRİTER</th>
+                  {gemini.map((gp) => (
+                    <th key={gp.name} className="text-center px-4 py-3 text-[11px] font-bold tracking-wider text-gray-500 uppercase whitespace-nowrap">
+                      {gp.name}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {MATRIX_ROWS.map(({ key, label, icon }) => (
+                  <tr key={key} className="border-b border-[#F1EFE8]">
+                    <td className="px-4 py-3 text-[13px] font-medium text-gray-700 whitespace-nowrap">
+                      <span className="mr-2 text-[15px]">{icon}</span>{label}
+                    </td>
+                    {gemini.map((gp) => {
+                      const v = gp[key as keyof GeminiPlatform]
+                      const val = (typeof v === 'string' && v) ? v : null
+                      const isPhone = val !== null && !val.startsWith('http') && val !== 'true'
+                      return (
+                        <td key={gp.name} className="px-4 py-3 text-center">
+                          {val
+                            ? isPhone
+                              ? <span className="text-xs text-gray-500">{val}</span>
+                              : <CheckCell href={val.startsWith('http') ? val : undefined} />
+                            : <CrossCell />}
+                        </td>
+                      )
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
       {d.genel_degerlendirme && (
         <div className="bg-white rounded-2xl border border-[#E2E0D8] shadow-sm p-5">
-          <h3 className="text-sm font-semibold text-[#1C1B19] mb-2">📋 Genel Değerlendirme</h3>
+          <h3 className="text-sm font-semibold text-[#1C1B19] mb-2">📊 Genel Değerlendirme</h3>
           <p className="text-sm text-gray-600 leading-relaxed">{d.genel_degerlendirme}</p>
         </div>
       )}
 
       {d.oneriler && d.oneriler.length > 0 && (
         <div className="bg-white rounded-2xl border border-[#E2E0D8] shadow-sm p-5">
-          <h3 className="text-sm font-semibold text-[#1C1B19] mb-3">🚀 Stratejik Öneriler</h3>
+          <h3 className="text-sm font-semibold text-[#1C1B19] mb-3">💡 Strateji Önerileri</h3>
           <ul className="flex flex-col gap-2">
             {d.oneriler.map((o, i) => (
               <li key={i} className="flex gap-2 text-sm text-gray-600">
