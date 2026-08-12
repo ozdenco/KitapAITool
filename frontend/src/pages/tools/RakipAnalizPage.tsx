@@ -13,9 +13,19 @@ import { ToolShell } from '@/components/ui/ToolShell'
 
 interface RakipKart {
   ad: string
+  tehdit?: string        // 'Yüksek' | 'Orta' | 'Düşük'
   guclu: string[]
   zayif: string[]
   firsat: string
+}
+
+interface GeminiPlatform {
+  name: string
+  instagram?: string | null
+  facebook?: string | null
+  linkedin?: string | null
+  google_business?: string | null
+  whatsapp?: string | null
 }
 
 interface RakipResult {
@@ -23,6 +33,7 @@ interface RakipResult {
   genel_degerlendirme: string
   oneriler: string[]
   ctaText?: string
+  geminiPlatforms?: GeminiPlatform[]
 }
 
 interface RakipBlok {
@@ -55,6 +66,14 @@ const FIYAT_SEGMENTLERI = [
 ]
 
 const emptyRakip = (): RakipBlok => ({ ad: '', web: '', fiyat: '' })
+
+// ─── Tehdit seviyesi renk haritası ───────────────────────────────────────────
+
+const TEHDIT_STYLE: Record<string, string> = {
+  'Yüksek': 'bg-red-50 text-red-600 border-red-200',
+  'Orta':   'bg-amber-50 text-amber-700 border-amber-200',
+  'Düşük':  'bg-green-50 text-green-700 border-green-200',
+}
 
 // ─── Prompt builder ────────────────────────────────────────────────────────────
 
@@ -89,6 +108,7 @@ SADECE JSON döndür:
   "rakipler": [
     {
       "ad": "<rakip adı>",
+      "tehdit": "<Yüksek|Orta|Düşük — rakibin ${f.biz}'ye toplam rekabet baskısı>",
       "guclu": ["<3-4 kısa güçlü yön>"],
       "zayif": ["<2-3 kısa zayıf yön>"],
       "firsat": "<${f.biz} bu rakibe karşı nasıl avantaj kazanır, 1 cümle>"
@@ -127,8 +147,13 @@ export function RakipAnalizPage() {
         .filter((r) => r.ad.trim())
         .map((r) => ({ name: r.ad, ...(r.web ? { web: r.web } : {}) }))
       const res = await api.post('/tools/rakip-analiz/run', { prompt, competitors })
+      // n8n iki alan döndürür: content (MiniMax analizi) + geminiPlatforms (sosyal medya araştırması)
       const content = res.data?.content?.[0]?.text ?? res.data
-      return parseAiJson<RakipResult>(content)
+      const parsed = parseAiJson<RakipResult>(content)
+      const geminiPlatforms: GeminiPlatform[] = Array.isArray(res.data?.geminiPlatforms)
+        ? (res.data.geminiPlatforms as GeminiPlatform[])
+        : []
+      return { ...parsed, geminiPlatforms }
     },
     onSuccess: (data) => {
       setResult(data)
@@ -317,6 +342,11 @@ export function RakipAnalizPage() {
                       {i + 1}
                     </div>
                     <h3 className="font-semibold text-gray-900">{rakip.ad}</h3>
+                    {rakip.tehdit && (
+                      <span className={`ml-auto text-xs font-semibold px-2.5 py-1 rounded-full border ${TEHDIT_STYLE[rakip.tehdit] ?? 'bg-gray-100 text-gray-600 border-gray-200'}`}>
+                        {rakip.tehdit} Tehdit
+                      </span>
+                    )}
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 divide-y sm:divide-y-0 sm:divide-x divide-gray-100">
                     <div className="p-4">
@@ -345,6 +375,130 @@ export function RakipAnalizPage() {
                   </div>
                 </div>
               ))}
+
+              {/* ── Karşılaştırma Tablosu (PDF-uyumlu: SEN + rakipler, Fiyat satırı dahil) ── */}
+              {result.geminiPlatforms && result.geminiPlatforms.length > 0 && (() => {
+                const activeRakips = [rakip1, rakip2, rakip3].filter((r) => r.ad.trim())
+
+                const CRITERIA_ROWS = [
+                  { key: 'web',             label: 'Web Sitesi',      icon: '🌐' },
+                  { key: 'google_business', label: 'Google Business', icon: '🔍' },
+                  { key: 'instagram',       label: 'Instagram',       icon: '📸' },
+                  { key: 'facebook',        label: 'Facebook',        icon: '👍' },
+                  { key: 'linkedin',        label: 'LinkedIn',        icon: '💼' },
+                  { key: 'whatsapp',        label: 'WhatsApp İş',     icon: '💬' },
+                ]
+
+                // "SEN" sütunu: form verisinden türet
+                const myHas = (key: string): boolean => {
+                  if (key === 'web')             return web.trim() !== ''
+                  if (key === 'google_business') return platforms.includes('Google Business')
+                  if (key === 'instagram')       return platforms.includes('Instagram')
+                  if (key === 'facebook')        return platforms.includes('Facebook')
+                  if (key === 'linkedin')        return platforms.includes('LinkedIn')
+                  if (key === 'whatsapp')        return platforms.includes('WhatsApp İş')
+                  return false
+                }
+
+                // Rakip sütunları: geminiPlatforms + form web alanı
+                const compVal = (gp: GeminiPlatform, rakip: RakipBlok, key: string): string | null => {
+                  if (key === 'web') return rakip.web.trim() !== '' ? 'true' : null
+                  const v = gp[key as keyof GeminiPlatform]
+                  return (typeof v === 'string' && v) ? v : null
+                }
+
+                const CheckCell = ({ href }: { href?: string }) => (
+                  href && href.startsWith('http')
+                    ? <a href={href} target="_blank" rel="noopener noreferrer" title={href}
+                        className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-[#1D9E75]/10 text-[#1D9E75] hover:bg-[#1D9E75]/20 transition-colors text-[13px] font-bold">✓</a>
+                    : <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-[#1D9E75]/10 text-[#1D9E75] text-[13px] font-bold">✓</span>
+                )
+
+                const CrossCell = () => (
+                  <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-gray-100 text-gray-400 text-[13px]">✗</span>
+                )
+
+                return (
+                  <div className="bg-white rounded-2xl border border-[#E2E0D8] shadow-sm overflow-hidden">
+                    <div className="px-5 py-4 border-b border-[#F1EFE8] flex items-center gap-2">
+                      <span className="text-base">⊞</span>
+                      <div>
+                        <h3 className="text-sm font-semibold text-[#1C1B19]">Karşılaştırma Tablosu</h3>
+                        <p className="text-xs text-gray-400 mt-0.5">Sosyal medya varlıkları Gemini AI tarafından araştırıldı</p>
+                      </div>
+                    </div>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm border-collapse">
+                        <thead>
+                          <tr className="bg-[#F7F6F2] border-b border-[#E2E0D8]">
+                            <th className="text-left px-4 py-3 text-[11px] font-bold tracking-wider text-gray-500 uppercase min-w-[140px]">KRİTER</th>
+                            {/* SEN sütunu — vurgulanmış */}
+                            <th className="text-center px-4 py-3 text-[11px] font-bold tracking-wider text-[#1D9E75] uppercase whitespace-nowrap">
+                              {biz || 'SİZ'}<br />
+                              <span className="text-[9px] font-normal text-[#1D9E75]/70 normal-case">(SEN)</span>
+                            </th>
+                            {result.geminiPlatforms!.map((gp) => (
+                              <th key={gp.name} className="text-center px-4 py-3 text-[11px] font-bold tracking-wider text-gray-500 uppercase whitespace-nowrap">
+                                {gp.name}
+                              </th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {CRITERIA_ROWS.map(({ key, label, icon }) => (
+                            <tr key={key} className="border-b border-[#F1EFE8]">
+                              <td className="px-4 py-3 text-[13px] font-medium text-gray-700 whitespace-nowrap">
+                                <span className="mr-2 text-[15px]">{icon}</span>{label}
+                              </td>
+                              {/* SEN hücresi */}
+                              <td className="px-4 py-3 text-center bg-[#F0FAF6]/40">
+                                {myHas(key) ? <CheckCell /> : <CrossCell />}
+                              </td>
+                              {/* Rakip hücreleri */}
+                              {result.geminiPlatforms!.map((gp, idx) => {
+                                const rakip = activeRakips[idx]
+                                const val = rakip ? compVal(gp, rakip, key) : null
+                                const isLink = typeof val === 'string' && val.startsWith('http')
+                                const isPhone = typeof val === 'string' && !isLink && val !== 'true'
+                                return (
+                                  <td key={gp.name} className="px-4 py-3 text-center">
+                                    {val ? (
+                                      isPhone
+                                        ? <span className="text-xs text-gray-500">{val}</span>
+                                        : <CheckCell href={isLink ? val : undefined} />
+                                    ) : (
+                                      <CrossCell />
+                                    )}
+                                  </td>
+                                )
+                              })}
+                            </tr>
+                          ))}
+
+                          {/* Fiyat satırı */}
+                          <tr className="bg-[#FAFAF8]">
+                            <td className="px-4 py-3 text-[13px] font-medium text-gray-700 whitespace-nowrap">
+                              <span className="mr-2 text-[15px]">💰</span>Fiyat
+                            </td>
+                            <td className="px-4 py-3 text-center bg-[#F0FAF6]/40">
+                              {myPrice
+                                ? <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[#1D9E75]/10 text-[#085041]">{myPrice}</span>
+                                : <span className="text-gray-400 text-xs">—</span>}
+                            </td>
+                            {activeRakips.map((rakip) => (
+                              <td key={rakip.ad} className="px-4 py-3 text-center">
+                                {rakip.fiyat
+                                  ? <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-600">{rakip.fiyat}</span>
+                                  : <span className="text-gray-400 text-xs">—</span>}
+                              </td>
+                            ))}
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )
+              })()}
 
               <div className="bg-white rounded-2xl border border-[#E2E0D8] shadow-sm p-5">
                 <h3 className="text-sm font-semibold text-[#1C1B19] mb-2">📊 Genel Değerlendirme</h3>
