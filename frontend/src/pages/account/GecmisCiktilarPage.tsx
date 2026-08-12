@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import api from '@/lib/api'
 import { TOOLS } from '@/lib/tools'
+import { ToolOutputRenderer } from '@/components/ui/ToolOutputRenderer'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -127,6 +128,22 @@ function OutputObject({ obj, depth }: { obj: Record<string, unknown>; depth: num
   )
 }
 
+// ─── Rich renderer with generic fallback ─────────────────────────────────────
+
+// Tool IDs that have a dedicated rich renderer in ToolOutputRenderer.
+const RICH_TOOL_IDS = new Set([
+  'gorunurluk-skoru', 'musteri-persona', 'icerik-takvimi', 'reklam-butce',
+  'whatsapp-satis', 'musteri-geri-donus', 'chatbot-senaryo', 'ai-gorunurluk',
+  'viral-video', 'trend-video', 'rakip-analiz',
+])
+
+function RichOrFallback({ toolId, parsed }: { toolId: string; parsed: Record<string, unknown> }) {
+  if (RICH_TOOL_IDS.has(toolId)) {
+    return <ToolOutputRenderer toolId={toolId} data={parsed} />
+  }
+  return <OutputObject obj={parsed} depth={0} />
+}
+
 // ─── Expanded result panel ────────────────────────────────────────────────────
 
 function ResultDetailPanel({ result: summary, onClose }: { result: ResultSummary; onClose: () => void }) {
@@ -206,7 +223,7 @@ function ResultDetailPanel({ result: summary, onClose }: { result: ResultSummary
             {JSON.stringify(JSON.parse(data.outputJson), null, 2)}
           </pre>
         ) : parsed !== null ? (
-          <OutputObject obj={parsed} depth={0} />
+          <RichOrFallback toolId={data.toolId} parsed={parsed} />
         ) : (
           <p className="text-[13px] text-[#3A3935] whitespace-pre-wrap leading-relaxed">
             {data.outputJson}
