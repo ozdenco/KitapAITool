@@ -79,10 +79,10 @@ builder.Services.AddCors(opts =>
 
 // Application services
 // n8n proxy: AI işlemleri 60s+ sürebilir. Retry YOK — idempotent değil (iki kez çağrılırsa
-// n8n iki kez çalışır, token harcar). Frontend 120s timeout ile eşleşmesi için 105s.
+// n8n iki kez çalışır, token harcar). Frontend 210s timeout; backend 180s (biraz önde biter).
 builder.Services.AddHttpClient<N8nProxyService>(client =>
 {
-    client.Timeout = TimeSpan.FromSeconds(105);
+    client.Timeout = TimeSpan.FromSeconds(180);
 });
 builder.Services.AddScoped<TokenService>();
 builder.Services.AddScoped<EmailService>();
