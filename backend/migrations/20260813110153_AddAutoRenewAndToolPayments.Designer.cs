@@ -3,6 +3,7 @@ using System;
 using KolayKobi.Api.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace KolayKobi.Api.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260813110153_AddAutoRenewAndToolPayments")]
+    partial class AddAutoRenewAndToolPayments
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -61,14 +64,8 @@ namespace KolayKobi.Api.Migrations
                         .HasMaxLength(64)
                         .HasColumnType("character varying(64)");
 
-                    b.Property<string>("ToolIds")
-                        .HasColumnType("text");
-
                     b.Property<Guid>("UserId")
                         .HasColumnType("uuid");
-
-                    b.Property<int?>("UsesPerTool")
-                        .HasColumnType("integer");
 
                     b.HasKey("Id");
 
@@ -264,7 +261,7 @@ namespace KolayKobi.Api.Migrations
                             PriceMonthly = 9m,
                             ToolId = "gorunurluk-skoru",
                             ToolName = "İşletme Görünürlük Skoru",
-                            UpdatedAt = new DateTime(2026, 8, 13, 12, 30, 46, 521, DateTimeKind.Utc).AddTicks(2940)
+                            UpdatedAt = new DateTime(2026, 8, 13, 11, 1, 53, 335, DateTimeKind.Utc).AddTicks(7040)
                         },
                         new
                         {
@@ -273,7 +270,7 @@ namespace KolayKobi.Api.Migrations
                             PriceMonthly = 9m,
                             ToolId = "musteri-persona",
                             ToolName = "Müşteri Persona Oluşturucu",
-                            UpdatedAt = new DateTime(2026, 8, 13, 12, 30, 46, 521, DateTimeKind.Utc).AddTicks(3430)
+                            UpdatedAt = new DateTime(2026, 8, 13, 11, 1, 53, 335, DateTimeKind.Utc).AddTicks(7470)
                         },
                         new
                         {
@@ -282,7 +279,7 @@ namespace KolayKobi.Api.Migrations
                             PriceMonthly = 29m,
                             ToolId = "icerik-takvimi",
                             ToolName = "30 Günlük İçerik Takvimi",
-                            UpdatedAt = new DateTime(2026, 8, 13, 12, 30, 46, 521, DateTimeKind.Utc).AddTicks(3430)
+                            UpdatedAt = new DateTime(2026, 8, 13, 11, 1, 53, 335, DateTimeKind.Utc).AddTicks(7470)
                         },
                         new
                         {
@@ -291,7 +288,7 @@ namespace KolayKobi.Api.Migrations
                             PriceMonthly = 9m,
                             ToolId = "whatsapp-satis",
                             ToolName = "WhatsApp Satış Script Üretici",
-                            UpdatedAt = new DateTime(2026, 8, 13, 12, 30, 46, 521, DateTimeKind.Utc).AddTicks(3430)
+                            UpdatedAt = new DateTime(2026, 8, 13, 11, 1, 53, 335, DateTimeKind.Utc).AddTicks(7470)
                         },
                         new
                         {
@@ -300,7 +297,7 @@ namespace KolayKobi.Api.Migrations
                             PriceMonthly = 9m,
                             ToolId = "reklam-butce",
                             ToolName = "Reklam Bütçe Dağıtıcı",
-                            UpdatedAt = new DateTime(2026, 8, 13, 12, 30, 46, 521, DateTimeKind.Utc).AddTicks(3430)
+                            UpdatedAt = new DateTime(2026, 8, 13, 11, 1, 53, 335, DateTimeKind.Utc).AddTicks(7470)
                         },
                         new
                         {
@@ -309,7 +306,7 @@ namespace KolayKobi.Api.Migrations
                             PriceMonthly = 9m,
                             ToolId = "musteri-geri-donus",
                             ToolName = "Müşteri Geri Dönüş Senaryosu",
-                            UpdatedAt = new DateTime(2026, 8, 13, 12, 30, 46, 521, DateTimeKind.Utc).AddTicks(3430)
+                            UpdatedAt = new DateTime(2026, 8, 13, 11, 1, 53, 335, DateTimeKind.Utc).AddTicks(7470)
                         },
                         new
                         {
@@ -318,7 +315,7 @@ namespace KolayKobi.Api.Migrations
                             PriceMonthly = 9m,
                             ToolId = "rakip-analiz",
                             ToolName = "Rakip Analiz Panosu",
-                            UpdatedAt = new DateTime(2026, 8, 13, 12, 30, 46, 521, DateTimeKind.Utc).AddTicks(3430)
+                            UpdatedAt = new DateTime(2026, 8, 13, 11, 1, 53, 335, DateTimeKind.Utc).AddTicks(7470)
                         },
                         new
                         {
@@ -327,7 +324,7 @@ namespace KolayKobi.Api.Migrations
                             PriceMonthly = 9m,
                             ToolId = "chatbot-senaryo",
                             ToolName = "Chatbot Senaryo Hazırlayıcı",
-                            UpdatedAt = new DateTime(2026, 8, 13, 12, 30, 46, 521, DateTimeKind.Utc).AddTicks(3430)
+                            UpdatedAt = new DateTime(2026, 8, 13, 11, 1, 53, 335, DateTimeKind.Utc).AddTicks(7470)
                         },
                         new
                         {
@@ -336,7 +333,7 @@ namespace KolayKobi.Api.Migrations
                             PriceMonthly = 9m,
                             ToolId = "ai-gorunurluk",
                             ToolName = "AI Görünürlük Takipçisi",
-                            UpdatedAt = new DateTime(2026, 8, 13, 12, 30, 46, 521, DateTimeKind.Utc).AddTicks(3430)
+                            UpdatedAt = new DateTime(2026, 8, 13, 11, 1, 53, 335, DateTimeKind.Utc).AddTicks(7470)
                         },
                         new
                         {
@@ -345,7 +342,7 @@ namespace KolayKobi.Api.Migrations
                             PriceMonthly = 9m,
                             ToolId = "viral-video",
                             ToolName = "Viral Video Uyarlayıcı",
-                            UpdatedAt = new DateTime(2026, 8, 13, 12, 30, 46, 521, DateTimeKind.Utc).AddTicks(3430)
+                            UpdatedAt = new DateTime(2026, 8, 13, 11, 1, 53, 335, DateTimeKind.Utc).AddTicks(7470)
                         },
                         new
                         {
@@ -354,7 +351,7 @@ namespace KolayKobi.Api.Migrations
                             PriceMonthly = 29m,
                             ToolId = "trend-video",
                             ToolName = "Trend Video Bulucu",
-                            UpdatedAt = new DateTime(2026, 8, 13, 12, 30, 46, 521, DateTimeKind.Utc).AddTicks(3430)
+                            UpdatedAt = new DateTime(2026, 8, 13, 11, 1, 53, 335, DateTimeKind.Utc).AddTicks(7470)
                         });
                 });
 
@@ -372,9 +369,6 @@ namespace KolayKobi.Api.Migrations
 
                     b.Property<string>("IyzicoPaymentId")
                         .HasColumnType("text");
-
-                    b.Property<int?>("MonthlyLimit")
-                        .HasColumnType("integer");
 
                     b.Property<DateTime>("PurchasedAt")
                         .HasColumnType("timestamp with time zone");

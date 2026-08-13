@@ -3,11 +3,13 @@ import { NavLink, Outlet, Navigate, useLocation } from 'react-router-dom'
 const NAV_ITEMS = [
   { to: 'abonelik',        label: 'Paket Bilgilerim',     icon: '📦' },
   { to: 'paket-sec',       label: 'Paket Yükselt',        icon: '⬆️' },
-  { to: 'araclarim',       label: 'Satın Alınan Araçlar', icon: '🔧' },
+  { to: 'araclarim',       label: 'Araç Satın Al',        icon: '🛒' },
+  { to: 'odeme-gecmisi',   label: 'Ödeme Geçmişi',        icon: '💳' },
   { to: 'gecmis-ciktilar', label: 'Geçmiş Çıktılarım',   icon: '📋' },
+  { to: 'arac-kullanim',   label: 'Araç Kullanımı',       icon: '📊' },
   { to: 'profil',          label: 'Profil Bilgileri',     icon: '👤' },
   { to: 'sifre',           label: 'Şifre Değiştir',       icon: '🔒' },
-  { to: 'kullanim-gecmisi',label: 'Kullanım Geçmişi',     icon: '📊' },
+  { to: 'kullanim-gecmisi',label: 'Kullanım Geçmişi',     icon: '📈' },
 ] as const
 
 export function HesabimLayout() {

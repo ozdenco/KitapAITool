@@ -43,7 +43,8 @@ public class AdminController(AppDbContext db, EmailService email) : ControllerBa
              ErrorMessage = "Şifre en az 8 karakter, bir büyük harf, bir küçük harf ve bir rakam içermelidir.")]
         string Password,
         bool IsAdmin = false,
-        string Plan = "free");
+        string Plan = "free",
+        bool SendEmail = false);
 
     public record AdminResetPasswordRequest(
         [Required, MinLength(8),
@@ -142,20 +143,23 @@ public class AdminController(AppDbContext db, EmailService email) : ControllerBa
 
         await db.SaveChangesAsync();
 
-        // Hoş geldiniz maili: kullanıcı 24 saat geçerli şifre belirleme linki alır
-        var resetToken = Guid.NewGuid().ToString("N");
-        user.PasswordResetToken  = resetToken;
-        user.PasswordResetExpiry = DateTime.UtcNow.AddHours(24);
-        await db.SaveChangesAsync();
+        // Hoş geldiniz maili: yalnızca admin "Mail Gönder" kutusunu işaretlediyse gönderilir
+        if (req.SendEmail)
+        {
+            var resetToken = Guid.NewGuid().ToString("N");
+            user.PasswordResetToken  = resetToken;
+            user.PasswordResetExpiry = DateTime.UtcNow.AddHours(24);
+            await db.SaveChangesAsync();
 
-        try
-        {
-            await email.SendWelcomeEmailAsync(user.Email, user.Name, resetToken);
-        }
-        catch (Exception ex)
-        {
-            // Mail hatası kullanıcı oluşturmayı geri almaz — loglayıp devam et
-            Console.Error.WriteLine($"[AdminController] Welcome email failed for {user.Email}: {ex.Message}");
+            try
+            {
+                await email.SendWelcomeEmailAsync(user.Email, user.Name, resetToken);
+            }
+            catch (Exception ex)
+            {
+                // Mail hatası kullanıcı oluşturmayı geri almaz — loglayıp devam et
+                Console.Error.WriteLine($"[AdminController] Welcome email failed for {user.Email}: {ex.Message}");
+            }
         }
 
         return Ok(new { success = true, data = new { user.Id, user.Name, user.Email } });
@@ -309,6 +313,84 @@ public class AdminController(AppDbContext db, EmailService email) : ControllerBa
         });
     }
 
+    // ── GET /api/admin/usage-log ──────────────────────────────────────────────
+    // Detaylı kullanım logu: kişi + araç filtresi, paket + limit + rapor özeti dahil
+    [HttpGet("usage-log")]
+    public async Task<IActionResult> GetDetailedUsageLog(
+        [FromQuery] Guid?   userId  = null,
+        [FromQuery] string? toolId  = null,
+        [FromQuery] int     limit   = 300)
+    {
+        limit = Math.Clamp(limit, 1, 500);
+
+        IQueryable<ToolUsageLog> query = db.ToolUsageLogs
+            .Include(l => l.User)
+                .ThenInclude(u => u.Subscription)
+                    .ThenInclude(s => s!.Plan);
+
+        if (userId.HasValue)             query = query.Where(l => l.UserId == userId.Value);
+        if (!string.IsNullOrEmpty(toolId)) query = query.Where(l => l.ToolId == toolId);
+
+        var logs = await query
+            .OrderByDescending(l => l.UsedAt)
+            .Take(limit)
+            .ToListAsync();
+
+        // ToolResult'lardan inputSummary + id al (en yakın zamanlı eşleşme)
+        var userIds = logs.Select(l => l.UserId).Distinct().ToList();
+        var toolIds = logs.Select(l => l.ToolId).Distinct().ToList();
+
+        var results = await db.ToolResults
+            .Where(r => userIds.Contains(r.UserId) && toolIds.Contains(r.ToolId))
+            .Select(r => new { r.Id, r.UserId, r.ToolId, r.InputSummary, r.CreatedAt })
+            .ToListAsync();
+
+        (string Summary, Guid? ResultId) FindResult(Guid uid, string tid, DateTime at)
+        {
+            var match = results
+                .Where(r => r.UserId == uid && r.ToolId == tid)
+                .OrderBy(r => Math.Abs((r.CreatedAt - at).TotalSeconds))
+                .FirstOrDefault();
+            return (match?.InputSummary ?? string.Empty, match?.Id);
+        }
+
+        // Snapshot alanları kayıt anında saklandı — dinamik hesaplamaya gerek yok
+        var data = logs.Select(l =>
+        {
+            var currentPlan = l.User.Subscription?.Plan;
+            var (summary, resultId) = FindResult(l.UserId, l.ToolId, l.UsedAt);
+            return new
+            {
+                id               = l.Id,
+                userId           = l.UserId,
+                userName         = l.User.Name,
+                userEmail        = l.User.Email,
+                toolId           = l.ToolId,
+                usedAt           = l.UsedAt,
+                success          = l.Success,
+                inputSummary     = summary,
+                toolResultId     = resultId,                     // rapor detay sayfası için
+                // Kayıt anındaki snapshot değerleri
+                planNameAtTime   = string.IsNullOrEmpty(l.PlanNameAtTime)
+                                       ? (currentPlan?.Name ?? "Ücretsiz")
+                                       : l.PlanNameAtTime,
+                planType         = currentPlan?.Type.ToString().ToLower() ?? "free",
+                usageCountBefore = l.UsageCountBefore,
+                usageCountAfter  = l.Success ? l.UsageCountBefore + 1 : l.UsageCountBefore,
+                limitAtTime      = l.LimitAtTime,
+            };
+        }).ToList();
+
+        // Filtre dropdown'ı için kullanıcı listesi
+        var users = logs
+            .Select(l => new { id = l.UserId, name = l.User.Name, email = l.User.Email })
+            .DistinctBy(u => u.id)
+            .OrderBy(u => u.name)
+            .ToList();
+
+        return Ok(new { success = true, data, meta = new { users } });
+    }
+
     // ── DELETE /api/admin/users/{id} ──────────────────────────────────────────
     [HttpDelete("users/{id:guid}")]
     public async Task<IActionResult> DeleteUser(Guid id)
@@ -324,6 +406,23 @@ public class AdminController(AppDbContext db, EmailService email) : ControllerBa
         db.Users.Remove(user);   // Cascade: Subscription + UsageLogs + ToolPurchases silinir
         await db.SaveChangesAsync();
         return Ok(new { success = true });
+    }
+
+    // ── GET /api/admin/results/{id} ──────────────────────────────────────────
+    // Admin herhangi bir kullanıcının ToolResult'ını okuyabilir
+    [HttpGet("results/{id:guid}")]
+    public async Task<IActionResult> GetResult(Guid id)
+    {
+        var result = await db.ToolResults
+            .Include(r => r.User)
+            .Where(r => r.Id == id)
+            .Select(r => new { r.Id, r.ToolId, r.InputSummary, r.OutputJson, r.CreatedAt, r.UserId, r.User.Name, r.User.Email })
+            .FirstOrDefaultAsync();
+
+        if (result is null)
+            return NotFound(new { success = false, error = "Kayıt bulunamadı." });
+
+        return Ok(new { success = true, data = result });
     }
 
     // ── GET /api/admin/plans ──────────────────────────────────────────────────
@@ -381,4 +480,122 @@ public class AdminController(AppDbContext db, EmailService email) : ControllerBa
         await db.SaveChangesAsync();
         return Ok(new { success = true });
     }
+
+    // ── GET /api/admin/tool-prices ────────────────────────────────────────────
+    [HttpGet("tool-prices")]
+    public async Task<IActionResult> GetToolPrices()
+    {
+        var prices = await db.ToolPrices
+            .OrderBy(p => p.Id)
+            .Select(p => new
+            {
+                p.Id,
+                p.ToolId,
+                p.ToolName,
+                p.PriceMonthly,
+                p.IsActive,
+                p.UpdatedAt,
+            })
+            .ToListAsync();
+
+        return Ok(new { success = true, data = prices });
+    }
+
+    // ── PUT /api/admin/tool-prices/{id} ──────────────────────────────────────
+    [HttpPut("tool-prices/{id:int}")]
+    public async Task<IActionResult> UpdateToolPrice(int id, [FromBody] UpdateToolPriceRequest req)
+    {
+        var toolPrice = await db.ToolPrices.FindAsync(id);
+        if (toolPrice is null)
+            return NotFound(new { error = "Araç fiyatı bulunamadı." });
+
+        toolPrice.PriceMonthly = req.PriceMonthly;
+        toolPrice.IsActive     = req.IsActive;
+        toolPrice.UpdatedAt    = DateTime.UtcNow;
+
+        await db.SaveChangesAsync();
+        return Ok(new { success = true });
+    }
+
+    public record UpdateToolPriceRequest(
+        [Range(0, 9999.99)] decimal PriceMonthly,
+        bool IsActive);
+
+    // ── PUT /api/admin/users/{userId}/subscription ────────────────────────────
+    // Admin: herhangi bir kullanıcının aboneliğini direkt değiştirir (test/destek için).
+    // action: "set" → planId ile aktive et | "expire" → süresi dolmuş say | "free" → ücretsiz plana al
+
+    [HttpPut("users/{userId:guid}/subscription")]
+    public async Task<IActionResult> UpdateUserSubscription(
+        Guid userId,
+        [FromBody] UpdateUserSubscriptionRequest req)
+    {
+        var user = await db.Users.FindAsync(userId);
+        if (user is null)
+            return NotFound(new { error = "Kullanıcı bulunamadı." });
+
+        var sub = await db.Subscriptions.FirstOrDefaultAsync(s => s.UserId == userId);
+
+        if (req.Action == "free" || req.Action == "expire")
+        {
+            if (sub is not null)
+            {
+                if (req.Action == "expire")
+                {
+                    // Süresi dünden itibaren dolmuş say
+                    sub.ExpiresAt = DateTime.UtcNow.AddDays(-1);
+                }
+                else // free
+                {
+                    var freePlan = await db.Plans.FirstOrDefaultAsync(p => p.Type == PlanType.Free);
+                    if (freePlan is null)
+                        return StatusCode(500, new { error = "Ücretsiz plan bulunamadı." });
+
+                    sub.PlanId      = freePlan.Id;
+                    sub.Status      = SubscriptionStatus.Active;
+                    sub.StartedAt   = DateTime.UtcNow;
+                    sub.ExpiresAt   = null;
+                    sub.CancelledAt = null;
+                }
+                await db.SaveChangesAsync();
+            }
+            return Ok(new { success = true, action = req.Action });
+        }
+
+        // action == "set" — belirtilen plan ile aktive et
+        if (req.PlanId is null)
+            return BadRequest(new { error = "planId gerekli." });
+
+        var plan = await db.Plans.FindAsync(req.PlanId.Value);
+        if (plan is null)
+            return NotFound(new { error = "Plan bulunamadı." });
+
+        if (sub is not null)
+        {
+            sub.PlanId      = plan.Id;
+            sub.Status      = SubscriptionStatus.Active;
+            sub.StartedAt   = DateTime.UtcNow;
+            sub.ExpiresAt   = plan.Type == PlanType.Free ? null : DateTime.UtcNow.AddMonths(1);
+            sub.CancelledAt = null;
+        }
+        else
+        {
+            sub = new Subscription
+            {
+                UserId    = userId,
+                PlanId    = plan.Id,
+                Status    = SubscriptionStatus.Active,
+                StartedAt = DateTime.UtcNow,
+                ExpiresAt = plan.Type == PlanType.Free ? null : DateTime.UtcNow.AddMonths(1),
+            };
+            db.Subscriptions.Add(sub);
+        }
+
+        await db.SaveChangesAsync();
+        return Ok(new { success = true, plan = plan.Name, expiresAt = sub.ExpiresAt });
+    }
+
+    public record UpdateUserSubscriptionRequest(
+        string Action,    // "set" | "free" | "expire"
+        int? PlanId);
 }

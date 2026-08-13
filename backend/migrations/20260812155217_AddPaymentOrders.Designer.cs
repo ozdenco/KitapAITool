@@ -3,6 +3,7 @@ using System;
 using KolayKobi.Api.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace KolayKobi.Api.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260812155217_AddPaymentOrders")]
+    partial class AddPaymentOrders
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -51,24 +54,14 @@ namespace KolayKobi.Api.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)");
 
-                    b.Property<int?>("PlanId")
+                    b.Property<int>("PlanId")
                         .HasColumnType("integer");
 
                     b.Property<int>("Status")
                         .HasColumnType("integer");
 
-                    b.Property<string>("ToolId")
-                        .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
-
-                    b.Property<string>("ToolIds")
-                        .HasColumnType("text");
-
                     b.Property<Guid>("UserId")
                         .HasColumnType("uuid");
-
-                    b.Property<int?>("UsesPerTool")
-                        .HasColumnType("integer");
 
                     b.HasKey("Id");
 
@@ -185,9 +178,6 @@ namespace KolayKobi.Api.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<bool>("AutoRenew")
-                        .HasColumnType("boolean");
-
                     b.Property<DateTime?>("CancelledAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -222,142 +212,6 @@ namespace KolayKobi.Api.Migrations
                     b.ToTable("Subscriptions");
                 });
 
-            modelBuilder.Entity("KolayKobi.Api.Data.Models.ToolPrice", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("boolean");
-
-                    b.Property<decimal>("PriceMonthly")
-                        .HasColumnType("decimal(10,2)");
-
-                    b.Property<string>("ToolId")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
-
-                    b.Property<string>("ToolName")
-                        .IsRequired()
-                        .HasMaxLength(128)
-                        .HasColumnType("character varying(128)");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ToolId")
-                        .IsUnique();
-
-                    b.ToTable("ToolPrices");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = 1,
-                            IsActive = true,
-                            PriceMonthly = 9m,
-                            ToolId = "gorunurluk-skoru",
-                            ToolName = "İşletme Görünürlük Skoru",
-                            UpdatedAt = new DateTime(2026, 8, 13, 12, 30, 46, 521, DateTimeKind.Utc).AddTicks(2940)
-                        },
-                        new
-                        {
-                            Id = 2,
-                            IsActive = true,
-                            PriceMonthly = 9m,
-                            ToolId = "musteri-persona",
-                            ToolName = "Müşteri Persona Oluşturucu",
-                            UpdatedAt = new DateTime(2026, 8, 13, 12, 30, 46, 521, DateTimeKind.Utc).AddTicks(3430)
-                        },
-                        new
-                        {
-                            Id = 3,
-                            IsActive = true,
-                            PriceMonthly = 29m,
-                            ToolId = "icerik-takvimi",
-                            ToolName = "30 Günlük İçerik Takvimi",
-                            UpdatedAt = new DateTime(2026, 8, 13, 12, 30, 46, 521, DateTimeKind.Utc).AddTicks(3430)
-                        },
-                        new
-                        {
-                            Id = 4,
-                            IsActive = true,
-                            PriceMonthly = 9m,
-                            ToolId = "whatsapp-satis",
-                            ToolName = "WhatsApp Satış Script Üretici",
-                            UpdatedAt = new DateTime(2026, 8, 13, 12, 30, 46, 521, DateTimeKind.Utc).AddTicks(3430)
-                        },
-                        new
-                        {
-                            Id = 5,
-                            IsActive = true,
-                            PriceMonthly = 9m,
-                            ToolId = "reklam-butce",
-                            ToolName = "Reklam Bütçe Dağıtıcı",
-                            UpdatedAt = new DateTime(2026, 8, 13, 12, 30, 46, 521, DateTimeKind.Utc).AddTicks(3430)
-                        },
-                        new
-                        {
-                            Id = 6,
-                            IsActive = true,
-                            PriceMonthly = 9m,
-                            ToolId = "musteri-geri-donus",
-                            ToolName = "Müşteri Geri Dönüş Senaryosu",
-                            UpdatedAt = new DateTime(2026, 8, 13, 12, 30, 46, 521, DateTimeKind.Utc).AddTicks(3430)
-                        },
-                        new
-                        {
-                            Id = 7,
-                            IsActive = true,
-                            PriceMonthly = 9m,
-                            ToolId = "rakip-analiz",
-                            ToolName = "Rakip Analiz Panosu",
-                            UpdatedAt = new DateTime(2026, 8, 13, 12, 30, 46, 521, DateTimeKind.Utc).AddTicks(3430)
-                        },
-                        new
-                        {
-                            Id = 8,
-                            IsActive = true,
-                            PriceMonthly = 9m,
-                            ToolId = "chatbot-senaryo",
-                            ToolName = "Chatbot Senaryo Hazırlayıcı",
-                            UpdatedAt = new DateTime(2026, 8, 13, 12, 30, 46, 521, DateTimeKind.Utc).AddTicks(3430)
-                        },
-                        new
-                        {
-                            Id = 9,
-                            IsActive = true,
-                            PriceMonthly = 9m,
-                            ToolId = "ai-gorunurluk",
-                            ToolName = "AI Görünürlük Takipçisi",
-                            UpdatedAt = new DateTime(2026, 8, 13, 12, 30, 46, 521, DateTimeKind.Utc).AddTicks(3430)
-                        },
-                        new
-                        {
-                            Id = 10,
-                            IsActive = true,
-                            PriceMonthly = 9m,
-                            ToolId = "viral-video",
-                            ToolName = "Viral Video Uyarlayıcı",
-                            UpdatedAt = new DateTime(2026, 8, 13, 12, 30, 46, 521, DateTimeKind.Utc).AddTicks(3430)
-                        },
-                        new
-                        {
-                            Id = 11,
-                            IsActive = true,
-                            PriceMonthly = 29m,
-                            ToolId = "trend-video",
-                            ToolName = "Trend Video Bulucu",
-                            UpdatedAt = new DateTime(2026, 8, 13, 12, 30, 46, 521, DateTimeKind.Utc).AddTicks(3430)
-                        });
-                });
-
             modelBuilder.Entity("KolayKobi.Api.Data.Models.ToolPurchase", b =>
                 {
                     b.Property<Guid>("Id")
@@ -372,9 +226,6 @@ namespace KolayKobi.Api.Migrations
 
                     b.Property<string>("IyzicoPaymentId")
                         .HasColumnType("text");
-
-                    b.Property<int?>("MonthlyLimit")
-                        .HasColumnType("integer");
 
                     b.Property<DateTime>("PurchasedAt")
                         .HasColumnType("timestamp with time zone");
@@ -544,7 +395,9 @@ namespace KolayKobi.Api.Migrations
                 {
                     b.HasOne("KolayKobi.Api.Data.Models.Plan", "Plan")
                         .WithMany()
-                        .HasForeignKey("PlanId");
+                        .HasForeignKey("PlanId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.HasOne("KolayKobi.Api.Data.Models.User", "User")
                         .WithMany()

@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import api from '@/lib/api'
 import { useAuthStore } from '@/store/auth'
@@ -16,7 +17,8 @@ interface Plan {
 interface Subscription {
   plan: string
   planName: string
-  status: string
+  status: string     // 'active' | 'expired'
+  expiresAt?: string
 }
 
 // ─── Plan feature lists ───────────────────────────────────────────────────────
@@ -63,6 +65,14 @@ const PLAN_ICONS: Record<string, string> = {
   enterprise: '🏢',
 }
 
+// Abonelik tier sırası — düşük sayı = düşük plan
+const PLAN_TIER: Record<string, number> = {
+  free:       0,
+  standard:   1,
+  premium:    2,
+  enterprise: 3,
+}
+
 const PLAN_BADGE: Record<string, { bg: string; text: string; border: string }> = {
   free:       { bg: 'bg-gray-50',     text: 'text-gray-600',    border: 'border-gray-200' },
   standard:   { bg: 'bg-blue-50',     text: 'text-blue-700',    border: 'border-blue-200' },
@@ -87,15 +97,36 @@ export function PaketSecPage() {
       api.get<Subscription>('/subscriptions/me').then((r: { data: Subscription }) => r.data),
   })
 
+  // Expired abonelik → free plan gibi davran (tüm paketler satın alınabilir)
+  const isExpired   = sub?.status === 'expired'
   const currentPlan = user?.isAdmin ? 'admin' : (sub?.plan ?? 'free')
 
-  const handleUpgrade = (planType: string) => {
-    if (planType === 'enterprise') {
+  const [loadingPlanId, setLoadingPlanId] = useState<number | null>(null)
+  const [checkoutError, setCheckoutError] = useState<string | null>(null)
+
+  const handleUpgrade = async (plan: Plan) => {
+    if (plan.type === 'enterprise') {
       window.open('https://kolaykobi.com/iletisim/', '_blank', 'noopener,noreferrer')
       return
     }
-    // TODO: ödeme entegrasyonu geldiğinde burada yönlendirme yapılacak
-    alert('Ödeme entegrasyonu yakında aktif olacak. Lütfen destek@kolaykobi.com adresine yazın.')
+
+    setCheckoutError(null)
+    setLoadingPlanId(plan.id)
+
+    try {
+      const res = await api.post<{ paymentPageUrl: string; token: string }>(
+        '/payments/checkout-form',
+        { planId: plan.id }
+      )
+      // iyzico ödeme sayfasına yönlendir
+      window.location.href = res.data.paymentPageUrl
+    } catch (err: unknown) {
+      const msg =
+        (err as { response?: { data?: { error?: string } } })?.response?.data?.error
+        ?? 'Ödeme başlatılamadı. Lütfen tekrar deneyin.'
+      setCheckoutError(msg)
+      setLoadingPlanId(null)
+    }
   }
 
   return (
@@ -109,10 +140,27 @@ export function PaketSecPage() {
         <p className="text-[13px] text-[#6B6963]">İhtiyacınıza uygun paketi seçin ve araçları kullanmaya başlayın</p>
       </div>
 
-      {/* ── Promo banner ── */}
-      <div className="bg-[#1D9E75] text-white rounded-2xl px-5 py-3 text-center text-[13px] font-medium">
-        🎉 Yeni aboneliklere özel tanıtım fiyatlarımızdan yararlanın!
-      </div>
+      {/* ── Promo / expired banner ── */}
+      {isExpired ? (
+        <div className="bg-amber-50 border border-amber-200 rounded-2xl px-5 py-3 text-[13px] text-amber-800">
+          ⏰ <strong>Paketiniz sona erdi.</strong>{' '}
+          {sub?.expiresAt
+            ? `${new Date(sub.expiresAt).toLocaleDateString('tr-TR')} tarihinde`
+            : ''}{' '}
+          Ücretsiz plana geçildi — yeni paket seçerek devam edebilirsiniz.
+        </div>
+      ) : (
+        <div className="bg-[#1D9E75] text-white rounded-2xl px-5 py-3 text-center text-[13px] font-medium">
+          🎉 Yeni aboneliklere özel tanıtım fiyatlarımızdan yararlanın!
+        </div>
+      )}
+
+      {/* ── Hata mesajı ── */}
+      {checkoutError && (
+        <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-[13px] text-red-700">
+          ⚠️ {checkoutError}
+        </div>
+      )}
 
       {/* ── Plan cards ── */}
       {isLoading ? (
@@ -124,7 +172,10 @@ export function PaketSecPage() {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {(plans ?? []).map((plan) => {
-            const isActive    = currentPlan === plan.type
+            const currentTier   = PLAN_TIER[currentPlan] ?? 0
+            const planTier      = PLAN_TIER[plan.type]   ?? 0
+            const isActive      = currentPlan === plan.type
+            const isDowngrade   = planTier < currentTier          // mevcut plandan düşük
             const isRecommended = plan.type === 'premium'
             const isEnterprise  = plan.type === 'enterprise'
             const badge         = PLAN_BADGE[plan.type] ?? PLAN_BADGE.free
@@ -199,29 +250,43 @@ export function PaketSecPage() {
 
                 {/* CTA Button */}
                 {isActive ? (
+                  // Aktif plan — deaktive
                   <button
                     disabled
                     className="w-full py-2.5 rounded-xl text-[13px] font-medium bg-[#F7F6F2] border border-[#D3D1C7] text-[#9A9792] cursor-default"
                   >
                     Aktif Paket
                   </button>
+                ) : isDowngrade ? (
+                  // Mevcut plandan düşük — satın alma engellendi
+                  <button
+                    disabled
+                    className="w-full py-2.5 rounded-xl text-[13px] font-medium bg-[#F7F6F2] border border-[#D3D1C7] text-[#9A9792] cursor-default"
+                  >
+                    Paket Süresi Dolunca Seçilebilir
+                  </button>
                 ) : isEnterprise ? (
                   <button
-                    onClick={() => handleUpgrade(plan.type)}
+                    onClick={() => handleUpgrade(plan)}
                     className="w-full py-2.5 rounded-xl text-[13px] font-medium bg-amber-600 text-white hover:bg-amber-700 transition-colors"
                   >
                     🤝 İletişime Geç
                   </button>
                 ) : (
                   <button
-                    onClick={() => handleUpgrade(plan.type)}
-                    className={`w-full py-2.5 rounded-xl text-[13px] font-medium transition-colors ${
+                    onClick={() => handleUpgrade(plan)}
+                    disabled={loadingPlanId !== null}
+                    className={`w-full py-2.5 rounded-xl text-[13px] font-medium transition-colors disabled:opacity-60 disabled:cursor-wait ${
                       isRecommended
                         ? 'bg-[#1D9E75] text-white hover:bg-[#178a65]'
                         : 'bg-[#1C1B19] text-white hover:bg-[#2C2B27]'
                     }`}
                   >
-                    🛒 Satın Al — {plan.priceMonthly === 0 ? 'Ücretsiz' : `₺${plan.priceMonthly.toLocaleString('tr-TR')}`}
+                    {loadingPlanId === plan.id
+                      ? '⏳ Yönlendiriliyor...'
+                      : currentPlan !== 'free'
+                        ? `⬆️ Yükselt — ₺${plan.priceMonthly.toLocaleString('tr-TR')}`
+                        : `🛒 Satın Al — ₺${plan.priceMonthly.toLocaleString('tr-TR')}`}
                   </button>
                 )}
               </div>

@@ -17,6 +17,9 @@ import { SifreDegistirPage } from '@/pages/account/SifreDegistirPage'
 import { KullanimGecmisiPage } from '@/pages/account/KullanimGecmisiPage'
 import { GecmisCiktilarPage } from '@/pages/account/GecmisCiktilarPage'
 import { PaketSecPage } from '@/pages/account/PaketSecPage'
+import { OdemeSonucPage } from '@/pages/account/OdemeSonucPage'
+import { OdemeGecmisiPage } from '@/pages/account/OdemeGecmisiPage'
+import { AracKullanimPage } from '@/pages/account/AracKullanimPage'
 import { ToolPage } from '@/pages/tools/ToolPage'
 import { AdminGuard } from '@/components/AdminGuard'
 import { AdminLayout } from '@/pages/admin/AdminLayout'
@@ -25,6 +28,9 @@ import { AdminKullaniciListesiPage } from '@/pages/admin/AdminKullaniciListesiPa
 import { AdminKullaniciIslemleriPage } from '@/pages/admin/AdminKullaniciIslemleriPage'
 import { AdminPaketIslemleriPage } from '@/pages/admin/AdminPaketIslemleriPage'
 import { AdminKullaniciGecmisiPage } from '@/pages/admin/AdminKullaniciGecmisiPage'
+import { AdminKullanimRaporuPage } from '@/pages/admin/AdminKullanimRaporuPage'
+import { AdminRaporDetayPage } from '@/pages/admin/AdminRaporDetayPage'
+import { AdminAracFiyatlariPage } from '@/pages/admin/AdminAracFiyatlariPage'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -69,6 +75,9 @@ function AppRoutes() {
               <Route path="kullanim-gecmisi" element={<KullanimGecmisiPage />} />
               <Route path="gecmis-ciktilar"  element={<GecmisCiktilarPage />} />
               <Route path="paket-sec"        element={<PaketSecPage />} />
+              <Route path="odeme-sonuc"     element={<OdemeSonucPage />} />
+              <Route path="odeme-gecmisi"   element={<OdemeGecmisiPage />} />
+              <Route path="arac-kullanim"   element={<AracKullanimPage />} />
             </Route>
 
             <Route path="/arac/:toolId" element={<ToolPage />} />
@@ -87,6 +96,8 @@ function AppRoutes() {
               <Route path="kullanici-listesi"   element={<AdminKullaniciListesiPage />} />
               <Route path="kullanici-islemleri" element={<AdminKullaniciIslemleriPage />} />
               <Route path="paket-islemleri"     element={<AdminPaketIslemleriPage />} />
+              <Route path="arac-fiyatlari"      element={<AdminAracFiyatlariPage />} />
+              <Route path="kullanim-raporu"     element={<AdminKullanimRaporuPage />} />
             </Route>
 
             {/* Admin: user usage history — outside AdminLayout (full-page) */}
@@ -95,6 +106,16 @@ function AppRoutes() {
               element={
                 <AdminGuard>
                   <AdminKullaniciGecmisiPage />
+                </AdminGuard>
+              }
+            />
+
+            {/* Admin: rapor detay — outside AdminLayout (full-page) */}
+            <Route
+              path="/admin/rapor/:resultId"
+              element={
+                <AdminGuard>
+                  <AdminRaporDetayPage />
                 </AdminGuard>
               }
             />

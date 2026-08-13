@@ -93,6 +93,13 @@ builder.Services.AddScoped<UserService>();
 builder.Services.AddScoped<ToolUsageService>();
 builder.Services.AddScoped<SubscriptionService>();
 
+// PayTR ödeme — ayrı HttpClient (token alma kısa, 30s yeterli)
+builder.Services.AddHttpClient("paytr", client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(30);
+});
+builder.Services.AddScoped<PayTrService>();
+
 // ──────────────────────────────────────────────────────────────────────────────
 // Pipeline
 // ──────────────────────────────────────────────────────────────────────────────

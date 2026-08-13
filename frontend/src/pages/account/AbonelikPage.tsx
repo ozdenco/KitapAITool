@@ -1,10 +1,11 @@
-import { useQuery } from '@tanstack/react-query'
+import { useState } from 'react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { Link } from 'react-router-dom'
 import api from '@/lib/api'
 import { useToolUsage } from '@/hooks/useToolUsage'
-import { UsageBar } from '@/components/ui/UsageBar'
 import { useAuthStore } from '@/store/auth'
 import { TOOLS } from '@/lib/tools'
-import type { ApiResponse, ToolId } from '@/types'
+import type { ApiResponse } from '@/types'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -12,34 +13,56 @@ interface Subscription {
   plan: string
   planName: string
   status: 'active' | 'paused' | 'cancelled' | 'expired'
+  previousPlan?: string
   startedAt: string
   expiresAt: string | null
   usagePerToolPerMonth: number | null
+  autoRenew: boolean
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const PLAN_BADGE: Record<string, string> = {
-  free: 'bg-[#F2F1ED] text-[#6B6963] border border-[#D3D1C7]',
-  standard: 'bg-blue-50 text-blue-700 border border-blue-200',
-  premium: 'bg-violet-50 text-violet-700 border border-violet-200',
+  free:       'bg-[#F2F1ED] text-[#6B6963] border border-[#D3D1C7]',
+  standard:   'bg-blue-50 text-blue-700 border border-blue-200',
+  premium:    'bg-violet-50 text-violet-700 border border-violet-200',
   enterprise: 'bg-amber-50 text-amber-700 border border-amber-200',
-  admin: 'bg-[#E6F9F2] text-[#085041] border border-[#9FE1CB]',
+  admin:      'bg-[#E6F9F2] text-[#085041] border border-[#9FE1CB]',
 }
 
-const STATUS_LABEL: Record<string, string> = {
-  active: 'Aktif',
-  paused: 'Duraklatıldı',
-  cancelled: 'İptal Edildi',
-  expired: 'Süresi Doldu',
+// ─── AutoRenew Toggle ─────────────────────────────────────────────────────────
+
+function AutoRenewToggle({ value, onChange, disabled }: {
+  value: boolean
+  onChange: (v: boolean) => void
+  disabled?: boolean
+}) {
+  return (
+    <button
+      role="switch"
+      aria-checked={value}
+      onClick={() => !disabled && onChange(!value)}
+      disabled={disabled}
+      className={`relative inline-flex w-11 h-6 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1D9E75]/40 disabled:opacity-50 ${
+        value ? 'bg-[#1D9E75]' : 'bg-[#D3D1C7]'
+      }`}
+    >
+      <span
+        className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${
+          value ? 'translate-x-5' : 'translate-x-0'
+        }`}
+      />
+    </button>
+  )
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function AbonelikPage() {
   const { user } = useAuthStore()
+  const queryClient = useQueryClient()
 
-  const { data: sub, isLoading: subLoading } = useQuery({
+  const { data: sub, isLoading: subLoading } = useQuery<Subscription>({
     queryKey: ['subscription'],
     queryFn: () =>
       api.get<Subscription>('/subscriptions/me').then((r: { data: Subscription }) => r.data),
@@ -47,16 +70,26 @@ export function AbonelikPage() {
 
   const { data: usages } = useToolUsage()
 
-  // Derived stats
-  const toolLimit = user?.isAdmin ? null : (sub?.usagePerToolPerMonth ?? 3)
-  const totalUsed = usages?.reduce((s, u) => s + u.usedCount, 0) ?? 0
-  const totalLimit = toolLimit != null ? (TOOLS.length * toolLimit) : null
-  const totalRemaining = totalLimit != null ? Math.max(0, totalLimit - totalUsed) : null
+  const autoRenewMutation = useMutation({
+    mutationFn: (autoRenew: boolean) =>
+      api.put('/subscriptions/me/auto-renew', { autoRenew }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['subscription'] })
+    },
+  })
 
-  const getToolUsage = (toolId: ToolId) => {
-    const u = usages?.find((u) => u.toolId === toolId)
-    return { used: u?.usedCount ?? 0, limit: toolLimit }
-  }
+  const isExpired  = sub?.status === 'expired'
+  const isActive   = sub?.status === 'active'
+  const planKey    = user?.isAdmin ? 'admin' : (sub?.plan ?? 'free')
+  const toolLimit  = user?.isAdmin ? null : (sub?.usagePerToolPerMonth ?? 3)
+  const totalUsed  = usages?.reduce((s, u) => s + u.usedCount, 0) ?? 0
+  const isFreeOrExpired = planKey === 'free' || isExpired
+  // Expired/free plan: show per-tool stats (not misleading totals)
+  const totalLimit = toolLimit != null ? (isFreeOrExpired ? toolLimit : TOOLS.length * toolLimit) : null
+  const totalRem   = totalLimit != null
+    ? (isFreeOrExpired ? Math.max(0, toolLimit! - Math.max(...(usages?.map(u => u.usedCount) ?? [0]))) : Math.max(0, TOOLS.length * toolLimit! - totalUsed))
+    : null
+  const badgeCls   = PLAN_BADGE[planKey] ?? PLAN_BADGE.free
 
   if (subLoading) {
     return (
@@ -68,12 +101,9 @@ export function AbonelikPage() {
     )
   }
 
-  const planKey = user?.isAdmin ? 'admin' : (sub?.plan ?? 'free')
-  const badgeCls = PLAN_BADGE[planKey] ?? PLAN_BADGE.free
-
   return (
     <div className="flex flex-col gap-6">
-      {/* ── Page title ── */}
+      {/* ── Title ── */}
       <div>
         <div className="flex items-center gap-[10px] mb-[4px]">
           <span className="text-[22px] leading-none">📦</span>
@@ -82,7 +112,38 @@ export function AbonelikPage() {
         <p className="text-[13px] text-[#6B6963]">Aktif paketiniz ve kullanım detaylarınız</p>
       </div>
 
-      {/* ── Current plan card ── */}
+      {/* ── Süresi doldu uyarısı ── */}
+      {isExpired && (
+        <div className="bg-amber-50 border border-amber-200 rounded-2xl px-5 py-4">
+          <div className="flex items-start gap-3">
+            <span className="text-[20px] shrink-0">⏰</span>
+            <div className="flex-1">
+              <p className="text-[14px] font-semibold text-amber-900 mb-1">
+                {sub?.previousPlan ? `${sub.previousPlan} Paketiniz` : 'Paketiniz'} Sona Erdi
+              </p>
+              <p className="text-[12px] text-amber-800 mb-3">
+                Ücretsiz plana geçildi — araç başına 3 kullanım hakkınız var. İstediğiniz zaman yeni paket satın alabilir veya tekil araç aboneliği yapabilirsiniz.
+              </p>
+              <div className="flex gap-2 flex-wrap">
+                <Link
+                  to="/hesabim/paket-sec"
+                  className="px-4 py-2 rounded-xl text-[12px] font-semibold bg-[#1D9E75] text-white hover:bg-[#178a65] transition-colors"
+                >
+                  📦 Paket Satın Al
+                </Link>
+                <Link
+                  to="/hesabim/araclarim"
+                  className="px-4 py-2 rounded-xl text-[12px] font-semibold bg-white border border-[#D3D1C7] text-[#3A3935] hover:bg-[#F7F6F2] transition-colors"
+                >
+                  🔧 Araç Satın Al
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Plan kartı ── */}
       <div className="bg-white rounded-2xl border border-[#E2E0D8] p-5">
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <div className="flex items-center gap-3">
@@ -90,72 +151,94 @@ export function AbonelikPage() {
               {toolLimit == null && <span>∞</span>}
               {sub?.planName ?? (user?.isAdmin ? 'Admin' : 'Ücretsiz')} Paketi
             </span>
-            {sub?.status && sub.status !== 'active' && (
-              <span className="text-[12px] text-amber-600 font-medium">
-                {STATUS_LABEL[sub.status]}
-              </span>
+            {isExpired && (
+              <span className="text-[12px] text-amber-600 font-medium">Süresi Doldu</span>
             )}
           </div>
           {user?.isAdmin && (
             <span className="text-[15px] font-semibold text-[#1D9E75]">Admin Hesabı</span>
           )}
           {sub?.expiresAt && (
-            <span className="text-[12px] text-[#9A9792]">
-              Bitiş: {new Date(sub.expiresAt).toLocaleDateString('tr-TR')}
+            <span className={`text-[12px] ${isExpired ? 'text-amber-600 font-medium' : 'text-[#9A9792]'}`}>
+              {isExpired ? 'Bitti: ' : 'Bitiş: '}
+              {new Date(sub.expiresAt).toLocaleDateString('tr-TR')}
             </span>
           )}
         </div>
-      </div>
 
-      {/* ── Stats row ── */}
-      <div className="grid grid-cols-3 gap-3">
-        {[
-          {
-            label: 'Bu Ay Kullanılan',
-            value: totalUsed === 0 ? '0' : String(totalUsed),
-            highlight: totalUsed > 0,
-          },
-          {
-            label: 'Toplam Hak',
-            value: totalLimit == null ? '∞' : String(totalLimit),
-            highlight: false,
-          },
-          {
-            label: 'Kalan Hak',
-            value: totalRemaining == null ? '∞' : String(totalRemaining),
-            highlight: false,
-          },
-        ].map(({ label, value, highlight }) => (
-          <div key={label} className="bg-white rounded-2xl border border-[#E2E0D8] p-4 text-center">
-            <p className="text-[11px] text-[#9A9792] mb-1">{label}</p>
-            <p className={`text-[26px] font-bold ${highlight ? 'text-[#1D9E75]' : 'text-[#1C1B19]'}`}>
-              {value}
-            </p>
+        {/* ── Otomatik yenileme ── */}
+        {!user?.isAdmin && sub && sub.plan !== 'free' && (
+          <div className="mt-4 pt-4 border-t border-[#F0EFE9] flex items-center justify-between gap-4">
+            <div>
+              <p className="text-[13px] font-medium text-[#1C1B19]">Otomatik Yenileme</p>
+              <p className="text-[12px] text-[#9A9792]">
+                {isExpired
+                  ? (sub.autoRenew ? 'Yeni paket alındığında otomatik yenileme aktif olacak' : 'Yeni paket alındığında devre dışı kalacak')
+                  : (sub.autoRenew ? 'Paket bitiş tarihinde otomatik yenilenecek' : 'Paket bittikten sonra ücretsiz plana geçilecek')}
+              </p>
+            </div>
+            <AutoRenewToggle
+              value={sub.autoRenew}
+              onChange={(v) => autoRenewMutation.mutate(v)}
+              disabled={autoRenewMutation.isPending}
+            />
           </div>
-        ))}
+        )}
       </div>
 
-      {/* ── Per-tool usage ── */}
-      <div className="bg-white rounded-2xl border border-[#E2E0D8] p-5">
-        <h2 className="text-[13px] font-semibold text-[#6B6963] uppercase tracking-wider mb-4">
-          Araç Başına Kullanım
-        </h2>
-        <div className="flex flex-col gap-3">
-          {TOOLS.map((tool) => {
-            const { used, limit } = getToolUsage(tool.id)
-            return (
-              <div key={tool.id} className="flex items-center gap-3">
-                <span className="text-[18px] w-7 shrink-0 leading-none">{tool.icon}</span>
-                <div className="flex-1 min-w-0">
-                  <p className="text-[12px] font-medium text-[#3A3935] truncate leading-snug">{tool.name}</p>
-                  <UsageBar used={used} limit={limit} className="mt-[3px]" />
-                </div>
+      {/* ── İstatistik row ── */}
+      <div className="grid grid-cols-3 gap-3">
+        {isFreeOrExpired ? (
+          // Free/expired: show per-tool stats (3 per tool) — clearer than "33 total"
+          <>
+            <div className="bg-white rounded-2xl border border-[#E2E0D8] p-4 text-center">
+              <p className="text-[11px] text-[#9A9792] mb-1">Bu Ay Kullanılan</p>
+              <p className={`text-[26px] font-bold ${totalUsed > 0 ? 'text-[#1D9E75]' : 'text-[#1C1B19]'}`}>{totalUsed}</p>
+              <p className="text-[10px] text-[#9A9792]">tüm araçlar</p>
+            </div>
+            <div className="bg-white rounded-2xl border border-[#E2E0D8] p-4 text-center">
+              <p className="text-[11px] text-[#9A9792] mb-1">Hak / Araç</p>
+              <p className="text-[26px] font-bold text-[#1C1B19]">3</p>
+              <p className="text-[10px] text-[#9A9792]">ücretsiz plan</p>
+            </div>
+            <div className="bg-white rounded-2xl border border-[#E2E0D8] p-4 text-center">
+              <p className="text-[11px] text-[#9A9792] mb-1">Kalan / Araç</p>
+              <p className="text-[26px] font-bold text-[#1C1B19]">{totalRem ?? 3}</p>
+              <p className="text-[10px] text-[#9A9792]">bu ay</p>
+            </div>
+          </>
+        ) : (
+          // Paid plan: show totals
+          <>
+            {[
+              { label: 'Bu Ay Kullanılan', value: String(totalUsed),      sub: 'tüm araçlar',  highlight: totalUsed > 0 },
+              { label: 'Toplam Hak',       value: totalLimit == null ? '∞' : String(totalLimit), sub: `${toolLimit}/araç`, highlight: false },
+              { label: 'Kalan Hak',        value: totalRem   == null ? '∞' : String(totalRem),   sub: 'bu ay',            highlight: false },
+            ].map(({ label, value, sub, highlight }) => (
+              <div key={label} className="bg-white rounded-2xl border border-[#E2E0D8] p-4 text-center">
+                <p className="text-[11px] text-[#9A9792] mb-1">{label}</p>
+                <p className={`text-[26px] font-bold ${highlight ? 'text-[#1D9E75]' : 'text-[#1C1B19]'}`}>{value}</p>
+                <p className="text-[10px] text-[#9A9792]">{sub}</p>
               </div>
-            )
-          })}
-        </div>
+            ))}
+          </>
+        )}
       </div>
 
+      {/* ── Araç kullanımı linki ── */}
+      <Link
+        to="/hesabim/arac-kullanim"
+        className="flex items-center justify-between bg-white rounded-2xl border border-[#E2E0D8] px-5 py-4 hover:bg-[#FAFAF7] transition-colors group"
+      >
+        <div className="flex items-center gap-3">
+          <span className="text-[20px]">📊</span>
+          <div>
+            <p className="text-[13px] font-medium text-[#1C1B19]">Araç Başına Kullanım</p>
+            <p className="text-[12px] text-[#9A9792]">Her araç için bu ayki kullanım detayı</p>
+          </div>
+        </div>
+        <span className="text-[#9A9792] group-hover:text-[#1D9E75] transition-colors text-lg">→</span>
+      </Link>
     </div>
   )
 }

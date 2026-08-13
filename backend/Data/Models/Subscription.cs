@@ -20,6 +20,11 @@ public class Subscription
     public string? IyzicoSubscriptionId { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
+    /// <summary>
+    /// Paket süresi dolduğunda otomatik yenile. false ise paket biter, ücretsiz plana düşer.
+    /// </summary>
+    public bool AutoRenew { get; set; } = true;
+
     // Navigation
     public User User { get; set; } = null!;
     public Plan Plan { get; set; } = null!;

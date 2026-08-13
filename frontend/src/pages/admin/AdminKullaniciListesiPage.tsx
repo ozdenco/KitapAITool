@@ -7,6 +7,134 @@ import { EditModal, ResetPasswordModal } from './AdminModals'
 import type { AdminUser } from './AdminModals'
 import { formatDate, timeAgo, TOOL_LABELS, PLAN_LABELS, PLAN_COLORS } from './adminConstants'
 
+// ─── Plan Change Modal ────────────────────────────────────────────────────────
+
+interface PaketDegistirModalProps {
+  user: AdminUser
+  onClose: () => void
+  onSaved: () => void
+}
+
+type PlanAction = 'free' | 'set' | 'expire'
+
+interface PlanOption {
+  action: PlanAction
+  label: string
+  description: string
+  cls: string
+  planType?: string
+}
+
+const PLAN_OPTIONS: PlanOption[] = [
+  { action: 'free',   label: '🎁 Ücretsiz',     description: 'Ücretsiz plana al, süresiz',  cls: 'bg-gray-50 border-gray-200 hover:bg-gray-100 text-gray-700' },
+  { action: 'set',    label: '⭐ Standart',      description: '10 hak/araç, +1 ay',          cls: 'bg-blue-50 border-blue-200 hover:bg-blue-100 text-blue-700',       planType: 'standard' },
+  { action: 'set',    label: '💎 Premium',       description: '25 hak/araç, +1 ay',          cls: 'bg-violet-50 border-violet-200 hover:bg-violet-100 text-violet-700', planType: 'premium' },
+  { action: 'set',    label: '🏢 Kurumsal',      description: 'Sınırsız hak, +1 ay',         cls: 'bg-amber-50 border-amber-200 hover:bg-amber-100 text-amber-700',    planType: 'enterprise' },
+  { action: 'expire', label: '⏰ Süresi Doldur', description: 'Aboneliği dün bitmiş say',    cls: 'bg-red-50 border-red-200 hover:bg-red-100 text-red-700' },
+]
+
+function PaketDegistirModal({ user, onClose, onSaved }: PaketDegistirModalProps) {
+  const [error, setError] = useState<string | null>(null)
+  const [loadingAction, setLoadingAction] = useState<string | null>(null)
+
+  // Fetch plans to get plan IDs
+  const { data: plans } = useQuery({
+    queryKey: ['plans'],
+    queryFn: async () => {
+      const res = await api.get<{ id: number; type: string; name: string }[]>('/subscriptions/plans')
+      return res.data
+    },
+  })
+
+  const getPlanId = (planType: string): number | undefined =>
+    plans?.find((p) => p.type === planType)?.id
+
+  const handleAction = async (action: PlanAction, planType?: string) => {
+    setError(null)
+    const key = action === 'set' ? (planType ?? action) : action
+    setLoadingAction(key)
+
+    try {
+      const body =
+        action === 'set' && planType
+          ? { action: 'set', planId: getPlanId(planType) }
+          : { action }
+
+      await api.put(`/admin/users/${user.id}/subscription`, body)
+      onSaved()
+      onClose()
+    } catch (err: unknown) {
+      const msg =
+        (err as { response?: { data?: { error?: string } } })?.response?.data?.error
+        ?? 'İşlem başarısız oldu.'
+      setError(msg)
+    } finally {
+      setLoadingAction(null)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onClose}>
+      <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm" onClick={(e) => e.stopPropagation()}>
+        {/* Header */}
+        <div className="flex items-center gap-3 mb-4">
+          <span className="text-2xl">📦</span>
+          <div>
+            <h3 className="text-[15px] font-bold text-[#1C1B19]">Paket Değiştir</h3>
+            <p className="text-[12px] text-[#9A9792] truncate max-w-[200px]">{user.name} · {user.email}</p>
+          </div>
+        </div>
+
+        {/* Current plan */}
+        <div className="mb-4 px-3 py-2 rounded-xl bg-[#F7F6F2] border border-[#E2E0D8]">
+          <p className="text-[11px] text-[#9A9792] uppercase tracking-wider mb-0.5">Mevcut Plan</p>
+          <p className="text-[13px] font-semibold text-[#1C1B19]">
+            <span className={`inline-block px-2 py-0.5 rounded-full text-xs ${PLAN_COLORS[user.planType] ?? 'bg-gray-100'}`}>
+              {PLAN_LABELS[user.planType] ?? user.planType}
+            </span>
+          </p>
+        </div>
+
+        {/* Plan options */}
+        <div className="flex flex-col gap-2 mb-4">
+          {PLAN_OPTIONS.map(({ action, label, description, cls, planType }) => {
+            const key = action === 'set' ? (planType ?? action) : action
+            const isLoading = loadingAction === key
+            const needsPlanId = action === 'set' && !getPlanId(planType ?? '')
+            return (
+              <button
+                key={key}
+                onClick={() => handleAction(action as PlanAction, planType)}
+                disabled={loadingAction !== null || needsPlanId}
+                className={`w-full flex items-center justify-between px-4 py-3 rounded-xl border text-left transition-colors disabled:opacity-50 disabled:cursor-wait ${cls}`}
+              >
+                <div>
+                  <p className="text-[13px] font-semibold">{label}</p>
+                  <p className="text-[11px] opacity-70">{description}</p>
+                </div>
+                {isLoading && (
+                  <span className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin shrink-0" />
+                )}
+              </button>
+            )
+          })}
+        </div>
+
+        {error && (
+          <p className="text-[12px] text-red-600 mb-3">⚠️ {error}</p>
+        )}
+
+        <button
+          onClick={onClose}
+          className="w-full py-2 rounded-xl text-[13px] text-[#6B6963] hover:bg-[#F7F6F2] transition-colors"
+        >
+          İptal
+        </button>
+      </div>
+    </div>
+  )
+}
+
 // ─── Tool Badges ──────────────────────────────────────────────────────────────
 
 function ToolBadges({ toolIds }: { toolIds: string[] }) {
@@ -47,9 +175,10 @@ interface UserActionSidebarProps {
   onToggleStatus: () => void
   onDelete: () => void
   onDetail: () => void
+  onPaketDegistir: () => void
 }
 
-function UserActionSidebar({ user, isPending, onEdit, onResetPassword, onToggleStatus, onDelete, onDetail }: UserActionSidebarProps) {
+function UserActionSidebar({ user, isPending, onEdit, onResetPassword, onToggleStatus, onDelete, onDetail, onPaketDegistir }: UserActionSidebarProps) {
   return (
     <aside className="shrink-0 w-[190px] sticky top-4">
       <div className="bg-white rounded-2xl border border-[#E2E0D8]">
@@ -77,6 +206,7 @@ function UserActionSidebar({ user, isPending, onEdit, onResetPassword, onToggleS
               {[
                 { icon: '✎',  label: 'Düzenle',           onClick: onEdit,          cls: 'text-[#3A3935] hover:bg-[#F0FAF6] hover:text-[#085041]' },
                 { icon: '📊', label: 'Kullanım Geçmişi',  onClick: onDetail,        cls: 'text-[#3A3935] hover:bg-[#F0FAF6] hover:text-[#085041]' },
+                { icon: '📦', label: 'Paket Değiştir',    onClick: onPaketDegistir, cls: 'text-[#1D9E75] hover:bg-[#E6F9F2]' },
                 { icon: '🔑', label: 'Şifre Sıfırla',     onClick: onResetPassword, cls: 'text-amber-700 hover:bg-amber-50' },
                 {
                   icon:    user.isActive ? '⏸' : '▶',
@@ -113,11 +243,12 @@ export function AdminKullaniciListesiPage() {
   const queryClient = useQueryClient()
   const navigate    = useNavigate()
 
-  const [selectedUser,  setSelectedUser]  = useState<AdminUser | null>(null)
-  const [editUser,      setEditUser]      = useState<AdminUser | null>(null)
-  const [resetUser,     setResetUser]     = useState<AdminUser | null>(null)
-  const [deleteConfirm, setDeleteConfirm] = useState<AdminUser | null>(null)
-  const [search,        setSearch]        = useState('')
+  const [selectedUser,      setSelectedUser]      = useState<AdminUser | null>(null)
+  const [editUser,          setEditUser]          = useState<AdminUser | null>(null)
+  const [resetUser,         setResetUser]         = useState<AdminUser | null>(null)
+  const [deleteConfirm,     setDeleteConfirm]     = useState<AdminUser | null>(null)
+  const [paketDegistirUser, setPaketDegistirUser] = useState<AdminUser | null>(null)
+  const [search,            setSearch]            = useState('')
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ['admin-users'],
@@ -264,12 +395,20 @@ export function AdminKullaniciListesiPage() {
           onToggleStatus={() => { if (selectedUser) toggleStatusMutation.mutate(selectedUser.id) }}
           onDelete={() => { if (selectedUser) setDeleteConfirm(selectedUser) }}
           onDetail={() => { if (selectedUser) navigate(`/admin/kullanici/${selectedUser.id}/gecmis`) }}
+          onPaketDegistir={() => { if (selectedUser) setPaketDegistirUser(selectedUser) }}
         />
       </div>
 
       {/* ── Modals ── */}
-      {editUser  && <EditModal user={editUser} onClose={() => setEditUser(null)} onSaved={handleSaved} />}
-      {resetUser && <ResetPasswordModal user={resetUser} onClose={() => setResetUser(null)} />}
+      {editUser          && <EditModal user={editUser} onClose={() => setEditUser(null)} onSaved={handleSaved} />}
+      {resetUser         && <ResetPasswordModal user={resetUser} onClose={() => setResetUser(null)} />}
+      {paketDegistirUser && (
+        <PaketDegistirModal
+          user={paketDegistirUser}
+          onClose={() => setPaketDegistirUser(null)}
+          onSaved={handleSaved}
+        />
+      )}
 
       {/* Delete Confirmation */}
       {deleteConfirm && (

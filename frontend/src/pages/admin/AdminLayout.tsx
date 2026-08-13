@@ -5,6 +5,8 @@ const ADMIN_NAV_ITEMS = [
   { to: '/admin/kullanici-listesi',  label: 'Kullanıcı Listesi',  icon: '👥' },
   { to: '/admin/kullanici-islemleri',label: 'Kullanıcı İşlemleri',icon: '⚙️' },
   { to: '/admin/paket-islemleri',    label: 'Paket İşlemleri',    icon: '📦' },
+  { to: '/admin/arac-fiyatlari',     label: 'Araç Fiyatları',     icon: '🏷️' },
+  { to: '/admin/kullanim-raporu',    label: 'Kullanım Raporu',    icon: '📋' },
 ] as const
 
 export function AdminLayout() {

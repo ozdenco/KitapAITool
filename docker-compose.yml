@@ -46,6 +46,12 @@ services:
       Smtp__FromEmail: ${SMTP__FROMEMAIL:-}
       Smtp__FromName: ${SMTP__FROMNAME:-KolayKOBİ}
       AppUrl: ${APP_URL:-https://app.kolaykobi.com}
+      # PayTR ödeme
+      PayTr__MerchantId: ${PAYTR_MERCHANT_ID:-}
+      PayTr__MerchantKey: ${PAYTR_MERCHANT_KEY:-}
+      PayTr__MerchantSalt: ${PAYTR_MERCHANT_SALT:-}
+      PayTr__TestMode: ${PAYTR_TEST_MODE:-true}
+      Frontend__BaseUrl: ${FRONTEND_BASE_URL:-https://app.kolaykobi.com}
     # Backend'i dışarıya açmıyoruz — nginx iç ağdan proxy yapıyor
     expose:
       - "5000"

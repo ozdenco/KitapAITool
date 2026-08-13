@@ -209,9 +209,6 @@ function ResultDetailPanel({ result: summary, onClose }: { result: ResultSummary
         <span className="text-[20px] leading-none">{meta.icon}</span>
         <div className="flex-1 min-w-0">
           <p className="text-[13px] font-semibold text-[#1C1B19]">{meta.name}</p>
-          {summary.inputSummary && summary.inputSummary !== summary.toolId && (
-            <p className="text-[11px] text-[#6B6963] truncate">{summary.inputSummary}</p>
-          )}
         </div>
         <div className="flex items-center gap-1">
           <button
@@ -463,12 +460,7 @@ export function GecmisCiktilarPage() {
                   <span className="text-[22px] leading-none shrink-0">{meta.icon}</span>
 
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <p className="text-[13px] font-semibold text-[#1C1B19]">{meta.name}</p>
-                      {r.inputSummary && r.inputSummary !== r.toolId && (
-                        <span className="text-[12px] text-[#6B6963] truncate max-w-[260px]">— {r.inputSummary}</span>
-                      )}
-                    </div>
+                    <p className="text-[13px] font-semibold text-[#1C1B19]">{meta.name}</p>
                     <p className="text-[11px] text-[#9A9792] mt-0.5">{formatDate(r.createdAt)}</p>
                   </div>
 

@@ -23,7 +23,7 @@ interface UpdateUserPayload { name?: string; company?: string; isAdmin?: boolean
 
 interface CreateUserPayload {
   name: string; email: string; company: string
-  password: string; isAdmin: boolean; plan: string
+  password: string; isAdmin: boolean; plan: string; sendEmail: boolean
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -183,6 +183,7 @@ export function CreateUserModal({ onClose, onCreated }: CreateUserModalProps) {
   const [company, setCompany]     = useState('')
   const [plan, setPlan]           = useState('free')
   const [isAdmin, setIsAdmin]     = useState(false)
+  const [sendEmail, setSendEmail] = useState(false)
   const [password, setPassword]   = useState('')
   const [confirm, setConfirm]     = useState('')
   const [showPw, setShowPw]       = useState(false)
@@ -204,7 +205,7 @@ export function CreateUserModal({ onClose, onCreated }: CreateUserModalProps) {
     if (!email.trim())           { setError('E-posta zorunludur.'); return }
     if (!PASSWORD_RE.test(password)) { setError('Şifre en az 8 karakter, büyük/küçük harf ve rakam içermelidir.'); return }
     if (password !== confirm)    { setError('Şifreler eşleşmiyor.'); return }
-    mutation.mutate({ name: name.trim(), email: email.trim(), company: company.trim(), plan, isAdmin, password })
+    mutation.mutate({ name: name.trim(), email: email.trim(), company: company.trim(), plan, isAdmin, password, sendEmail })
   }
 
   const EyeBtn = ({ show, toggle }: { show: boolean; toggle: () => void }) => (
@@ -244,6 +245,30 @@ export function CreateUserModal({ onClose, onCreated }: CreateUserModalProps) {
               </label>
             </div>
           </div>
+          {/* Mail gönderim tercihi */}
+          <div className="border border-dashed border-gray-200 rounded-xl p-4 bg-gray-50 flex flex-col gap-2">
+            <label className="flex items-start gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                className="w-4 h-4 accent-[#1D9E75] mt-0.5 shrink-0"
+                checked={sendEmail}
+                onChange={(e) => setSendEmail(e.target.checked)}
+              />
+              <div>
+                <p className="text-sm font-medium text-gray-700 leading-snug">Kullanıcıya hoş geldin maili gönder</p>
+                {sendEmail ? (
+                  <p className="text-xs text-[#1D9E75] mt-0.5">
+                    ✉️ Kullanıcı "Kullanıcınız oluşturuldu, şifrenizi belirlemek için tıklayın" içerikli bir bağlantı alacak.
+                  </p>
+                ) : (
+                  <p className="text-xs text-gray-400 mt-0.5">
+                    Mail gönderilmeyecek — şifre bilgisini kullanıcıya manuel iletebilirsiniz.
+                  </p>
+                )}
+              </div>
+            </label>
+          </div>
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Şifre *</label>
             <div className="relative">
@@ -262,7 +287,7 @@ export function CreateUserModal({ onClose, onCreated }: CreateUserModalProps) {
           </div>
         </div>
         {error && <p className="mt-3 text-sm text-red-500">{error}</p>}
-        <p className="mt-3 text-xs text-gray-400">* Admin tarafından oluşturulan hesaplar e-posta doğrulaması olmadan aktif olur.</p>
+        <p className="mt-3 text-xs text-gray-400">* Admin tarafından oluşturulan hesaplar e-posta doğrulaması gerekmeden aktif olur.</p>
         <div className="flex gap-3 mt-6 justify-end">
           <button onClick={onClose} className="px-4 py-2 rounded-lg text-sm text-gray-600 hover:bg-gray-100 transition-colors">İptal</button>
           <button onClick={handleCreate} disabled={mutation.isPending}
