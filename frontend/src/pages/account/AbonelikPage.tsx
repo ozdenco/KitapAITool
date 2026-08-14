@@ -155,6 +155,11 @@ export function AbonelikPage() {
             {isExpired && (
               <span className="text-[12px] text-amber-600 font-medium">Süresi Doldu</span>
             )}
+            {sub?.startedAt && (
+              <span className="text-[12px] text-[#9A9792]">
+                Başlangıç: {new Date(sub.startedAt).toLocaleDateString('tr-TR')}
+              </span>
+            )}
             {sub?.expiresAt && (
               <span className={`text-[12px] ${isExpired ? 'text-amber-600 font-medium' : 'text-[#9A9792]'}`}>
                 {isExpired ? 'Bitti: ' : 'Bitiş: '}

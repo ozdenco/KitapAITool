@@ -215,7 +215,7 @@ export function AdminAracFiyatlariPage() {
             <thead>
               <tr className="bg-[#F7F6F2] border-b border-[#E2E0D8]">
                 <th className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-[#9A9792]">Araç</th>
-                <th className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-[#9A9792]">Aylık Fiyat</th>
+                <th className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-[#9A9792]">Aylık Standart Paket Fiyatı</th>
                 <th className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-[#9A9792]">Durum</th>
                 <th className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-[#9A9792]">Son Güncelleme</th>
                 <th className="px-5 py-3" />
