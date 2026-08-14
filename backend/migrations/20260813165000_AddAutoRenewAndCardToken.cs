@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
@@ -5,6 +6,8 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace KolayKobi.Api.migrations
 {
     /// <inheritdoc />
+    [DbContext(typeof(KolayKobi.Api.Data.AppDbContext))]
+    [Migration("20260813165000_AddAutoRenewAndCardToken")]
     public partial class AddAutoRenewAndCardToken : Migration
     {
         /// <inheritdoc />
