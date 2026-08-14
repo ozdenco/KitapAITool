@@ -1,19 +1,21 @@
 import { NavLink, Outlet, Navigate, useLocation } from 'react-router-dom'
+import { useLogout } from '@/hooks/useAuth'
 
 const NAV_ITEMS = [
+  { to: 'profil',          label: 'Profil Bilgileri',     icon: '👤' },
   { to: 'abonelik',        label: 'Paket Bilgilerim',     icon: '📦' },
   { to: 'paket-sec',       label: 'Paket Yükselt',        icon: '⬆️' },
   { to: 'araclarim',       label: 'Araç Satın Al',        icon: '🛒' },
   { to: 'odeme-gecmisi',   label: 'Ödeme Geçmişi',        icon: '💳' },
   { to: 'gecmis-ciktilar', label: 'Geçmiş Çıktılarım',   icon: '📋' },
-  { to: 'arac-kullanim',   label: 'Araç Kullanımı',       icon: '📊' },
-  { to: 'profil',          label: 'Profil Bilgileri',     icon: '👤' },
+  { to: 'arac-kullanim',   label: 'Araç Kullanımı',       icon: '📈' },
+  { to: 'kullanim-gecmisi',label: 'Kullanım Geçmişi',     icon: '📊' },
   { to: 'sifre',           label: 'Şifre Değiştir',       icon: '🔒' },
-  { to: 'kullanim-gecmisi',label: 'Kullanım Geçmişi',     icon: '📈' },
 ] as const
 
 export function HesabimLayout() {
   const { pathname } = useLocation()
+  const logout = useLogout()
 
   // /hesabim → /hesabim/abonelik
   if (pathname === '/hesabim' || pathname === '/hesabim/') {
@@ -30,7 +32,7 @@ export function HesabimLayout() {
               ⚙️ Hesap Ayarları
             </p>
           </div>
-          <nav className="flex flex-col gap-[2px] px-2 pb-3">
+          <nav className="flex flex-col gap-[2px] px-2 pb-2">
             {NAV_ITEMS.map(({ to, label, icon }) => (
               <NavLink
                 key={to}
@@ -47,8 +49,18 @@ export function HesabimLayout() {
                 <span>{label}</span>
               </NavLink>
             ))}
-
           </nav>
+
+          {/* Çıkış Yap */}
+          <div className="border-t border-[#F2F1ED] px-2 pb-2 pt-1">
+            <button
+              onClick={logout}
+              className="flex items-center gap-[9px] px-[11px] py-[8px] rounded-xl text-[13px] font-medium text-red-600 hover:bg-red-50 transition-colors w-full"
+            >
+              <span className="text-[15px] leading-none">🚪</span>
+              <span>Çıkış Yap</span>
+            </button>
+          </div>
         </div>
       </aside>
 

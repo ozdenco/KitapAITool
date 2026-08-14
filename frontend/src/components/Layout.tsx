@@ -10,7 +10,9 @@ const ACCOUNT_ITEMS = [
   { to: '/hesabim/abonelik',        label: 'Paket Bilgilerim',     icon: '📦' },
   { to: '/hesabim/paket-sec',       label: 'Paket Yükselt',        icon: '⬆️' },
   { to: '/hesabim/araclarim',       label: 'Araç Satın Al',        icon: '🛒' },
+  { to: '/hesabim/odeme-gecmisi',   label: 'Ödeme Geçmişi',        icon: '💳' },
   { to: '/hesabim/gecmis-ciktilar', label: 'Geçmiş Çıktılarım',   icon: '📋' },
+  { to: '/hesabim/arac-kullanim',   label: 'Araç Kullanımı',       icon: '📈' },
   { to: '/hesabim/kullanim-gecmisi',label: 'Kullanım Geçmişi',     icon: '📊' },
   { to: '/hesabim/sifre',           label: 'Şifre Değiştir',       icon: '🔒' },
 ] as const
