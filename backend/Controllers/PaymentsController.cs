@@ -329,6 +329,16 @@ public class PaymentsController(
             order.IyzicoPaymentId = form.MerchantOid;
             order.CompletedAt     = DateTime.UtcNow;
 
+            // PayTR kayıtlı kart tokenını kullanıcıya kaydet (otomatik yenileme için)
+            if (!string.IsNullOrWhiteSpace(form.Utoken))
+            {
+                var payingUser = await db.Users.FindAsync(order.UserId);
+                if (payingUser is not null)
+                {
+                    payingUser.PayTrCardToken = form.Utoken;
+                }
+            }
+
             if (order.PlanId.HasValue)
             {
                 // Abonelik paketi ödemesi
@@ -348,6 +358,7 @@ public class PaymentsController(
                     IyzicoPaymentId = form.MerchantOid,
                     PurchasedAt     = DateTime.UtcNow,
                     ExpiresAt       = DateTime.UtcNow.AddMonths(1),
+                    AutoRenew       = true,
                 });
             }
             else if (order.ToolIds is not null)
@@ -370,6 +381,7 @@ public class PaymentsController(
                         IyzicoPaymentId = form.MerchantOid,
                         PurchasedAt     = DateTime.UtcNow,
                         ExpiresAt       = DateTime.UtcNow.AddMonths(1),
+                        AutoRenew       = true,
                     });
                 }
             }
@@ -429,10 +441,31 @@ public class PaymentsController(
                 p.AmountPaid,
                 p.PurchasedAt,
                 p.ExpiresAt,
+                p.AutoRenew,
+                p.MonthlyLimit,
             })
             .ToListAsync();
 
         return Ok(new { success = true, data = purchases });
+    }
+
+    // ── PUT /api/payments/my-tools/{id}/auto-renew ───────────────────────────
+    // Kullanıcı araç satın alımı için otomatik yenileme tercihini değiştirir.
+
+    [HttpPut("my-tools/{id:guid}/auto-renew")]
+    [Authorize]
+    public async Task<IActionResult> SetToolAutoRenew(Guid id, [FromBody] SetToolAutoRenewRequest req)
+    {
+        var purchase = await db.ToolPurchases
+            .FirstOrDefaultAsync(p => p.Id == id && p.UserId == CurrentUserId);
+
+        if (purchase is null)
+            return NotFound(new { success = false, error = "Araç satın alımı bulunamadı." });
+
+        purchase.AutoRenew = req.AutoRenew;
+        await db.SaveChangesAsync();
+
+        return Ok(new { success = true, autoRenew = req.AutoRenew });
     }
 
     // ── GET /api/payments/tool-prices ────────────────────────────────────────
@@ -454,6 +487,7 @@ public class PaymentsController(
     public record CheckoutRequest(int PlanId);
     public record ToolCheckoutRequest(string ToolId);
     public record BulkToolCheckoutRequest(string[] ToolIds, int UsesPerTool);
+    public record SetToolAutoRenewRequest(bool AutoRenew);
 }
 
 // PayTR callback form-data modeli
@@ -486,4 +520,8 @@ public class PayTrCallbackForm
 
     [Microsoft.AspNetCore.Mvc.FromForm(Name = "currency")]
     public string Currency         { get; set; } = "";
+
+    // Kart kayıt tokenı — store_card=1 ile yapılan ödemelerde PayTR tarafından döner
+    [Microsoft.AspNetCore.Mvc.FromForm(Name = "utoken")]
+    public string? Utoken          { get; set; }
 }

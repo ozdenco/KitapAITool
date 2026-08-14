@@ -19,6 +19,9 @@ public class ToolPurchase
     public DateTime PurchasedAt { get; set; } = DateTime.UtcNow;
     public DateTime? ExpiresAt { get; set; }
 
+    /// <summary>Araç aboneliği sona erince otomatik yenileme yapılsın mı?</summary>
+    public bool AutoRenew { get; set; } = true;
+
     // Navigation
     public User User { get; set; } = null!;
 }

@@ -105,6 +105,7 @@ public class PayTrService
             ["paytr_token"]      = token,
             ["lang"]             = "tr",
             ["debug_on"]         = "0",
+            ["store_card"]       = "1",    // Kartı kaydet → callback'te utoken döner
         };
 
         var content  = new FormUrlEncodedContent(fields);
@@ -150,5 +151,67 @@ public class PayTrService
         if (!ok)
             _logger.LogWarning("PayTR callback hash uyuşmazlığı! orderId={OrderId}", merchantOid);
         return ok;
+    }
+
+    // ── Otomatik yenileme: kayıtlı kart ile çekim ────────────────────────────
+    // PayTR Recurring Payments API:
+    // POST https://www.paytr.com/odeme/guvenli/recurring
+    // Params: merchant_id, utoken, merchant_oid, payment_amount, paytr_token
+    // paytr_token = HMAC-SHA256(merchant_id + utoken + merchant_oid + payment_amount + merchant_salt)
+
+    private const string RecurringUrl = "https://www.paytr.com/odeme/guvenli/recurring";
+
+    public async Task<bool> RecurringChargeAsync(
+        string  uToken,
+        string  orderId,
+        decimal amount,
+        string  description,
+        User    user,
+        CancellationToken ct = default)
+    {
+        var amountKurus = (int)(amount * 100);
+
+        var hashInput = _merchantId + uToken + orderId + amountKurus.ToString() + _merchantSalt;
+        using var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(_merchantKey));
+        var token = Convert.ToBase64String(hmac.ComputeHash(Encoding.UTF8.GetBytes(hashInput)));
+
+        var basket = JsonSerializer.Serialize(new[]
+        {
+            new[] { description, amount.ToString("F2", System.Globalization.CultureInfo.InvariantCulture), "1" }
+        });
+        var basketB64 = Convert.ToBase64String(Encoding.UTF8.GetBytes(basket));
+
+        var fields = new Dictionary<string, string>
+        {
+            ["merchant_id"]    = _merchantId,
+            ["utoken"]         = uToken,
+            ["merchant_oid"]   = orderId,
+            ["email"]          = user.Email,
+            ["payment_amount"] = amountKurus.ToString(),
+            ["user_basket"]    = basketB64,
+            ["paytr_token"]    = token,
+            ["currency"]       = "TL",
+            ["test_mode"]      = _testMode ? "1" : "0",
+        };
+
+        try
+        {
+            var response = await _http.PostAsync(RecurringUrl, new FormUrlEncodedContent(fields), ct);
+            var body     = await response.Content.ReadAsStringAsync(ct);
+
+            _logger.LogInformation("PayTR recurring → HTTP {Status} | body: {Body}",
+                (int)response.StatusCode, body);
+
+            using var doc  = JsonDocument.Parse(body);
+            var root       = doc.RootElement;
+            var status     = root.TryGetProperty("status", out var s) ? s.GetString() : null;
+
+            return status == "success";
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "PayTR recurring charge başarısız. orderId={OrderId}", orderId);
+            return false;
+        }
     }
 }

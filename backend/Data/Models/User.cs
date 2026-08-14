@@ -31,6 +31,14 @@ public class User
     // ── Google OAuth ──────────────────────────────────────────────────────────
     public string? GoogleId { get; set; }
 
+    // ── PayTR kayıtlı kart tokenı (otomatik yenileme için) ───────────────────
+    /// <summary>
+    /// PayTR'ın ödeme callback'inde döndürdüğü utoken.
+    /// store_card=1 ile yapılan ödemelerde saklanır;
+    /// RecurringRenewalService otomatik yenilemelerde bu token ile çekim yapar.
+    /// </summary>
+    public string? PayTrCardToken { get; set; }
+
     // Navigation
     public Subscription? Subscription { get; set; }
     public ICollection<ToolUsageLog> UsageLogs { get; set; } = [];

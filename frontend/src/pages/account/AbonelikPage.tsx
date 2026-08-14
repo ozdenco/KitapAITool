@@ -145,8 +145,9 @@ export function AbonelikPage() {
 
       {/* ── Plan kartı ── */}
       <div className="bg-white rounded-2xl border border-[#E2E0D8] p-5">
+        {/* Başlık satırı: plan badge + otomatik yenileme */}
         <div className="flex items-center justify-between gap-4 flex-wrap">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-wrap">
             <span className={`inline-flex items-center gap-[6px] px-[12px] py-[6px] rounded-full text-[13px] font-semibold ${badgeCls}`}>
               {toolLimit == null && <span>∞</span>}
               {sub?.planName ?? (user?.isAdmin ? 'Admin' : 'Ücretsiz')} Paketi
@@ -154,35 +155,46 @@ export function AbonelikPage() {
             {isExpired && (
               <span className="text-[12px] text-amber-600 font-medium">Süresi Doldu</span>
             )}
+            {sub?.expiresAt && (
+              <span className={`text-[12px] ${isExpired ? 'text-amber-600 font-medium' : 'text-[#9A9792]'}`}>
+                {isExpired ? 'Bitti: ' : 'Bitiş: '}
+                {new Date(sub.expiresAt).toLocaleDateString('tr-TR')}
+              </span>
+            )}
+            {user?.isAdmin && (
+              <span className="text-[12px] font-semibold text-[#1D9E75]">Admin Hesabı</span>
+            )}
           </div>
-          {user?.isAdmin && (
-            <span className="text-[15px] font-semibold text-[#1D9E75]">Admin Hesabı</span>
-          )}
-          {sub?.expiresAt && (
-            <span className={`text-[12px] ${isExpired ? 'text-amber-600 font-medium' : 'text-[#9A9792]'}`}>
-              {isExpired ? 'Bitti: ' : 'Bitiş: '}
-              {new Date(sub.expiresAt).toLocaleDateString('tr-TR')}
-            </span>
+
+          {/* Otomatik yenileme — aktif paket için yanında göster */}
+          {!user?.isAdmin && sub && sub.plan !== 'free' && (
+            <div className="flex items-center gap-3 shrink-0">
+              <div className="text-right">
+                <p className="text-[12px] font-medium text-[#1C1B19]">Otomatik Yenileme</p>
+                <p className="text-[11px] text-[#9A9792]">
+                  {sub.autoRenew ? 'Açık' : 'Kapalı'}
+                </p>
+              </div>
+              <AutoRenewToggle
+                value={sub.autoRenew}
+                onChange={(v) => autoRenewMutation.mutate(v)}
+                disabled={autoRenewMutation.isPending}
+              />
+            </div>
           )}
         </div>
 
-        {/* ── Otomatik yenileme ── */}
+        {/* Açıklama — sadece toggle varsa göster */}
         {!user?.isAdmin && sub && sub.plan !== 'free' && (
-          <div className="mt-4 pt-4 border-t border-[#F0EFE9] flex items-center justify-between gap-4">
-            <div>
-              <p className="text-[13px] font-medium text-[#1C1B19]">Otomatik Yenileme</p>
-              <p className="text-[12px] text-[#9A9792]">
-                {isExpired
-                  ? (sub.autoRenew ? 'Yeni paket alındığında otomatik yenileme aktif olacak' : 'Yeni paket alındığında devre dışı kalacak')
-                  : (sub.autoRenew ? 'Paket bitiş tarihinde otomatik yenilenecek' : 'Paket bittikten sonra ücretsiz plana geçilecek')}
-              </p>
-            </div>
-            <AutoRenewToggle
-              value={sub.autoRenew}
-              onChange={(v) => autoRenewMutation.mutate(v)}
-              disabled={autoRenewMutation.isPending}
-            />
-          </div>
+          <p className="mt-3 text-[11px] text-[#9A9792]">
+            {isExpired
+              ? (sub.autoRenew
+                  ? '✅ Yeni paket alındığında otomatik yenileme aktif olacak'
+                  : 'ℹ️ Yeni paket alındığında devre dışı kalacak')
+              : (sub.autoRenew
+                  ? '✅ Paket bitiş tarihinde otomatik olarak yenilenir ve başarı/hata durumunda e-posta alırsınız'
+                  : 'ℹ️ Paket bittikten sonra ücretsiz plana geçilecek')}
+          </p>
         )}
       </div>
 

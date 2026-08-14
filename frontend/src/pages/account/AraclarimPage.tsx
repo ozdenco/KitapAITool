@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '@/lib/api'
 import { TOOLS } from '@/lib/tools'
 
@@ -11,6 +11,8 @@ interface ActiveToolPurchase {
   amountPaid: number
   purchasedAt: string
   expiresAt: string | null
+  autoRenew: boolean
+  monthlyLimit: number | null
 }
 
 interface ToolPrice {
@@ -47,6 +49,32 @@ function formatDate(iso: string): string {
   })
 }
 
+// ─── AutoRenew Toggle ─────────────────────────────────────────────────────────
+
+function AutoRenewToggle({ value, onChange, disabled }: {
+  value: boolean
+  onChange: (v: boolean) => void
+  disabled?: boolean
+}) {
+  return (
+    <button
+      role="switch"
+      aria-checked={value}
+      onClick={(e) => { e.stopPropagation(); !disabled && onChange(!value) }}
+      disabled={disabled}
+      className={`relative inline-flex w-10 h-5 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1D9E75]/40 disabled:opacity-50 shrink-0 ${
+        value ? 'bg-[#1D9E75]' : 'bg-[#D3D1C7]'
+      }`}
+    >
+      <span
+        className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${
+          value ? 'translate-x-5' : 'translate-x-0'
+        }`}
+      />
+    </button>
+  )
+}
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function AraclarimPage() {
@@ -54,6 +82,13 @@ export function AraclarimPage() {
   const [tier, setTier] = useState<UsageTier>(10)
   const [isChecking, setIsChecking] = useState(false)
   const [checkoutError, setCheckoutError] = useState<string | null>(null)
+  const queryClient = useQueryClient()
+
+  const autoRenewMutation = useMutation({
+    mutationFn: ({ id, autoRenew }: { id: string; autoRenew: boolean }) =>
+      api.put(`/payments/my-tools/${id}/auto-renew`, { autoRenew }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['my-tools'] }),
+  })
 
   // Aktif abonelik bilgisi — ücretli abonelik varken araç alımı kapalı
   const { data: sub, isLoading: subLoading } = useQuery<Subscription>({
@@ -219,17 +254,35 @@ export function AraclarimPage() {
                       </span>
                     </div>
                     <span className="text-[28px] leading-none shrink-0 mt-0.5">{tool.icon}</span>
-                    <div className="flex-1 min-w-0 pr-12">
+                    <div className="flex-1 min-w-0 pr-14">
                       <p className="text-[13px] font-semibold text-[#1C1B19] leading-snug">{tool.name}</p>
+                      {purchase?.monthlyLimit != null && (
+                        <p className="text-[11px] text-[#9A9792] mt-0.5">
+                          {purchase.monthlyLimit} kullanım/ay
+                        </p>
+                      )}
                       {purchase?.expiresAt && (
-                        <p className={`text-[11px] mt-1 ${isUrgent ? 'text-amber-600 font-medium' : 'text-[#9A9792]'}`}>
+                        <p className={`text-[11px] mt-0.5 ${isUrgent ? 'text-amber-600 font-medium' : 'text-[#9A9792]'}`}>
                           {isUrgent && days === 0
                             ? '⚠️ Bugün bitiyor!'
                             : isUrgent && days !== null
                             ? `⚠️ ${days} gün kaldı`
-                            : `${new Date(purchase.expiresAt).toLocaleDateString('tr-TR', { day: '2-digit', month: 'short', year: 'numeric' })} tarihine kadar`}
+                            : `${new Date(purchase.expiresAt).toLocaleDateString('tr-TR', { day: '2-digit', month: 'short', year: 'numeric' })} bitiş`}
                         </p>
                       )}
+                      {/* Otomatik yenileme satırı */}
+                      <div className="mt-2 flex items-center gap-2">
+                        <AutoRenewToggle
+                          value={purchase?.autoRenew ?? true}
+                          onChange={(v) =>
+                            purchase && autoRenewMutation.mutate({ id: purchase.id, autoRenew: v })
+                          }
+                          disabled={autoRenewMutation.isPending}
+                        />
+                        <span className="text-[11px] text-[#9A9792]">
+                          {purchase?.autoRenew ? 'Oto. yenileme açık' : 'Oto. yenileme kapalı'}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 )

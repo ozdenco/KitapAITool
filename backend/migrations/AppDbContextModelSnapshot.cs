@@ -367,6 +367,11 @@ namespace KolayKobi.Api.Migrations
                     b.Property<decimal>("AmountPaid")
                         .HasColumnType("decimal(10,2)");
 
+                    b.Property<bool>("AutoRenew")
+                        .ValueGeneratedOnAdd()
+                        .HasDefaultValue(true)
+                        .HasColumnType("boolean");
+
                     b.Property<DateTime?>("ExpiresAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -497,6 +502,9 @@ namespace KolayKobi.Api.Migrations
                         .HasColumnType("boolean");
 
                     b.Property<string>("GoogleId")
+                        .HasColumnType("text");
+
+                    b.Property<string>("PayTrCardToken")
                         .HasColumnType("text");
 
                     b.Property<bool>("IsActive")

@@ -197,6 +197,119 @@ public class EmailService(IConfiguration config, ILogger<EmailService> logger)
         await SendAsync(toEmail, toName, "KolayKOBİ — Hesabınız oluşturuldu, şifrenizi belirleyin", html);
     }
 
+    // ── Otomatik yenileme başarılı maili ────────────────────────────────────
+    public async Task SendRenewalSuccessEmailAsync(
+        string toEmail, string toName,
+        string planOrToolName, decimal amount, DateTime newExpiresAt,
+        string[]? features = null)
+    {
+        var appUrl = config["AppUrl"] ?? "https://app.kolaykobi.com";
+        var date   = newExpiresAt.ToString("dd MMMM yyyy", new System.Globalization.CultureInfo("tr-TR"));
+        var featuresHtml = features is { Length: > 0 }
+            ? "<ul style=\"margin:8px 0;padding-left:18px;\">" +
+              string.Join("", features.Select(f => $"<li style=\"color:#475569;font-size:14px;margin-bottom:4px;\">{f}</li>")) +
+              "</ul>"
+            : "";
+
+        var html = $"""
+            <!DOCTYPE html><html lang="tr"><head><meta charset="UTF-8"></head>
+            <body style="margin:0;padding:0;background:#f4f7fb;font-family:'Inter',system-ui,sans-serif;">
+              <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f7fb;padding:40px 0;">
+                <tr><td align="center">
+                  <table width="480" cellpadding="0" cellspacing="0"
+                         style="background:#fff;border-radius:16px;padding:40px;border:1px solid #e2e8f0;max-width:480px;">
+                    <tr><td align="center" style="padding-bottom:24px;">{LogoHtml}</td></tr>
+                    <tr><td>
+                      <div style="background:#E6F9F2;border-radius:10px;padding:16px;text-align:center;margin-bottom:20px;">
+                        <span style="font-size:28px;">✅</span>
+                        <p style="margin:8px 0 0;font-size:16px;font-weight:700;color:#085041;">Otomatik Yenileme Başarılı</p>
+                      </div>
+                      <p style="margin:0 0 12px;color:#0f172a;font-size:15px;">Merhaba {toName},</p>
+                      <p style="margin:0 0 16px;color:#475569;line-height:1.65;">
+                        <strong>{planOrToolName}</strong> paketiniz/aboneliğiniz otomatik olarak yenilendi.
+                        Ücretlendirme tutarı: <strong>₺{amount:F2}</strong>.
+                      </p>
+                      {(features?.Length > 0 ? $"<p style=\"margin:0 0 8px;color:#0f172a;font-weight:600;\">Paket içeriği:</p>{featuresHtml}" : "")}
+                      <p style="margin:16px 0 0;color:#475569;font-size:14px;">
+                        Yeni bitiş tarihi: <strong>{date}</strong>
+                      </p>
+                    </td></tr>
+                    <tr><td align="center" style="padding:24px 0;">
+                      <a href="{appUrl}/hesabim/abonelik"
+                         style="display:inline-block;background:#1D9E75;color:#fff;font-weight:700;
+                                font-size:15px;padding:12px 28px;border-radius:10px;text-decoration:none;">
+                        📦 Aboneliğimi Görüntüle
+                      </a>
+                    </td></tr>
+                    <tr><td>
+                      <hr style="border:none;border-top:1px solid #f1f5f9;margin:8px 0 16px;">
+                      <p style="margin:0;font-size:12px;color:#cbd5e1;text-align:center;">
+                        Otomatik yenilemeyi kapatmak için hesabım &gt; Paket Bilgilerim sayfasını ziyaret edin.
+                      </p>
+                    </td></tr>
+                  </table>
+                </td></tr>
+              </table>
+            </body></html>
+            """;
+
+        await SendAsync(toEmail, toName, $"KolayKOBİ — {planOrToolName} otomatik olarak yenilendi ✅", html);
+    }
+
+    // ── Otomatik yenileme başarısız maili ───────────────────────────────────
+    public async Task SendRenewalFailedEmailAsync(
+        string toEmail, string toName,
+        string planOrToolName, DateTime expiresAt)
+    {
+        var appUrl = config["AppUrl"] ?? "https://app.kolaykobi.com";
+        var date   = expiresAt.ToString("dd MMMM yyyy", new System.Globalization.CultureInfo("tr-TR"));
+        var renewUrl = $"{appUrl}/hesabim/paket-sec";
+
+        var html = $"""
+            <!DOCTYPE html><html lang="tr"><head><meta charset="UTF-8"></head>
+            <body style="margin:0;padding:0;background:#f4f7fb;font-family:'Inter',system-ui,sans-serif;">
+              <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f7fb;padding:40px 0;">
+                <tr><td align="center">
+                  <table width="480" cellpadding="0" cellspacing="0"
+                         style="background:#fff;border-radius:16px;padding:40px;border:1px solid #e2e8f0;max-width:480px;">
+                    <tr><td align="center" style="padding-bottom:24px;">{LogoHtml}</td></tr>
+                    <tr><td>
+                      <div style="background:#FEF3C7;border-radius:10px;padding:16px;text-align:center;margin-bottom:20px;">
+                        <span style="font-size:28px;">⚠️</span>
+                        <p style="margin:8px 0 0;font-size:16px;font-weight:700;color:#92400E;">Otomatik Yenileme Başarısız</p>
+                      </div>
+                      <p style="margin:0 0 12px;color:#0f172a;font-size:15px;">Merhaba {toName},</p>
+                      <p style="margin:0 0 16px;color:#475569;line-height:1.65;">
+                        <strong>{planOrToolName}</strong> paketiniz/aboneliğiniz otomatik yenilenemedi.
+                        Kayıtlı kartınızdan ödeme alınamadı.
+                      </p>
+                      <p style="margin:0 0 16px;color:#475569;font-size:14px;">
+                        Mevcut aboneliğiniz <strong>{date}</strong> tarihinde sona erecek.
+                        Hizmet kesintisiz devam etsin diye aboneliğinizi manuel olarak yenileyebilirsiniz.
+                      </p>
+                    </td></tr>
+                    <tr><td align="center" style="padding:16px 0 24px;">
+                      <a href="{renewUrl}"
+                         style="display:inline-block;background:#D97706;color:#fff;font-weight:700;
+                                font-size:15px;padding:12px 28px;border-radius:10px;text-decoration:none;">
+                        🔄 Aboneliğimi Yenile
+                      </a>
+                    </td></tr>
+                    <tr><td>
+                      <hr style="border:none;border-top:1px solid #f1f5f9;margin:8px 0 16px;">
+                      <p style="margin:0;font-size:12px;color:#cbd5e1;text-align:center;">
+                        Kartınızı güncellemek için hesabım &gt; Ödeme yöntemlerim sayfasını ziyaret edebilirsiniz.
+                      </p>
+                    </td></tr>
+                  </table>
+                </td></tr>
+              </table>
+            </body></html>
+            """;
+
+        await SendAsync(toEmail, toName, $"KolayKOBİ — {planOrToolName} otomatik yenileme başarısız ⚠️", html);
+    }
+
     // ── Ortak SMTP gönderici ─────────────────────────────────────────────────
     private async Task SendAsync(string toEmail, string toName, string subject, string htmlBody)
     {
