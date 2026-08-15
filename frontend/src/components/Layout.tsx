@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
-import { Outlet, NavLink, useNavigate } from 'react-router-dom'
+import { Outlet, useNavigate } from 'react-router-dom'
 import { clsx } from 'clsx'
 import { useAuthStore } from '@/store/auth'
 import { useLogout } from '@/hooks/useAuth'
 import { Logo } from '@/components/ui/Logo'
+import { TOOLS, TOOL_CATEGORIES } from '@/lib/tools'
 
 const ACCOUNT_ITEMS = [
   { to: '/hesabim/profil',          label: 'Profil Bilgileri',     icon: '👤' },
@@ -25,6 +26,85 @@ const ADMIN_ITEMS = [
   { to: '/admin/arac-fiyatlari',      label: 'Araç Fiyatları',      icon: '🏷️' },
   { to: '/admin/kullanim-raporu',     label: 'Kullanım Raporu',     icon: '📋' },
 ] as const
+
+// ─── Tools dropdown ───────────────────────────────────────────────────────────
+
+function ToolsDropdown() {
+  const [open, setOpen] = useState(false)
+  const ref             = useRef<HTMLDivElement>(null)
+  const navigate        = useNavigate()
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+
+  const grouped = Object.entries(TOOL_CATEGORIES)
+    .map(([key, label]) => ({
+      key,
+      label,
+      tools: TOOLS.filter((t) => t.category === key),
+    }))
+    .filter((g) => g.tools.length > 0)
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        aria-haspopup="true"
+        aria-expanded={open}
+        className={clsx(
+          'px-3 py-1.5 rounded-lg text-sm font-medium transition-colors inline-flex items-center gap-1.5',
+          open ? 'bg-[#1D9E75]/10 text-[#1D9E75]' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100',
+        )}
+      >
+        Araçlar
+        <svg
+          className={clsx('w-3 h-3 opacity-60 transition-transform', open && 'rotate-180')}
+          viewBox="0 0 10 6" fill="none"
+        >
+          <path d="M1 1l4 4 4-4" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" />
+        </svg>
+      </button>
+
+      {open && (
+        <div className="absolute top-full mt-2 left-0 z-50 bg-white border border-[#E2E0D8] rounded-2xl shadow-lg overflow-hidden min-w-[240px]">
+          {grouped.map(({ key, label, tools }) => (
+            <div key={key}>
+              <p className="px-4 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-[#9A9792]">
+                {label}
+              </p>
+              <nav className="flex flex-col gap-[2px] px-2 pb-2">
+                {tools.map((tool) => (
+                  <button
+                    key={tool.id}
+                    onClick={() => { setOpen(false); navigate(`/arac/${tool.id}`) }}
+                    className="flex items-center gap-[9px] px-[11px] py-[7px] rounded-xl text-[13px] font-medium text-[#3A3935] hover:bg-[#F0FAF6] hover:text-[#085041] transition-colors text-left w-full"
+                  >
+                    <span className="text-[14px] leading-none">{tool.icon}</span>
+                    <span>{tool.name}</span>
+                  </button>
+                ))}
+              </nav>
+            </div>
+          ))}
+          <div className="border-t border-[#F2F1ED] p-2">
+            <button
+              onClick={() => { setOpen(false); navigate('/dashboard') }}
+              className="flex items-center gap-[9px] px-[11px] py-[8px] rounded-xl text-[13px] font-medium text-[#1D9E75] hover:bg-[#F0FAF6] transition-colors w-full"
+            >
+              <span className="text-[14px]">🏠</span>
+              <span>Tüm Araçlar</span>
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
 
 // ─── Generic dropdown ─────────────────────────────────────────────────────────
 
@@ -122,17 +202,7 @@ export function Layout() {
 
           {/* Nav */}
           <nav className="hidden md:flex items-center gap-1">
-            <NavLink
-              to="/dashboard"
-              className={({ isActive }) =>
-                clsx(
-                  'px-3 py-1.5 rounded-lg text-sm font-medium transition-colors',
-                  isActive ? 'bg-[#1D9E75]/10 text-[#1D9E75]' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100',
-                )
-              }
-            >
-              Araçlar
-            </NavLink>
+            <ToolsDropdown />
 
             {user?.isAdmin && (
               <Dropdown
