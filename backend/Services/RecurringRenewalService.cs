@@ -202,11 +202,17 @@ public class RecurringRenewalService(
         var user    = userTools[0].User;
         var hasCard = !string.IsNullOrEmpty(user.PayTrCardToken);
 
+        // Aynı tool'dan birden fazla satır varsa (test trigger tekrarı gibi) en son satırı al
+        userTools = userTools
+            .GroupBy(t => t.ToolId)
+            .Select(g => g.OrderByDescending(t => t.PurchasedAt).First())
+            .ToList();
+
         logger.LogInformation("[AutoRenew] Araç yenileme: userId={UserId} araç sayısı={Count}",
             user.Id, userTools.Count);
 
         // ── Gerçek araç fiyatlarını ToolPrices tablosundan al ─────────────────
-        var toolIdList    = userTools.Select(t => t.ToolId).ToArray();
+        var toolIdList    = userTools.Select(t => t.ToolId).Distinct().ToArray();
         var toolPriceDict = await db.ToolPrices
             .Where(tp => toolIdList.Contains(tp.ToolId))
             .ToDictionaryAsync(tp => tp.ToolId, tp => tp.PriceMonthly, ct);

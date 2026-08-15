@@ -222,7 +222,7 @@ public class EmailService(IConfiguration config, ILogger<EmailService> logger)
                     <tr><td>
                       <div style="background:#E6F9F2;border-radius:10px;padding:16px;text-align:center;margin-bottom:20px;">
                         <span style="font-size:28px;">✅</span>
-                        <p style="margin:8px 0 0;font-size:16px;font-weight:700;color:#085041;">Otomatik Yenileme Başarılı</p>
+                        <p style="margin:8px 0 0;font-size:16px;font-weight:700;color:#085041;">KolayKOBİ Aboneliğiniz yenilendi</p>
                       </div>
                       <p style="margin:0 0 12px;color:#0f172a;font-size:15px;">Merhaba {toName},</p>
                       <p style="margin:0 0 16px;color:#475569;line-height:1.65;">
@@ -253,7 +253,7 @@ public class EmailService(IConfiguration config, ILogger<EmailService> logger)
             </body></html>
             """;
 
-        await SendAsync(toEmail, toName, $"KolayKOBİ — {planOrToolName} otomatik olarak yenilendi ✅", html);
+        await SendAsync(toEmail, toName, "KolayKOBİ Aboneliği", html);
     }
 
     // ── Otomatik yenileme başarısız maili ───────────────────────────────────
@@ -320,10 +320,20 @@ public class EmailService(IConfiguration config, ILogger<EmailService> logger)
             return;
         }
 
+        var appUrl = config["AppUrl"] ?? "https://app.kolaykobi.com";
+        var unsubscribeUrl = $"{appUrl}/hesabim/abonelik";
+
         var message = new MimeMessage();
         message.From.Add(new MailboxAddress(s.FromName, s.FromEmail));
         message.To.Add(new MailboxAddress(toName, toEmail));
         message.Subject = subject;
+
+        // Yahoo/Gmail bulk sender requirements (2024):
+        // List-Unsubscribe + List-Unsubscribe-Post zorunlu
+        message.Headers.Add("List-Unsubscribe", $"<{unsubscribeUrl}>");
+        message.Headers.Add("List-Unsubscribe-Post", "List-Unsubscribe=One-Click");
+        message.Headers.Add("Precedence", "bulk");
+
         message.Body = new TextPart("html") { Text = htmlBody };
 
         try
