@@ -12,8 +12,19 @@ namespace KolayKobi.Api.Controllers;
 [ApiController]
 [Route("api/admin")]
 [Authorize(Policy = "AdminOnly")]
-public class AdminController(AppDbContext db, EmailService email) : ControllerBase
+public class AdminController(AppDbContext db, EmailService email, RecurringRenewalService renewal) : ControllerBase
 {
+    // ── POST /api/admin/trigger-renewal ────────────────────────────────────
+    // Otomatik yenileme servisini elle tetikler (test amaçlı).
+
+    [HttpPost("trigger-renewal")]
+    public async Task<IActionResult> TriggerRenewal()
+    {
+        await renewal.RunNowAsync(CancellationToken.None);
+        return Ok(new { success = true, message = "Otomatik yenileme tamamlandı." });
+    }
+
+
     // ── DTOs ─────────────────────────────────────────────────────────────────
 
     public record AdminUserDto(
@@ -570,12 +581,18 @@ public class AdminController(AppDbContext db, EmailService email) : ControllerBa
         if (plan is null)
             return NotFound(new { error = "Plan bulunamadı." });
 
+        // Bitiş = başlangıç + 1 ay - 1 gün (15 Ağu → 14 Eyl)
+        var newExpiry = plan.Type == PlanType.Free
+            ? (DateTime?)null
+            : DateTime.UtcNow.AddMonths(1).AddDays(-1);
+
         if (sub is not null)
         {
             sub.PlanId      = plan.Id;
             sub.Status      = SubscriptionStatus.Active;
             sub.StartedAt   = DateTime.UtcNow;
-            sub.ExpiresAt   = plan.Type == PlanType.Free ? null : DateTime.UtcNow.AddMonths(1);
+            sub.ExpiresAt   = newExpiry;
+            sub.AutoRenew   = true;
             sub.CancelledAt = null;
         }
         else
@@ -586,12 +603,35 @@ public class AdminController(AppDbContext db, EmailService email) : ControllerBa
                 PlanId    = plan.Id,
                 Status    = SubscriptionStatus.Active,
                 StartedAt = DateTime.UtcNow,
-                ExpiresAt = plan.Type == PlanType.Free ? null : DateTime.UtcNow.AddMonths(1),
+                ExpiresAt = newExpiry,
+                AutoRenew = true,
             };
             db.Subscriptions.Add(sub);
         }
 
         await db.SaveChangesAsync();
+
+        // Satın alma onay e-postası (yalnızca ücretli paketler için)
+        if (plan.Type != PlanType.Free && newExpiry.HasValue)
+        {
+            var targetUser = await db.Users.FindAsync(userId);
+            if (targetUser is not null)
+            {
+                try
+                {
+                    await email.SendPurchaseConfirmationEmailAsync(
+                        targetUser.Email, targetUser.Name,
+                        $"{plan.Name} Paketi",
+                        plan.PriceMonthly,
+                        newExpiry.Value);
+                }
+                catch (Exception ex)
+                {
+                    Console.Error.WriteLine($"[AdminController] Purchase email failed: {ex.Message}");
+                }
+            }
+        }
+
         return Ok(new { success = true, plan = plan.Name, expiresAt = sub.ExpiresAt });
     }
 

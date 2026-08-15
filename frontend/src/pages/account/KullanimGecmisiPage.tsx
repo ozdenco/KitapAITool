@@ -9,8 +9,9 @@ interface PeriodUsage {
   totalUsed:   number
 }
 
-interface Subscription {
-  startedAt: string
+interface SubInfo {
+  startedAt:           string
+  usagePerToolPerMonth: number | null
 }
 
 interface ToolPurchase {
@@ -31,7 +32,7 @@ function parseDateParts(iso: string): { day: number; month: number; year: number
 function longPeriodLabel(periodStart: string, periodEnd: string): string {
   const s = parseDateParts(periodStart)
   const e = parseDateParts(periodEnd)
-  const endStr = `${e.day} ${TR_MONTHS_LONG[e.month - 1]} ${e.year}`
+  const endStr   = `${e.day} ${TR_MONTHS_LONG[e.month - 1]} ${e.year}`
   const startStr = s.year === e.year
     ? `${s.day} ${TR_MONTHS_LONG[s.month - 1]}`
     : `${s.day} ${TR_MONTHS_LONG[s.month - 1]} ${s.year}`
@@ -55,12 +56,12 @@ interface BarChartProps {
 function BarChart({ data }: BarChartProps) {
   if (data.length === 0) return null
 
-  const maxVal  = Math.max(...data.map((d) => d.totalUsed), 1)
-  const chartH  = 130
-  const barW    = 36
-  const gap     = 20
-  const padX    = 10
-  const totalW  = data.length * (barW + gap) - gap + padX * 2
+  const maxVal = Math.max(...data.map((d) => d.totalUsed), 1)
+  const chartH = 130
+  const barW   = 36
+  const gap    = 20
+  const padX   = 10
+  const totalW = data.length * (barW + gap) - gap + padX * 2
 
   return (
     <svg
@@ -75,28 +76,27 @@ function BarChart({ data }: BarChartProps) {
         const x    = padX + i * (barW + gap)
         const barH = Math.max((d.totalUsed / maxVal) * chartH, d.totalUsed > 0 ? 4 : 0)
         const y    = chartH - barH
-        // İlk satır: gün + ay kısaltması, ikinci satır: yıl (eğer farklıysa göster)
         const { day, month, year } = parseDateParts(d.periodStart)
-        const isLastYear = i > 0 && parseDateParts(data[i - 1].periodStart).year !== year
+        const isNewYear = i > 0 && parseDateParts(data[i - 1].periodStart).year !== year
 
         return (
           <g key={d.periodStart}>
             <rect x={x} y={y} width={barW} height={barH} rx={4} fill="#1D9E75" opacity={0.85} />
 
             {d.totalUsed > 0 && (
-              <text x={x + barW / 2} y={y - 5} textAnchor="middle" fontSize={10} fill="#6B6963" fontFamily="inherit">
+              <text x={x + barW / 2} y={y - 5} textAnchor="middle" fontSize={9} fill="#6B6963" fontFamily="inherit">
                 {d.totalUsed}
               </text>
             )}
 
-            {/* Gün + ay */}
-            <text x={x + barW / 2} y={chartH + 16} textAnchor="middle" fontSize={10} fill="#9A9792" fontFamily="inherit">
+            {/* Gün + ay — font size küçültüldü */}
+            <text x={x + barW / 2} y={chartH + 14} textAnchor="middle" fontSize={8} fill="#9A9792" fontFamily="inherit">
               {`${day} ${TR_MONTHS_SHORT[month - 1]}`}
             </text>
 
             {/* Yıl — yalnızca yıl değişiminde */}
-            {(i === 0 || isLastYear) && (
-              <text x={x + barW / 2} y={chartH + 30} textAnchor="middle" fontSize={9} fill="#C0BDB5" fontFamily="inherit">
+            {(i === 0 || isNewYear) && (
+              <text x={x + barW / 2} y={chartH + 26} textAnchor="middle" fontSize={8} fill="#C0BDB5" fontFamily="inherit">
                 {year}
               </text>
             )}
@@ -110,11 +110,10 @@ function BarChart({ data }: BarChartProps) {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function KullanimGecmisiPage() {
-  // Fatura gününü bulmak için subscription ve araç satın alım tarihleri
-  const { data: sub } = useQuery<Subscription>({
+  const { data: sub } = useQuery<SubInfo>({
     queryKey: ['subscription'],
     queryFn: () =>
-      api.get<Subscription>('/subscriptions/me').then((r: { data: Subscription }) => r.data),
+      api.get<SubInfo>('/subscriptions/me').then((r: { data: SubInfo }) => r.data),
   })
 
   const { data: myTools } = useQuery<ToolPurchase[]>({
@@ -124,7 +123,6 @@ export function KullanimGecmisiPage() {
          .then((r: { data: { success: boolean; data: ToolPurchase[] } }) => r.data.data),
   })
 
-  // En erken araç satın alım tarihi (fatura günü için)
   const earliestToolDate = myTools && myTools.length > 0
     ? myTools.reduce((min, t) => t.purchasedAt < min ? t.purchasedAt : min, myTools[0].purchasedAt)
     : undefined
@@ -137,17 +135,16 @@ export function KullanimGecmisiPage() {
       api.get<PeriodUsage[]>(`/tools/usage/history?months=6&startDay=${billingDay}`).then(
         (r: { data: PeriodUsage[] }) => r.data
       ),
-    // billingDay belli olana kadar bekleme (sub veya tools yüklensin)
     enabled: sub !== undefined || myTools !== undefined,
   })
 
-  // Derived stats
-  const totalUsed   = history?.reduce((s, m) => s + m.totalUsed, 0) ?? 0
-  const activeMonths = history?.filter((m) => m.totalUsed > 0).length ?? 0
-  const monthlyAvg  = activeMonths > 0 ? Math.round(totalUsed / activeMonths) : 0
+  // Araç başına aylık limit (plan'dan)
+  const perToolLimit = sub?.usagePerToolPerMonth ?? null
 
-  // Göreli kullanım — bar için max değer
-  const maxUsed = history ? Math.max(...history.map((d) => d.totalUsed), 1) : 1
+  // Derived stats
+  const totalUsed    = history?.reduce((s, m) => s + m.totalUsed, 0) ?? 0
+  const activeMonths = history?.filter((m) => m.totalUsed > 0).length ?? 0
+  const monthlyAvg   = activeMonths > 0 ? Math.round(totalUsed / activeMonths) : 0
 
   return (
     <div className="flex flex-col gap-6">
@@ -167,17 +164,38 @@ export function KullanimGecmisiPage() {
 
       {/* ── Stat cards ── */}
       <div className="grid grid-cols-3 gap-3">
-        {[
-          { label: 'Toplam Kullanım',    value: isLoading ? '—' : String(totalUsed),  sub: 'son 6 dönem' },
-          { label: 'Aktif Dönem',        value: isLoading ? '—' : `${activeMonths} dönem`, sub: 'kullanım olan' },
-          { label: 'Dönem Ortalaması',   value: isLoading ? '—' : String(monthlyAvg), sub: 'kullanım/dönem' },
-        ].map(({ label, value, sub: subText }) => (
-          <div key={label} className="bg-white rounded-2xl border border-[#E2E0D8] p-4 text-center">
-            <p className="text-[11px] text-[#9A9792] mb-1">{label}</p>
-            <p className="text-[24px] font-bold text-[#1C1B19] leading-none mb-1">{value}</p>
-            <p className="text-[11px] text-[#9A9792]">{subText}</p>
-          </div>
-        ))}
+        <div className="bg-white rounded-2xl border border-[#E2E0D8] p-4 text-center">
+          <p className="text-[11px] text-[#9A9792] mb-1">Toplam Kullanım</p>
+          <p className="text-[24px] font-bold text-[#1C1B19] leading-none mb-1">
+            {isLoading ? '—' : String(totalUsed)}
+          </p>
+          <p className="text-[11px] text-[#9A9792]">son 6 dönem</p>
+        </div>
+
+        <div className="bg-white rounded-2xl border border-[#E2E0D8] p-4 text-center">
+          <p className="text-[11px] text-[#9A9792] mb-1">Aktif Dönem</p>
+          {isLoading ? (
+            <p className="text-[24px] font-bold text-[#1C1B19] leading-none mb-1">—</p>
+          ) : activeMonths === 0 ? (
+            <>
+              <p className="text-[24px] font-bold text-[#C0BDB5] leading-none mb-1">—</p>
+              <p className="text-[11px] text-[#C0BDB5]">henüz kullanım yok</p>
+            </>
+          ) : (
+            <>
+              <p className="text-[24px] font-bold text-[#1C1B19] leading-none mb-1">{activeMonths}</p>
+              <p className="text-[11px] text-[#9A9792]">{activeMonths === 1 ? 'dönem' : 'dönem'} kullanım var</p>
+            </>
+          )}
+        </div>
+
+        <div className="bg-white rounded-2xl border border-[#E2E0D8] p-4 text-center">
+          <p className="text-[11px] text-[#9A9792] mb-1">Dönem Ortalaması</p>
+          <p className="text-[24px] font-bold text-[#1C1B19] leading-none mb-1">
+            {isLoading ? '—' : activeMonths === 0 ? '—' : String(monthlyAvg)}
+          </p>
+          <p className="text-[11px] text-[#9A9792]">kullanım/dönem</p>
+        </div>
       </div>
 
       {/* ── Bar Chart ── */}
@@ -215,25 +233,25 @@ export function KullanimGecmisiPage() {
             <table className="w-full text-[13px]">
               <thead>
                 <tr className="border-b border-[#E2E0D8] bg-[#F7F6F2]">
-                  {[
-                    { label: 'Dönem',       align: 'left'  },
-                    { label: 'Kullanılan',  align: 'right' },
-                    { label: 'Göreli',      align: 'right' },
-                  ].map(({ label, align }) => (
-                    <th
-                      key={label}
-                      className={`px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-[#9A9792] ${
-                        align === 'left' ? 'text-left' : 'text-right'
-                      }`}
-                    >
-                      {label}
-                    </th>
-                  ))}
+                  <th className="px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-[#9A9792] text-left">
+                    Dönem
+                  </th>
+                  <th className="px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-[#9A9792] text-right">
+                    Kullanım
+                  </th>
+                  <th className="px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-[#9A9792] text-right">
+                    İlerleme
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 {[...history].reverse().map((row) => {
-                  const pct   = Math.round((row.totalUsed / maxUsed) * 100)
+                  // İlerleme: araç başına limit varsa o limite göre, yoksa dönemin max'ına göre
+                  const maxUsed = history ? Math.max(...history.map((d) => d.totalUsed), 1) : 1
+                  const pct = perToolLimit != null && perToolLimit > 0
+                    ? Math.min(100, Math.round((row.totalUsed / perToolLimit) * 100))
+                    : Math.round((row.totalUsed / maxUsed) * 100)
+
                   const label = longPeriodLabel(row.periodStart, row.periodEnd)
 
                   return (
@@ -246,24 +264,35 @@ export function KullanimGecmisiPage() {
                         {label}
                       </td>
 
-                      {/* Kullanılan */}
-                      <td className="px-5 py-3 text-right tabular-nums">
-                        <span className={row.totalUsed > 0 ? 'text-[#1C1B19] font-semibold' : 'text-[#9A9792]'}>
-                          {row.totalUsed}
-                        </span>
+                      {/* Kullanım: X/Limit */}
+                      <td className="px-5 py-3 text-right tabular-nums whitespace-nowrap">
+                        {perToolLimit != null ? (
+                          <span className={row.totalUsed > 0 ? 'text-[#1C1B19] font-semibold' : 'text-[#9A9792]'}>
+                            <span className={row.totalUsed > 0 ? 'text-[#1C1B19] font-semibold' : 'text-[#9A9792]'}>
+                              {row.totalUsed}
+                            </span>
+                            <span className="text-[#C0BDB5] font-normal">/{perToolLimit}</span>
+                          </span>
+                        ) : (
+                          <span className={row.totalUsed > 0 ? 'text-[#1C1B19] font-semibold' : 'text-[#9A9792]'}>
+                            {row.totalUsed}
+                          </span>
+                        )}
                       </td>
 
-                      {/* Göreli bar — dönem içindeki max'a göre */}
+                      {/* İlerleme bar */}
                       <td className="px-5 py-3">
                         <div className="flex items-center justify-end gap-2">
                           <div className="w-24 h-[5px] bg-[#E2E0D8] rounded-full overflow-hidden">
                             <div
-                              className="h-full rounded-full bg-[#1D9E75] transition-all"
+                              className={`h-full rounded-full transition-all ${
+                                pct >= 100 ? 'bg-red-400' : pct >= 80 ? 'bg-amber-400' : 'bg-[#1D9E75]'
+                              }`}
                               style={{ width: `${row.totalUsed > 0 ? Math.max(pct, 6) : 0}%` }}
                             />
                           </div>
-                          <span className="text-[12px] text-[#9A9792] w-7 text-right tabular-nums">
-                            {row.totalUsed > 0 ? `${pct}%` : '—'}
+                          <span className="text-[12px] text-[#9A9792] w-8 text-right tabular-nums">
+                            {row.totalUsed > 0 ? `%${pct}` : '—'}
                           </span>
                         </div>
                       </td>
