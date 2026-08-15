@@ -16,6 +16,12 @@ public record MonthlyUsageSummary(
     int TotalUsed
 );
 
+public record ToolPeriodUsage(
+    string ToolId,
+    int    UsedCount,
+    int?   Limit       // null = sınırsız
+);
+
 public class ToolUsageService(AppDbContext db)
 {
     private static readonly string[] AllToolIds =
@@ -121,6 +127,53 @@ public class ToolUsageService(AppDbContext db)
             p.End.ToString("yyyy-MM-dd"),
             counts[i]
         )).ToList();
+    }
+
+    /// <summary>
+    /// Belirli bir dönem içinde araç bazlı kullanım dökümanını döndürür.
+    /// Dönem: [periodStart, periodEnd) — ISO date string "yyyy-MM-dd"
+    /// </summary>
+    public async Task<List<ToolPeriodUsage>> GetPeriodUsageAsync(
+        Guid userId, string periodStart, string periodEnd)
+    {
+        var start = DateTime.Parse(periodStart, null, System.Globalization.DateTimeStyles.AssumeUniversal)
+                            .ToUniversalTime();
+        var end   = DateTime.Parse(periodEnd, null, System.Globalization.DateTimeStyles.AssumeUniversal)
+                            .ToUniversalTime();
+
+        // Dönem içindeki her araç kullanım sayısı
+        var logCounts = await db.ToolUsageLogs
+            .Where(l => l.UserId == userId && l.UsedAt >= start && l.UsedAt < end)
+            .GroupBy(l => l.ToolId)
+            .Select(g => new { ToolId = g.Key, Count = g.Count() })
+            .ToDictionaryAsync(x => x.ToolId, x => x.Count);
+
+        // Dönem içinde aktif araç satın alımı limitleri
+        var toolPurchaseMap = await db.ToolPurchases
+            .Where(p => p.UserId == userId
+                     && p.PurchasedAt < end
+                     && (p.ExpiresAt == null || p.ExpiresAt > start))
+            .GroupBy(p => p.ToolId)
+            .Select(g => new { ToolId = g.Key, MonthlyLimit = g.Max(p => p.MonthlyLimit) })
+            .ToDictionaryAsync(x => x.ToolId, x => x.MonthlyLimit);
+
+        // Plan limitini kullanıcı aboneliğinden al (dönem anındaki snapshot yerine mevcut plan kullanılır)
+        var plan = await GetUserPlanAsync(userId);
+        var planLimit = plan?.UsagePerToolPerMonth;
+
+        // Tüm araçlar — kullananları üstte sırala
+        return AllToolIds
+            .Select(toolId =>
+            {
+                logCounts.TryGetValue(toolId, out var used);
+                int? limit = toolPurchaseMap.TryGetValue(toolId, out var purchaseLimit)
+                    ? purchaseLimit
+                    : planLimit;
+                return new ToolPeriodUsage(toolId, used, limit);
+            })
+            .OrderByDescending(x => x.UsedCount)
+            .ThenBy(x => x.ToolId)
+            .ToList();
     }
 
     public async Task<bool> CanUseToolAsync(Guid userId, string toolId)

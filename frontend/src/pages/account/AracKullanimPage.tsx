@@ -31,17 +31,31 @@ function fmtDate(iso: string | null | undefined) {
   })
 }
 
+/** Ücretsiz plan için startedAt + 1 ay - 1 gün hesaplar (süreli görünüm) */
+function freePlanEnd(startedAt: string): string {
+  const d = new Date(startedAt)
+  d.setMonth(d.getMonth() + 1)
+  d.setDate(d.getDate() - 1)
+  return d.toISOString()
+}
+
 function getToolDates(
   toolId: string,
   myTools: ToolPurchase[] | undefined,
   sub: SubInfo | undefined,
 ): { start: string | null; end: string | null } {
+  // Araç satın alımı varsa kendi tarihleri
   const purchase = myTools?.find((p) => p.toolId === toolId)
   if (purchase) {
     return { start: purchase.purchasedAt, end: purchase.expiresAt }
   }
   if (sub && sub.status === 'active') {
-    return { start: sub.startedAt, end: sub.expiresAt ?? null }
+    // Ücretli plan: gerçek bitiş tarihi
+    if (sub.expiresAt) {
+      return { start: sub.startedAt, end: sub.expiresAt }
+    }
+    // Ücretsiz plan: bitiş yoktur ama dönem göster (startedAt + 1 ay - 1 gün)
+    return { start: sub.startedAt, end: freePlanEnd(sub.startedAt) }
   }
   return { start: null, end: null }
 }
@@ -195,7 +209,7 @@ export function AracKullanimPage() {
       </div>
 
       <p className="text-[11px] text-[#9A9792] text-center">
-        Kullanım sayaçları her ayın 1'inde sıfırlanır.
+        Kullanım sayaçları her fatura döneminin başında sıfırlanır.
       </p>
     </div>
   )

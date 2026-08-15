@@ -1,12 +1,20 @@
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import api from '@/lib/api'
+import { TOOLS } from '@/lib/tools'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface PeriodUsage {
-  periodStart: string  // "2026-07-14"
-  periodEnd:   string  // "2026-08-14"
+  periodStart: string
+  periodEnd:   string
   totalUsed:   number
+}
+
+interface ToolPeriodUsage {
+  toolId:    string
+  usedCount: number
+  limit:     number | null
 }
 
 interface SubInfo {
@@ -27,7 +35,6 @@ function parseDateParts(iso: string): { day: number; month: number; year: number
   return { day: d, month: m, year: y }
 }
 
-/** "14 Ağustos – 14 Eylül 2026" */
 function longPeriodLabel(periodStart: string, periodEnd: string): string {
   const s = parseDateParts(periodStart)
   const e = parseDateParts(periodEnd)
@@ -38,7 +45,12 @@ function longPeriodLabel(periodStart: string, periodEnd: string): string {
   return `${startStr} – ${endStr}`
 }
 
-/** Kullanıcının fatura gününü al — subscription startedAt veya araç purchasedAt */
+function shortPeriodLabel(periodStart: string, periodEnd: string): string {
+  const s = parseDateParts(periodStart)
+  const e = parseDateParts(periodEnd)
+  return `${s.day} ${TR_MONTHS_SHORT[s.month - 1]} – ${e.day} ${TR_MONTHS_SHORT[e.month - 1]}`
+}
+
 function getBillingDay(subStartedAt?: string, toolPurchasedAt?: string): number {
   const raw = subStartedAt ?? toolPurchasedAt
   if (!raw) return 1
@@ -48,11 +60,7 @@ function getBillingDay(subStartedAt?: string, toolPurchasedAt?: string): number 
 
 // ─── Bar Chart (SVG) ──────────────────────────────────────────────────────────
 
-interface BarChartProps {
-  data: PeriodUsage[]
-}
-
-function BarChart({ data }: BarChartProps) {
+function BarChart({ data }: { data: PeriodUsage[] }) {
   if (data.length === 0) return null
 
   const maxVal = Math.max(...data.map((d) => d.totalUsed), 1)
@@ -68,7 +76,6 @@ function BarChart({ data }: BarChartProps) {
       className="w-full overflow-visible"
       aria-label="Fatura dönemi kullanım grafiği"
     >
-      {/* Baseline */}
       <line x1={padX} y1={chartH} x2={totalW - padX} y2={chartH} stroke="#E2E0D8" strokeWidth={1} />
 
       {data.map((d, i) => {
@@ -81,19 +88,14 @@ function BarChart({ data }: BarChartProps) {
         return (
           <g key={d.periodStart}>
             <rect x={x} y={y} width={barW} height={barH} rx={4} fill="#1D9E75" opacity={0.85} />
-
             {d.totalUsed > 0 && (
               <text x={x + barW / 2} y={y - 5} textAnchor="middle" fontSize={9} fill="#6B6963" fontFamily="inherit">
                 {d.totalUsed}
               </text>
             )}
-
-            {/* Gün + ay — font size küçültüldü */}
             <text x={x + barW / 2} y={chartH + 14} textAnchor="middle" fontSize={8} fill="#9A9792" fontFamily="inherit">
               {`${day} ${TR_MONTHS_SHORT[month - 1]}`}
             </text>
-
-            {/* Yıl — yalnızca yıl değişiminde */}
             {(i === 0 || isNewYear) && (
               <text x={x + barW / 2} y={chartH + 26} textAnchor="middle" fontSize={8} fill="#C0BDB5" fontFamily="inherit">
                 {year}
@@ -103,6 +105,136 @@ function BarChart({ data }: BarChartProps) {
         )
       })}
     </svg>
+  )
+}
+
+// ─── Period Detail Table ───────────────────────────────────────────────────────
+
+function PeriodDetailTable({
+  periodStart,
+  periodEnd,
+}: {
+  periodStart: string
+  periodEnd:   string
+}) {
+  const { data, isLoading } = useQuery<ToolPeriodUsage[]>({
+    queryKey: ['usage-period', periodStart, periodEnd],
+    queryFn: () =>
+      api.get<ToolPeriodUsage[]>(
+        `/tools/usage/period?start=${periodStart}&end=${periodEnd}`
+      ).then((r: { data: ToolPeriodUsage[] }) => r.data),
+  })
+
+  // Araç adını TOOLS listesinden bul
+  function toolName(toolId: string): string {
+    return TOOLS.find((t) => t.id === toolId)?.name ?? toolId
+  }
+  function toolIcon(toolId: string): string {
+    return TOOLS.find((t) => t.id === toolId)?.icon ?? '🔧'
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-col gap-[1px] px-5 pb-5 pt-2">
+        {[1, 2, 3, 4, 5].map((n) => (
+          <div key={n} className="h-10 bg-[#F7F6F2] rounded animate-pulse mb-1" />
+        ))}
+      </div>
+    )
+  }
+
+  if (!data || data.length === 0) {
+    return (
+      <p className="text-[13px] text-[#9A9792] text-center py-8">
+        Bu dönemde hiç araç kullanılmamış.
+      </p>
+    )
+  }
+
+  // En az 1 kullanımı olan araçlar üstte; 0 olanlarda progress bar çizme
+  const usedTools   = data.filter((t) => t.usedCount > 0)
+  const unusedTools = data.filter((t) => t.usedCount === 0)
+  const rows        = [...usedTools, ...unusedTools]
+
+  return (
+    <table className="w-full text-[13px]">
+      <thead>
+        <tr className="border-b border-[#E2E0D8] bg-[#F7F6F2]">
+          <th className="px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-[#9A9792] text-left">
+            Araç
+          </th>
+          <th className="px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-[#9A9792] text-right">
+            Kullanım
+          </th>
+          <th className="px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-[#9A9792] text-right pr-5" style={{ width: 160 }}>
+            Doluluk
+          </th>
+        </tr>
+      </thead>
+      <tbody>
+        {rows.map((row) => {
+          const pct = row.limit != null && row.limit > 0
+            ? Math.min(100, Math.round((row.usedCount / row.limit) * 100))
+            : row.usedCount > 0 ? 100 : 0
+          const isHigh = pct >= 80
+          const isFull = pct >= 100
+
+          return (
+            <tr
+              key={row.toolId}
+              className="border-b border-[#F2F1ED] last:border-0 hover:bg-[#FAFAF8] transition-colors"
+            >
+              {/* Araç adı */}
+              <td className="px-5 py-[11px]">
+                <div className="flex items-center gap-2">
+                  <span className="text-[16px] leading-none shrink-0">{toolIcon(row.toolId)}</span>
+                  <span className={`text-[13px] ${row.usedCount > 0 ? 'text-[#1C1B19] font-medium' : 'text-[#9A9792]'}`}>
+                    {toolName(row.toolId)}
+                  </span>
+                </div>
+              </td>
+
+              {/* Kullanım: X / Limit */}
+              <td className="px-5 py-[11px] text-right tabular-nums whitespace-nowrap">
+                {row.limit != null ? (
+                  <span>
+                    <span className={row.usedCount > 0 ? 'text-[#1C1B19] font-semibold' : 'text-[#9A9792]'}>
+                      {row.usedCount}
+                    </span>
+                    <span className="text-[#C0BDB5]">/{row.limit}</span>
+                  </span>
+                ) : (
+                  <span className="text-[#1C1B19] font-semibold">{row.usedCount}</span>
+                )}
+              </td>
+
+              {/* Doluluk bar */}
+              <td className="px-5 py-[11px]">
+                <div className="flex items-center justify-end gap-2">
+                  {row.limit != null ? (
+                    <>
+                      <div className="w-20 h-[5px] bg-[#E2E0D8] rounded-full overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all ${
+                            isFull ? 'bg-red-400' : isHigh ? 'bg-amber-400' : 'bg-[#1D9E75]'
+                          }`}
+                          style={{ width: `${row.usedCount > 0 ? Math.max(pct, 5) : 0}%` }}
+                        />
+                      </div>
+                      <span className="text-[11px] text-[#9A9792] w-8 text-right tabular-nums">
+                        {row.usedCount > 0 ? `%${pct}` : '—'}
+                      </span>
+                    </>
+                  ) : (
+                    <span className="text-[11px] text-[#9A9792]">∞</span>
+                  )}
+                </div>
+              </td>
+            </tr>
+          )
+        })}
+      </tbody>
+    </table>
   )
 }
 
@@ -136,6 +268,14 @@ export function KullanimGecmisiPage() {
       ),
     enabled: sub !== undefined || myTools !== undefined,
   })
+
+  // Seçili dönem — default: en güncel dönem (son eleman)
+  const periods     = history ? [...history].reverse() : []
+  const [selectedPeriodStart, setSelectedPeriodStart] = useState<string | null>(null)
+
+  // history yüklendikten sonra default seçimi yap
+  const activePeriodStart = selectedPeriodStart ?? periods[0]?.periodStart ?? null
+  const activePeriod      = periods.find((p) => p.periodStart === activePeriodStart) ?? periods[0] ?? null
 
   // Derived stats
   const totalUsed    = history?.reduce((s, m) => s + m.totalUsed, 0) ?? 0
@@ -180,7 +320,7 @@ export function KullanimGecmisiPage() {
           ) : (
             <>
               <p className="text-[24px] font-bold text-[#1C1B19] leading-none mb-1">{activeMonths}</p>
-              <p className="text-[11px] text-[#9A9792]">{activeMonths === 1 ? 'dönem' : 'dönem'} kullanım var</p>
+              <p className="text-[11px] text-[#9A9792]">dönem kullanım var</p>
             </>
           )}
         </div>
@@ -199,7 +339,6 @@ export function KullanimGecmisiPage() {
         <h2 className="text-[13px] font-semibold text-[#6B6963] uppercase tracking-wider mb-4">
           Dönem Başına Kullanım
         </h2>
-
         {isLoading && <div className="h-[166px] bg-[#F7F6F2] rounded-lg animate-pulse" />}
         {isError && <p className="text-[13px] text-[#9A9792] text-center py-8">Veriler yüklenirken hata oluştu.</p>}
         {!isLoading && !isError && (!history || history.length === 0) && (
@@ -208,98 +347,64 @@ export function KullanimGecmisiPage() {
         {history && history.length > 0 && <BarChart data={history} />}
       </div>
 
-      {/* ── Table ── */}
+      {/* ── Dönem Detayı ── */}
       <div className="bg-white rounded-2xl border border-[#E2E0D8] overflow-hidden">
-        <div className="px-5 pt-5 pb-3">
-          <h2 className="text-[13px] font-semibold text-[#6B6963] uppercase tracking-wider">
+        {/* Header + dönem seçici */}
+        <div className="px-5 pt-5 pb-4 flex items-center justify-between gap-4 border-b border-[#F0EFE9]">
+          <h2 className="text-[13px] font-semibold text-[#6B6963] uppercase tracking-wider shrink-0">
             Dönem Detayı
           </h2>
+
+          {/* Combo */}
+          {periods.length > 0 && (
+            <select
+              value={activePeriodStart ?? ''}
+              onChange={(e) => setSelectedPeriodStart(e.target.value)}
+              className="text-[13px] text-[#1C1B19] bg-[#F7F6F2] border border-[#E2E0D8] rounded-lg px-3 py-1.5 pr-7 appearance-none cursor-pointer hover:bg-[#F0EFE9] transition-colors focus:outline-none focus:ring-2 focus:ring-[#1D9E75]/30"
+              style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%239A9792' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 10px center' }}
+            >
+              {periods.map((p) => (
+                <option key={p.periodStart} value={p.periodStart}>
+                  {shortPeriodLabel(p.periodStart, p.periodEnd)}
+                  {p.totalUsed > 0 ? ` (${p.totalUsed})` : ''}
+                </option>
+              ))}
+            </select>
+          )}
         </div>
 
+        {/* Tablo */}
         {isLoading && (
-          <div className="flex flex-col gap-2 px-5 pb-5">
-            {[1, 2, 3, 4, 5, 6].map((n) => (
-              <div key={n} className="h-9 bg-[#F7F6F2] rounded animate-pulse" />
+          <div className="flex flex-col gap-2 px-5 pb-5 pt-3">
+            {[1, 2, 3, 4, 5].map((n) => (
+              <div key={n} className="h-10 bg-[#F7F6F2] rounded animate-pulse" />
             ))}
           </div>
         )}
 
-        {history && history.length > 0 && (
+        {!isLoading && activePeriod && (
           <div className="overflow-x-auto">
-            <table className="w-full text-[13px]">
-              <thead>
-                <tr className="border-b border-[#E2E0D8] bg-[#F7F6F2]">
-                  <th className="px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-[#9A9792] text-left">
-                    Dönem
-                  </th>
-                  <th className="px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-[#9A9792] text-right">
-                    Kullanım
-                  </th>
-                  <th className="px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-[#9A9792] text-right">
-                    İlerleme
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {[...history].reverse().map((row) => {
-                  // İlerleme: dönemler arası göreli (en yoğun döneme göre %)
-                  const maxUsed = Math.max(...history.map((d) => d.totalUsed), 1)
-                  const pct     = Math.round((row.totalUsed / maxUsed) * 100)
-                  const label   = longPeriodLabel(row.periodStart, row.periodEnd)
-
-                  return (
-                    <tr
-                      key={row.periodStart}
-                      className="border-b border-[#F2F1ED] last:border-0 hover:bg-[#FAFAF8] transition-colors"
-                    >
-                      {/* Dönem */}
-                      <td className="px-5 py-3 text-[#1C1B19] font-medium whitespace-nowrap">
-                        {label}
-                      </td>
-
-                      {/* Kullanım — sadece toplam sayı */}
-                      <td className="px-5 py-3 text-right tabular-nums">
-                        <span className={row.totalUsed > 0 ? 'text-[#1C1B19] font-semibold' : 'text-[#9A9792]'}>
-                          {row.totalUsed}
-                        </span>
-                      </td>
-
-                      {/* İlerleme bar */}
-                      <td className="px-5 py-3">
-                        <div className="flex items-center justify-end gap-2">
-                          <div className="w-24 h-[5px] bg-[#E2E0D8] rounded-full overflow-hidden">
-                            <div
-                              className={`h-full rounded-full transition-all ${
-                                pct >= 100 ? 'bg-red-400' : pct >= 80 ? 'bg-amber-400' : 'bg-[#1D9E75]'
-                              }`}
-                              style={{ width: `${row.totalUsed > 0 ? Math.max(pct, 6) : 0}%` }}
-                            />
-                          </div>
-                          <span className="text-[12px] text-[#9A9792] w-8 text-right tabular-nums">
-                            {row.totalUsed > 0 ? `%${pct}` : '—'}
-                          </span>
-                        </div>
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
+            <PeriodDetailTable
+              periodStart={activePeriod.periodStart}
+              periodEnd={activePeriod.periodEnd}
+            />
           </div>
         )}
 
-        {!isLoading && (!history || history.length === 0) && !isError && (
+        {!isLoading && !activePeriod && (
           <p className="text-[13px] text-[#9A9792] text-center py-8">Henüz kullanım verisi bulunmuyor.</p>
         )}
 
         {/* Dipnot */}
-        <div className="px-5 pb-4 pt-2 border-t border-[#F2F1ED]">
-          <p className="text-[11px] text-[#9A9792]">
-            💡 Araç başına kullanım limitiniz için{' '}
-            <a href="/hesabim/arac-kullanim" className="text-[#1D9E75] hover:underline">Araç Başına Kullanım</a>{' '}
-            sayfasına bakabilirsiniz. Araç aboneliğiniz varsa o araçlar için farklı limit geçerlidir.
-          </p>
-        </div>
+        {activePeriod && (
+          <div className="px-5 pb-4 pt-2 border-t border-[#F2F1ED]">
+            <p className="text-[11px] text-[#9A9792]">
+              💡 Araç başına kullanım limitiniz için{' '}
+              <a href="/hesabim/arac-kullanim" className="text-[#1D9E75] hover:underline">Araç Başına Kullanım</a>{' '}
+              sayfasına bakabilirsiniz.
+            </p>
+          </div>
+        )}
       </div>
     </div>
   )

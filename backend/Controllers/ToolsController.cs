@@ -56,6 +56,24 @@ public class ToolsController(
         return Ok(data);
     }
 
+    /// <summary>GET /api/tools/usage/period?start=yyyy-MM-dd&amp;end=yyyy-MM-dd — Dönem içi araç bazlı dökümü.</summary>
+    [HttpGet("usage/period")]
+    public async Task<IActionResult> GetPeriodUsage(
+        [FromQuery] string start,
+        [FromQuery] string end)
+    {
+        if (string.IsNullOrWhiteSpace(start) || string.IsNullOrWhiteSpace(end))
+            return BadRequest(new { error = "start ve end parametreleri gerekli." });
+
+        var data = await usage.GetPeriodUsageAsync(CurrentUserId, start, end);
+        return Ok(data.Select(t => new
+        {
+            toolId    = t.ToolId,
+            usedCount = t.UsedCount,
+            limit     = t.Limit,
+        }));
+    }
+
     /// <summary>GET /api/tools/results — Kullanıcının kayıtlı çıktıları (son 50 kayıt).</summary>
     [HttpGet("results")]
     public async Task<IActionResult> GetResults([FromQuery] int limit = 50)
