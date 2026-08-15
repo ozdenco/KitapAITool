@@ -10,8 +10,7 @@ interface PeriodUsage {
 }
 
 interface SubInfo {
-  startedAt:           string
-  usagePerToolPerMonth: number | null
+  startedAt: string
 }
 
 interface ToolPurchase {
@@ -138,9 +137,6 @@ export function KullanimGecmisiPage() {
     enabled: sub !== undefined || myTools !== undefined,
   })
 
-  // Araç başına aylık limit (plan'dan)
-  const perToolLimit = sub?.usagePerToolPerMonth ?? null
-
   // Derived stats
   const totalUsed    = history?.reduce((s, m) => s + m.totalUsed, 0) ?? 0
   const activeMonths = history?.filter((m) => m.totalUsed > 0).length ?? 0
@@ -246,13 +242,10 @@ export function KullanimGecmisiPage() {
               </thead>
               <tbody>
                 {[...history].reverse().map((row) => {
-                  // İlerleme: araç başına limit varsa o limite göre, yoksa dönemin max'ına göre
-                  const maxUsed = history ? Math.max(...history.map((d) => d.totalUsed), 1) : 1
-                  const pct = perToolLimit != null && perToolLimit > 0
-                    ? Math.min(100, Math.round((row.totalUsed / perToolLimit) * 100))
-                    : Math.round((row.totalUsed / maxUsed) * 100)
-
-                  const label = longPeriodLabel(row.periodStart, row.periodEnd)
+                  // İlerleme: dönemler arası göreli (en yoğun döneme göre %)
+                  const maxUsed = Math.max(...history.map((d) => d.totalUsed), 1)
+                  const pct     = Math.round((row.totalUsed / maxUsed) * 100)
+                  const label   = longPeriodLabel(row.periodStart, row.periodEnd)
 
                   return (
                     <tr
@@ -264,20 +257,11 @@ export function KullanimGecmisiPage() {
                         {label}
                       </td>
 
-                      {/* Kullanım: X/Limit */}
-                      <td className="px-5 py-3 text-right tabular-nums whitespace-nowrap">
-                        {perToolLimit != null ? (
-                          <span className={row.totalUsed > 0 ? 'text-[#1C1B19] font-semibold' : 'text-[#9A9792]'}>
-                            <span className={row.totalUsed > 0 ? 'text-[#1C1B19] font-semibold' : 'text-[#9A9792]'}>
-                              {row.totalUsed}
-                            </span>
-                            <span className="text-[#C0BDB5] font-normal">/{perToolLimit}</span>
-                          </span>
-                        ) : (
-                          <span className={row.totalUsed > 0 ? 'text-[#1C1B19] font-semibold' : 'text-[#9A9792]'}>
-                            {row.totalUsed}
-                          </span>
-                        )}
+                      {/* Kullanım — sadece toplam sayı */}
+                      <td className="px-5 py-3 text-right tabular-nums">
+                        <span className={row.totalUsed > 0 ? 'text-[#1C1B19] font-semibold' : 'text-[#9A9792]'}>
+                          {row.totalUsed}
+                        </span>
                       </td>
 
                       {/* İlerleme bar */}
