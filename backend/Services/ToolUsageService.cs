@@ -11,9 +11,9 @@ public record ToolUsageSummary(
 );
 
 public record MonthlyUsageSummary(
-    string MonthYear,   // "2026-08"
-    int TotalUsed,
-    int TotalLimit      // 0 = unlimited (admin / enterprise)
+    string PeriodStart, // "2026-07-14" — fatura dönemi başlangıcı
+    string PeriodEnd,   // "2026-08-14" — fatura dönemi bitişi (dahil değil)
+    int TotalUsed
 );
 
 public class ToolUsageService(AppDbContext db)
@@ -66,41 +66,61 @@ public class ToolUsageService(AppDbContext db)
         }).ToList();
     }
 
-    // ── Son N aylık kullanım geçmişi ──────────────────────────────────────────
-    public async Task<List<MonthlyUsageSummary>> GetUsageHistoryAsync(Guid userId, int months = 6)
+    // ── Son N aylık kullanım geçmişi (fatura dönemi bazlı) ───────────────────
+    /// <param name="userId">Kullanıcı ID'si</param>
+    /// <param name="months">Gösterilecek dönem sayısı (1–12)</param>
+    /// <param name="startDay">Fatura günü — satın alım tarihinin günü, örn. 14 (1–28)</param>
+    public async Task<List<MonthlyUsageSummary>> GetUsageHistoryAsync(
+        Guid userId, int months = 6, int startDay = 1)
     {
-        months = Math.Clamp(months, 1, 12);
+        months   = Math.Clamp(months, 1, 12);
+        startDay = Math.Clamp(startDay, 1, 28);
 
-        var now       = DateTime.UtcNow;
-        var startDate = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc)
-                            .AddMonths(-(months - 1));
+        var now = DateTime.UtcNow;
 
-        // Tüm ayları tek sorguda al
-        var usageByMonth = await db.ToolUsageLogs
-            .Where(l => l.UserId == userId && l.UsedAt >= startDate)
-            .GroupBy(l => new { l.UsedAt.Year, l.UsedAt.Month })
-            .Select(g => new { g.Key.Year, g.Key.Month, Count = g.Count() })
-            .ToDictionaryAsync(x => (x.Year, x.Month), x => x.Count);
+        // En son geçmiş fatura dönemi başlangıcını bul
+        // Örn: startDay=14, bugün 15 Ağu → en son dönem 14 Ağu
+        //      startDay=14, bugün 10 Ağu → en son dönem 14 Tem
+        var latestPeriodStart = new DateTime(now.Year, now.Month, startDay, 0, 0, 0, DateTimeKind.Utc);
+        if (latestPeriodStart > now)
+            latestPeriodStart = latestPeriodStart.AddMonths(-1);
 
-        var plan         = await GetUserPlanAsync(userId);
-        var limitPerTool = plan?.UsagePerToolPerMonth;         // null = sınırsız
-        var totalLimit   = limitPerTool.HasValue
-                            ? limitPerTool.Value * AllToolIds.Length
-                            : 0;  // 0 = sınırsız (frontend'de özel gösterilir)
+        // N dönemi geriye giderek listele
+        var periods = Enumerable.Range(0, months)
+            .Select(i => (
+                Start: latestPeriodStart.AddMonths(-(months - 1 - i)),
+                End:   latestPeriodStart.AddMonths(-(months - 2 - i))
+            ))
+            .ToList();
 
-        var result = new List<MonthlyUsageSummary>(months);
-        for (var i = months - 1; i >= 0; i--)
+        var rangeStart = periods[0].Start;
+        var rangeEnd   = periods[^1].End;
+
+        // Tüm logları bir sorguyla çek, bellekte dönemlere böl
+        var logDates = await db.ToolUsageLogs
+            .Where(l => l.UserId == userId && l.UsedAt >= rangeStart && l.UsedAt < rangeEnd)
+            .Select(l => l.UsedAt)
+            .ToListAsync();
+
+        // Dönem → sayaç
+        var counts = new int[months];
+        foreach (var logDate in logDates)
         {
-            var monthStart = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc)
-                                 .AddMonths(-i);
-            usageByMonth.TryGetValue((monthStart.Year, monthStart.Month), out var used);
-            result.Add(new MonthlyUsageSummary(
-                monthStart.ToString("yyyy-MM"),
-                used,
-                totalLimit));
+            for (var i = 0; i < periods.Count; i++)
+            {
+                if (logDate >= periods[i].Start && logDate < periods[i].End)
+                {
+                    counts[i]++;
+                    break;
+                }
+            }
         }
 
-        return result;
+        return periods.Select((p, i) => new MonthlyUsageSummary(
+            p.Start.ToString("yyyy-MM-dd"),
+            p.End.ToString("yyyy-MM-dd"),
+            counts[i]
+        )).ToList();
     }
 
     public async Task<bool> CanUseToolAsync(Guid userId, string toolId)

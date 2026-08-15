@@ -36,16 +36,22 @@ public class ToolsController(
         return Ok(new { success = true, data });
     }
 
-    /// <summary>GET /api/tools/usage/history?months=6 — Monthly usage history.</summary>
+    /// <summary>
+    /// GET /api/tools/usage/history?months=6&amp;startDay=1
+    /// Fatura dönemi bazlı kullanım geçmişi.
+    /// startDay: satın alım tarihinin günü (1–28), varsayılan 1 (takvim ayı gibi davranır).
+    /// </summary>
     [HttpGet("usage/history")]
-    public async Task<IActionResult> GetUsageHistory([FromQuery] int months = 6)
+    public async Task<IActionResult> GetUsageHistory(
+        [FromQuery] int months   = 6,
+        [FromQuery] int startDay = 1)
     {
-        var history = await usage.GetUsageHistoryAsync(CurrentUserId, months);
+        var history = await usage.GetUsageHistoryAsync(CurrentUserId, months, startDay);
         var data = history.Select(h => new
         {
-            monthYear  = h.MonthYear,
-            totalUsed  = h.TotalUsed,
-            totalLimit = h.TotalLimit,
+            periodStart = h.PeriodStart,  // "2026-07-14"
+            periodEnd   = h.PeriodEnd,    // "2026-08-14"
+            totalUsed   = h.TotalUsed,
         });
         return Ok(data);
     }
