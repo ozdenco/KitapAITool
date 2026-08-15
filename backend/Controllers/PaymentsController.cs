@@ -364,12 +364,21 @@ public class PaymentsController(
             else if (order.ToolIds is not null)
             {
                 // Toplu araç ödemesi — her araç için ayrı ToolPurchase oluştur
-                var toolIds   = JsonSerializer.Deserialize<string[]>(order.ToolIds) ?? [];
-                var perTool   = toolIds.Length > 0 ? order.Amount / toolIds.Length : 0;
-                var monthly   = order.UsesPerTool;   // 10 veya 25
+                var toolIds         = JsonSerializer.Deserialize<string[]>(order.ToolIds) ?? [];
+                var monthly         = order.UsesPerTool;   // 10 veya 25
+                var priceMultiplier = monthly == 25 ? 2m : 1m;
+
+                // Araç başına gerçek fiyatı ToolPrices tablosundan al
+                // (eşit bölme yerine doğru bireysel fiyat)
+                var toolPriceMap = await db.ToolPrices
+                    .Where(tp => toolIds.Contains(tp.ToolId))
+                    .ToDictionaryAsync(tp => tp.ToolId, tp => tp.PriceMonthly);
 
                 foreach (var tid in toolIds)
                 {
+                    var basePrice  = toolPriceMap.TryGetValue(tid, out var bp) ? bp : order.Amount / toolIds.Length;
+                    var toolAmount = Math.Round(basePrice * priceMultiplier, 2);
+
                     db.ToolPurchases.Add(new ToolPurchase
                     {
                         UserId          = order.UserId,
@@ -377,7 +386,7 @@ public class PaymentsController(
                         MonthlyLimit    = monthly,
                         UsesGranted     = monthly ?? 10,
                         UsesRemaining   = monthly ?? 10,
-                        AmountPaid      = perTool,
+                        AmountPaid      = toolAmount,
                         IyzicoPaymentId = form.MerchantOid,
                         PurchasedAt     = DateTime.UtcNow,
                         ExpiresAt       = DateTime.UtcNow.AddMonths(1),
@@ -413,6 +422,8 @@ public class PaymentsController(
                 o.Status,
                 planName    = o.Plan != null ? o.Plan.Name : null,
                 toolId      = o.ToolId,
+                toolIds     = o.ToolIds,     // JSON array string for bulk tool orders
+                usesPerTool = o.UsesPerTool, // 10 or 25 for bulk tool orders
                 o.CreatedAt,
                 o.CompletedAt
             })

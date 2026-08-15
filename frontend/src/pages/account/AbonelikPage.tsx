@@ -20,6 +20,15 @@ interface Subscription {
   autoRenew: boolean
 }
 
+interface ToolPurchase {
+  id: string
+  toolId: string
+  amountPaid: number
+  expiresAt: string | null
+  autoRenew: boolean
+  monthlyLimit: number | null
+}
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const PLAN_BADGE: Record<string, string> = {
@@ -70,6 +79,14 @@ export function AbonelikPage() {
 
   const { data: usages } = useToolUsage()
 
+  // Aktif araç abonelikleri — süresi dolmuş plan uyarısını ayarlamak için
+  const { data: activeTools } = useQuery<ToolPurchase[]>({
+    queryKey: ['my-tools'],
+    queryFn: () =>
+      api.get<{ success: boolean; data: ToolPurchase[] }>('/payments/my-tools')
+         .then((r: { data: { success: boolean; data: ToolPurchase[] } }) => r.data.data),
+  })
+
   const autoRenewMutation = useMutation({
     mutationFn: (autoRenew: boolean) =>
       api.put('/subscriptions/me/auto-renew', { autoRenew }),
@@ -113,35 +130,79 @@ export function AbonelikPage() {
       </div>
 
       {/* ── Süresi doldu uyarısı ── */}
-      {isExpired && (
-        <div className="bg-amber-50 border border-amber-200 rounded-2xl px-5 py-4">
-          <div className="flex items-start gap-3">
-            <span className="text-[20px] shrink-0">⏰</span>
-            <div className="flex-1">
-              <p className="text-[14px] font-semibold text-amber-900 mb-1">
-                {sub?.previousPlan ? `${sub.previousPlan} Paketiniz` : 'Paketiniz'} Sona Erdi
-              </p>
-              <p className="text-[12px] text-amber-800 mb-3">
-                Ücretsiz plana geçildi — araç başına 3 kullanım hakkınız var. İstediğiniz zaman yeni paket satın alabilir veya tekil araç aboneliği yapabilirsiniz.
-              </p>
-              <div className="flex gap-2 flex-wrap">
-                <Link
-                  to="/hesabim/paket-sec"
-                  className="px-4 py-2 rounded-xl text-[12px] font-semibold bg-[#1D9E75] text-white hover:bg-[#178a65] transition-colors"
-                >
-                  📦 Paket Satın Al
-                </Link>
-                <Link
-                  to="/hesabim/araclarim"
-                  className="px-4 py-2 rounded-xl text-[12px] font-semibold bg-white border border-[#D3D1C7] text-[#3A3935] hover:bg-[#F7F6F2] transition-colors"
-                >
-                  🔧 Araç Satın Al
-                </Link>
+      {isExpired && (() => {
+        const activeToolCount  = activeTools?.length ?? 0
+        const toolLimitPerTool = activeTools?.[0]?.monthlyLimit ?? null
+
+        // Aktif araç aboneliği varken farklı mesaj göster
+        if (activeToolCount > 0) {
+          const limitText = user?.isAdmin
+            ? 'sınırsız'
+            : toolLimitPerTool != null
+              ? `${toolLimitPerTool} kullanım/ay`
+              : 'sınırsız'
+          return (
+            <div className="bg-blue-50 border border-blue-200 rounded-2xl px-5 py-4">
+              <div className="flex items-start gap-3">
+                <span className="text-[20px] shrink-0">🔧</span>
+                <div className="flex-1">
+                  <p className="text-[14px] font-semibold text-blue-900 mb-1">
+                    {activeToolCount} Araç Aboneliğiniz Aktif
+                  </p>
+                  <p className="text-[12px] text-blue-800 mb-3">
+                    Aboneliğiniz olan araçlar için {limitText} hakkınız var. Diğer araçlar için araç başına 3 kullanım hakkı geçerlidir.
+                  </p>
+                  <div className="flex gap-2 flex-wrap">
+                    <Link
+                      to="/hesabim/arac-kullanim"
+                      className="px-4 py-2 rounded-xl text-[12px] font-semibold bg-[#1D9E75] text-white hover:bg-[#178a65] transition-colors"
+                    >
+                      📊 Araç Kullanımım
+                    </Link>
+                    <Link
+                      to="/hesabim/paket-sec"
+                      className="px-4 py-2 rounded-xl text-[12px] font-semibold bg-white border border-[#D3D1C7] text-[#3A3935] hover:bg-[#F7F6F2] transition-colors"
+                    >
+                      📦 Paket Satın Al
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )
+        }
+
+        // Araç aboneliği yokken standart mesaj
+        return (
+          <div className="bg-amber-50 border border-amber-200 rounded-2xl px-5 py-4">
+            <div className="flex items-start gap-3">
+              <span className="text-[20px] shrink-0">⏰</span>
+              <div className="flex-1">
+                <p className="text-[14px] font-semibold text-amber-900 mb-1">
+                  {sub?.previousPlan ? `${sub.previousPlan} Paketiniz` : 'Paketiniz'} Sona Erdi
+                </p>
+                <p className="text-[12px] text-amber-800 mb-3">
+                  Ücretsiz plana geçildi — araç başına 3 kullanım hakkınız var. İstediğiniz zaman yeni paket satın alabilir veya tekil araç aboneliği yapabilirsiniz.
+                </p>
+                <div className="flex gap-2 flex-wrap">
+                  <Link
+                    to="/hesabim/paket-sec"
+                    className="px-4 py-2 rounded-xl text-[12px] font-semibold bg-[#1D9E75] text-white hover:bg-[#178a65] transition-colors"
+                  >
+                    📦 Paket Satın Al
+                  </Link>
+                  <Link
+                    to="/hesabim/araclarim"
+                    className="px-4 py-2 rounded-xl text-[12px] font-semibold bg-white border border-[#D3D1C7] text-[#3A3935] hover:bg-[#F7F6F2] transition-colors"
+                  >
+                    🔧 Araç Satın Al
+                  </Link>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        )
+      })()}
 
       {/* ── Plan kartı ── */}
       <div className="bg-white rounded-2xl border border-[#E2E0D8] p-5">

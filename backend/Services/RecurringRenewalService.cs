@@ -1,3 +1,4 @@
+using System.Text.Json;
 using KolayKobi.Api.Data;
 using KolayKobi.Api.Data.Models;
 using Microsoft.EntityFrameworkCore;
@@ -13,11 +14,17 @@ namespace KolayKobi.Api.Services;
 ///   2. Kullanıcının kayıtlı kartı varsa → PayTR recurring API ile çekim yap
 ///   3. Çekim başarılıysa → süresi uzat + başarı maili gönder
 ///   4. Çekim başarısızsa (veya kart yoksa) → başarısızlık maili gönder
+///
+/// Araç yenilemede kullanıcı bazında gruplama yapılır:
+///   Birden fazla aracı aynı gün sona eren kullanıcı → tek PaymentOrder.
 /// </summary>
 public class RecurringRenewalService(
     IServiceScopeFactory scopeFactory,
     ILogger<RecurringRenewalService> logger) : BackgroundService
 {
+    /// <summary>Admin panelinden veya test amacıyla hemen çalıştırır.</summary>
+    public Task RunNowAsync(CancellationToken ct) => ProcessRenewalsAsync(ct);
+
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         logger.LogInformation("[AutoRenew] Servis başladı.");
@@ -77,7 +84,7 @@ public class RecurringRenewalService(
             await RenewSubscriptionAsync(sub, db, paytr, email, ct);
         }
 
-        // ── 2. Araç satın alım yenilemeleri ─────────────────────────────────
+        // ── 2. Araç satın alım yenilemeleri — kullanıcı bazında grupla ────────
         var tools = await db.ToolPurchases
             .Include(t => t.User)
             .Where(t => t.AutoRenew
@@ -86,16 +93,18 @@ public class RecurringRenewalService(
                      && t.ExpiresAt < dayEnd)
             .ToListAsync(ct);
 
-        foreach (var tool in tools)
+        // Aynı kullanıcının birden fazla aracı varsa tek seferde işle
+        var toolsByUser = tools.GroupBy(t => t.UserId).ToList();
+        foreach (var userGroup in toolsByUser)
         {
-            await RenewToolPurchaseAsync(tool, db, paytr, email, ct);
+            await RenewUserToolsAsync(userGroup.ToList(), db, paytr, email, ct);
         }
 
         try { await db.SaveChangesAsync(ct); }
         catch (Exception ex) { logger.LogError(ex, "[AutoRenew] SaveChanges başarısız."); }
 
-        logger.LogInformation("[AutoRenew] Tamamlandı. Abonelik={SubCount}, Araç={ToolCount}",
-            subs.Count, tools.Count);
+        logger.LogInformation("[AutoRenew] Tamamlandı. Abonelik={SubCount}, Araç Grubu={ToolGroupCount}",
+            subs.Count, toolsByUser.Count);
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -111,12 +120,20 @@ public class RecurringRenewalService(
 
         var orderId = $"AR-SUB-{user.Id.ToString("N")[..8]}-{DateTime.UtcNow:yyyyMMddHHmmss}";
         var success = false;
+        var hasCard = !string.IsNullOrEmpty(user.PayTrCardToken);
 
-        if (!string.IsNullOrEmpty(user.PayTrCardToken) && plan.PriceMonthly > 0)
+        if (hasCard && plan.PriceMonthly > 0)
         {
             success = await paytr.RecurringChargeAsync(
                 user.PayTrCardToken, orderId, plan.PriceMonthly,
                 $"{plan.Name} Paketi — 1 Aylık", user, ct);
+        }
+        else if (!hasCard)
+        {
+            // Kart kaydı olmayan kullanıcılar → ücretsiz yenileme (admin tarafından oluşturulan)
+            success = true;
+            logger.LogInformation("[AutoRenew] Kart token yok, ücretsiz yenileme: {Email} - {Plan}",
+                user.Email, plan.Name);
         }
 
         if (success)
@@ -169,88 +186,143 @@ public class RecurringRenewalService(
         }
     }
 
-    private async Task RenewToolPurchaseAsync(
-        ToolPurchase tool, AppDbContext db, PayTrService paytr, EmailService email, CancellationToken ct)
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Bir kullanıcının aynı gün sona eren tüm araçlarını gruplayarak yeniler.
+    /// Birden fazla araç varsa → TEK PaymentOrder (birleşik ödeme kaydı).
+    /// </summary>
+    private async Task RenewUserToolsAsync(
+        List<ToolPurchase> userTools, AppDbContext db, PayTrService paytr,
+        EmailService email, CancellationToken ct)
     {
-        var user = tool.User;
+        var user    = userTools[0].User;
+        var hasCard = !string.IsNullOrEmpty(user.PayTrCardToken);
 
-        logger.LogInformation("[AutoRenew] Araç yenileme: userId={UserId} toolId={ToolId}",
-            user.Id, tool.ToolId);
+        logger.LogInformation("[AutoRenew] Araç yenileme: userId={UserId} araç sayısı={Count}",
+            user.Id, userTools.Count);
 
-        var orderId  = $"AR-TOOL-{user.Id.ToString("N")[..8]}-{DateTime.UtcNow:yyyyMMddHHmmss}";
-        var success  = false;
-        var toolName = ToolIdToName(tool.ToolId);
+        // ── Gerçek araç fiyatlarını ToolPrices tablosundan al ─────────────────
+        var toolIdList    = userTools.Select(t => t.ToolId).ToArray();
+        var toolPriceDict = await db.ToolPrices
+            .Where(tp => toolIdList.Contains(tp.ToolId))
+            .ToDictionaryAsync(tp => tp.ToolId, tp => tp.PriceMonthly, ct);
 
-        if (!string.IsNullOrEmpty(user.PayTrCardToken) && tool.AmountPaid > 0)
+        // Araç başına tutar: base fiyat × (kullanım limiti / 10)
+        // Örnek: icerik-takvimi ₺29 × (25/10) = ₺58
+        var toolAmounts = userTools.ToDictionary(
+            t => t.ToolId,
+            t =>
+            {
+                var basePrice  = toolPriceDict.TryGetValue(t.ToolId, out var p) ? p : t.AmountPaid;
+                var multiplier = t.MonthlyLimit.HasValue ? t.MonthlyLimit.Value / 10m : 1m;
+                return Math.Round(basePrice * multiplier, 2);
+            });
+
+        var totalAmount = toolAmounts.Values.Sum();
+        var orderId     = $"AR-TOOL-{user.Id.ToString("N")[..8]}-{DateTime.UtcNow:yyyyMMddHHmmss}";
+        var success     = false;
+
+        if (hasCard && totalAmount > 0)
         {
+            var desc = userTools.Count == 1
+                ? $"{ToolIdToName(userTools[0].ToolId)} araç aboneliği"
+                : $"Araç aboneliği yenileme ({userTools.Count} araç)";
+
             success = await paytr.RecurringChargeAsync(
-                user.PayTrCardToken, orderId, tool.AmountPaid,
-                $"{toolName} araç aboneliği", user, ct);
+                user.PayTrCardToken, orderId, totalAmount, desc, user, ct);
+        }
+        else if (!hasCard)
+        {
+            // Kart kaydı olmayan kullanıcı (admin tarafından oluşturulan) → ücretsiz yenileme
+            success = true;
+            logger.LogInformation("[AutoRenew] Kart token yok, ücretsiz yenileme: {Email} - {Count} araç",
+                user.Email, userTools.Count);
         }
 
         if (success)
         {
-            // Yeni ToolPurchase oluştur (mevcut sona erer, yeni başlar)
-            db.ToolPurchases.Add(new ToolPurchase
+            // ── Her araç için yeni ToolPurchase (doğru AmountPaid ile) ──────────
+            foreach (var tool in userTools)
             {
-                UserId          = tool.UserId,
-                ToolId          = tool.ToolId,
-                MonthlyLimit    = tool.MonthlyLimit,
-                UsesGranted     = tool.MonthlyLimit ?? tool.UsesGranted,
-                UsesRemaining   = tool.MonthlyLimit ?? tool.UsesGranted,
-                AmountPaid      = tool.AmountPaid,
-                IyzicoPaymentId = orderId,
-                PurchasedAt     = DateTime.UtcNow,
-                ExpiresAt       = DateTime.UtcNow.AddMonths(1),
-                AutoRenew       = true,
-            });
+                var renewAmount = toolAmounts.TryGetValue(tool.ToolId, out var a) ? a : tool.AmountPaid;
+                db.ToolPurchases.Add(new ToolPurchase
+                {
+                    UserId          = tool.UserId,
+                    ToolId          = tool.ToolId,
+                    MonthlyLimit    = tool.MonthlyLimit,
+                    UsesGranted     = tool.MonthlyLimit ?? tool.UsesGranted,
+                    UsesRemaining   = tool.MonthlyLimit ?? tool.UsesGranted,
+                    AmountPaid      = renewAmount,
+                    IyzicoPaymentId = orderId,
+                    PurchasedAt     = DateTime.UtcNow,
+                    ExpiresAt       = DateTime.UtcNow.AddMonths(1),
+                    AutoRenew       = true,
+                });
+            }
 
-            // Ödeme kaydı
+            // ── Kullanıcı başına TEK birleşik ödeme kaydı ─────────────────────
             db.PaymentOrders.Add(new PaymentOrder
             {
-                UserId          = tool.UserId,
-                ToolId          = tool.ToolId,
+                UserId          = user.Id,
+                ToolId          = userTools.Count == 1 ? userTools[0].ToolId : null,
+                ToolIds         = userTools.Count > 1
+                                    ? JsonSerializer.Serialize(toolIdList)
+                                    : null,
                 ConversationId  = orderId,
                 IyzicoToken     = "AUTO-RENEW",
                 Status          = PaymentOrderStatus.Completed,
-                Amount          = tool.AmountPaid,
+                Amount          = totalAmount,
                 IyzicoPaymentId = orderId,
                 CompletedAt     = DateTime.UtcNow,
-                UsesPerTool     = tool.MonthlyLimit,
+                UsesPerTool     = userTools[0].MonthlyLimit,
             });
 
-            var limitLabel = tool.MonthlyLimit.HasValue
-                ? $"{tool.MonthlyLimit} kullanım/ay"
-                : "Sınırsız kullanım";
+            // ── Birleşik başarı e-postası ──────────────────────────────────────
+            var features = userTools.Select(t =>
+            {
+                var name     = ToolIdToName(t.ToolId);
+                var limitLbl = t.MonthlyLimit.HasValue ? $"{t.MonthlyLimit} kullanım/ay" : "Sınırsız";
+                var amount   = toolAmounts.TryGetValue(t.ToolId, out var a) ? $"₺{a:F0}" : "";
+                return $"{name} ({limitLbl}) — {amount}";
+            }).ToArray();
+
+            var serviceTitle = userTools.Count == 1
+                ? ToolIdToName(userTools[0].ToolId)
+                : $"{userTools.Count} Araç Aboneliği";
 
             try
             {
                 await email.SendRenewalSuccessEmailAsync(
                     user.Email, user.Name,
-                    toolName, tool.AmountPaid, DateTime.UtcNow.AddMonths(1),
-                    [$"{toolName}: {limitLabel}"]);
+                    serviceTitle, totalAmount,
+                    DateTime.UtcNow.AddMonths(1),
+                    features);
             }
             catch (Exception ex)
             {
                 logger.LogWarning(ex, "[AutoRenew] Araç başarı maili gönderilemedi: {Email}", user.Email);
             }
 
-            logger.LogInformation("[AutoRenew] ✅ Araç yenilendi: {Email} - {ToolId}", user.Email, tool.ToolId);
+            logger.LogInformation("[AutoRenew] ✅ {Count} araç yenilendi: {Email}",
+                userTools.Count, user.Email);
         }
         else
         {
-            try
+            foreach (var tool in userTools)
             {
-                await email.SendRenewalFailedEmailAsync(
-                    user.Email, user.Name,
-                    toolName, tool.ExpiresAt!.Value);
+                try
+                {
+                    await email.SendRenewalFailedEmailAsync(
+                        user.Email, user.Name,
+                        ToolIdToName(tool.ToolId), tool.ExpiresAt!.Value);
+                }
+                catch (Exception ex)
+                {
+                    logger.LogWarning(ex, "[AutoRenew] Araç hata maili gönderilemedi: {Email}", user.Email);
+                }
             }
-            catch (Exception ex)
-            {
-                logger.LogWarning(ex, "[AutoRenew] Araç hata maili gönderilemedi: {Email}", user.Email);
-            }
-
-            logger.LogWarning("[AutoRenew] ❌ Araç yenilenemedi: {Email} - {ToolId}", user.Email, tool.ToolId);
+            logger.LogWarning("[AutoRenew] ❌ Araç yenilenemedi: {Email}", user.Email);
         }
     }
 
