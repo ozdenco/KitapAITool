@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '@/lib/api'
 import { useAuthStore } from '@/store/auth'
 
@@ -19,6 +19,7 @@ interface Subscription {
   planName: string
   status: string     // 'active' | 'expired'
   expiresAt?: string
+  autoRenew: boolean
 }
 
 // ─── Plan feature lists ───────────────────────────────────────────────────────
@@ -71,6 +72,7 @@ const PLAN_TIER: Record<string, number> = {
   standard:   1,
   premium:    2,
   enterprise: 3,
+  admin:      99,  // admin tüm ücretli planların üstünde
 }
 
 const PLAN_BADGE: Record<string, { bg: string; text: string; border: string }> = {
@@ -78,12 +80,64 @@ const PLAN_BADGE: Record<string, { bg: string; text: string; border: string }> =
   standard:   { bg: 'bg-blue-50',     text: 'text-blue-700',    border: 'border-blue-200' },
   premium:    { bg: 'bg-[#F0FAF6]',   text: 'text-[#085041]',   border: 'border-[#1D9E75]' },
   enterprise: { bg: 'bg-amber-50',    text: 'text-amber-700',   border: 'border-amber-300' },
+  admin:      { bg: 'bg-[#F0FAF6]',   text: 'text-[#085041]',   border: 'border-[#1D9E75]' },
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function formatDate(iso?: string) {
+  if (!iso) return ''
+  return new Date(iso).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' })
+}
+
+// ─── Active subscription banner ───────────────────────────────────────────────
+
+function ActiveSubBanner({
+  sub,
+  onToggleAutoRenew,
+  toggling,
+}: {
+  sub: Subscription
+  onToggleAutoRenew: () => void
+  toggling: boolean
+}) {
+  const dateStr = formatDate(sub.expiresAt)
+  const planLabel = sub.planName ?? sub.plan
+
+  if (sub.autoRenew) {
+    return (
+      <div className="bg-blue-50 border border-blue-200 rounded-2xl px-5 py-4 text-[13px] text-blue-900">
+        <p className="font-semibold mb-1">🔄 {planLabel} otomatik yenilenecek</p>
+        <p className="text-blue-800">
+          Aboneliğiniz <strong>{dateStr}</strong> tarihinde otomatik olarak yenilenecektir.
+        </p>
+        <button
+          onClick={onToggleAutoRenew}
+          disabled={toggling}
+          className="mt-2 text-[12px] font-medium text-blue-700 underline underline-offset-2 hover:text-blue-900 disabled:opacity-60"
+        >
+          {toggling ? '⏳ Güncelleniyor...' : 'Otomatik yenilemeyi kapatmak için tıklayınız'}
+        </button>
+      </div>
+    )
+  }
+
+  return (
+    <div className="bg-amber-50 border border-amber-200 rounded-2xl px-5 py-4 text-[13px] text-amber-900">
+      <p className="font-semibold mb-1">📦 {planLabel} devam ediyor</p>
+      <p className="text-amber-800">
+        <strong>{planLabel}</strong> aboneliğiniz <strong>{dateStr}</strong> tarihinde sona erecek.
+        {' '}Paket alımı bu tarihten itibaren aktif olacaktır.
+      </p>
+    </div>
+  )
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function PaketSecPage() {
-  const { user } = useAuthStore()
+  const { user }      = useAuthStore()
+  const queryClient   = useQueryClient()
 
   const { data: plans, isLoading } = useQuery<Plan[]>({
     queryKey: ['plans'],
@@ -97,9 +151,23 @@ export function PaketSecPage() {
       api.get<Subscription>('/subscriptions/me').then((r: { data: Subscription }) => r.data),
   })
 
-  // Expired abonelik → free plan gibi davran (tüm paketler satın alınabilir)
-  const isExpired   = sub?.status === 'expired'
-  const currentPlan = user?.isAdmin ? 'admin' : (sub?.plan ?? 'free')
+  const autoRenewMutation = useMutation({
+    mutationFn: (autoRenew: boolean) =>
+      api.put('/subscriptions/me/auto-renew', { autoRenew }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['subscription'] })
+    },
+  })
+
+  const isExpired = sub?.status === 'expired'
+
+  // Gerçek plan tipini kullan — admin için 'admin', normal kullanıcı için sub?.plan
+  const rawPlan   = user?.isAdmin ? 'admin' : (sub?.plan ?? 'free')
+  // Süresi dolmuşsa free gibi davran (tüm paketler satın alınabilir)
+  const currentPlan = isExpired ? 'free' : rawPlan
+
+  const currentTier = PLAN_TIER[currentPlan] ?? 0
+  const hasActiveSub = !isExpired && currentTier > 0  // ücretsiz veya admin değil, aktif
 
   const [loadingPlanId, setLoadingPlanId] = useState<number | null>(null)
   const [checkoutError, setCheckoutError] = useState<string | null>(null)
@@ -118,7 +186,6 @@ export function PaketSecPage() {
         '/payments/checkout-form',
         { planId: plan.id }
       )
-      // iyzico ödeme sayfasına yönlendir
       window.location.href = res.data.paymentPageUrl
     } catch (err: unknown) {
       const msg =
@@ -140,20 +207,24 @@ export function PaketSecPage() {
         <p className="text-[13px] text-[#6B6963]">İhtiyacınıza uygun paketi seçin ve araçları kullanmaya başlayın</p>
       </div>
 
-      {/* ── Promo / expired banner ── */}
+      {/* ── Promo / active / expired banner ── */}
       {isExpired ? (
         <div className="bg-amber-50 border border-amber-200 rounded-2xl px-5 py-3 text-[13px] text-amber-800">
           ⏰ <strong>Paketiniz sona erdi.</strong>{' '}
-          {sub?.expiresAt
-            ? `${new Date(sub.expiresAt).toLocaleDateString('tr-TR')} tarihinde`
-            : ''}{' '}
+          {sub?.expiresAt ? `${formatDate(sub.expiresAt)} tarihinde ` : ''}
           Ücretsiz plana geçildi — yeni paket seçerek devam edebilirsiniz.
         </div>
-      ) : (
+      ) : hasActiveSub && sub && currentPlan !== 'admin' ? (
+        <ActiveSubBanner
+          sub={sub}
+          onToggleAutoRenew={() => autoRenewMutation.mutate(!sub.autoRenew)}
+          toggling={autoRenewMutation.isPending}
+        />
+      ) : !hasActiveSub && !isExpired ? (
         <div className="bg-[#1D9E75] text-white rounded-2xl px-5 py-3 text-center text-[13px] font-medium">
           🎉 Yeni aboneliklere özel tanıtım fiyatlarımızdan yararlanın!
         </div>
-      )}
+      ) : null}
 
       {/* ── Hata mesajı ── */}
       {checkoutError && (
@@ -172,27 +243,44 @@ export function PaketSecPage() {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {(plans ?? []).map((plan) => {
-            const currentTier   = PLAN_TIER[currentPlan] ?? 0
-            const planTier      = PLAN_TIER[plan.type]   ?? 0
+            const planTier      = PLAN_TIER[plan.type] ?? 0
             const isActive      = currentPlan === plan.type
-            const isDowngrade   = planTier < currentTier          // mevcut plandan düşük
+            const isDowngrade   = planTier < currentTier    // mevcut plandan düşük veya eşit (aynı plan)
+            const isSameTier    = planTier === currentTier && !isActive
+            const isBlocked     = isActive || isDowngrade || isSameTier
             const isRecommended = plan.type === 'premium'
             const isEnterprise  = plan.type === 'enterprise'
             const badge         = PLAN_BADGE[plan.type] ?? PLAN_BADGE.free
             const features      = PLAN_FEATURES[plan.type] ?? []
             const icon          = PLAN_ICONS[plan.type] ?? '📦'
 
+            // Deaktif buton etiketi — duruma göre
+            const disabledLabel = (() => {
+              if (plan.type === 'free') return isActive ? 'Aktif Plan' : 'Varsayılan Plan'
+              if (isActive) {
+                return sub?.autoRenew ? '🔄 Otomatik Olarak Yenileniyor' : 'Aktif Paket'
+              }
+              if (isDowngrade || isSameTier) {
+                return sub?.autoRenew
+                  ? 'Mevcut Paket Süresi Dolunca Seçilebilir'
+                  : 'Paket Süresi Dolunca Seçilebilir'
+              }
+              return 'Seçilemez'
+            })()
+
             return (
               <div
                 key={plan.id}
                 className={`relative rounded-2xl border-2 p-5 flex flex-col gap-4 transition-shadow ${
-                  isRecommended
+                  isRecommended && !isBlocked
                     ? 'border-[#1D9E75] shadow-lg shadow-[#1D9E75]/10'
-                    : 'border-[#E2E0D8]'
+                    : isActive
+                      ? 'border-[#1D9E75]/40'
+                      : 'border-[#E2E0D8]'
                 } bg-white`}
               >
-                {/* Recommended badge */}
-                {isRecommended && (
+                {/* Recommended badge — sadece gerçekten satın alınabilirse göster */}
+                {isRecommended && !isBlocked && (
                   <div className="absolute -top-3 left-1/2 -translate-x-1/2">
                     <span className="bg-[#1D9E75] text-white text-[11px] font-bold px-3 py-1 rounded-full uppercase tracking-wider">
                       ÖNERİLEN
@@ -249,21 +337,12 @@ export function PaketSecPage() {
                 </ul>
 
                 {/* CTA Button */}
-                {isActive ? (
-                  // Aktif plan — deaktive
+                {plan.type === 'free' || isBlocked ? (
                   <button
                     disabled
                     className="w-full py-2.5 rounded-xl text-[13px] font-medium bg-[#F7F6F2] border border-[#D3D1C7] text-[#9A9792] cursor-default"
                   >
-                    Aktif Paket
-                  </button>
-                ) : isDowngrade ? (
-                  // Mevcut plandan düşük — satın alma engellendi
-                  <button
-                    disabled
-                    className="w-full py-2.5 rounded-xl text-[13px] font-medium bg-[#F7F6F2] border border-[#D3D1C7] text-[#9A9792] cursor-default"
-                  >
-                    Paket Süresi Dolunca Seçilebilir
+                    {disabledLabel}
                   </button>
                 ) : isEnterprise ? (
                   <button
@@ -276,11 +355,7 @@ export function PaketSecPage() {
                   <button
                     onClick={() => handleUpgrade(plan)}
                     disabled={loadingPlanId !== null}
-                    className={`w-full py-2.5 rounded-xl text-[13px] font-medium transition-colors disabled:opacity-60 disabled:cursor-wait ${
-                      isRecommended
-                        ? 'bg-[#1D9E75] text-white hover:bg-[#178a65]'
-                        : 'bg-[#1C1B19] text-white hover:bg-[#2C2B27]'
-                    }`}
+                    className="w-full py-2.5 rounded-xl text-[13px] font-medium transition-colors disabled:opacity-60 disabled:cursor-wait bg-[#1D9E75] text-white hover:bg-[#178a65]"
                   >
                     {loadingPlanId === plan.id
                       ? '⏳ Yönlendiriliyor...'
