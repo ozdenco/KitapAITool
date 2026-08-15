@@ -1,4 +1,4 @@
-import { NavLink, Outlet, Navigate, useLocation } from 'react-router-dom'
+import { NavLink, Outlet } from 'react-router-dom'
 
 const ADMIN_NAV_ITEMS = [
   { to: '/admin/istatistikler',      label: 'İstatistikler',      icon: '📊' },
@@ -10,13 +10,6 @@ const ADMIN_NAV_ITEMS = [
 ] as const
 
 export function AdminLayout() {
-  const { pathname } = useLocation()
-
-  // /admin → /admin/istatistikler
-  if (pathname === '/admin' || pathname === '/admin/') {
-    return <Navigate to="/admin/istatistikler" replace />
-  }
-
   return (
     <div className="w-full max-w-[1200px] px-6 py-8 flex gap-6 items-start">
       {/* ── Sidebar ── */}

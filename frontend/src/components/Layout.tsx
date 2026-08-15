@@ -51,19 +51,30 @@ function ToolsDropdown() {
     .filter((g) => g.tools.length > 0)
 
   return (
-    <div ref={ref} className="relative">
+    <div ref={ref} className="relative flex items-center">
+      {/* Metin → dashboard'a gider */}
+      <button
+        onClick={() => { setOpen(false); navigate('/dashboard') }}
+        className={clsx(
+          'pl-3 pr-1 py-1.5 rounded-l-lg text-sm font-medium transition-colors',
+          open ? 'text-[#1D9E75]' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100',
+        )}
+      >
+        Araçlar
+      </button>
+
+      {/* Ok → dropdown'ı açar/kapar */}
       <button
         onClick={() => setOpen((v) => !v)}
         aria-haspopup="true"
         aria-expanded={open}
         className={clsx(
-          'px-3 py-1.5 rounded-lg text-sm font-medium transition-colors inline-flex items-center gap-1.5',
-          open ? 'bg-[#1D9E75]/10 text-[#1D9E75]' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100',
+          'pr-2 pl-0.5 py-1.5 rounded-r-lg transition-colors',
+          open ? 'bg-[#1D9E75]/10 text-[#1D9E75]' : 'text-gray-400 hover:text-gray-700 hover:bg-gray-100',
         )}
       >
-        Araçlar
         <svg
-          className={clsx('w-3 h-3 opacity-60 transition-transform', open && 'rotate-180')}
+          className={clsx('w-3 h-3 transition-transform', open && 'rotate-180')}
           viewBox="0 0 10 6" fill="none"
         >
           <path d="M1 1l4 4 4-4" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" />
@@ -100,6 +111,76 @@ function ToolsDropdown() {
               <span>Tüm Araçlar</span>
             </button>
           </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─── Admin dropdown (split: metin → /admin, ok → menü) ───────────────────────
+
+function AdminDropdown() {
+  const [open, setOpen] = useState(false)
+  const ref             = useRef<HTMLDivElement>(null)
+  const navigate        = useNavigate()
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+
+  return (
+    <div ref={ref} className="relative flex items-center">
+      {/* Metin → /admin */}
+      <button
+        onClick={() => { setOpen(false); navigate('/admin') }}
+        className={clsx(
+          'pl-3 pr-1 py-1.5 rounded-l-lg text-sm font-medium transition-colors',
+          open
+            ? 'text-amber-700'
+            : 'text-amber-700 hover:text-amber-800 hover:bg-amber-50',
+        )}
+      >
+        🔐 Yönetici İşlemleri
+      </button>
+
+      {/* Ok → dropdown */}
+      <button
+        onClick={() => setOpen((v) => !v)}
+        aria-haspopup="true"
+        aria-expanded={open}
+        className={clsx(
+          'pr-2 pl-0.5 py-1.5 rounded-r-lg transition-colors',
+          open
+            ? 'bg-amber-500/10 text-amber-700'
+            : 'text-amber-500 hover:text-amber-700 hover:bg-amber-50',
+        )}
+      >
+        <svg
+          className={clsx('w-3 h-3 transition-transform', open && 'rotate-180')}
+          viewBox="0 0 10 6" fill="none"
+        >
+          <path d="M1 1l4 4 4-4" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" />
+        </svg>
+      </button>
+
+      {open && (
+        <div className="absolute top-full mt-2 left-0 z-50 bg-white border border-[#E2E0D8] rounded-2xl shadow-lg overflow-hidden min-w-[220px]">
+          <nav className="flex flex-col gap-[2px] p-2">
+            {ADMIN_ITEMS.map(({ to, label, icon }) => (
+              <button
+                key={to}
+                onClick={() => { setOpen(false); navigate(to) }}
+                className="flex items-center gap-[9px] px-[11px] py-[8px] rounded-xl text-[13px] font-medium text-[#3A3935] hover:bg-amber-50 hover:text-amber-800 transition-colors text-left w-full"
+              >
+                <span className="text-[14px] leading-none">{icon}</span>
+                <span>{label}</span>
+              </button>
+            ))}
+          </nav>
         </div>
       )}
     </div>
@@ -204,23 +285,7 @@ export function Layout() {
           <nav className="hidden md:flex items-center gap-1">
             <ToolsDropdown />
 
-            {user?.isAdmin && (
-              <Dropdown
-                align="left"
-                trigger={
-                  <span className={clsx(
-                    'px-3 py-1.5 rounded-lg text-sm font-medium transition-colors inline-flex items-center gap-1.5',
-                    'text-amber-700 hover:text-amber-800 hover:bg-amber-50',
-                  )}>
-                    🔐 Yönetici İşlemleri
-                    <svg className="w-3 h-3 opacity-60" viewBox="0 0 10 6" fill="none">
-                      <path d="M1 1l4 4 4-4" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" />
-                    </svg>
-                  </span>
-                }
-                items={ADMIN_ITEMS}
-              />
-            )}
+            {user?.isAdmin && <AdminDropdown />}
           </nav>
 
           {/* User dropdown */}

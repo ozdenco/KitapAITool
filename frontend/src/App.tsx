@@ -31,6 +31,7 @@ import { AdminKullaniciGecmisiPage } from '@/pages/admin/AdminKullaniciGecmisiPa
 import { AdminKullanimRaporuPage } from '@/pages/admin/AdminKullanimRaporuPage'
 import { AdminRaporDetayPage } from '@/pages/admin/AdminRaporDetayPage'
 import { AdminAracFiyatlariPage } from '@/pages/admin/AdminAracFiyatlariPage'
+import { AdminAnaSayfaPage } from '@/pages/admin/AdminAnaSayfaPage'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -91,7 +92,7 @@ function AppRoutes() {
                 </AdminGuard>
               }
             >
-              <Route index element={<Navigate to="istatistikler" replace />} />
+              <Route index element={<AdminAnaSayfaPage />} />
               <Route path="istatistikler"       element={<AdminIstatistiklerPage />} />
               <Route path="kullanici-listesi"   element={<AdminKullaniciListesiPage />} />
               <Route path="kullanici-islemleri" element={<AdminKullaniciIslemleriPage />} />
