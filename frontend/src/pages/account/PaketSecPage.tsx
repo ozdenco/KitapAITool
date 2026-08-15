@@ -214,7 +214,7 @@ export function PaketSecPage() {
           {sub?.expiresAt ? `${formatDate(sub.expiresAt)} tarihinde ` : ''}
           Ücretsiz plana geçildi — yeni paket seçerek devam edebilirsiniz.
         </div>
-      ) : hasActiveSub && sub && currentPlan !== 'admin' ? (
+      ) : sub && !isExpired && sub.plan !== 'free' ? (
         <ActiveSubBanner
           sub={sub}
           onToggleAutoRenew={() => autoRenewMutation.mutate(!sub.autoRenew)}

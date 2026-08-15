@@ -12,10 +12,12 @@ namespace KolayKobi.Api.Controllers;
 [ApiController]
 [Route("api/payments")]
 public class PaymentsController(
-    AppDbContext        db,
-    PayTrService        paytr,
-    SubscriptionService subs,
-    IConfiguration      config) : ControllerBase
+    AppDbContext                db,
+    PayTrService                paytr,
+    SubscriptionService         subs,
+    IConfiguration              config,
+    EmailService                email,
+    ILogger<PaymentsController> logger) : ControllerBase
 {
     private Guid CurrentUserId =>
         Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
@@ -329,15 +331,11 @@ public class PaymentsController(
             order.IyzicoPaymentId = form.MerchantOid;
             order.CompletedAt     = DateTime.UtcNow;
 
-            // PayTR kayıtlı kart tokenını kullanıcıya kaydet (otomatik yenileme için)
-            if (!string.IsNullOrWhiteSpace(form.Utoken))
-            {
-                var payingUser = await db.Users.FindAsync(order.UserId);
-                if (payingUser is not null)
-                {
-                    payingUser.PayTrCardToken = form.Utoken;
-                }
-            }
+            // Kullanıcıyı yükle — PayTR kart tokeni + onay maili için
+            var payingUser = await db.Users.FindAsync(order.UserId);
+
+            if (!string.IsNullOrWhiteSpace(form.Utoken) && payingUser is not null)
+                payingUser.PayTrCardToken = form.Utoken;
 
             if (order.PlanId.HasValue)
             {
@@ -394,6 +392,63 @@ public class PaymentsController(
                     });
                 }
             }
+
+            // ── Satın alma onay e-postası ─────────────────────────────────────
+            if (payingUser is not null)
+            {
+                try
+                {
+                    var newExpiry = DateTime.UtcNow.AddMonths(1);
+
+                    if (order.PlanId.HasValue && order.Plan is not null)
+                    {
+                        // Paket aboneliği
+                        var planFeatures = new[]
+                        {
+                            "Tüm 11 araca erişim",
+                            order.Plan.UsagePerToolPerMonth.HasValue
+                                ? $"Araç başına {order.Plan.UsagePerToolPerMonth} kullanım/ay"
+                                : "Sınırsız kullanım",
+                        };
+                        await email.SendPurchaseConfirmationEmailAsync(
+                            payingUser.Email, payingUser.Name,
+                            order.Plan.Name, order.Amount, newExpiry, planFeatures);
+                    }
+                    else if (order.ToolId is not null)
+                    {
+                        // Tekil araç
+                        var toolPrice = await db.ToolPrices
+                            .FirstOrDefaultAsync(tp => tp.ToolId == order.ToolId);
+                        var toolName = toolPrice?.ToolName ?? order.ToolId;
+                        await email.SendPurchaseConfirmationEmailAsync(
+                            payingUser.Email, payingUser.Name,
+                            toolName, order.Amount, newExpiry);
+                    }
+                    else if (order.ToolIds is not null)
+                    {
+                        // Toplu araç
+                        var toolIdArr = JsonSerializer.Deserialize<string[]>(order.ToolIds) ?? [];
+                        var toolPrices = await db.ToolPrices
+                            .Where(tp => toolIdArr.Contains(tp.ToolId))
+                            .Select(tp => new { tp.ToolId, tp.ToolName })
+                            .ToListAsync();
+                        var limitLabel = order.UsesPerTool.HasValue
+                            ? $"{order.UsesPerTool} kullanım/ay"
+                            : "Sınırsız";
+                        var features = toolPrices
+                            .Select(tp => $"{tp.ToolName} — {limitLabel}")
+                            .ToArray();
+                        await email.SendPurchaseConfirmationEmailAsync(
+                            payingUser.Email, payingUser.Name,
+                            $"{toolIdArr.Length} Araç Aboneliği", order.Amount, newExpiry, features);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    // E-posta hatası ödeme akışını bozmasın
+                    logger.LogWarning(ex, "[Callback] Onay maili gönderilemedi: {Email}", payingUser.Email);
+                }
+            }
         }
         else
         {
@@ -444,7 +499,7 @@ public class PaymentsController(
             .Where(p => p.UserId == CurrentUserId
                      && p.UsesRemaining > 0
                      && (p.ExpiresAt == null || p.ExpiresAt > now))
-            .OrderBy(p => p.ExpiresAt)
+            .OrderByDescending(p => p.ExpiresAt)   // en geç bitiş tarihi önce
             .Select(p => new
             {
                 p.Id,
@@ -457,7 +512,15 @@ public class PaymentsController(
             })
             .ToListAsync();
 
-        return Ok(new { success = true, data = purchases });
+        // Araç yenilemesi eski kayıtları silmez — ToolId başına yalnızca
+        // en geç bitiş tarihli (= ilk sıradaki) kaydı döndür.
+        var unique = purchases
+            .GroupBy(p => p.ToolId)
+            .Select(g => g.First())           // zaten ExpiresAt DESC sıralı
+            .OrderBy(p => p.ExpiresAt)
+            .ToList();
+
+        return Ok(new { success = true, data = unique });
     }
 
     // ── PUT /api/payments/my-tools/{id}/auto-renew ───────────────────────────
