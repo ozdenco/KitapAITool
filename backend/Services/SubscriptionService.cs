@@ -51,9 +51,11 @@ public class SubscriptionService(AppDbContext db)
             existing.PlanId      = planId;
             existing.Status      = SubscriptionStatus.Active;
             existing.StartedAt   = DateTime.UtcNow;
-            existing.ExpiresAt   = DateTime.UtcNow.AddMonths(1);
+            // Bitiş = başlangıç + 1 ay - 1 gün (15 Ağu → 14 Eyl)
+            existing.ExpiresAt   = DateTime.UtcNow.AddMonths(1).AddDays(-1);
             existing.CancelledAt = null;
-            // AutoRenew varsayılan olarak açık kalır — kullanıcı değiştirmemişse dokunma
+            // Yeni satın alımda her zaman açık yap
+            existing.AutoRenew   = true;
             await db.SaveChangesAsync();
             existing.Plan = plan;
             return existing;
@@ -65,7 +67,8 @@ public class SubscriptionService(AppDbContext db)
             PlanId     = planId,
             Status     = SubscriptionStatus.Active,
             StartedAt  = DateTime.UtcNow,
-            ExpiresAt  = DateTime.UtcNow.AddMonths(1),
+            // Bitiş = başlangıç + 1 ay - 1 gün (15 Ağu → 14 Eyl)
+            ExpiresAt  = DateTime.UtcNow.AddMonths(1).AddDays(-1),
             AutoRenew  = true,
         };
 

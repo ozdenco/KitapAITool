@@ -1,10 +1,69 @@
+import { useQuery } from '@tanstack/react-query'
 import { useToolUsage } from '@/hooks/useToolUsage'
+import { useAuthStore } from '@/store/auth'
 import { TOOLS } from '@/lib/tools'
+import api from '@/lib/api'
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+interface ToolPurchase {
+  id: string
+  toolId: string
+  purchasedAt: string
+  expiresAt: string | null
+  autoRenew: boolean
+  monthlyLimit: number | null
+}
+
+interface SubInfo {
+  plan: string
+  status: string
+  startedAt: string
+  expiresAt: string | null
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function fmtDate(iso: string | null | undefined) {
+  if (!iso) return null
+  return new Date(iso).toLocaleDateString('tr-TR', {
+    day: 'numeric', month: 'short', year: 'numeric',
+  })
+}
+
+function getToolDates(
+  toolId: string,
+  myTools: ToolPurchase[] | undefined,
+  sub: SubInfo | undefined,
+): { start: string | null; end: string | null } {
+  const purchase = myTools?.find((p) => p.toolId === toolId)
+  if (purchase) {
+    return { start: purchase.purchasedAt, end: purchase.expiresAt }
+  }
+  if (sub && sub.status === 'active') {
+    return { start: sub.startedAt, end: sub.expiresAt ?? null }
+  }
+  return { start: null, end: null }
+}
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function AracKullanimPage() {
-  const { data: usages, isLoading, isError } = useToolUsage()
+  const { user }                                        = useAuthStore()
+  const { data: usages, isLoading, isError }            = useToolUsage()
+
+  const { data: myTools } = useQuery<ToolPurchase[]>({
+    queryKey: ['my-tools'],
+    queryFn: () =>
+      api.get<{ success: boolean; data: ToolPurchase[] }>('/payments/my-tools')
+         .then((r: { data: { success: boolean; data: ToolPurchase[] } }) => r.data.data),
+  })
+
+  const { data: sub } = useQuery<SubInfo>({
+    queryKey: ['subscription'],
+    queryFn: () =>
+      api.get<SubInfo>('/subscriptions/me').then((r: { data: SubInfo }) => r.data),
+  })
 
   return (
     <div className="flex flex-col gap-6">
@@ -20,8 +79,9 @@ export function AracKullanimPage() {
       {/* ── Table ── */}
       <div className="bg-white rounded-2xl border border-[#E2E0D8] overflow-hidden">
         {/* Header */}
-        <div className="grid grid-cols-[1fr_110px_80px] gap-3 px-5 py-3 bg-[#F7F6F2] border-b border-[#E2E0D8]">
+        <div className="grid grid-cols-[1fr_190px_110px_80px] gap-3 px-5 py-3 bg-[#F7F6F2] border-b border-[#E2E0D8]">
           <span className="text-[11px] font-semibold uppercase tracking-wider text-[#9A9792]">Araç</span>
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-[#9A9792] text-center">Geçerlilik</span>
           <span className="text-[11px] font-semibold uppercase tracking-wider text-[#9A9792] text-center">Kullanım</span>
           <span className="text-[11px] font-semibold uppercase tracking-wider text-[#9A9792] text-right">Durum</span>
         </div>
@@ -29,7 +89,7 @@ export function AracKullanimPage() {
         {isLoading && (
           <div className="flex flex-col gap-[1px]">
             {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map((n) => (
-              <div key={n} className="h-[58px] bg-white border-b border-[#F0EFE9] last:border-b-0 animate-pulse" />
+              <div key={n} className="h-[62px] bg-white border-b border-[#F0EFE9] last:border-b-0 animate-pulse" />
             ))}
           </div>
         )}
@@ -41,22 +101,47 @@ export function AracKullanimPage() {
         )}
 
         {!isLoading && !isError && TOOLS.map((tool) => {
-          const usage = usages?.find((u) => u.toolId === tool.id)
+          const usage   = usages?.find((u) => u.toolId === tool.id)
           const used    = usage?.usedCount ?? 0
           const limit   = usage?.limit ?? null
           const pct     = limit != null && limit > 0 ? Math.min(100, Math.round((used / limit) * 100)) : null
           const isHigh  = (pct ?? 0) >= 80
           const isFull  = pct === 100
 
+          const { start, end } = getToolDates(tool.id, myTools, sub)
+          const startStr = fmtDate(start)
+          const endStr   = fmtDate(end)
+
+          // Admin için tarih gösterme
+          const showDates = !user?.isAdmin && (startStr || endStr)
+
           return (
             <div
               key={tool.id}
-              className="grid grid-cols-[1fr_110px_80px] gap-3 px-5 py-[14px] items-center border-b border-[#F0EFE9] last:border-b-0 hover:bg-[#FAFAF7] transition-colors"
+              className="grid grid-cols-[1fr_190px_110px_80px] gap-3 px-5 py-[13px] items-center border-b border-[#F0EFE9] last:border-b-0 hover:bg-[#FAFAF7] transition-colors"
             >
               {/* Araç adı */}
               <div className="flex items-center gap-[10px] min-w-0">
                 <span className="text-[20px] shrink-0 leading-none">{tool.icon}</span>
                 <p className="text-[13px] font-medium text-[#1C1B19] truncate">{tool.name}</p>
+              </div>
+
+              {/* Geçerlilik tarihleri */}
+              <div className="flex flex-col items-center gap-[2px]">
+                {showDates ? (
+                  <>
+                    {startStr && (
+                      <span className="text-[11px] text-[#6B6963] tabular-nums">{startStr}</span>
+                    )}
+                    {endStr && (
+                      <span className="text-[11px] text-[#9A9792] tabular-nums">
+                        → {endStr}
+                      </span>
+                    )}
+                  </>
+                ) : (
+                  <span className="text-[11px] text-[#C0BDB5]">—</span>
+                )}
               </div>
 
               {/* Progress bar + count */}

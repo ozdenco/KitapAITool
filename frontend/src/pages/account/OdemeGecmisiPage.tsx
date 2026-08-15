@@ -63,6 +63,7 @@ const PLAN_FEATURES: Record<string, string[]> = {
 function addOneMonth(iso: string): Date {
   const d = new Date(iso)
   d.setMonth(d.getMonth() + 1)
+  d.setDate(d.getDate() - 1)   // Bitiş = başlangıç + 1 ay - 1 gün (15 Ağu → 14 Eyl)
   return d
 }
 

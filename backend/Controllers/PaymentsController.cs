@@ -355,7 +355,7 @@ public class PaymentsController(
                     AmountPaid      = order.Amount,
                     IyzicoPaymentId = form.MerchantOid,
                     PurchasedAt     = DateTime.UtcNow,
-                    ExpiresAt       = DateTime.UtcNow.AddMonths(1),
+                    ExpiresAt       = DateTime.UtcNow.AddMonths(1).AddDays(-1),
                     AutoRenew       = true,
                 });
             }
@@ -387,7 +387,7 @@ public class PaymentsController(
                         AmountPaid      = toolAmount,
                         IyzicoPaymentId = form.MerchantOid,
                         PurchasedAt     = DateTime.UtcNow,
-                        ExpiresAt       = DateTime.UtcNow.AddMonths(1),
+                        ExpiresAt       = DateTime.UtcNow.AddMonths(1).AddDays(-1),
                         AutoRenew       = true,
                     });
                 }
@@ -398,7 +398,7 @@ public class PaymentsController(
             {
                 try
                 {
-                    var newExpiry = DateTime.UtcNow.AddMonths(1);
+                    var newExpiry = DateTime.UtcNow.AddMonths(1).AddDays(-1);
 
                     if (order.PlanId.HasValue && order.Plan is not null)
                     {
