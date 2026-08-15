@@ -35,9 +35,20 @@ function parseDateParts(iso: string): { day: number; month: number; year: number
   return { day: d, month: m, year: y }
 }
 
+/**
+ * Backend [start, end) yarı-açık aralık kullanır — end dahil değil.
+ * Gösterimde end'den 1 gün çıkararak inclusive bitiş tarihi hesaplanır.
+ * Örn: periodEnd="2026-09-15" → gösterim "14 Eylül"
+ */
+function inclusiveEnd(periodEnd: string): { day: number; month: number; year: number } {
+  const d = new Date(periodEnd)
+  d.setUTCDate(d.getUTCDate() - 1)
+  return { day: d.getUTCDate(), month: d.getUTCMonth() + 1, year: d.getUTCFullYear() }
+}
+
 function longPeriodLabel(periodStart: string, periodEnd: string): string {
   const s = parseDateParts(periodStart)
-  const e = parseDateParts(periodEnd)
+  const e = inclusiveEnd(periodEnd)
   const endStr   = `${e.day} ${TR_MONTHS_LONG[e.month - 1]} ${e.year}`
   const startStr = s.year === e.year
     ? `${s.day} ${TR_MONTHS_LONG[s.month - 1]}`
@@ -47,7 +58,7 @@ function longPeriodLabel(periodStart: string, periodEnd: string): string {
 
 function shortPeriodLabel(periodStart: string, periodEnd: string): string {
   const s = parseDateParts(periodStart)
-  const e = parseDateParts(periodEnd)
+  const e = inclusiveEnd(periodEnd)
   return `${s.day} ${TR_MONTHS_SHORT[s.month - 1]} – ${e.day} ${TR_MONTHS_SHORT[e.month - 1]}`
 }
 
