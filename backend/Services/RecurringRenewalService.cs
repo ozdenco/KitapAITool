@@ -268,7 +268,8 @@ public class RecurringRenewalService(
                     AmountPaid      = renewAmount,
                     IyzicoPaymentId = orderId,
                     PurchasedAt     = DateTime.UtcNow,
-                    ExpiresAt       = DateTime.UtcNow.AddMonths(1),
+                    // Bitiş = satın alım + 1 ay - 1 gün (15 Ağu → 14 Eyl)
+                    ExpiresAt       = DateTime.UtcNow.AddMonths(1).AddDays(-1),
                     AutoRenew       = true,
                 });
             }
@@ -308,7 +309,7 @@ public class RecurringRenewalService(
                 await email.SendRenewalSuccessEmailAsync(
                     user.Email, user.Name,
                     serviceTitle, totalAmount,
-                    DateTime.UtcNow.AddMonths(1),
+                    DateTime.UtcNow.AddMonths(1).AddDays(-1),
                     features);
             }
             catch (Exception ex)
