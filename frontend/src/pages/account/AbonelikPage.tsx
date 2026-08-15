@@ -232,8 +232,8 @@ export function AbonelikPage() {
             )}
           </div>
 
-          {/* Otomatik yenileme — aktif paket için yanında göster */}
-          {!user?.isAdmin && sub && sub.plan !== 'free' && (
+          {/* Otomatik yenileme — aktif paket için yanında göster (admin dahil) */}
+          {sub && sub.plan !== 'free' && (
             <div className="flex items-center gap-3 shrink-0">
               <div className="text-right">
                 <p className="text-[12px] font-medium text-[#1C1B19]">Otomatik Yenileme</p>
@@ -251,7 +251,7 @@ export function AbonelikPage() {
         </div>
 
         {/* Açıklama — sadece toggle varsa göster */}
-        {!user?.isAdmin && sub && sub.plan !== 'free' && (
+        {sub && sub.plan !== 'free' && (
           <p className="mt-3 text-[11px] text-[#9A9792]">
             {isExpired
               ? (sub.autoRenew

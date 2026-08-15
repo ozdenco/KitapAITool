@@ -118,22 +118,25 @@ public class RecurringRenewalService(
         logger.LogInformation("[AutoRenew] Abonelik yenileme: userId={UserId} plan={Plan}",
             user.Id, plan.Name);
 
-        var orderId = $"AR-SUB-{user.Id.ToString("N")[..8]}-{DateTime.UtcNow:yyyyMMddHHmmss}";
-        var success = false;
-        var hasCard = !string.IsNullOrEmpty(user.PayTrCardToken);
+        var orderId   = $"AR-SUB-{user.Id.ToString("N")[..8]}-{DateTime.UtcNow:yyyyMMddHHmmss}";
+        var success   = false;
+        var hasCard   = !string.IsNullOrEmpty(user.PayTrCardToken);
+        var isFreeRenew = user.IsAdmin || !hasCard;
 
-        if (hasCard && plan.PriceMonthly > 0)
+        if (!isFreeRenew && plan.PriceMonthly > 0)
         {
+            // Normal kullanıcı, kartı var → PayTR'den çek
             success = await paytr.RecurringChargeAsync(
                 user.PayTrCardToken, orderId, plan.PriceMonthly,
                 $"{plan.Name} Paketi — 1 Aylık", user, ct);
         }
-        else if (!hasCard)
+        else
         {
-            // Kart kaydı olmayan kullanıcılar → ücretsiz yenileme (admin tarafından oluşturulan)
+            // Admin veya kart kaydı olmayan → ücretsiz yenileme, mail gönder
             success = true;
-            logger.LogInformation("[AutoRenew] Kart token yok, ücretsiz yenileme: {Email} - {Plan}",
-                user.Email, plan.Name);
+            var reason = user.IsAdmin ? "admin hesabı" : "kart token yok";
+            logger.LogInformation("[AutoRenew] Ücretsiz yenileme ({Reason}): {Email} - {Plan}",
+                reason, user.Email, plan.Name);
         }
 
         if (success)
@@ -219,12 +222,14 @@ public class RecurringRenewalService(
                 return Math.Round(basePrice * multiplier, 2);
             });
 
-        var totalAmount = toolAmounts.Values.Sum();
-        var orderId     = $"AR-TOOL-{user.Id.ToString("N")[..8]}-{DateTime.UtcNow:yyyyMMddHHmmss}";
-        var success     = false;
+        var totalAmount  = toolAmounts.Values.Sum();
+        var orderId      = $"AR-TOOL-{user.Id.ToString("N")[..8]}-{DateTime.UtcNow:yyyyMMddHHmmss}";
+        var success      = false;
+        var isFreeRenew  = user.IsAdmin || !hasCard;
 
-        if (hasCard && totalAmount > 0)
+        if (!isFreeRenew && totalAmount > 0)
         {
+            // Normal kullanıcı, kartı var → PayTR'den çek
             var desc = userTools.Count == 1
                 ? $"{ToolIdToName(userTools[0].ToolId)} araç aboneliği"
                 : $"Araç aboneliği yenileme ({userTools.Count} araç)";
@@ -232,12 +237,13 @@ public class RecurringRenewalService(
             success = await paytr.RecurringChargeAsync(
                 user.PayTrCardToken, orderId, totalAmount, desc, user, ct);
         }
-        else if (!hasCard)
+        else
         {
-            // Kart kaydı olmayan kullanıcı (admin tarafından oluşturulan) → ücretsiz yenileme
+            // Admin veya kart kaydı olmayan → ücretsiz yenileme, mail gönder
             success = true;
-            logger.LogInformation("[AutoRenew] Kart token yok, ücretsiz yenileme: {Email} - {Count} araç",
-                user.Email, userTools.Count);
+            var reason = user.IsAdmin ? "admin hesabı" : "kart token yok";
+            logger.LogInformation("[AutoRenew] Ücretsiz yenileme ({Reason}): {Email} - {Count} araç",
+                reason, user.Email, userTools.Count);
         }
 
         if (success)
