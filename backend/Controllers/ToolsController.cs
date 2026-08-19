@@ -210,9 +210,14 @@ public class ToolsController(
     {
         try
         {
-            // Extract input summary from payload
-            var promptText = payload.TryGetProperty("prompt", out var p) ? p.GetString() ?? "" : "";
-            var summary = ExtractSummary(toolId, promptText);
+            // Extract input summary: prompt (legacy) → videoDesc → biz + sector → toolId fallback
+            var summaryText =
+                TryGetString(payload, "prompt")     ??
+                TryGetString(payload, "videoDesc")  ??
+                TryGetString(payload, "videoUrl")   ??
+                CombineFields(payload, "biz", "sector") ??
+                "";
+            var summary = ExtractSummary(toolId, summaryText);
 
             db.ToolResults.Add(new ToolResult
             {
@@ -228,6 +233,20 @@ public class ToolsController(
             // Saving history must not break the main request
             logger.LogWarning(ex, "Failed to save tool result for {ToolId}", toolId);
         }
+    }
+
+    private static string? TryGetString(JsonElement el, string key) =>
+        el.TryGetProperty(key, out var v) && v.ValueKind == JsonValueKind.String
+            ? v.GetString()?.Trim()
+            : null;
+
+    private static string? CombineFields(JsonElement el, params string[] keys)
+    {
+        var parts = keys
+            .Select(k => TryGetString(el, k))
+            .Where(s => !string.IsNullOrEmpty(s))
+            .ToList();
+        return parts.Count > 0 ? string.Join(" — ", parts) : null;
     }
 
     private static readonly Regex BusinessNamePattern =

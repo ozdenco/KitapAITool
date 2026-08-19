@@ -26,8 +26,16 @@ public class N8nProxyService(HttpClient http, IConfiguration config, ILogger<N8n
         ["trend-video"]       = "/webhook/kolay-kobi-trend-video"
     };
 
-    // Async tools use job polling
+    // Async tools use job polling.
     private static readonly HashSet<string> AsyncToolIds = ["icerik-takvimi", "trend-video"];
+
+    // Araçların durum sorgulama webhook'ları ana path'den AYRI olabilir.
+    // trend-video: n8n'de ayrı bir Status Webhook var — path + query param kullanır.
+    // Diğer async araçlar (icerik-takvimi) varsayılan {mainPath}/status/{jobId} pattern'ini kullanır.
+    private static readonly Dictionary<string, string> StatusWebhookPaths = new()
+    {
+        ["trend-video"] = "/webhook/kolay-kobi-trend-video-status"
+    };
 
     public async Task<HttpResponseMessage> ForwardAsync(
         string toolId,
@@ -46,16 +54,32 @@ public class N8nProxyService(HttpClient http, IConfiguration config, ILogger<N8n
 
     public bool IsAsync(string toolId) => AsyncToolIds.Contains(toolId);
 
-    /// <summary>Poll n8n for async job result by job_id.</summary>
+    /// <summary>
+    /// Poll n8n for async job result by job_id.
+    /// trend-video uses a dedicated status webhook at a separate path with ?jobId= query param.
+    /// Other async tools fall back to {mainWebhookPath}/status/{jobId}.
+    /// </summary>
     public async Task<HttpResponseMessage> PollJobAsync(
         string toolId,
         string jobId,
         CancellationToken cancellationToken = default)
     {
-        if (!WebhookPaths.TryGetValue(toolId, out var path))
-            throw new ArgumentException($"Unknown tool: {toolId}");
+        string url;
 
-        var url = $"{_baseUrl}{path}/status/{jobId}";
+        if (StatusWebhookPaths.TryGetValue(toolId, out var statusPath))
+        {
+            // Dedicated status webhook — uses ?jobId= query param
+            url = $"{_baseUrl}{statusPath}?jobId={Uri.EscapeDataString(jobId)}";
+        }
+        else
+        {
+            // Default fallback: append /status/{jobId} to the main webhook path
+            if (!WebhookPaths.TryGetValue(toolId, out var mainPath))
+                throw new ArgumentException($"Unknown tool: {toolId}");
+            url = $"{_baseUrl}{mainPath}/status/{jobId}";
+        }
+
+        logger.LogDebug("Polling job {JobId} for {ToolId}: {Url}", jobId, toolId, url);
         return await http.GetAsync(url, cancellationToken);
     }
 }
