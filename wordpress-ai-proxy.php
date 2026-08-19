@@ -190,7 +190,8 @@ function kolaykobi_ai_proxy(WP_REST_Request $request) {
 
     $params = $request->get_json_params();
     $prompt = $params['prompt'] ?? '';
-    if (!is_string($prompt) || $prompt === '' || strlen($prompt) > 20000) {
+    // prompt opsiyonel — viral-uyarlayici gibi araçlar prompt göndermez, n8n kendi oluşturur
+    if (!is_string($prompt) || strlen($prompt) > 20000) {
         return new WP_REST_Response(array('error' => 'Geçersiz prompt'), 400);
     }
 

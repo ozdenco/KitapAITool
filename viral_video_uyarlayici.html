@@ -382,35 +382,19 @@ async function generate() {
   setLoading(true);
 
   try {
-    const startRes = await fetch(N8N_PROXY + '/start', {
+    const res = await fetch(N8N_PROXY, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ videoUrl, videoDesc, sector, biz: bizText, tones, note: extraCtx })
     });
 
-    if (!startRes.ok) {
-      const err = await startRes.json().catch(() => ({}));
-      throw new Error(err.error || 'Sunucu hatası (' + startRes.status + ')');
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Sunucu hatası (' + res.status + ')');
     }
 
-    const { job_id } = await startRes.json();
-    if (!job_id) throw new Error('İş başlatılamadı.');
-
-    // Poll for result
-    let parsed = null;
-    for (let i = 0; i < 60; i++) {
-      await new Promise(r => setTimeout(r, 3000));
-      const statusRes = await fetch(N8N_PROXY + '/status/' + job_id);
-      if (!statusRes.ok) continue;
-      const statusData = await statusRes.json();
-      if (statusData.status === 'completed') {
-        parsed = statusData;
-        break;
-      } else if (statusData.status === 'error') {
-        throw new Error(statusData.error || 'İşlem hatayla sonuçlandı.');
-      }
-    }
-    if (!parsed) throw new Error('İşlem zaman aşımına uğradı. Lütfen tekrar deneyin.');
+    const parsed = await res.json();
+    if (!parsed || parsed.error) throw new Error(parsed.error || 'Geçersiz yanıt alındı.');
 
     rd.count++;
     saveRateData(rd);
