@@ -74,12 +74,45 @@ input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3p
 .video-platform{font-size:12px;color:#6B6963;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 .video-platform i{color:#1D9E75;font-size:14px}
 .platform-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;background:#F0FAF6;border-radius:6px;font-size:11px;color:#085041;font-weight:500}
+.badge-amber{background:#FEF9EC;border:0.5px solid #F5D76E;color:#7A5C00}
+.badge-blue{background:#EFF6FF;border:0.5px solid #93C5FD;color:#1E40AF}
+.badge-purple{background:#F5F3FF;border:0.5px solid #C4B5FD;color:#5B21B6}
 .video-body{padding:1rem 1.5rem}
+
+/* Score row */
+.score-row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:.85rem}
+.score-pill{display:flex;align-items:center;gap:5px;padding:5px 11px;border-radius:20px;font-size:12px;font-weight:500}
+.score-pill-trend{background:#FEF9EC;color:#7A5C00;border:0.5px solid #F5D76E}
+.score-pill-adapt{background:#EFF6FF;color:#1E40AF;border:0.5px solid #93C5FD}
+.score-bar-wrap{flex:1;display:flex;align-items:center;gap:6px}
+.score-bar-bg{flex:1;height:5px;background:#E2E0D8;border-radius:3px;overflow:hidden;min-width:40px}
+.score-bar-fill{height:100%;border-radius:3px;transition:width .4s}
+
+/* Format structure box */
+.format-struct{background:#F7F6F2;border-radius:8px;padding:9px 12px;font-size:12px;color:#44403C;line-height:1.6;margin-bottom:.75rem;border-left:3px solid #1D9E75}
+.format-struct strong{color:#1C1B19;font-size:12px}
 
 .balloon{background:#DCF8C6;border-radius:0 12px 12px 12px;padding:12px 14px;font-size:13px;color:#1C1B19;line-height:1.6;position:relative;margin-bottom:.75rem;max-width:480px;white-space:pre-wrap;word-break:break-word}
 .balloon::before{content:'';position:absolute;left:-8px;top:0;width:0;height:0;border-top:8px solid #DCF8C6;border-left:8px solid transparent}
 .video-tip{font-size:12px;color:#6B6963;background:#F7F6F2;border-radius:8px;padding:8px 10px;display:flex;align-items:flex-start;gap:7px;margin-top:.5rem}
 .video-tip i{color:#1D9E75;font-size:14px;flex-shrink:0;margin-top:1px}
+
+/* Sector adaptations */
+.sector-adaptations{margin-top:.85rem}
+.sector-adapt-title{font-size:12px;font-weight:500;color:#6B6963;margin-bottom:.5rem;display:flex;align-items:center;gap:5px}
+.sector-adapt-primary{background:#F0FAF6;border:0.5px solid #9FE1CB;border-radius:10px;padding:11px 13px;margin-bottom:.5rem}
+.sector-adapt-primary .sa-sector{font-size:11px;font-weight:600;color:#085041;text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px;display:flex;align-items:center;gap:4px}
+.sector-adapt-primary .sa-hook{font-size:13px;font-weight:500;color:#1C1B19;margin-bottom:3px}
+.sector-adapt-primary .sa-scenario{font-size:12px;color:#0F6E56;line-height:1.5}
+.sector-other-list{display:flex;flex-direction:column;gap:6px}
+.sector-adapt-other{border:0.5px solid #E2E0D8;border-radius:8px;overflow:hidden}
+.sector-adapt-other summary{padding:8px 11px;font-size:12px;font-weight:500;color:#44403C;cursor:pointer;display:flex;align-items:center;gap:6px;list-style:none;user-select:none}
+.sector-adapt-other summary::-webkit-details-marker{display:none}
+.sector-adapt-other summary::before{content:'›';font-size:14px;color:#9A9792;transition:transform .2s;display:inline-block}
+.sector-adapt-other[open] summary::before{transform:rotate(90deg)}
+.sector-adapt-other-body{padding:8px 11px 10px;border-top:0.5px solid #F1EFE8}
+.sector-adapt-other .sa-hook{font-size:12px;font-weight:500;color:#1C1B19;margin-bottom:3px}
+.sector-adapt-other .sa-scenario{font-size:12px;color:#6B6963;line-height:1.5}
 
 .video-tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:.75rem}
 .video-tag{font-size:11px;padding:3px 8px;background:#F0FAF6;border:0.5px solid #9FE1CB;border-radius:6px;color:#085041;font-weight:500}
@@ -445,21 +478,86 @@ function renderResults(result) {
   list.innerHTML = lastVideos.map(v => {
     const platformIcon = PLATFORM_ICONS[v.platform] || 'ti-video';
     const tags = (v.tags || []).map(t => `<span class="video-tag">${escHtml(t)}</span>`).join('');
+
+    // Format mining fields
+    const hasFormatMining = !!(v.format_adi || v.format_tipi || v.uyarlanabilirlik_skoru != null);
+    const trendScore = typeof v.trend_skoru === 'number' ? v.trend_skoru : (parseInt(v.trendScore) || null);
+    const adaptScore = typeof v.uyarlanabilirlik_skoru === 'number' ? v.uyarlanabilirlik_skoru : null;
+
+    // Score bars
+    let scoreRowHtml = '';
+    if (hasFormatMining) {
+      const tBar = trendScore != null ? `<div class="score-bar-fill" style="width:${trendScore}%;background:#C98F00"></div>` : '';
+      const aBar = adaptScore != null ? `<div class="score-bar-fill" style="width:${adaptScore}%;background:#3B82F6"></div>` : '';
+      scoreRowHtml = `<div class="score-row">
+        ${trendScore != null ? `<div class="score-pill score-pill-trend"><i class="ti ti-flame" aria-hidden="true"></i> Trend: ${trendScore}<div class="score-bar-wrap"><div class="score-bar-bg">${tBar}</div></div></div>` : ''}
+        ${adaptScore != null ? `<div class="score-pill score-pill-adapt"><i class="ti ti-arrows-shuffle" aria-hidden="true"></i> Uyarlanabilirlik: ${adaptScore}<div class="score-bar-wrap"><div class="score-bar-bg">${aBar}</div></div></div>` : ''}
+      </div>`;
+    }
+
+    // Format structure block
+    let structHtml = '';
+    if (v.kurgu_yapisi) {
+      structHtml = `<div class="format-struct"><strong>Kurgu yapısı:</strong> ${escHtml(v.kurgu_yapisi)}</div>`;
+    }
+
+    // Hook balloon — prefer ornek_hook, fallback whyTrending
+    const hookText = v.ornek_hook || v.whyTrending || '';
+
+    // Sector adaptations
+    let sectorHtml = '';
+    const adaptList = v.sektore_ozgu_uyarlamalar || [];
+    if (adaptList.length) {
+      const primary = adaptList[0];
+      const others = adaptList.slice(1);
+      sectorHtml = `<div class="sector-adaptations">
+        <div class="sector-adapt-title"><i class="ti ti-building-store" aria-hidden="true"></i> Sektöre Özel Uyarlamalar</div>
+        <div class="sector-adapt-primary">
+          <div class="sa-sector"><i class="ti ti-star-filled" aria-hidden="true"></i> ${escHtml(primary.sektor || '')}</div>
+          ${primary.hook ? `<div class="sa-hook">🎬 ${escHtml(primary.hook)}</div>` : ''}
+          ${primary.senaryo_taslagi ? `<div class="sa-scenario">${escHtml(primary.senaryo_taslagi)}</div>` : ''}
+        </div>
+        ${others.length ? `<div class="sector-other-list">${others.map(ot => `
+          <details class="sector-adapt-other">
+            <summary>${escHtml(ot.sektor || '')}</summary>
+            <div class="sector-adapt-other-body">
+              ${ot.hook ? `<div class="sa-hook">🎬 ${escHtml(ot.hook)}</div>` : ''}
+              ${ot.senaryo_taslagi ? `<div class="sa-scenario">${escHtml(ot.senaryo_taslagi)}</div>` : ''}
+            </div>
+          </details>`).join('')}</div>` : ''}
+      </div>`;
+    } else if (v.adaptation) {
+      // Legacy: plain adaptation text
+      sectorHtml = `<div class="video-tip"><i class="ti ti-bulb" aria-hidden="true"></i> <span><strong>Markanıza uyarlama:</strong> ${escHtml(v.adaptation)}</span></div>`;
+    }
+
+    // uretim_zorlugu / marka_guvenligi badges
+    const metaBadges = [
+      v.uretim_zorlugu ? `<span class="platform-badge badge-purple"><i class="ti ti-tool" aria-hidden="true"></i> ${escHtml(v.uretim_zorlugu)}</span>` : '',
+      v.marka_guvenligi ? `<span class="platform-badge ${v.marka_guvenligi === 'Yüksek' ? '' : 'badge-amber'}"><i class="ti ti-shield-check" aria-hidden="true"></i> ${escHtml(v.marka_guvenligi)}</span>` : '',
+    ].filter(Boolean).join('');
+
+    const formatName = v.format_adi || v.title;
+    const formatTipiBadge = v.format_tipi ? `<span class="platform-badge badge-blue"><i class="ti ti-layout" aria-hidden="true"></i> ${escHtml(v.format_tipi)}</span>` : '';
+
     return `
       <div class="video-card">
         <div class="video-header">
-          <div class="video-rank">${v.rank}</div>
+          <div class="video-rank">${v.rank || v.sira || ''}</div>
           <div class="video-meta">
-            <div class="video-title">${escHtml(v.title)}</div>
+            <div class="video-title">${escHtml(formatName)}</div>
             <div class="video-platform">
-              <span class="platform-badge"><i class="ti ${escHtml(platformIcon)}" aria-hidden="true"></i> ${escHtml(v.platform || 'Instagram/Facebook')}</span>
-              ${v.trendScore ? `<span class="platform-badge" style="background:#FEF9EC;border-color:#F5D76E;color:#7A5C00"><i class="ti ti-flame" aria-hidden="true"></i> Trend: ${escHtml(v.trendScore)}</span>` : ''}
+              ${v.platform ? `<span class="platform-badge"><i class="ti ${escHtml(platformIcon)}" aria-hidden="true"></i> ${escHtml(v.platform)}</span>` : ''}
+              ${formatTipiBadge}
+              ${metaBadges}
             </div>
           </div>
         </div>
         <div class="video-body">
-          <div class="balloon">${escHtml(v.whyTrending || '')}</div>
-          ${v.adaptation ? `<div class="video-tip"><i class="ti ti-bulb" aria-hidden="true"></i> <span><strong>Markanıza uyarlama:</strong> ${escHtml(v.adaptation)}</span></div>` : ''}
+          ${scoreRowHtml}
+          ${structHtml}
+          ${hookText ? `<div class="balloon">${escHtml(hookText)}</div>` : ''}
+          ${sectorHtml}
           ${[v.tags, v.tags?.length].every(Boolean) ? `<div class="video-tags">${tags}</div>` : ''}
         </div>
       </div>
@@ -673,16 +771,30 @@ function resetForm() {
 
 function downloadCsv() {
   if (!lastVideos.length) return;
-  const headers = ['Sıra', 'Başlık', 'Platform', 'Trend Skoru', 'Neden Trend', 'Markanıza Uyarlama', 'Etiketler'];
-  const rows = lastVideos.map(v => [
-    v.rank,
-    v.title,
-    v.platform,
-    v.trendScore,
-    (v.whyTrending || '').replace(/"/g, '""'),
-    (v.adaptation || '').replace(/"/g, '""'),
-    (v.tags || []).join('; '),
-  ]);
+  const headers = ['Sıra', 'Format Adı', 'Format Tipi', 'Platform', 'Trend Skoru', 'Uyarlanabilirlik Skoru', 'Kurgu Yapısı', 'Örnek Hook', 'Sektör 1', 'Senaryo 1', 'Sektör 2', 'Senaryo 2', 'Sektör 3', 'Senaryo 3', 'Üretim Zorluğu', 'Marka Güvenliği', 'Etiketler'];
+  const rows = lastVideos.map(v => {
+    const adaptList = v.sektore_ozgu_uyarlamalar || [];
+    const s = i => adaptList[i] || {};
+    return [
+      v.rank || v.sira || '',
+      v.format_adi || v.title || '',
+      v.format_tipi || '',
+      v.platform || '',
+      v.trend_skoru != null ? v.trend_skoru : (v.trendScore || ''),
+      v.uyarlanabilirlik_skoru != null ? v.uyarlanabilirlik_skoru : '',
+      (v.kurgu_yapisi || '').replace(/"/g, '""'),
+      (v.ornek_hook || v.whyTrending || '').replace(/"/g, '""'),
+      (s(0).sektor || '').replace(/"/g, '""'),
+      ((s(0).hook || '') + (s(0).senaryo_taslagi ? ' | ' + s(0).senaryo_taslagi : '')).replace(/"/g, '""'),
+      (s(1).sektor || '').replace(/"/g, '""'),
+      ((s(1).hook || '') + (s(1).senaryo_taslagi ? ' | ' + s(1).senaryo_taslagi : '')).replace(/"/g, '""'),
+      (s(2).sektor || '').replace(/"/g, '""'),
+      ((s(2).hook || '') + (s(2).senaryo_taslagi ? ' | ' + s(2).senaryo_taslagi : '')).replace(/"/g, '""'),
+      v.uretim_zorlugu || '',
+      v.marka_guvenligi || '',
+      (v.tags || []).join('; '),
+    ];
+  });
   const csv = [headers, ...rows].map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
   const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' });
   const a = document.createElement('a');
