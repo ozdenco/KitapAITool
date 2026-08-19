@@ -476,113 +476,46 @@ function renderResults(result) {
 
   const list = document.getElementById('videos-list');
   list.innerHTML = lastVideos.map(v => {
-    const platformIcon = PLATFORM_ICONS[v.platform] || 'ti-video';
-    const tags = (v.tags || []).map(t => `<span class="video-tag">${escHtml(t)}</span>`).join('');
+    const sector = lastFormData.sector || '';
+    const biz = lastFormData.biz || '';
 
-    // Format mining fields
-    const hasFormatMining = !!(v.format_adi || v.format_tipi || v.uyarlanabilirlik_skoru != null);
-    const trendScore = typeof v.trend_skoru === 'number' ? v.trend_skoru : (parseInt(v.trendScore) || null);
-    const adaptScore = typeof v.uyarlanabilirlik_skoru === 'number' ? v.uyarlanabilirlik_skoru : null;
-
-    // Score bars
-    let scoreRowHtml = '';
-    if (hasFormatMining) {
-      const tBar = trendScore != null ? `<div class="score-bar-fill" style="width:${trendScore}%;background:#C98F00"></div>` : '';
-      const aBar = adaptScore != null ? `<div class="score-bar-fill" style="width:${adaptScore}%;background:#3B82F6"></div>` : '';
-      scoreRowHtml = `<div class="score-row">
-        ${trendScore != null ? `<div class="score-pill score-pill-trend"><i class="ti ti-flame" aria-hidden="true"></i> Trend: ${trendScore}<div class="score-bar-wrap"><div class="score-bar-bg">${tBar}</div></div></div>` : ''}
-        ${adaptScore != null ? `<div class="score-pill score-pill-adapt"><i class="ti ti-arrows-shuffle" aria-hidden="true"></i> Uyarlanabilirlik: ${adaptScore}<div class="score-bar-wrap"><div class="score-bar-bg">${aBar}</div></div></div>` : ''}
-      </div>`;
-    }
-
-    // Format structure block
-    let structHtml = '';
-    if (v.kurgu_yapisi) {
-      structHtml = `<div class="format-struct"><strong>Kurgu yapısı:</strong> ${escHtml(v.kurgu_yapisi)}</div>`;
-    }
-
-    // Hook balloon — prefer ornek_hook, fallback whyTrending
-    const hookText = v.ornek_hook || v.whyTrending || '';
-
-    // Sector adaptations
-    let sectorHtml = '';
-    const adaptList = v.sektore_ozgu_uyarlamalar || [];
-    if (adaptList.length) {
-      const primary = adaptList[0];
-      const others = adaptList.slice(1);
-      sectorHtml = `<div class="sector-adaptations">
-        <div class="sector-adapt-title"><i class="ti ti-building-store" aria-hidden="true"></i> Sektöre Özel Uyarlamalar</div>
-        <div class="sector-adapt-primary">
-          <div class="sa-sector"><i class="ti ti-star-filled" aria-hidden="true"></i> ${escHtml(primary.sektor || '')}</div>
-          ${primary.hook ? `<div class="sa-hook">🎬 ${escHtml(primary.hook)}</div>` : ''}
-          ${primary.senaryo_taslagi ? `<div class="sa-scenario">${escHtml(primary.senaryo_taslagi)}</div>` : ''}
-        </div>
-        ${others.length ? `<div class="sector-other-list">${others.map(ot => `
-          <details class="sector-adapt-other">
-            <summary>${escHtml(ot.sektor || '')}</summary>
-            <div class="sector-adapt-other-body">
-              ${ot.hook ? `<div class="sa-hook">🎬 ${escHtml(ot.hook)}</div>` : ''}
-              ${ot.senaryo_taslagi ? `<div class="sa-scenario">${escHtml(ot.senaryo_taslagi)}</div>` : ''}
-            </div>
-          </details>`).join('')}</div>` : ''}
-      </div>`;
-    } else if (v.adaptation) {
-      // Legacy: plain adaptation text
-      sectorHtml = `<div class="video-tip"><i class="ti ti-bulb" aria-hidden="true"></i> <span><strong>Markanıza uyarlama:</strong> ${escHtml(v.adaptation)}</span></div>`;
-    }
-
-    // uretim_zorlugu / marka_guvenligi badges
-    const metaBadges = [
-      v.uretim_zorlugu ? `<span class="platform-badge badge-purple"><i class="ti ti-tool" aria-hidden="true"></i> ${escHtml(v.uretim_zorlugu)}</span>` : '',
-      v.marka_guvenligi ? `<span class="platform-badge ${v.marka_guvenligi === 'Yüksek' ? '' : 'badge-amber'}"><i class="ti ti-shield-check" aria-hidden="true"></i> ${escHtml(v.marka_guvenligi)}</span>` : '',
-    ].filter(Boolean).join('');
-
-    const formatName = v.format_adi || v.title;
-    const formatTipiBadge = v.format_tipi ? `<span class="platform-badge badge-blue"><i class="ti ti-layout" aria-hidden="true"></i> ${escHtml(v.format_tipi)}</span>` : '';
+    const plays = v.playCount ? v.playCount.toLocaleString('tr-TR') : '';
+    const likes = v.diggCount ? v.diggCount.toLocaleString('tr-TR') : '';
+    const hashtags = (v.hashtags || []).map(h => `<span class="video-tag">#${escHtml(h)}</span>`).join('');
+    const uyarlaParams = new URLSearchParams({
+      url: v.webVideoUrl || '',
+      desc: (v.title || '').slice(0, 200),
+      sector: sector,
+      biz: biz,
+    }).toString();
+    const uyarlaUrl = '/viral-video-uyarlayici/?' + uyarlaParams;
 
     return `
       <div class="video-card">
         <div class="video-header">
-          <div class="video-rank">${v.rank || v.sira || ''}</div>
+          <div class="video-rank">${v.rank}</div>
           <div class="video-meta">
-            <div class="video-title">${escHtml(formatName)}</div>
+            <div class="video-title">${v.author ? '<span style="color:#1D9E75">@' + escHtml(v.author) + '</span> — ' : ''}${escHtml((v.title || '').slice(0, 100))}</div>
             <div class="video-platform">
-              ${v.platform ? `<span class="platform-badge"><i class="ti ${escHtml(platformIcon)}" aria-hidden="true"></i> ${escHtml(v.platform)}</span>` : ''}
-              ${formatTipiBadge}
-              ${metaBadges}
+              <span class="platform-badge"><i class="ti ti-brand-tiktok" aria-hidden="true"></i> TikTok</span>
+              ${plays ? `<span class="platform-badge badge-amber"><i class="ti ti-eye" aria-hidden="true"></i> ${plays}</span>` : ''}
+              ${likes ? `<span class="platform-badge" style="background:#FFF0F6;border-color:#FBA7C5;color:#9D1B4E"><i class="ti ti-heart" aria-hidden="true"></i> ${likes}</span>` : ''}
             </div>
           </div>
         </div>
         <div class="video-body">
-          ${scoreRowHtml}
-          ${structHtml}
-          ${hookText ? `<div class="balloon">${escHtml(hookText)}</div>` : ''}
-          ${sectorHtml}
-          ${[v.tags, v.tags?.length].every(Boolean) ? `<div class="video-tags">${tags}</div>` : ''}
+          ${hashtags ? `<div class="video-tags" style="margin-bottom:.6rem">${hashtags}</div>` : ''}
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:.5rem">
+            ${v.webVideoUrl ? `<a href="${escHtml(v.webVideoUrl)}" target="_blank" rel="noopener noreferrer" class="btn-secondary" style="flex:none;padding:7px 13px;font-size:12px;gap:5px"><i class="ti ti-external-link" aria-hidden="true"></i> Videoyu Aç</a>` : ''}
+            <a href="${escHtml(uyarlaUrl)}" class="btn-primary" style="flex:none;width:auto;padding:7px 16px;font-size:13px;margin-top:0;gap:6px"><i class="ti ti-wand" aria-hidden="true"></i> Bu Formatı Uyarla →</a>
+          </div>
         </div>
       </div>
     `;
   }).join('');
 
   const sourcesSection = document.getElementById('real-sources-section');
-  const sourcesList = document.getElementById('real-sources-list');
-  const realSources = (result.realSources || []).filter(s => [s, s?.webVideoUrl].every(Boolean));
-  if (realSources.length) {
-    const sorted = [...realSources].sort((a, b) => (b.playCount || 0) - (a.playCount || 0));
-    sourcesList.innerHTML = sorted.slice(0, 6).map(s => {
-      const author = s.authorMeta?.name ? '@' + s.authorMeta.name : '';
-      const plays = s.playCount ? s.playCount.toLocaleString('tr-TR') + ' izlenme' : '';
-      const diggs = s.diggCount ? s.diggCount.toLocaleString('tr-TR') + ' beğeni' : '';
-      const stats = [plays, diggs].filter(Boolean).join(' · ');
-      const caption = (s.text || '').slice(0, 90);
-      return `
-        <a href="${escHtml(s.webVideoUrl)}" target="_blank" rel="noopener noreferrer" style="display:block;font-size:12.5px;color:#0F6E56;text-decoration:none;line-height:1.5;padding:.3rem 0">
-          <strong>${escHtml(author)}</strong> ${stats ? '— ' + escHtml(stats) : ''}<br/>
-          <span style="color:#6B6963">${escHtml(caption)}</span>
-        </a>
-      `;
-    }).join('');
-    sourcesSection.style.display = 'block';
+  if (sourcesSection) sourcesSection.style.display = 'none';
   } else {
     sourcesSection.style.display = 'none';
   }
@@ -626,52 +559,7 @@ async function generate() {
   const msgEl = document.getElementById('loading-msg');
   const ticker = setInterval(() => { mi = (mi + 1) % loadingMsgs.length; msgEl.textContent = loadingMsgs[mi]; }, 1800);
 
-  const sectorText = sector === 'ALL' ? 'TÜM SEKTÖRLER (genel tarama — sektör bağımsız viral içerikler)' : sector;
-
-  // Ayni promptun tekrar tekrar ayni fikirleri uretmesini engellemek icin her
-  // calistirmada formatlarin rastgele bir alt kumesini one cikariyoruz.
-  const FORMAT_POOL = [
-    'POV (birinci şahıs bakış açısı)', 'Before/After (öncesi-sonrası)', 'Day in the life',
-    'Myth-busting (yanlış bilinenler)', 'Reveal (sürpriz açılış)', 'Reaction (gerçek tepki)',
-    'Sadece bu işi yapanlar anlar', 'Absürt/komik hayvan veya obje', 'Mini-tutorial (nasıl yapılır)',
-    'Behind the scenes (perde arkası)', 'Storytime (çalışan anlatıyor)', 'Us vs Them (trend ses üstü)'
-  ];
-  const suggestedFormats = [...FORMAT_POOL].sort(() => Math.random() - 0.5).slice(0, 5).join(', ');
-
-  const VIDEO_COUNT = 7;
-
-  const prompt = `Sen sosyal medya trend analisti ve içerik stratejistisin. NOT: gerçek zamanlı internet erişimin yok; aşağıdaki formatlar 2023-2025 arası Instagram Reels / Facebook Reels'te yaygın kullanılan, bilinen viral kalıplardır — bunlardan esinlenerek işletmeye özel, uygulanabilir senaryolar üret.
-
-═══ İŞLETME BİLGİLERİ ═══
-İşletme: ${biz} | Sektör: ${sectorText} | Hedef kitle: ${audience || 'belirtilmemiş'}
-${note ? `Özel talimat (MUTLAKA uygula): ${note}` : ''}
-Ton: ${tones.join(' + ')} — tüm fikirlerde bu tonların karışımı hissedilmeli.
-
-═══ GÖREV ═══
-${VIDEO_COUNT} video fikri üret. Her biri: (1) bilinen bir viral formattan esinlensin, (2) işletmeye somut uyarlanmış bir senaryo içersin (kopyala-yapıştır uygulanabilir), (3) neden bu format işe yarıyor 1 cümleyle açıklansın.
-
-Bu çalıştırmada özellikle şu format ailelerine ağırlık ver (esinlenme amaçlı, birebir kopya değil): ${suggestedFormats}. Kalan fikirler için de listede olmayan farklı formatlar dene. ${VIDEO_COUNT} fikrin formatları birbirinden belirgin şekilde farklı olsun — aynı formatı (örn. sadece POV) tekrarlama.
-
-═══ KURALLAR ═══
-- Genel/kalıp içerikten kaçın; her fikir bu markaya özel olsun, başka markada kullanılamayacak kadar somut olsun.
-- ${sector === 'ALL' ? 'Sektör bağımsız evrensel viral formatlar seç (penguen yürüyor, kahve dökülüyor vs.)' : 'Sektöre özgü terminoloji ve değer önerileri kullan.'}
-- platform: Instagram Reels, Facebook Reels, Instagram Story, Facebook Story, Instagram Post, Facebook Post, YouTube Shorts, TikTok (sadece uygunsa)
-- tags: 2-4 etiket. trendScore: 1-10 arası (10=en yüksek potansiyel).
-- ÖNEMLİ (JSON geçerliliği için): metin alanlarının (title, whyTrending, adaptation) içinde asla çift tırnak (") kullanma; alıntı/diyalog/etiket belirtmek için tek tırnak (') kullan. Sondaki elemandan sonra virgül bırakma.
-
-SADECE JSON döndür (Türkçe karakterleri koru):
-{"videos":[{"rank":1,"title":"...","platform":"...","trendScore":"8/10","whyTrending":"...","adaptation":"...","tags":["...","..."]}],"ctaText":"..."}`;
-
-  // ─── ASENKRON JOB + POLLING ─────────────────────────────────────────────
-  // MiniMax-M3 reasoning modeli 60-150+ saniye sürebiliyor. Tek bir uzun
-  // fetch() isteği kullanmak, arada Cloudflare/hosting/reverse-proxy gibi
-  // katmanların kendi (genelde 60-100sn) timeout'una takılıp bağlantıyı
-  // kesmesine yol açıyordu — n8n arka planda işi bitirse bile tarayıcı
-  // zaten "Sunucuya bağlanılamadı" görüyordu. Bunun yerine:
-  //  1) /start ucuna POST at → n8n ANINDA bir job_id döner (1-2 sn, hiçbir
-  //     timeout'a takılmaz), asıl AI işini arka planda sürdürür.
-  //  2) /status/{job_id} ucunu birkaç saniyede bir GET ile sorgula — her
-  //     sorgu da anlık biter. AI işi bitince "completed" döner.
+  // Apify arama — AI yok, sadece TikTok trend verileri çekiliyor
   const startUrl = N8N_PROXY + '/start';
   const statusUrlBase = N8N_PROXY + '/status/';
 
@@ -679,7 +567,7 @@ SADECE JSON döndür (Türkçe karakterleri koru):
     const startRes = await fetch(startUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt, biz, sector, tones, audience, note }),
+      body: JSON.stringify({ biz, sector, tones, audience, note }),
     });
     if (!startRes.ok) {
       if (startRes.status === 404) throw new Error('404: WordPress proxy endpoint tanımlı değil');

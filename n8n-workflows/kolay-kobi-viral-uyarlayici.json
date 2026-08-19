@@ -12,18 +12,24 @@
       "name": "Webhook",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 1.1,
-      "position": [240, 300],
+      "position": [
+        240,
+        300
+      ],
       "webhookId": "kolay-kobi-viral-uyarlayici"
     },
     {
       "parameters": {
-        "jsCode": "const body = $input.first().json.body || $input.first().json;\nconst prompt = body.prompt || '';\nif (!prompt || prompt.length < 20) {\n  return [{ json: { error: 'Geçersiz istek: prompt eksik.' } }];\n}\nconst apiBody = {\n  model: 'MiniMax-M3',\n  max_completion_tokens: 8000,\n  messages: [{ role: 'user', content: prompt }]\n};\nreturn [{ json: { ...body, apiBody } }];"
+        "jsCode": "const body = $input.first().json.body || $input.first().json;\nconst videoUrl = body.videoUrl || body.video_url || '';\nconst videoDesc = body.videoDesc || body.video_desc || body.prompt || '';\nconst sector = body.sector || 'Genel';\nconst biz = body.biz || '';\nconst tones = Array.isArray(body.tones) ? body.tones.join(' + ') : (body.tones || 'Eğlendirici');\nconst note = body.note || '';\n\nif (!videoDesc || videoDesc.length < 10) {\n  return [{ json: { error: 'Geçersiz istek: video açıklaması eksik.' } }];\n}\n\nconst systemMessage = `Sen bir içerik stratejisti ve format mining uzmanısın.\nGörevin: Kullanıcının tarif ettiği viral videonun arkasındaki tekrarlanabilir FORMAT yapısını çıkarmak ve farklı sektörlere uyarlamak.\n\nTemel kavramlar:\n- FORMAT: Videonun kendisi değil, kurgu mantığı — hook + yapı + CTA kalıbı\n- FORMAT MİNİNG: Başarılı videodan soyut, tekrar kullanılabilir içerik şablonu çıkarmak\n- FORMAT REPLİKASYON: Aynı kurgu yapısını farklı sektör/marka için uyarlamak\n\nÇıktı her zaman geçerli JSON olmalıdır. Markdown kullanma. Sadece JSON döndür. Düşünme sürecini kısa tut.`;\n\nconst userPrompt = `Viral video bilgisi:\n${videoUrl ? 'Link: ' + videoUrl : ''}\nAçıklama: ${videoDesc}\n${note ? 'Ek not: ' + note : ''}\n\nGörev:\n1. Bu videonun FORMAT yapısını çıkar (hook + kurgu + CTA mantığı)\n2. Formatı 3 farklı sektöre uyarla — birincisi mutlaka \"${sector}\" sektörü olsun\n3. Her sektör için: hook cümlesi + sahne sahne senaryo taslağı yaz\n\nİşletme: ${biz || 'belirtilmemiş'}\nTon: ${tones}\n\nZORUNLU JSON ÇIKTI ŞEMASI (sadece bunu döndür):\n{\n  \"format_adi\": \"Videonun format adı (kısa, tanımlayıcı)\",\n  \"format_tipi\": \"POV | Mini skeç | Reveal | Before/After | Us vs Them | Text overlay | Micro-drama | Diğer\",\n  \"format_aciklamasi\": \"Formatın kurgu mantığı — hook + yapı + CTA\",\n  \"kurgu_yapisi\": \"Sahne 1 (X sn): ... → Sahne 2 (X sn): ... → Sahne 3 (X sn): ...\",\n  \"sure\": \"tahmini süre\",\n  \"ornek_hook\": \"İlk 1-3 saniyede söylenecek cümle\",\n  \"uretim_zorlugu\": \"Çok Düşük | Düşük | Orta | Yüksek\",\n  \"marka_guvenligi\": \"Yüksek | Orta | Dikkat Gerekir\",\n  \"sektore_ozgu_uyarlamalar\": [\n    {\n      \"sektor\": \"${sector}\",\n      \"hook\": \"Bu sektöre özel hook cümlesi\",\n      \"senaryo_taslagi\": \"Sahne sahne kısa senaryo (3-5 cümle)\",\n      \"cta\": \"Harekete geçirme cümlesi\"\n    },\n    {\n      \"sektor\": \"2. sektör adı\",\n      \"hook\": \"...\",\n      \"senaryo_taslagi\": \"...\",\n      \"cta\": \"...\"\n    },\n    {\n      \"sektor\": \"3. sektör adı\",\n      \"hook\": \"...\",\n      \"senaryo_taslagi\": \"...\",\n      \"cta\": \"...\"\n    }\n  ],\n  \"uygulama_ipuclari\": \"Bu formatı uygularken dikkat edilmesi gereken 2-3 pratik ipucu\"\n}`;\n\nconst apiBody = {\n  model: 'MiniMax-M3',\n  max_completion_tokens: 8000,\n  messages: [\n    { role: 'system', content: systemMessage },\n    { role: 'user', content: userPrompt }\n  ]\n};\nreturn [{ json: { ...body, apiBody } }];"
       },
       "id": "build-request-node",
       "name": "Build Request",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [460, 300]
+      "position": [
+        460,
+        300
+      ]
     },
     {
       "parameters": {
@@ -53,18 +59,24 @@
       "name": "MiniMax API",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [680, 300],
+      "position": [
+        680,
+        300
+      ],
       "onError": "continueErrorOutput"
     },
     {
       "parameters": {
-        "jsCode": "// MiniMax-M1 (veya M3) reasoning modeli <think>...</think> blogu dondurur;\n// gercek JSON bundan sonra gelir. Think blogunu atlayip JSON'u cikartiyoruz.\nconst apiData = $input.first().json;\nlet text = apiData.choices?.[0]?.message?.content || '';\n\nconst thinkEnd = text.lastIndexOf('</think>');\nif (thinkEnd !== -1) text = text.slice(thinkEnd + '</think>'.length);\n\nconst jsonStart = text.indexOf('{');\nconst jsonEnd = text.lastIndexOf('}');\nif (jsonStart !== -1 && jsonEnd !== -1) text = text.slice(jsonStart, jsonEnd + 1);\n\nfunction tryParseJson(raw) {\n  try { return JSON.parse(raw); } catch {\n    const repaired = raw.replace(/,\\s*([\\]}])/g, '$1').replace(/[\\u0000-\\u0008\\u000B\\u000C\\u000E-\\u001F]/g, '');\n    try { return JSON.parse(repaired); } catch { return null; }\n  }\n}\n\nconst result = tryParseJson(text);\nif (!result) {\n  return [{ json: {\n    choices: [{ message: { content: text } }],\n    _parseError: true\n  }}];\n}\n\n// Dogrudan MiniMax'in ham yanitini choices formatinda donduruyoruz\n// (HTML tarafinda choices[0].message.content olarak okunuyor).\nreturn [{ json: {\n  choices: [{ message: { content: JSON.stringify(result) } }]\n}}];"
+        "jsCode": "const apiData = $input.first().json;\nconst msg = apiData.choices?.[0]?.message || {};\nlet text = msg.content || msg.reasoning_content || '';\n\n// <think> bloğunu temizle\nconst thinkEnd = text.lastIndexOf('</think>');\nif (thinkEnd !== -1) text = text.slice(thinkEnd + '</think>'.length);\n\n// JSON bloğunu çıkar\nconst jsonStart = text.indexOf('{');\nconst jsonEnd = text.lastIndexOf('}');\nif (jsonStart !== -1 && jsonEnd !== -1) text = text.slice(jsonStart, jsonEnd + 1);\n\n// TR_RESTORE — MiniMax GBK encoding fix\nconst TR_RESTORE = {\n  '\\u7109': 'ü', '\\u8267': 'ş', '\\u679a': 'ö', '\\u83bd': 'ç',\n  '\\u8c0b': 'ı', '\\u81d2': 'ğ', '\\u811f': 'Ç', '\\u813a': 'Ü',\n  '\\u8266': 'Ş', '\\u8130': 'Ö', '\\u81d1': 'Ğ', '\\u964c': 'İ',\n};\nconst TR_KEYS = Object.keys(TR_RESTORE).join('');\nconst TR_RE = new RegExp('[' + TR_KEYS + ']', 'g');\ntext = text.replace(TR_RE, ch => TR_RESTORE[ch] || ch);\n\nfunction tryParseJson(raw) {\n  try { return { ok: true, value: JSON.parse(raw) }; }\n  catch (e1) {\n    const repaired = raw\n      .replace(/,\\s*([\\]}])/g, '$1')\n      .replace(/[\\u0000-\\u0008\\u000B\\u000C\\u000E-\\u001F]/g, '');\n    try { return { ok: true, value: JSON.parse(repaired) }; }\n    catch (e2) { return { ok: false, error: e1.message }; }\n  }\n}\n\nconst parsed = tryParseJson(text);\nif (!parsed.ok) {\n  return [{ json: {\n    _parseError: true,\n    _rawText: text.slice(0, 500),\n    error: 'AI çıktısı geçerli JSON değildi: ' + parsed.error\n  }}];\n}\n\nconst result = parsed.value;\nreturn [{ json: { ...result, _ok: true } }];"
       },
       "id": "response-transform-node",
       "name": "Response Transform",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [900, 200]
+      "position": [
+        900,
+        200
+      ]
     },
     {
       "parameters": {
@@ -74,31 +86,50 @@
       "name": "API Error",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [900, 400]
+      "position": [
+        900,
+        400
+      ]
     }
   ],
   "connections": {
     "Webhook": {
       "main": [
         [
-          { "node": "Build Request", "type": "main", "index": 0 }
+          {
+            "node": "Build Request",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Build Request": {
       "main": [
         [
-          { "node": "MiniMax API", "type": "main", "index": 0 }
+          {
+            "node": "MiniMax API",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "MiniMax API": {
       "main": [
         [
-          { "node": "Response Transform", "type": "main", "index": 0 }
+          {
+            "node": "Response Transform",
+            "type": "main",
+            "index": 0
+          }
         ],
         [
-          { "node": "API Error", "type": "main", "index": 0 }
+          {
+            "node": "API Error",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     }

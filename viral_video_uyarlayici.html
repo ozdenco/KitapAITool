@@ -377,78 +377,40 @@ async function generate() {
   if (rd.count >= MONTHLY_LIMIT) return showErr('Aylık kullanım limitinize ulaştınız. ' + nextMonthName() + ' ayında tekrar deneyin.');
 
   const bizText = biz || 'İşletmeniz';
-  const tonesText = tones.length ? tones.join(', ') : 'belirtilmedi';
 
-  const prompt = `Sen bir sosyal medya içerik stratejisti ve viral içerik analistisin.
-
-Bir kullanıcı aşağıdaki viral videoyu kendi işletmesi için uyarlamak istiyor.
-
-=== VİRAL VİDEO BİLGİSİ ===
-Link: ${videoUrl}
-Açıklama: ${videoDesc}${extraCtx ? '\nEk bağlam: ' + extraCtx : ''}
-
-=== İŞLETME BİLGİSİ ===
-İşletme adı: ${bizText}
-Sektör: ${sector}
-Ton tercihi: ${tonesText}
-
-=== GÖREVIN ===
-1. Önce videonun FORMAT/KONSEPTINI analiz et — ne tür bir yapı bu? (challenge, before/after, gün içi vlog, myth-busting, POV, storytime, reveal vb.) Bu formatın neden viral olduğunu kısaca açıkla.
-
-2. Bu formatı "${bizText}" isimli ${sector} sektöründeki işletme için 3 farklı şekilde uyarla. Her uyarlama:
-   - Orijinal formatın ruhunu korusun ama içerik tamamen ${sector} sektörüne özgü olsun
-   - Gerçekten çekilebilir, pratik bir video fikri olsun — hayali değil
-   - Hook (ilk 3 saniye): izleyiciyi durduracak açılış cümlesi/sahnesi
-   - Açıklama metni: video boyunca izleyiciye ne göstereceğini/söyleyeceğini
-   - Platform önerisi: TikTok / Instagram Reels / YouTube Shorts (hangisi daha uygun)
-   - Hashtag önerileri: 5-7 adet
-
-Yanıtı MUTLAKA şu JSON formatında ver:
-
-{
-  "formatAnalysis": "Videonun formatı ve neden viral olduğunun kısa açıklaması (2-4 cümle)",
-  "formatName": "Format adı (örn: 'Day-in-the-life vlog', 'Myth-busting', 'POV challenge')",
-  "adaptations": [
-    {
-      "rank": 1,
-      "title": "Uyarlama başlığı",
-      "hook": "İlk 3 saniyedeki açılış — izleyiciyi durduracak cümle veya sahne",
-      "description": "Videonun geri kalanında ne gösterileceği, nasıl çekileceği",
-      "platform": "TikTok",
-      "hashtags": ["#etiket1", "#etiket2", "#etiket3", "#etiket4", "#etiket5"],
-      "whyItWorks": "Bu uyarlamanın neden işe yarayacağını 1-2 cümlede açıkla"
-    }
-  ]
-}`;
-
+  // n8n Build Request node prompt'u kendisi oluşturuyor — sadece veri gönder
   setLoading(true);
 
   try {
-    const res = await fetch(N8N_PROXY, {
+    const startRes = await fetch(N8N_PROXY + '/start', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt, videoUrl, sector, biz: bizText, tones })
+      body: JSON.stringify({ videoUrl, videoDesc, sector, biz: bizText, tones, note: extraCtx })
     });
 
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err.error || 'Sunucu hatası (' + res.status + ')');
+    if (!startRes.ok) {
+      const err = await startRes.json().catch(() => ({}));
+      throw new Error(err.error || 'Sunucu hatası (' + startRes.status + ')');
     }
 
-    const data = await res.json();
-    const content = data.choices?.[0]?.message?.content || '';
+    const { job_id } = await startRes.json();
+    if (!job_id) throw new Error('İş başlatılamadı.');
 
-    const thinkEnd = content.lastIndexOf('</think>');
-    let text = thinkEnd !== -1 ? content.slice(thinkEnd + 8) : content;
-    const js = text.indexOf('{');
-    const je = text.lastIndexOf('}');
-    if ([js !== -1, je !== -1].every(Boolean)) text = text.slice(js, je + 1);
-
-    let parsed;
-    try { parsed = JSON.parse(text); } catch {
-      const repaired = text.replace(/,\s*([\]}])/g, '$1').replace(/[--]/g, '');
-      try { parsed = JSON.parse(repaired); } catch { throw new Error('Yanıt ayrıştırılamadı. Lütfen tekrar deneyin.'); }
+    // Poll for result
+    let parsed = null;
+    for (let i = 0; i < 60; i++) {
+      await new Promise(r => setTimeout(r, 3000));
+      const statusRes = await fetch(N8N_PROXY + '/status/' + job_id);
+      if (!statusRes.ok) continue;
+      const statusData = await statusRes.json();
+      if (statusData.status === 'completed') {
+        parsed = statusData;
+        break;
+      } else if (statusData.status === 'error') {
+        throw new Error(statusData.error || 'İşlem hatayla sonuçlandı.');
+      }
     }
+    if (!parsed) throw new Error('İşlem zaman aşımına uğradı. Lütfen tekrar deneyin.');
 
     rd.count++;
     saveRateData(rd);
@@ -465,46 +427,59 @@ Yanıtı MUTLAKA şu JSON formatında ver:
   setLoading(false);
 }
 
+
 function renderResults(data, videoUrl, biz, sector) {
-  document.getElementById('results-title').textContent = 'Uyarlama Fikirleri';
+  document.getElementById('results-title').textContent = 'Format Analizi & Uyarlamalar';
   document.getElementById('results-sub').textContent = biz + ' — ' + sector;
   document.getElementById('source-url-display').textContent = videoUrl;
-  document.getElementById('format-analysis').textContent =
-    (data.formatName ? '📌 Format: ' + data.formatName + '\n' : '') + (data.formatAnalysis || '');
+
+  // Format özeti
+  const formatParts = [];
+  if (data.format_adi) formatParts.push('📌 ' + data.format_adi);
+  if (data.format_tipi) formatParts.push('Tür: ' + data.format_tipi);
+  if (data.format_aciklamasi) formatParts.push(data.format_aciklamasi);
+  if (data.kurgu_yapisi) formatParts.push('🎬 Kurgu: ' + data.kurgu_yapisi);
+  if (data.ornek_hook) formatParts.push('🪝 Örnek Hook: ' + data.ornek_hook);
+  const metaLine = [data.sure, data.uretim_zorlugu ? 'Üretim: ' + data.uretim_zorlugu : '', data.marka_guvenligi ? 'Marka: ' + data.marka_guvenligi : ''].filter(Boolean).join(' · ');
+  if (metaLine) formatParts.push(metaLine);
+  document.getElementById('format-analysis').textContent = formatParts.join('
+');
 
   const list = document.getElementById('adaptations-list');
   list.innerHTML = '';
 
-  const adaptations = data.adaptations || [];
-  adaptations.forEach(a => {
-    const tags = (a.hashtags || []).map(t =>
-      '<span class="tag tag-platform">' + t + '</span>'
-    ).join('');
-
+  const uyarlamalar = data.sektore_ozgu_uyarlamalar || [];
+  uyarlamalar.forEach((a, idx) => {
     const card = document.createElement('div');
     card.className = 'adapt-card';
     card.innerHTML = `
       <div class="adapt-header">
-        <div class="adapt-num">${a.rank || ''}</div>
-        <div class="adapt-title">${a.title || ''}</div>
+        <div class="adapt-num">${idx + 1}</div>
+        <div class="adapt-title">${a.sektor || ''}</div>
       </div>
       <div class="adapt-body">
         <div class="adapt-hook">
-          <strong>🎬 İlk 3 saniye (hook):</strong>
+          <strong>🪝 Hook:</strong>
           ${a.hook || ''}
         </div>
-        <div class="balloon" style="margin-top:.75rem">${a.description || ''}</div>
-        ${a.whyItWorks ? '<div class="adapt-tip"><i class="ti ti-bulb"></i><span>' + a.whyItWorks + '</span></div>' : ''}
-        <div class="adapt-tags">
-          <span class="tag tag-format">${a.platform || ''}</span>
-          ${tags}
-        </div>
+        <div class="balloon" style="margin-top:.75rem">${(a.senaryo_taslagi || '').replace(/
+/g, '<br>')}</div>
+        ${a.cta ? '<div class="adapt-tip"><i class="ti ti-player-play"></i><span><strong>CTA:</strong> ' + a.cta + '</span></div>' : ''}
       </div>`;
     list.appendChild(card);
   });
 
+  if (data.uygulama_ipuclari) {
+    const tip = document.createElement('div');
+    tip.className = 'adapt-card';
+    tip.style.cssText = 'background:#F0FAF6;border-color:#9FE1CB';
+    tip.innerHTML = '<div class="adapt-body"><div class="adapt-tip"><i class="ti ti-bulb"></i><span><strong>Uygulama İpuçları:</strong> ' + data.uygulama_ipuclari + '</span></div></div>';
+    list.appendChild(tip);
+  }
+
   document.getElementById('results').style.display = 'block';
 }
+
 
 function resetForm() {
   document.getElementById('results').style.display = 'none';
@@ -593,6 +568,44 @@ document.addEventListener('input',  function(e) { if (document.getElementById('f
 
 updateRateBar();
 restoreForm();
+
+// ── Trend Video Bulucu'dan gelen URL parametrelerini oku ──────────────────
+(function readUrlParams() {
+  const p = new URLSearchParams(location.search);
+  const url = p.get('url');
+  const desc = p.get('desc');
+  const sector = p.get('sector');
+  const biz = p.get('biz');
+  if (url) {
+    const el = document.getElementById('video-url');
+    if (el && !el.value) el.value = url;
+  }
+  if (desc) {
+    const el = document.getElementById('video-desc');
+    if (el && !el.value) el.value = desc;
+  }
+  if (sector) {
+    const el = document.getElementById('sector');
+    if (el && !el.value) {
+      // Exact match first, then partial
+      const opt = [...el.options].find(o => o.value === sector) ||
+                  [...el.options].find(o => o.value.startsWith(sector.split('/')[0].trim()));
+      if (opt) el.value = opt.value;
+    }
+  }
+  if (biz) {
+    const el = document.getElementById('biz-name');
+    if (el && !el.value) el.value = biz;
+  }
+  if (url || desc) {
+    // Trend Video Bulucu'dan gelindi — bilgi kutusu göster
+    const notice = document.createElement('div');
+    notice.style.cssText = 'background:#F0FAF6;border:0.5px solid #9FE1CB;border-radius:8px;padding:9px 13px;font-size:12.5px;color:#085041;margin-bottom:1rem;display:flex;align-items:center;gap:7px';
+    notice.innerHTML = '<i class="ti ti-trending-up" aria-hidden="true"></i> Trend Video Bulucu\'dan aktarıldı. Alanları kontrol edip uyarla butonuna basın.';
+    const formBody = document.getElementById('form-body');
+    if (formBody) formBody.insertBefore(notice, formBody.firstChild);
+  }
+})();
 
 function collapseForm() {
   const fc = document.getElementById('form-section');
