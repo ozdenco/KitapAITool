@@ -85,6 +85,8 @@ export interface Tool {
   category: 'analiz' | 'icerik' | 'satis' | 'video'
   isAsync: boolean  // İçerik Takvimi ve Trend Video async çalışır
   n8nPath: string
+  /** false ise araç satın alma listesinde gösterilmez (ör. yeniden yapılandırılan araçlar) */
+  purchasable?: boolean
 }
 
 export interface ToolUsage {

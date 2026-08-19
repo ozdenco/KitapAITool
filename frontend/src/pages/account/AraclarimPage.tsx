@@ -238,7 +238,7 @@ export function AraclarimPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {TOOLS.map((tool) => {
+            {TOOLS.filter((t) => t.purchasable !== false).map((tool) => {
               const purchase   = activePurchaseMap.get(tool.id)
               const basePrice  = priceMap.get(tool.id)
               const isActive   = Boolean(purchase)

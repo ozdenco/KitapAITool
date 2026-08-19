@@ -90,6 +90,7 @@ export const TOOLS: Tool[] = [
     category: 'video',
     isAsync: false,
     n8nPath: 'kolay-kobi-viral',
+    purchasable: false, // Format Replication mantığına geçiş sürecinde satın alma listesinden çıkarıldı
   },
   {
     id: 'trend-video',
@@ -99,6 +100,7 @@ export const TOOLS: Tool[] = [
     category: 'video',
     isAsync: true,
     n8nPath: 'kolay-kobi-trend',
+    purchasable: false, // Format Replication mantığına geçiş sürecinde satın alma listesinden çıkarıldı
   },
 ]
 
