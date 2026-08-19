@@ -1,7 +1,7 @@
-import { useState } from 'react'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useState, useRef, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { useQueryClient } from '@tanstack/react-query'
 import api from '@/lib/api'
-import { parseAiJson } from '@/lib/parseAiJson'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
@@ -11,20 +11,18 @@ import { ToolShell } from '@/components/ui/ToolShell'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-interface TrendVideo {
-  sira: number
-  baslik: string
-  platform: string
-  neden_trend: string
-  uyarlama: string
-  ipucu?: string
-  etiketler?: string[]
+interface TikTokVideo {
+  rank: number
+  author: string
+  title: string
+  webVideoUrl: string
+  playCount?: number
+  diggCount?: number
+  hashtags?: string[]
 }
 
 interface TrendResult {
-  ozet?: string
-  videolar: TrendVideo[]
-  ctaText?: string
+  videos: TikTokVideo[]
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -57,77 +55,127 @@ const TONLAR = [
   'Mizahi ve eğlenceli',
 ]
 
-// ─── Prompt builder ────────────────────────────────────────────────────────────
+const LOADING_MESSAGES = [
+  'Trend videolar taranıyor...',
+  'Sektörel içerikler araştırılıyor...',
+  'TikTok verileri çekiliyor...',
+  'Viral potansiyel analiz ediliyor...',
+  'Son rötuşlar yapılıyor...',
+]
 
-function buildPrompt(f: {
-  bizName: string; sector: string; tones: string[]; audience: string; note: string
-}): string {
-  const sectorLabel = f.sector === 'ALL' ? 'tüm sektörler (genel tarama)' : f.sector
+const MAX_POLL_ATTEMPTS = 220 // 220 × 3 sn ≈ 11 dakika
+const POLL_INTERVAL_MS  = 3000
 
-  return `Sen sosyal medya trend uzmanısın. Instagram, Facebook ve TikTok'ta şu an popüler olan video formatlarını ve trend içerikleri biliyorsun.
-
-İşletme: ${f.bizName || 'belirtilmemiş'}
-Sektör: ${sectorLabel}
-İstenen video tonu: ${f.tones.join(', ')}
-Hedef kitle: ${f.audience || 'belirtilmemiş'}
-Ek not: ${f.note || 'yok'}
-
-Bu sektör ve ton için şu an sosyal medyada trend olan 5 video fikri öner. Her fikir için neden trend olduğunu açıkla ve işletmeye nasıl uyarlanabileceğini göster.
-
-SADECE JSON döndür:
-{
-  "ozet": "<sektör için trend içerik stratejisine dair 1-2 cümle genel özet>",
-  "videolar": [
-    {
-      "sira": 1,
-      "baslik": "<video fikri başlığı>",
-      "platform": "<en uygun platform: TikTok / Instagram Reels / Facebook>",
-      "neden_trend": "<neden viral/trend olduğu, ne tür duygusal tetikleyici kullandığı>",
-      "uyarlama": "<${f.bizName || 'işletme'} için nasıl uyarlanır, somut senaryo>",
-      "ipucu": "<çekim veya yayın için pratik ipucu>",
-      "etiketler": ["<hashtag önerisi>", "<hashtag önerisi>"]
-    }
-  ],
-  "ctaText": "<${f.bizName || 'işletme'} için motivasyon cümlesi>"
-}
-5 video fikri olsun. Türkçe, yaratıcı ve uygulanabilir olsun.`
+function formatCount(n?: number): string {
+  if (n == null) return ''
+  if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + 'M'
+  if (n >= 1_000) return (n / 1_000).toFixed(1) + 'K'
+  return n.toLocaleString('tr-TR')
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function TrendVideoPage() {
-  const queryClient = useQueryClient()
-  const [bizName, setBizName] = useState('')
-  const [sector, setSector] = useState('')
-  const [tones, setTones] = useState<string[]>([])
+  const navigate     = useNavigate()
+  const queryClient  = useQueryClient()
+
+  // Form state
+  const [bizName,  setBizName]  = useState('')
+  const [sector,   setSector]   = useState('')
+  const [tones,    setTones]    = useState<string[]>([])
   const [audience, setAudience] = useState('')
-  const [note, setNote] = useState('')
-  const [result, setResult] = useState<TrendResult | null>(null)
+  const [note,     setNote]     = useState('')
+
+  // Async job state
+  const [isPending,   setIsPending]   = useState(false)
+  const [loadingMsg,  setLoadingMsg]  = useState(LOADING_MESSAGES[0])
+  const [elapsedSec,  setElapsedSec]  = useState(0)
+  const [error,       setError]       = useState<string | null>(null)
+  const [result,      setResult]      = useState<TrendResult | null>(null)
+
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  const clearPolling = useCallback(() => {
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current)
+      intervalRef.current = null
+    }
+  }, [])
 
   const toggleTone = (t: string) =>
     setTones((prev) => prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t])
 
-  const mutation = useMutation({
-    mutationFn: async () => {
-      const prompt = buildPrompt({ bizName, sector, tones, audience, note })
-      const res = await api.post('/tools/trend-video/run', { prompt })
-      const content = res.data?.content?.[0]?.text ?? res.data
-      return parseAiJson<TrendResult>(content)
-    },
-    onSuccess: (data) => {
-      setResult(data)
-      void queryClient.invalidateQueries({ queryKey: ['tool-usage'] })
-    },
-  })
+  const startPolling = useCallback((jobId: string) => {
+    let attempt = 0
+    intervalRef.current = setInterval(async () => {
+      attempt++
+      setElapsedSec(attempt * 3)
+      setLoadingMsg(LOADING_MESSAGES[attempt % LOADING_MESSAGES.length])
 
-  const canSubmit = sector && tones.length > 0 && !mutation.isPending
+      if (attempt > MAX_POLL_ATTEMPTS) {
+        clearPolling()
+        setIsPending(false)
+        setError('11 dakika içinde sonuç gelmedi. Yapay zeka hâlâ çalışıyor olabilir — birkaç dakika sonra tekrar deneyin.')
+        return
+      }
+
+      try {
+        const res = await api.get<{ status: string; videos?: TikTokVideo[]; error?: string }>(
+          `/tools/trend-video/status/${jobId}`
+        )
+        if (res.data.status === 'completed') {
+          clearPolling()
+          setIsPending(false)
+          setResult({ videos: res.data.videos ?? [] })
+          void queryClient.invalidateQueries({ queryKey: ['tool-usage'] })
+        } else if (res.data.status === 'error') {
+          clearPolling()
+          setIsPending(false)
+          setError(res.data.error ?? 'İşlem hatayla sonuçlandı.')
+        }
+      } catch {
+        // Geçici ağ hatası — bir sonraki turda devam et
+      }
+    }, POLL_INTERVAL_MS)
+  }, [clearPolling, queryClient])
+
+  const handleGenerate = async () => {
+    if (!sector || tones.length === 0 || isPending) return
+    setError(null)
+    setResult(null)
+    setIsPending(true)
+    setElapsedSec(0)
+    setLoadingMsg(LOADING_MESSAGES[0])
+
+    try {
+      const res = await api.post<{ job_id: string }>(
+        '/tools/trend-video/start',
+        { biz: bizName, sector, tones, audience, note }
+      )
+      startPolling(res.data.job_id)
+    } catch (err: unknown) {
+      setIsPending(false)
+      const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error
+        ?? 'Sunucuya bağlanılamadı. Lütfen tekrar deneyin.'
+      setError(msg)
+    }
+  }
+
+  const handleReset = () => {
+    clearPolling()
+    setIsPending(false)
+    setResult(null)
+    setError(null)
+  }
+
+  const canSubmit = sector.length > 0 && tones.length > 0 && !isPending
 
   return (
     <ToolShell
       toolId="trend-video"
       title="Trend Video Bulucu"
       icon="📱"
-      description="Sektörünüze uygun Instagram, Facebook ve TikTok'ta trend olan video fikirlerini bulun; markanıza uyarlayın."
+      description="Sektörünüze uygun TikTok'ta trend olan videoları bulun; markanıza uyarlayın."
       hasResult={!!result}
       formHasInput={!!sector}
     >
@@ -136,7 +184,8 @@ export function TrendVideoPage() {
           {isFormOpen && (
             <div className="bg-white rounded-2xl border border-[#E2E0D8] p-8 mb-6">
               <div className="flex flex-col gap-5">
-                  {header}
+                {header}
+
                 <Input
                   label="İşletme / hizmet adı (opsiyonel)"
                   placeholder="Örn: Hızlı Kargo Lojistik"
@@ -191,85 +240,136 @@ export function TrendVideoPage() {
                   filename="trend-video-formu.json"
                   getData={() => ({ bizName, sector, tones, audience, note })}
                   onLoad={(d) => {
-                    if (typeof d.bizName === 'string') setBizName(d.bizName)
-                    if (typeof d.sector === 'string') setSector(d.sector)
-                    if (Array.isArray(d.tones)) setTones(d.tones as string[])
+                    if (typeof d.bizName  === 'string') setBizName(d.bizName)
+                    if (typeof d.sector   === 'string') setSector(d.sector)
+                    if (Array.isArray(d.tones))         setTones(d.tones as string[])
                     if (typeof d.audience === 'string') setAudience(d.audience)
-                    if (typeof d.note === 'string') setNote(d.note)
+                    if (typeof d.note     === 'string') setNote(d.note)
                   }}
                 />
                 {rateBar}
 
-                {mutation.isError && (
-                  <p className="text-sm text-red-500">{(mutation.error as Error)?.message || 'Bir hata oluştu. Lütfen tekrar deneyin.'}</p>
+                {error && (
+                  <div className="text-[13px] text-[#A32D2D] bg-[#FCEBEB] rounded-xl px-4 py-3">
+                    ⚠️ {error}
+                  </div>
                 )}
 
-                <Button onClick={() => mutation.mutate()} disabled={!canSubmit} loading={mutation.isPending} className="mt-1 w-full">
-                  📱 Trend Video Fikirlerini Getir
+                <Button onClick={handleGenerate} disabled={!canSubmit} loading={isPending} className="mt-1 w-full">
+                  🔥 Trendleri Bul
                 </Button>
-                {mutation.isPending && (
-                  <p className="text-center text-sm text-gray-400 animate-pulse">Trend videolar araştırılıyor — 1-2 dakika sürebilir...</p>
+
+                {isPending && (
+                  <div className="text-center py-6">
+                    <div className="w-11 h-11 border-[3px] border-[#E2E0D8] border-t-[#1D9E75] rounded-full animate-spin mx-auto mb-4" />
+                    <p className="text-[14px] text-[#6B6963]">{loadingMsg}</p>
+                    <p className="text-[12px] text-[#9A9792] mt-2">
+                      Yapay zeka çalışıyor ({elapsedSec} sn geçti)...
+                    </p>
+                  </div>
                 )}
               </div>
             </div>
           )}
 
-          {result && (
+          {/* ── Sonuçlar ── */}
+          {result && result.videos.length > 0 && (
             <div className="flex flex-col gap-4">
-              {result.ozet && (
-                <div className="bg-white rounded-2xl border border-[#E2E0D8] shadow-sm p-5">
-                  <h3 className="text-sm font-semibold text-[#1C1B19] mb-2">📊 Trend Özeti</h3>
-                  <p className="text-sm text-gray-600 leading-relaxed">{result.ozet}</p>
-                </div>
-              )}
+              {result.videos.map((v) => {
+                const uyarlaParams = new URLSearchParams({
+                  url:    v.webVideoUrl ?? '',
+                  desc:   (v.title ?? '').slice(0, 200),
+                  sector: sector,
+                  biz:    bizName,
+                }).toString()
 
-              {result.videolar.map((v, i) => (
-                <div key={i} className="bg-white rounded-2xl border border-[#E2E0D8] shadow-sm overflow-hidden">
-                  <div className="flex items-center gap-3 px-5 py-3.5 bg-[#1D9E75]/5 border-b border-[#F1EFE8]">
-                    <div className="w-7 h-7 rounded-full bg-[#1D9E75] text-white text-xs font-bold flex items-center justify-center shrink-0">
-                      {v.sira}
+                return (
+                  <div key={v.rank} className="bg-white rounded-2xl border border-[#E2E0D8] overflow-hidden">
+                    {/* Header */}
+                    <div className="flex items-start gap-[14px] px-6 py-4 border-b border-[#F1EFE8]">
+                      <div className="w-[34px] h-[34px] rounded-full bg-[#1D9E75] text-white flex items-center justify-center text-[13px] font-semibold shrink-0">
+                        {v.rank}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[14px] font-medium text-[#1C1B19] leading-snug mb-1">
+                          {v.author && (
+                            <span className="text-[#1D9E75]">@{v.author} — </span>
+                          )}
+                          {(v.title ?? '').slice(0, 100)}
+                        </p>
+                        <div className="flex items-center gap-2 flex-wrap text-[12px]">
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-[#F0FAF6] text-[#085041] rounded-md font-medium">
+                            TikTok
+                          </span>
+                          {v.playCount != null && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-[#FEF9EC] text-[#7A5C00] rounded-md font-medium border border-[#F5D76E]">
+                              👁 {formatCount(v.playCount)}
+                            </span>
+                          )}
+                          {v.diggCount != null && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-[#FFF0F6] text-[#9D1B4E] rounded-md font-medium border border-[#FBA7C5]">
+                              ❤️ {formatCount(v.diggCount)}
+                            </span>
+                          )}
+                        </div>
+                      </div>
                     </div>
-                    <div className="flex-1 flex items-center gap-2 flex-wrap">
-                      <span className="font-semibold text-sm text-[#085041]">{v.baslik}</span>
-                      <span className="text-xs px-2 py-0.5 bg-[#F0FAF6] text-[#085041] rounded-full font-medium">{v.platform}</span>
+
+                    {/* Body */}
+                    <div className="px-6 py-4 flex flex-col gap-3">
+                      {/* Hashtags */}
+                      {(v.hashtags ?? []).length > 0 && (
+                        <div className="flex flex-wrap gap-1.5">
+                          {(v.hashtags ?? []).map((h) => (
+                            <span key={h} className="text-[11px] px-2 py-0.5 bg-[#F0FAF6] border border-[#9FE1CB] text-[#085041] font-medium rounded-md">
+                              #{h}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Aksiyon butonları */}
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {v.webVideoUrl && (
+                          <a
+                            href={v.webVideoUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 px-[13px] py-[7px] bg-white border border-[#D3D1C7] rounded-lg text-[12px] font-medium text-[#1C1B19] hover:bg-[#F7F6F2] transition-colors"
+                          >
+                            ↗ Videoyu Aç
+                          </a>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => navigate(`/araclar/viral-video?${uyarlaParams}`)}
+                          className="inline-flex items-center gap-1.5 px-[16px] py-[7px] bg-[#1D9E75] text-white rounded-lg text-[13px] font-medium hover:bg-[#0F6E56] transition-colors"
+                        >
+                          🪄 Bu Formatı Uyarla →
+                        </button>
+                      </div>
                     </div>
                   </div>
-                  <div className="p-5 flex flex-col gap-3">
-                    <div>
-                      <p className="text-xs font-semibold text-gray-500 mb-1">🔥 Neden Trend?</p>
-                      <p className="text-sm text-gray-600 leading-relaxed">{v.neden_trend}</p>
-                    </div>
+                )
+              })}
 
-                    <div className="relative bg-[#DCF8C6] rounded-tr-xl rounded-b-xl px-4 py-3 text-sm text-[#1C1B19] leading-relaxed whitespace-pre-wrap">
-                      <div className="absolute left-0 top-0 w-0 h-0" style={{ borderTop: '8px solid #DCF8C6', borderLeft: '8px solid transparent', left: '-8px' }} />
-                      <p className="text-xs font-semibold text-[#085041] mb-1">💡 Uyarlama</p>
-                      {v.uyarlama}
-                    </div>
+              {/* CTA */}
+              <div className="bg-[#F0FAF6] border border-[#9FE1CB] rounded-2xl p-6 text-center">
+                <p className="text-[15px] font-medium text-[#085041] mb-1">Bu işi otomasyona bağlayalım</p>
+                <p className="text-[13px] text-[#0F6E56] mb-4 leading-relaxed">
+                  Uzmanlarımız video pazarlama stratejinizi oluştursun.
+                </p>
+                <a
+                  href="https://kolaykobi.com/iletisim"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-block bg-[#1D9E75] text-white px-6 py-2.5 rounded-lg text-[14px] font-medium hover:bg-[#0F6E56] transition-colors"
+                >
+                  Ücretsiz Görüşme Ayarla
+                </a>
+              </div>
 
-                    {v.ipucu && (
-                      <div className="flex gap-2 bg-gray-50 rounded-lg px-3 py-2 text-xs text-gray-500">
-                        <span className="text-[#1D9E75] shrink-0">💡</span>{v.ipucu}
-                      </div>
-                    )}
-
-                    {v.etiketler && v.etiketler.length > 0 && (
-                      <div className="flex gap-2 flex-wrap">
-                        {v.etiketler.map((tag) => (
-                          <span key={tag} className="text-xs px-2 py-0.5 bg-[#F0FAF6] border border-[#9FE1CB] text-[#085041] font-medium rounded-full">{tag}</span>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ))}
-
-              {result.ctaText && (
-                <div className="bg-[#1D9E75]/5 border border-[#1D9E75]/20 rounded-2xl p-5 text-center">
-                  <p className="text-sm text-[#1D9E75] font-medium">{result.ctaText}</p>
-                </div>
-              )}
-
-              <button onClick={() => setResult(null)} className="text-sm text-gray-400 underline text-center no-print">
+              <button onClick={handleReset} className="text-[13px] text-[#9A9792] underline text-center">
                 Yeni arama yap
               </button>
             </div>
