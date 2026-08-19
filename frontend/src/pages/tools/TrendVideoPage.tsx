@@ -232,7 +232,7 @@ export function TrendVideoPage() {
 
     try {
       const res = await api.post<{ job_id: string }>(
-        '/tools/trend-video/start',
+        '/tools/trend-video/run',
         { biz: bizName, sector, tones, audience, note }
       )
       startPolling(res.data.job_id)
