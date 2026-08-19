@@ -20,14 +20,37 @@
     },
     {
       "parameters": {
-        "jsCode": "const body = $input.first().json.body || $input.first().json;\nconst videoUrl = body.videoUrl || body.video_url || '';\nconst videoDesc = body.videoDesc || body.video_desc || body.prompt || '';\nconst sector = body.sector || 'Genel';\nconst biz = body.biz || '';\nconst tones = Array.isArray(body.tones) ? body.tones.join(' + ') : (body.tones || 'Eğlendirici');\nconst note = body.note || '';\n\nif (!videoDesc || videoDesc.length < 10) {\n  return [{ json: { error: 'Geçersiz istek: video açıklaması eksik.' } }];\n}\n\nconst systemMessage = `Sen bir içerik stratejisti ve format mining uzmanısın.\nGörevin: Kullanıcının tarif ettiği viral videonun arkasındaki tekrarlanabilir FORMAT yapısını çıkarmak ve farklı sektörlere uyarlamak.\n\nTemel kavramlar:\n- FORMAT: Videonun kendisi değil, kurgu mantığı — hook + yapı + CTA kalıbı\n- FORMAT MİNİNG: Başarılı videodan soyut, tekrar kullanılabilir içerik şablonu çıkarmak\n- FORMAT REPLİKASYON: Aynı kurgu yapısını farklı sektör/marka için uyarlamak\n\nÇıktı her zaman geçerli JSON olmalıdır. Markdown kullanma. Sadece JSON döndür. Düşünme sürecini kısa tut.`;\n\nconst userPrompt = `Viral video bilgisi:\n${videoUrl ? 'Link: ' + videoUrl : ''}\nAçıklama: ${videoDesc}\n${note ? 'Ek not: ' + note : ''}\n\nGörev:\n1. Bu videonun FORMAT yapısını çıkar (hook + kurgu + CTA mantığı)\n2. Formatı 3 farklı sektöre uyarla — birincisi mutlaka \"${sector}\" sektörü olsun\n3. Her sektör için: hook cümlesi + sahne sahne senaryo taslağı yaz\n\nİşletme: ${biz || 'belirtilmemiş'}\nTon: ${tones}\n\nZORUNLU JSON ÇIKTI ŞEMASI (sadece bunu döndür):\n{\n  \"format_adi\": \"Videonun format adı (kısa, tanımlayıcı)\",\n  \"format_tipi\": \"POV | Mini skeç | Reveal | Before/After | Us vs Them | Text overlay | Micro-drama | Diğer\",\n  \"format_aciklamasi\": \"Formatın kurgu mantığı — hook + yapı + CTA\",\n  \"kurgu_yapisi\": \"Sahne 1 (X sn): ... → Sahne 2 (X sn): ... → Sahne 3 (X sn): ...\",\n  \"sure\": \"tahmini süre\",\n  \"ornek_hook\": \"İlk 1-3 saniyede söylenecek cümle\",\n  \"uretim_zorlugu\": \"Çok Düşük | Düşük | Orta | Yüksek\",\n  \"marka_guvenligi\": \"Yüksek | Orta | Dikkat Gerekir\",\n  \"sektore_ozgu_uyarlamalar\": [\n    {\n      \"sektor\": \"${sector}\",\n      \"hook\": \"Bu sektöre özel hook cümlesi\",\n      \"senaryo_taslagi\": \"Sahne sahne kısa senaryo (3-5 cümle)\",\n      \"cta\": \"Harekete geçirme cümlesi\"\n    },\n    {\n      \"sektor\": \"2. sektör adı\",\n      \"hook\": \"...\",\n      \"senaryo_taslagi\": \"...\",\n      \"cta\": \"...\"\n    },\n    {\n      \"sektor\": \"3. sektör adı\",\n      \"hook\": \"...\",\n      \"senaryo_taslagi\": \"...\",\n      \"cta\": \"...\"\n    }\n  ],\n  \"uygulama_ipuclari\": \"Bu formatı uygularken dikkat edilmesi gereken 2-3 pratik ipucu\"\n}`;\n\nconst apiBody = {\n  model: 'MiniMax-M3',\n  max_completion_tokens: 8000,\n  messages: [\n    { role: 'system', content: systemMessage },\n    { role: 'user', content: userPrompt }\n  ]\n};\nreturn [{ json: { ...body, apiBody, apiBodyStr: JSON.stringify(apiBody) } }];"
+        "method": "GET",
+        "url": "={{ ($json.body?.bizUrl || $json.bizUrl || '').trim() }}",
+        "options": {
+          "timeout": 10000,
+          "response": {
+            "response": {
+              "responseFormat": "text"
+            }
+          }
+        }
+      },
+      "id": "firma-scrape-node",
+      "name": "Firma Scrape",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        460,
+        300
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $('Webhook').first().json.body || $('Webhook').first().json;\nconst videoUrl = body.videoUrl || body.video_url || '';\nconst videoDesc = body.videoDesc || body.video_desc || body.prompt || '';\nconst sector = body.sector || 'Genel';\nconst biz = body.biz || '';\nconst tones = Array.isArray(body.tones) ? body.tones.join(' + ') : (body.tones || 'Eğlendirici');\nconst note = body.note || '';\n\n// Firma web sitesi scrape sonucu (varsa)\nlet firmaBilgisi = '';\ntry {\n  const scraped = $('Firma Scrape').first().json?.data || $('Firma Scrape').first().json?.body || '';\n  firmaBilgisi = String(scraped).replace(/<[^>]+>/g, ' ').replace(/\\s+/g, ' ').trim().slice(0, 1500);\n} catch(e) { firmaBilgisi = ''; }\n\nif (!videoDesc || videoDesc.length < 10) {\n  return [{ json: { error: 'Geçersiz istek: video açıklaması eksik.' } }];\n}\n\nconst systemMessage = `Sen bir içerik stratejisti ve format mining uzmanısın.\nGörevin: Kullanıcının tarif ettiği viral videonun arkasındaki tekrarlanabilir FORMAT yapısını çıkarmak ve farklı sektörlere uyarlamak.\n\nTemel kavramlar:\n- FORMAT: Videonun kendisi değil, kurgu mantığı — hook + yapı + CTA kalıbı\n- FORMAT MİNİNG: Başarılı videodan soyut, tekrar kullanılabilir içerik şablonu çıkarmak\n- FORMAT REPLİKASYON: Aynı kurgu yapısını farklı sektör/marka için uyarlamak\n\nÇıktı her zaman geçerli JSON olmalıdır. Markdown kullanma. Sadece JSON döndür. Düşünme sürecini kısa tut.`;\n\nconst userPrompt = `Viral video bilgisi:\n${videoUrl ? 'Link: ' + videoUrl : ''}\nAçıklama: ${videoDesc}\n${note ? 'Ek not: ' + note : ''}${firmaBilgisi ? '\\nFirma web sitesinden elde edilen bilgi:\\n' + firmaBilgisi : ''}\n\nGörev:\n1. Bu videonun FORMAT yapısını çıkar (hook + kurgu + CTA mantığı)\n2. Formatı 3 farklı sektöre uyarla — birincisi mutlaka \"${sector}\" sektörü olsun\n3. Her sektör için: hook cümlesi + sahne sahne senaryo taslağı yaz\n\nİşletme: ${biz || 'belirtilmemiş'}\nTon: ${tones}\n\nZORUNLU JSON ÇIKTI ŞEMASI (sadece bunu döndür):\n{\n  \"format_adi\": \"Videonun format adı (kısa, tanımlayıcı)\",\n  \"format_tipi\": \"POV | Mini skeç | Reveal | Before/After | Us vs Them | Text overlay | Micro-drama | Diğer\",\n  \"format_aciklamasi\": \"Formatın kurgu mantığı — hook + yapı + CTA\",\n  \"kurgu_yapisi\": \"Sahne 1 (X sn): ... → Sahne 2 (X sn): ... → Sahne 3 (X sn): ...\",\n  \"sure\": \"tahmini süre\",\n  \"ornek_hook\": \"İlk 1-3 saniyede söylenecek cümle\",\n  \"uretim_zorlugu\": \"Çok Düşük | Düşük | Orta | Yüksek\",\n  \"marka_guvenligi\": \"Yüksek | Orta | Dikkat Gerekir\",\n  \"sektore_ozgu_uyarlamalar\": [\n    {\n      \"sektor\": \"${sector}\",\n      \"hook\": \"Bu sektöre özel hook cümlesi\",\n      \"senaryo_taslagi\": \"Sahne sahne kısa senaryo (3-5 cümle)\",\n      \"cta\": \"Harekete geçirme cümlesi\"\n    },\n    {\n      \"sektor\": \"2. sektör adı\",\n      \"hook\": \"...\",\n      \"senaryo_taslagi\": \"...\",\n      \"cta\": \"...\"\n    },\n    {\n      \"sektor\": \"3. sektör adı\",\n      \"hook\": \"...\",\n      \"senaryo_taslagi\": \"...\",\n      \"cta\": \"...\"\n    }\n  ],\n  \"uygulama_ipuclari\": \"Bu formatı uygularken dikkat edilmesi gereken 2-3 pratik ipucu\"\n}`;\n\nconst apiBody = {\n  model: 'MiniMax-M3',\n  max_completion_tokens: 8000,\n  messages: [\n    { role: 'system', content: systemMessage },\n    { role: 'user', content: userPrompt }\n  ]\n};\nreturn [{ json: { ...body, apiBody, apiBodyStr: JSON.stringify(apiBody) } }];"
       },
       "id": "build-request-node",
       "name": "Build Request",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        460,
+        680,
         300
       ]
     },
@@ -60,7 +83,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        680,
+        900,
         300
       ],
       "onError": "continueErrorOutput"
@@ -74,7 +97,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        900,
+        1120,
         200
       ]
     },
@@ -87,13 +110,24 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        900,
+        1120,
         400
       ]
     }
   ],
   "connections": {
     "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Firma Scrape",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Firma Scrape": {
       "main": [
         [
           {

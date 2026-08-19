@@ -190,6 +190,11 @@ input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3p
     </div>
 
     <div class="field">
+      <label>Firma Web Sitesi <span style="color:#9A9792">(isteğe bağlı — daha kişisel senaryo için)</span></label>
+      <input type="url" id="biz-url" placeholder="https://logvance.com.tr">
+    </div>
+
+    <div class="field">
       <label>Video Tonu</label>
       <div class="check-group">
         <label class="check-item"><input type="checkbox" name="tone" value="Eğlenceli / Komik"> Eğlenceli / Komik</label>
@@ -366,6 +371,7 @@ async function generate() {
   const videoDesc = document.getElementById('video-desc').value.trim();
   const sector = document.getElementById('sector').value;
   const biz = document.getElementById('biz-name').value.trim();
+  const bizUrl = document.getElementById('biz-url').value.trim();
   const extraCtx = document.getElementById('extra-ctx').value.trim();
   const tones = getTones();
 
@@ -385,7 +391,7 @@ async function generate() {
     const res = await fetch(N8N_PROXY, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ videoUrl, videoDesc, sector, biz: bizText, tones, note: extraCtx })
+      body: JSON.stringify({ videoUrl, videoDesc, sector, biz: bizText, bizUrl, tones, note: extraCtx })
     });
 
     if (!res.ok) {
@@ -469,6 +475,7 @@ function resetForm() {
   document.getElementById('video-url').value = '';
   document.getElementById('video-desc').value = '';
   document.getElementById('extra-ctx').value = '';
+  document.getElementById('biz-url').value = '';
   document.querySelectorAll('input[name="tone"]').forEach(el => { el.checked = false; });
   expandForm();
 }
@@ -579,6 +586,8 @@ restoreForm();
     const el = document.getElementById('biz-name');
     if (el) el.value = biz;
   }
+  const bizUrl = p.get('bizUrl');
+  if (bizUrl) { const el = document.getElementById('biz-url'); if (el) el.value = bizUrl; }
   if (url || desc) {
     // Trend Video Bulucu'dan gelindi — bilgi kutusu göster
     const notice = document.createElement('div');
