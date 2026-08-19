@@ -433,7 +433,6 @@ function renderResults(data, videoUrl, biz, sector) {
   document.getElementById('results-sub').textContent = biz + ' — ' + sector;
   document.getElementById('source-url-display').textContent = videoUrl;
 
-  // Format özeti
   const formatParts = [];
   if (data.format_adi) formatParts.push('📌 ' + data.format_adi);
   if (data.format_tipi) formatParts.push('Tür: ' + data.format_tipi);
@@ -442,30 +441,26 @@ function renderResults(data, videoUrl, biz, sector) {
   if (data.ornek_hook) formatParts.push('🪝 Örnek Hook: ' + data.ornek_hook);
   const metaLine = [data.sure, data.uretim_zorlugu ? 'Üretim: ' + data.uretim_zorlugu : '', data.marka_guvenligi ? 'Marka: ' + data.marka_guvenligi : ''].filter(Boolean).join(' · ');
   if (metaLine) formatParts.push(metaLine);
-  document.getElementById('format-analysis').textContent = formatParts.join('
-');
+  document.getElementById('format-analysis').textContent = formatParts.join('\n');
 
   const list = document.getElementById('adaptations-list');
   list.innerHTML = '';
 
   const uyarlamalar = data.sektore_ozgu_uyarlamalar || [];
-  uyarlamalar.forEach((a, idx) => {
+  uyarlamalar.forEach(function(a, idx) {
+    const senaryo = (a.senaryo_taslagi || '').replace(/\n/g, '<br>');
     const card = document.createElement('div');
     card.className = 'adapt-card';
-    card.innerHTML = `
-      <div class="adapt-header">
-        <div class="adapt-num">${idx + 1}</div>
-        <div class="adapt-title">${a.sektor || ''}</div>
-      </div>
-      <div class="adapt-body">
-        <div class="adapt-hook">
-          <strong>🪝 Hook:</strong>
-          ${a.hook || ''}
-        </div>
-        <div class="balloon" style="margin-top:.75rem">${(a.senaryo_taslagi || '').replace(/
-/g, '<br>')}</div>
-        ${a.cta ? '<div class="adapt-tip"><i class="ti ti-player-play"></i><span><strong>CTA:</strong> ' + a.cta + '</span></div>' : ''}
-      </div>`;
+    card.innerHTML =
+      '<div class="adapt-header">' +
+        '<div class="adapt-num">' + (idx + 1) + '</div>' +
+        '<div class="adapt-title">' + (a.sektor || '') + '</div>' +
+      '</div>' +
+      '<div class="adapt-body">' +
+        '<div class="adapt-hook"><strong>🫝 Hook:</strong> ' + (a.hook || '') + '</div>' +
+        '<div class="balloon" style="margin-top:.75rem">' + senaryo + '</div>' +
+        (a.cta ? '<div class="adapt-tip"><i class="ti ti-player-play"></i><span><strong>CTA:</strong> ' + a.cta + '</span></div>' : '') +
+      '</div>';
     list.appendChild(card);
   });
 
@@ -576,18 +571,18 @@ restoreForm();
   const desc = p.get('desc');
   const sector = p.get('sector');
   const biz = p.get('biz');
+  // URL params'tan gelen değerler localStorage'ı ezer — her zaman öncelikli
   if (url) {
     const el = document.getElementById('video-url');
-    if (el && !el.value) el.value = url;
+    if (el) el.value = url;
   }
   if (desc) {
     const el = document.getElementById('video-desc');
-    if (el && !el.value) el.value = desc;
+    if (el) el.value = desc;
   }
   if (sector) {
     const el = document.getElementById('sector');
-    if (el && !el.value) {
-      // Exact match first, then partial
+    if (el) {
       const opt = [...el.options].find(o => o.value === sector) ||
                   [...el.options].find(o => o.value.startsWith(sector.split('/')[0].trim()));
       if (opt) el.value = opt.value;
@@ -595,7 +590,7 @@ restoreForm();
   }
   if (biz) {
     const el = document.getElementById('biz-name');
-    if (el && !el.value) el.value = biz;
+    if (el) el.value = biz;
   }
   if (url || desc) {
     // Trend Video Bulucu'dan gelindi — bilgi kutusu göster
