@@ -19,11 +19,15 @@ interface TikTokVideo {
   playCount?: number
   diggCount?: number
   hashtags?: string[]
+  // Format Replication — n8n tarafından hesaplanır, mevcut değilse gizlenir
+  adaptabilityScore?: number              // 0–100
+  formatAdi?: string                      // Ör: "POV", "Expectation vs Reality"
+  trendDurumu?: 'rising' | 'peak' | 'falling' | string
+  uretimZorlugu?: number                  // 1–5
+  markaGuvenligi?: number                 // 1–5
 }
 
-interface TrendResult {
-  videos: TikTokVideo[]
-}
+interface TrendResult { videos: TikTokVideo[] }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -60,24 +64,103 @@ const LOADING_MESSAGES = [
   'Sektörel içerikler araştırılıyor...',
   'TikTok verileri çekiliyor...',
   'Viral potansiyel analiz ediliyor...',
+  'Uyarlanabilirlik skorları hesaplanıyor...',
   'Son rötuşlar yapılıyor...',
 ]
 
-const MAX_POLL_ATTEMPTS = 220 // 220 × 3 sn ≈ 11 dakika
+const MAX_POLL_ATTEMPTS = 220
 const POLL_INTERVAL_MS  = 3000
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function formatCount(n?: number): string {
   if (n == null) return ''
   if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + 'M'
-  if (n >= 1_000) return (n / 1_000).toFixed(1) + 'K'
+  if (n >= 1_000)     return (n / 1_000).toFixed(1) + 'K'
   return n.toLocaleString('tr-TR')
+}
+
+function scoreColor(score: number): { ring: string; text: string; bg: string } {
+  if (score >= 80) return { ring: '#1D9E75', text: '#085041', bg: '#F0FAF6' }
+  if (score >= 60) return { ring: '#D4A017', text: '#7A5C00', bg: '#FEF9EC' }
+  return                 { ring: '#C94040', text: '#7A1C1C', bg: '#FDF2F2' }
+}
+
+function scoreLabel(score: number): string {
+  if (score >= 80) return 'Çok Yüksek'
+  if (score >= 60) return 'Yüksek'
+  if (score >= 40) return 'Orta'
+  return 'Düşük'
+}
+
+function trendBadge(durumu?: string): { label: string; color: string; bg: string } | null {
+  if (!durumu) return null
+  if (durumu === 'rising')  return { label: '↑ Yükseliyor', color: '#085041', bg: '#E6F9F2' }
+  if (durumu === 'peak')    return { label: '⬆ Zirve',      color: '#7A5C00', bg: '#FEF9EC' }
+  if (durumu === 'falling') return { label: '↓ Düşüyor',    color: '#7A1C1C', bg: '#FDF2F2' }
+  return { label: durumu, color: '#3A3935', bg: '#F2F1ED' }
+}
+
+function starDots(value: number, max = 5, activeColor = '#1D9E75') {
+  return (
+    <span className="flex gap-[3px] items-center">
+      {Array.from({ length: max }).map((_, i) => (
+        <span
+          key={i}
+          className="w-2 h-2 rounded-full"
+          style={{ background: i < value ? activeColor : '#D3D1C7' }}
+        />
+      ))}
+    </span>
+  )
+}
+
+// ─── Adaptability Score Ring (SVG) ───────────────────────────────────────────
+
+function ScoreRing({ score }: { score: number }) {
+  const r    = 22
+  const circ = 2 * Math.PI * r
+  const fill = circ - (score / 100) * circ
+  const col  = scoreColor(score)
+
+  return (
+    <div className="flex flex-col items-center gap-1">
+      <div className="relative w-14 h-14 flex items-center justify-center">
+        <svg width="56" height="56" viewBox="0 0 56 56" style={{ transform: 'rotate(-90deg)' }}>
+          <circle cx="28" cy="28" r={r} fill="none" stroke="#E2E0D8" strokeWidth="4" />
+          <circle
+            cx="28" cy="28" r={r}
+            fill="none"
+            stroke={col.ring}
+            strokeWidth="4"
+            strokeLinecap="round"
+            strokeDasharray={circ}
+            strokeDashoffset={fill}
+            style={{ transition: 'stroke-dashoffset 0.6s ease' }}
+          />
+        </svg>
+        <span
+          className="absolute text-[15px] font-bold tabular-nums"
+          style={{ color: col.text }}
+        >
+          {score}
+        </span>
+      </div>
+      <span
+        className="text-[10px] font-semibold px-2 py-[2px] rounded-full"
+        style={{ color: col.text, background: col.bg }}
+      >
+        {scoreLabel(score)}
+      </span>
+    </div>
+  )
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function TrendVideoPage() {
-  const navigate     = useNavigate()
-  const queryClient  = useQueryClient()
+  const navigate    = useNavigate()
+  const queryClient = useQueryClient()
 
   // Form state
   const [bizName,  setBizName]  = useState('')
@@ -87,11 +170,11 @@ export function TrendVideoPage() {
   const [note,     setNote]     = useState('')
 
   // Async job state
-  const [isPending,   setIsPending]   = useState(false)
-  const [loadingMsg,  setLoadingMsg]  = useState(LOADING_MESSAGES[0])
-  const [elapsedSec,  setElapsedSec]  = useState(0)
-  const [error,       setError]       = useState<string | null>(null)
-  const [result,      setResult]      = useState<TrendResult | null>(null)
+  const [isPending,  setIsPending]  = useState(false)
+  const [loadingMsg, setLoadingMsg] = useState(LOADING_MESSAGES[0])
+  const [elapsedSec, setElapsedSec] = useState(0)
+  const [error,      setError]      = useState<string | null>(null)
+  const [result,     setResult]     = useState<TrendResult | null>(null)
 
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
@@ -283,29 +366,59 @@ export function TrendVideoPage() {
                   biz:    bizName,
                 }).toString()
 
+                const trend    = trendBadge(v.trendDurumu)
+                const hasScore = v.adaptabilityScore != null
+
                 return (
                   <div key={v.rank} className="bg-white rounded-2xl border border-[#E2E0D8] overflow-hidden">
-                    {/* Header */}
-                    <div className="flex items-start gap-[14px] px-6 py-4 border-b border-[#F1EFE8]">
-                      <div className="w-[34px] h-[34px] rounded-full bg-[#1D9E75] text-white flex items-center justify-center text-[13px] font-semibold shrink-0">
+
+                    {/* ── Header ── */}
+                    <div className="flex items-start gap-4 px-5 py-4 border-b border-[#F1EFE8]">
+                      {/* Sıralama numarası */}
+                      <div className="w-[34px] h-[34px] rounded-full bg-[#1D9E75] text-white flex items-center justify-center text-[13px] font-semibold shrink-0 mt-0.5">
                         {v.rank}
                       </div>
+
+                      {/* Başlık + meta */}
                       <div className="flex-1 min-w-0">
-                        <p className="text-[14px] font-medium text-[#1C1B19] leading-snug mb-1">
+                        <p className="text-[14px] font-medium text-[#1C1B19] leading-snug mb-1.5">
                           {v.author && (
                             <span className="text-[#1D9E75]">@{v.author} — </span>
                           )}
                           {(v.title ?? '').slice(0, 100)}
                         </p>
+
                         <div className="flex items-center gap-2 flex-wrap text-[12px]">
+                          {/* Format adı */}
+                          {v.formatAdi && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-[#EDE9FE] text-[#4C1D95] rounded-md font-medium border border-[#C4B5FD]">
+                              🎬 {v.formatAdi}
+                            </span>
+                          )}
+
+                          {/* Platform badge */}
                           <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-[#F0FAF6] text-[#085041] rounded-md font-medium">
                             TikTok
                           </span>
+
+                          {/* Trend durumu */}
+                          {trend && (
+                            <span
+                              className="inline-flex items-center px-2 py-0.5 rounded-md font-medium"
+                              style={{ color: trend.color, background: trend.bg }}
+                            >
+                              {trend.label}
+                            </span>
+                          )}
+
+                          {/* Play count */}
                           {v.playCount != null && (
                             <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-[#FEF9EC] text-[#7A5C00] rounded-md font-medium border border-[#F5D76E]">
                               👁 {formatCount(v.playCount)}
                             </span>
                           )}
+
+                          {/* Like count */}
                           {v.diggCount != null && (
                             <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-[#FFF0F6] text-[#9D1B4E] rounded-md font-medium border border-[#FBA7C5]">
                               ❤️ {formatCount(v.diggCount)}
@@ -313,10 +426,39 @@ export function TrendVideoPage() {
                           )}
                         </div>
                       </div>
+
+                      {/* Adaptability Score ring — sadece değer varsa */}
+                      {hasScore && (
+                        <div className="shrink-0 ml-1">
+                          <ScoreRing score={v.adaptabilityScore!} />
+                          <p className="text-[10px] text-[#9A9792] text-center mt-1 leading-tight">
+                            Uyarla-<br />nabilirlik
+                          </p>
+                        </div>
+                      )}
                     </div>
 
-                    {/* Body */}
-                    <div className="px-6 py-4 flex flex-col gap-3">
+                    {/* ── Body ── */}
+                    <div className="px-5 py-4 flex flex-col gap-3">
+
+                      {/* Detay metrikler — sadece en az biri varsa */}
+                      {(v.uretimZorlugu != null || v.markaGuvenligi != null) && (
+                        <div className="flex gap-5 text-[12px] text-[#6B6963]">
+                          {v.uretimZorlugu != null && (
+                            <div className="flex items-center gap-1.5">
+                              <span className="font-medium text-[#1C1B19]">Üretim zorluğu</span>
+                              {starDots(v.uretimZorlugu, 5, '#1D9E75')}
+                            </div>
+                          )}
+                          {v.markaGuvenligi != null && (
+                            <div className="flex items-center gap-1.5">
+                              <span className="font-medium text-[#1C1B19]">Marka güvenliği</span>
+                              {starDots(v.markaGuvenligi, 5, '#1D9E75')}
+                            </div>
+                          )}
+                        </div>
+                      )}
+
                       {/* Hashtags */}
                       {(v.hashtags ?? []).length > 0 && (
                         <div className="flex flex-wrap gap-1.5">
@@ -329,7 +471,7 @@ export function TrendVideoPage() {
                       )}
 
                       {/* Aksiyon butonları */}
-                      <div className="flex items-center gap-2 flex-wrap">
+                      <div className="flex items-center gap-2 flex-wrap pt-0.5">
                         {v.webVideoUrl && (
                           <a
                             href={v.webVideoUrl}
