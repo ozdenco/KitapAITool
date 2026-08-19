@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useAuthStore } from '@/store/auth'
 import { useToolUsage } from '@/hooks/useToolUsage'
 import { ToolCard } from '@/components/ui/ToolCard'
-import { TOOLS, TOOL_CATEGORIES } from '@/lib/tools'
+import { ACTIVE_TOOLS, TOOL_CATEGORIES } from '@/lib/tools'
 import api from '@/lib/api'
 import type { ToolId } from '@/types'
 
@@ -120,7 +120,7 @@ export function DashboardPage() {
       ) : (
         <div className="flex flex-col gap-6">
           {CATEGORIES.map((cat) => {
-            const catTools  = TOOLS.filter((t) => t.category === cat)
+            const catTools  = ACTIVE_TOOLS.filter((t) => t.category === cat)
             const isOpen    = expanded[cat] ?? true
             const catLabel  = TOOL_CATEGORIES[cat]
             const catIcon   = CATEGORY_ICONS[cat] ?? '📦'

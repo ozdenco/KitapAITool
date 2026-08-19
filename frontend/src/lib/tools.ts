@@ -90,7 +90,8 @@ export const TOOLS: Tool[] = [
     category: 'video',
     isAsync: false,
     n8nPath: 'kolay-kobi-viral',
-    purchasable: false, // Format Replication mantığına geçiş sürecinde satın alma listesinden çıkarıldı
+    purchasable: false,
+    active: false, // Format Replication mantığına geçiş sürecinde tüm UI'dan kaldırıldı
   },
   {
     id: 'trend-video',
@@ -100,9 +101,13 @@ export const TOOLS: Tool[] = [
     category: 'video',
     isAsync: true,
     n8nPath: 'kolay-kobi-trend',
-    purchasable: false, // Format Replication mantığına geçiş sürecinde satın alma listesinden çıkarıldı
+    purchasable: false,
+    active: false, // Format Replication mantığına geçiş sürecinde tüm UI'dan kaldırıldı
   },
 ]
+
+/** active !== false olan araçlar — navigasyon, dashboard, kullanım tablosu, satın alma için */
+export const ACTIVE_TOOLS = TOOLS.filter((t) => t.active !== false)
 
 export const TOOL_CATEGORIES = {
   analiz: 'Analiz & Strateji',

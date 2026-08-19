@@ -87,6 +87,8 @@ export interface Tool {
   n8nPath: string
   /** false ise araç satın alma listesinde gösterilmez (ör. yeniden yapılandırılan araçlar) */
   purchasable?: boolean
+  /** false ise araç tüm UI'dan gizlenir — navigasyon, dashboard, kullanım tablosu, satın alma */
+  active?: boolean
 }
 
 export interface ToolUsage {

@@ -34,9 +34,8 @@ public class ToolUsageService(AppDbContext db)
         "musteri-geri-donus",
         "rakip-analiz",
         "chatbot-senaryo",
-        "ai-gorunurluk",
-        "viral-video",
-        "trend-video"
+        "ai-gorunurluk"
+        // viral-video ve trend-video: Format Replication geçiş sürecinde kaldırıldı
     ];
 
     public async Task<List<ToolUsageSummary>> GetUsageSummaryAsync(Guid userId)

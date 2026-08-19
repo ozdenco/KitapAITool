@@ -4,7 +4,7 @@ import { clsx } from 'clsx'
 import { useAuthStore } from '@/store/auth'
 import { useLogout } from '@/hooks/useAuth'
 import { Logo } from '@/components/ui/Logo'
-import { TOOLS, TOOL_CATEGORIES } from '@/lib/tools'
+import { ACTIVE_TOOLS, TOOL_CATEGORIES } from '@/lib/tools'
 
 const ACCOUNT_ITEMS = [
   { to: '/hesabim/profil',          label: 'Profil Bilgileri',     icon: '👤' },
@@ -46,7 +46,7 @@ function ToolsDropdown() {
     .map(([key, label]) => ({
       key,
       label,
-      tools: TOOLS.filter((t) => t.category === key),
+      tools: ACTIVE_TOOLS.filter((t) => t.category === key),
     }))
     .filter((g) => g.tools.length > 0)
 

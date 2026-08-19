@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { useToolUsage } from '@/hooks/useToolUsage'
 import { useAuthStore } from '@/store/auth'
-import { TOOLS } from '@/lib/tools'
+import { ACTIVE_TOOLS } from '@/lib/tools'
 import api from '@/lib/api'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -114,7 +114,7 @@ export function AracKullanimPage() {
           </p>
         )}
 
-        {!isLoading && !isError && TOOLS.map((tool) => {
+        {!isLoading && !isError && ACTIVE_TOOLS.map((tool) => {
           const usage   = usages?.find((u) => u.toolId === tool.id)
           const used    = usage?.usedCount ?? 0
           const limit   = usage?.limit ?? null
