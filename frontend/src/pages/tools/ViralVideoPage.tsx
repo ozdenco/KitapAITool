@@ -1,7 +1,7 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '@/lib/api'
-import { parseAiJson } from '@/lib/parseAiJson'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
@@ -11,20 +11,24 @@ import { ToolShell } from '@/components/ui/ToolShell'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-interface UyarlamaFikir {
-  numara: number
-  baslik: string
-  senaryo: string
-  kanca?: string
-  ipucu?: string
-  platformlar?: string[]
-  format?: string
+interface SektoreOzguUyarlama {
+  sektor: string
+  hook: string
+  senaryo_taslagi: string
+  cta?: string
 }
 
 interface ViralVideoResult {
-  kaynak_analiz?: string
-  uyarlamalar: UyarlamaFikir[]
-  ctaText?: string
+  format_adi?: string
+  format_tipi?: string
+  format_aciklamasi?: string
+  kurgu_yapisi?: string
+  ornek_hook?: string
+  sure?: string
+  uretim_zorlugu?: string
+  marka_guvenligi?: string
+  sektore_ozgu_uyarlamalar: SektoreOzguUyarlama[]
+  uygulama_ipuclari?: string
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -45,63 +49,63 @@ const TONLAR = [
   'Merak Uyandıran',
 ]
 
-// ─── Prompt builder ────────────────────────────────────────────────────────────
-
-function buildPrompt(f: {
-  videoUrl: string; videoDesc: string; bizName: string
-  sector: string; tones: string[]; extra: string
-}): string {
-  return `Sen sosyal medya içerik uzmanısın. Viral videoları KOBİ'lere özgü uyarlamalara dönüştürüyorsun.
-
-Viral Video Linki: ${f.videoUrl}
-Videonun Konusu: ${f.videoDesc}
-İşletme: ${f.bizName || 'belirtilmemiş'}
-Sektör: ${f.sector}
-Tercih edilen ton: ${f.tones.length > 0 ? f.tones.join(', ') : 'serbest'}
-Ek bağlam: ${f.extra || 'yok'}
-
-Bu viral videonun formatını ve yapısını analiz et. Ardından ${f.bizName || 'bu işletme'} için 3 farklı uyarlama fikri üret. Her fikir videonun viral elementini koruyarak sektöre özgü olmalı.
-
-SADECE JSON döndür:
-{
-  "kaynak_analiz": "<videonun neden viral olduğuna dair 1-2 cümle analiz>",
-  "uyarlamalar": [
-    {
-      "numara": 1,
-      "baslik": "<uyarlama başlığı>",
-      "senaryo": "<tam senaryo açıklaması, ne çekileceği, nasıl kurgulanacağı>",
-      "kanca": "<ilk 3 saniyedeki dikkat çekici kanca cümlesi>",
-      "ipucu": "<çekim veya kurgu için pratik ipucu>",
-      "platformlar": ["<ör: TikTok>", "<ör: Instagram Reels>"],
-      "format": "<ör: 15-30 sn, dikey video>"
-    }
-  ],
-  "ctaText": "<${f.bizName || 'işletme'} için motivasyon cümlesi>"
-}
-3 uyarlama olsun. Türkçe, yaratıcı ve uygulanabilir olsun.`
-}
-
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function ViralVideoPage() {
-  const queryClient = useQueryClient()
-  const [videoUrl, setVideoUrl] = useState('')
+  const queryClient     = useQueryClient()
+  const [searchParams]  = useSearchParams()
+
+  // Form state
+  const [videoUrl,  setVideoUrl]  = useState('')
   const [videoDesc, setVideoDesc] = useState('')
-  const [bizName, setBizName] = useState('')
-  const [sector, setSector] = useState('')
-  const [tones, setTones] = useState<string[]>([])
-  const [extra, setExtra] = useState('')
-  const [result, setResult] = useState<ViralVideoResult | null>(null)
+  const [bizName,   setBizName]   = useState('')
+  const [sector,    setSector]    = useState('')
+  const [bizUrl,    setBizUrl]    = useState('')
+  const [tones,     setTones]     = useState<string[]>([])
+  const [extra,     setExtra]     = useState('')
+
+  // Sonuç + akış bildirimi
+  const [result,        setResult]        = useState<ViralVideoResult | null>(null)
+  const [fromTrend,     setFromTrend]     = useState(false)
+
+  // URL parametrelerinden form doldur (Trend Video Bulucu entegrasyonu)
+  useEffect(() => {
+    const urlParam    = searchParams.get('url')
+    const descParam   = searchParams.get('desc')
+    const sectorParam = searchParams.get('sector')
+    const bizParam    = searchParams.get('biz')
+    const bizUrlParam = searchParams.get('bizUrl')
+
+    if (urlParam)    setVideoUrl(urlParam)
+    if (descParam)   setVideoDesc(descParam.slice(0, 500))
+    if (bizParam)    setBizName(bizParam)
+    if (bizUrlParam) setBizUrl(bizUrlParam)
+
+    if (sectorParam) {
+      const match = SEKTORLER.find(
+        (s) => s === sectorParam || s.startsWith(sectorParam.split('/')[0].trim())
+      )
+      if (match) setSector(match)
+    }
+
+    if (urlParam || descParam) setFromTrend(true)
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const toggleTone = (t: string) =>
     setTones((prev) => prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t])
 
-  const mutation = useMutation({
+  const mutation = useMutation<ViralVideoResult>({
     mutationFn: async () => {
-      const prompt = buildPrompt({ videoUrl, videoDesc, bizName, sector, tones, extra })
-      const res = await api.post('/tools/viral-video/run', { prompt })
-      const content = res.data?.content?.[0]?.text ?? res.data
-      return parseAiJson<ViralVideoResult>(content)
+      const res = await api.post<ViralVideoResult>('/tools/viral-video/run', {
+        videoUrl,
+        videoDesc,
+        sector,
+        biz:    bizName || undefined,
+        bizUrl: bizUrl  || undefined,
+        tones,
+        note:   extra   || undefined,
+      })
+      return res.data
     },
     onSuccess: (data) => {
       setResult(data)
@@ -125,7 +129,15 @@ export function ViralVideoPage() {
           {isFormOpen && (
             <div className="bg-white rounded-2xl border border-[#E2E0D8] p-8 mb-6">
               <div className="flex flex-col gap-5">
-                  {header}
+                {header}
+
+                {/* Trend Video Bulucu'dan aktar bildirimi */}
+                {fromTrend && (
+                  <div className="flex items-center gap-2 bg-[#F0FAF6] border border-[#9FE1CB] rounded-lg px-4 py-2.5 text-[12.5px] text-[#085041]">
+                    📈 Trend Video Bulucu'dan aktarıldı. Alanları kontrol edip uyarla butonuna basın.
+                  </div>
+                )}
+
                 <Input
                   label="Video Linki *"
                   placeholder="https://www.tiktok.com/@... veya https://www.instagram.com/reel/..."
@@ -153,9 +165,20 @@ export function ViralVideoPage() {
                     label="Sektör *"
                     value={sector}
                     onChange={(e) => setSector(e.target.value)}
-                    options={[{ value: '', label: 'Seçin...' }, ...SEKTORLER.map((s) => ({ value: s, label: s }))]}
+                    options={[
+                      { value: '', label: 'Seçin...' },
+                      ...SEKTORLER.map((s) => ({ value: s, label: s })),
+                    ]}
                   />
                 </div>
+
+                <Input
+                  label="Firma Web Sitesi (isteğe bağlı — daha kişisel senaryo için)"
+                  placeholder="https://logvance.com.tr"
+                  value={bizUrl}
+                  onChange={(e) => setBizUrl(e.target.value)}
+                  type="url"
+                />
 
                 <div>
                   <p className="text-sm font-medium text-[#6B6963] mb-2">Video Tonu</p>
@@ -186,90 +209,157 @@ export function ViralVideoPage() {
 
                 <FormPersistButtons
                   filename="viral-video-formu.json"
-                  getData={() => ({ videoUrl, videoDesc, bizName, sector, tones, extra })}
+                  getData={() => ({ videoUrl, videoDesc, bizName, sector, bizUrl, tones, extra })}
                   onLoad={(d) => {
-                    if (typeof d.videoUrl === 'string') setVideoUrl(d.videoUrl)
+                    if (typeof d.videoUrl  === 'string') setVideoUrl(d.videoUrl)
                     if (typeof d.videoDesc === 'string') setVideoDesc(d.videoDesc)
-                    if (typeof d.bizName === 'string') setBizName(d.bizName)
-                    if (typeof d.sector === 'string') setSector(d.sector)
-                    if (Array.isArray(d.tones)) setTones(d.tones as string[])
-                    if (typeof d.extra === 'string') setExtra(d.extra)
+                    if (typeof d.bizName   === 'string') setBizName(d.bizName)
+                    if (typeof d.sector    === 'string') setSector(d.sector)
+                    if (typeof d.bizUrl    === 'string') setBizUrl(d.bizUrl)
+                    if (Array.isArray(d.tones))          setTones(d.tones as string[])
+                    if (typeof d.extra     === 'string') setExtra(d.extra)
                   }}
                 />
                 {rateBar}
 
                 {mutation.isError && (
-                  <p className="text-sm text-red-500">{(mutation.error as Error)?.message || 'Bir hata oluştu. Lütfen tekrar deneyin.'}</p>
+                  <p className="text-[13px] text-[#A32D2D] bg-[#FCEBEB] rounded-xl px-4 py-3">
+                    ⚠️ {(mutation.error as Error)?.message || 'Bir hata oluştu. Lütfen tekrar deneyin.'}
+                  </p>
                 )}
 
-                <Button onClick={() => mutation.mutate()} disabled={!canSubmit} loading={mutation.isPending} className="mt-1 w-full">
+                <Button
+                  onClick={() => mutation.mutate()}
+                  disabled={!canSubmit}
+                  loading={mutation.isPending}
+                  className="mt-1 w-full"
+                >
                   🎬 Uyarlama Fikirlerini Üret
                 </Button>
+
                 {mutation.isPending && (
-                  <p className="text-center text-sm text-gray-400 animate-pulse">Format analiz ediliyor, uyarlama fikirleri üretiliyor — 10–30 saniye sürebilir...</p>
+                  <p className="text-center text-[13px] text-[#9A9792] animate-pulse">
+                    Format analiz ediliyor, uyarlama fikirleri üretiliyor — 10–30 saniye sürebilir...
+                  </p>
                 )}
               </div>
             </div>
           )}
 
+          {/* ── Sonuçlar ── */}
           {result && (
             <div className="flex flex-col gap-4">
-              {result.kaynak_analiz && (
-                <div className="bg-white rounded-2xl border border-[#E2E0D8] shadow-sm p-5">
-                  <h3 className="text-sm font-semibold text-[#1C1B19] mb-2">🔍 Viral Analiz</h3>
-                  <p className="text-sm text-gray-600 leading-relaxed">{result.kaynak_analiz}</p>
+
+              {/* Kaynak kart + format analizi */}
+              <div className="bg-white rounded-2xl border border-[#E2E0D8] p-5 flex items-start gap-4">
+                <div className="w-9 h-9 rounded-lg bg-[#F0FAF6] flex items-center justify-center text-lg shrink-0">🎬</div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[11px] font-semibold uppercase tracking-wider text-[#6B6963] mb-1">Kaynak Video</p>
+                  <p className="text-[13px] text-[#1C1B19] break-all mb-2">{videoUrl}</p>
+
+                  {/* Format analizi — tüm format_* alanlarını satır satır yazar */}
+                  {(() => {
+                    const lines: string[] = []
+                    if (result.format_adi)         lines.push('📌 ' + result.format_adi)
+                    if (result.format_tipi)        lines.push('Tür: ' + result.format_tipi)
+                    if (result.format_aciklamasi)  lines.push(result.format_aciklamasi)
+                    if (result.kurgu_yapisi)       lines.push('🎬 Kurgu: ' + result.kurgu_yapisi)
+                    if (result.ornek_hook)         lines.push('🪝 Örnek Hook: ' + result.ornek_hook)
+                    const meta = [
+                      result.sure,
+                      result.uretim_zorlugu ? 'Üretim: ' + result.uretim_zorlugu : '',
+                      result.marka_guvenligi ? 'Marka: ' + result.marka_guvenligi : '',
+                    ].filter(Boolean).join(' · ')
+                    if (meta) lines.push(meta)
+                    if (lines.length === 0) return null
+                    return (
+                      <div className="border-t border-[#F1EFE8] pt-2 text-[13px] text-[#444441] leading-relaxed whitespace-pre-wrap">
+                        {lines.join('\n')}
+                      </div>
+                    )
+                  })()}
                 </div>
-              )}
+              </div>
 
-              {result.uyarlamalar.map((u, i) => (
-                <div key={i} className="bg-white rounded-2xl border border-[#E2E0D8] shadow-sm overflow-hidden">
-                  <div className="flex items-center gap-3 px-5 py-3.5 bg-[#1D9E75]/5 border-b border-[#F1EFE8]">
-                    <div className="w-7 h-7 rounded-full bg-[#1D9E75] text-white text-xs font-bold flex items-center justify-center shrink-0">
-                      {u.numara}
+              {/* Uyarlama kartları */}
+              {result.sektore_ozgu_uyarlamalar?.map((u, i) => (
+                <div key={i} className="bg-white rounded-2xl border border-[#E2E0D8] overflow-hidden">
+                  {/* Header */}
+                  <div className="flex items-center gap-3 px-5 py-3.5 border-b border-[#F1EFE8]">
+                    <div className="w-[30px] h-[30px] rounded-full bg-[#1D9E75] text-white text-[12px] font-semibold flex items-center justify-center shrink-0">
+                      {i + 1}
                     </div>
-                    <span className="font-semibold text-sm text-[#085041]">{u.baslik}</span>
+                    <span className="text-[14px] font-medium text-[#1C1B19]">{u.sektor}</span>
                   </div>
+
+                  {/* Body */}
                   <div className="p-5 flex flex-col gap-3">
-                    {/* Senaryo balonu */}
-                    <div className="relative bg-[#DCF8C6] rounded-tr-xl rounded-b-xl px-4 py-3 text-sm text-[#1C1B19] leading-relaxed whitespace-pre-wrap">
-                      <div className="absolute left-0 top-0 w-0 h-0" style={{ borderTop: '8px solid #DCF8C6', borderLeft: '8px solid transparent', left: '-8px' }} />
-                      {u.senaryo}
-                    </div>
-
-                    {u.kanca && (
-                      <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2.5">
-                        <p className="text-xs font-semibold text-amber-700 mb-0.5">🎣 İlk 3 Saniye Kancası</p>
-                        <p className="text-sm text-amber-800">{u.kanca}</p>
+                    {/* Hook */}
+                    {u.hook && (
+                      <div className="bg-[#FFF8ED] border border-[#F2D8A0] rounded-lg px-3 py-2.5">
+                        <p className="text-[12px] font-semibold text-[#633806] mb-1">🪝 Hook</p>
+                        <p className="text-[13px] text-[#1C1B19]">{u.hook}</p>
                       </div>
                     )}
 
-                    {u.ipucu && (
-                      <div className="flex gap-2 bg-gray-50 rounded-lg px-3 py-2 text-xs text-gray-500">
-                        <span className="text-[#1D9E75] shrink-0">💡</span>{u.ipucu}
+                    {/* Senaryo — WhatsApp balonu */}
+                    {u.senaryo_taslagi && (
+                      <div className="relative bg-[#DCF8C6] rounded-tr-xl rounded-b-xl px-4 py-3 text-[13px] text-[#1C1B19] leading-relaxed whitespace-pre-wrap">
+                        <div
+                          className="absolute w-0 h-0"
+                          style={{
+                            left: '-8px', top: 0,
+                            borderTop: '8px solid #DCF8C6',
+                            borderLeft: '8px solid transparent',
+                          }}
+                        />
+                        {u.senaryo_taslagi}
                       </div>
                     )}
 
-                    {(u.platformlar || u.format) && (
-                      <div className="flex gap-2 flex-wrap">
-                        {u.platformlar?.map((p) => (
-                          <span key={p} className="text-xs px-2.5 py-1 bg-[#E1F5EE] text-[#085041] font-medium rounded-full">{p}</span>
-                        ))}
-                        {u.format && (
-                          <span className="text-xs px-2.5 py-1 bg-blue-50 text-blue-700 font-medium rounded-full">{u.format}</span>
-                        )}
+                    {/* CTA */}
+                    {u.cta && (
+                      <div className="flex items-start gap-2 bg-[#F7F6F2] rounded-lg px-3 py-2 text-[12px] text-[#6B6963]">
+                        <span className="text-[#1D9E75] shrink-0 mt-px">▶</span>
+                        <span><strong className="text-[#1C1B19]">CTA:</strong> {u.cta}</span>
                       </div>
                     )}
                   </div>
                 </div>
               ))}
 
-              {result.ctaText && (
-                <div className="bg-[#1D9E75]/5 border border-[#1D9E75]/20 rounded-2xl p-5 text-center">
-                  <p className="text-sm text-[#1D9E75] font-medium">{result.ctaText}</p>
+              {/* Uygulama ipuçları */}
+              {result.uygulama_ipuclari && (
+                <div className="bg-[#F0FAF6] border border-[#9FE1CB] rounded-2xl p-5 flex items-start gap-3">
+                  <span className="text-lg shrink-0">💡</span>
+                  <div>
+                    <p className="text-[13px] font-semibold text-[#085041] mb-1">Uygulama İpuçları</p>
+                    <p className="text-[13px] text-[#0F6E56] leading-relaxed">{result.uygulama_ipuclari}</p>
+                  </div>
                 </div>
               )}
 
-              <button onClick={() => setResult(null)} className="text-sm text-gray-400 underline text-center no-print">
+              {/* CTA kutusu */}
+              <div className="bg-[#F0FAF6] border border-[#9FE1CB] rounded-2xl p-6 text-center">
+                <p className="text-[15px] font-medium text-[#085041] mb-1">Bu fikirleri düzenli almak ister misin?</p>
+                <p className="text-[13px] text-[#0F6E56] mb-4 leading-relaxed">
+                  Viral Video Uyarlayıcı'yı her ay düzenli kullanmak ve sosyal medya içeriklerini<br />
+                  rakiplerden önce planlamak ister misin?
+                </p>
+                <a
+                  href="https://kolaykobi.com/iletisim"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-block bg-[#1D9E75] text-white px-6 py-2.5 rounded-lg text-[14px] font-medium hover:bg-[#0F6E56] transition-colors"
+                >
+                  Ücretsiz Görüşme Ayarla
+                </a>
+              </div>
+
+              <button
+                onClick={() => setResult(null)}
+                className="text-[13px] text-[#9A9792] underline text-center"
+              >
                 Yeni uyarlama üret
               </button>
             </div>
