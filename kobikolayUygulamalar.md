@@ -628,7 +628,21 @@ Kullanıcının girdiği viral bir video konseptini veya URL'ini, kendi işletme
 
 ### Amaç
 
-Sektörünüzdeki güncel viral video trendlerini bulur ve işletmeye uyarlanabilecek içerik fikirleri sunar. Apify ile gerçek zamanlı TikTok ve Instagram verisi kullanılır.
+Sosyal medyada şu anda yükselen **video formatlarını** tarar; bu formatların arkasındaki kurgu yapısını (format mining) çıkarır ve kullanıcının sektörüne uyarlanabilir senaryo taslakları üretir.
+
+> **Temel ayrım:** Bu araç yalnızca "viral videolar" değil, **tekrar kullanılabilir video formatlarını** bulur. Çok izlenmiş bir video ≠ müşteri için doğru video. Asıl hedef: *çok izlenmiş + tekrar edilebilir + markaya uyarlanabilir + şu anda yükselen format.*
+
+### Kavram Sözlüğü
+
+| Terim | Tanım |
+|---|---|
+| **Trend Format** | İnsanların aynı video fikri/kurgu yapısını kendi versiyonlarıyla tekrar ürettiği içerik biçimi |
+| **Viral Format** | Kanıtlanmış, yüksek performanslı ve sektörler arası uyarlanabilir format |
+| **Format Replication** | Başarılı bir video formatının yapısını alıp ürünü, mesajı ve hedef kitleyi değiştirerek kendi markana uygulamak |
+| **Format Mining** | Sosyal medyada başarılı olmuş videoları tarayıp tekrar tekrar kullanılabilecek içerik yapılarını çıkarmak |
+| **Template** | Hazır kurgu; ses, geçiş ve animasyonları hazır; sadece görüntü değiştirilen (CapCut vb.) |
+| **Trending Audio** | Viral olan ses/müzik — format ile aynı şey değildir |
+| **Challenge** | İnsanların aynı hareketi/fikri gerçekleştirdiği katılım odaklı trend |
 
 ### Özellik Notu
 
@@ -638,43 +652,107 @@ Bu araç Apify API kullandığından **çalıştırma başına ~20 TL maliyet** 
 
 | Alan | Tür | Zorunlu | Açıklama |
 |---|---|---|---|
-| Sektör | Text | ✅ | Hangi sektörde trend aranacak? |
-| Platform | Radio | ✅ | TikTok / Instagram / Her İkisi |
+| Sektör | Text | ✅ | Hangi sektörde trend aranacak? (örn. Emlak, Restoran, Güzellik) |
+| Platform | Radio | ✅ | TikTok / Instagram Reels / Her İkisi |
 | Konum | Radio | ✅ | Türkiye / Global |
-| Arama Anahtar Kelimesi | Text | ✅ | Sektörle ilgili anahtar kelime |
+| Kullanım Amacı | Radio | ✅ | Marka bilinirliği / Ürün tanıtımı / Müşteri kazanma |
 | Dönem | Radio | ✅ | Bu hafta / Bu ay |
 
-### Çıktı
+### Çıktı — Format Mining Yapısı
+
+Her çıktı "video" değil, **"format"** odaklı olmalıdır:
 
 ```json
 {
-  "trend_videolar": [
+  "trend_formatlar": [
     {
       "sira": 1,
-      "platform": "TikTok",
-      "konu": "Ürün açılışı (unboxing) formatı",
-      "izlenme": "2.4M",
-      "beğeni": "180K",
-      "neden_viral": "Merak uyandıran ambalaj açılışı + sürpriz ürün",
-      "isletme_uyarlamasi": "Kendi ürününüzün kutu açılışını çekin; içine sürpriz not ekleyin"
+      "format_adi": "POV Format",
+      "format_aciklamasi": "Kameraya doğrudan bakış + üstte yazı + beklenmedik durum",
+      "ornek_hook": "POV: Müşteri 'sadece bakmaya geldim' dedi ve...",
+      "kurgu_yapisi": "3 sahne: Durum kur (2 sn) → Gerilim/sürpriz (4 sn) → Sonuç/CTA (2 sn)",
+      "sure": "8–12 saniye",
+      "platform": "TikTok + Reels",
+      "trend_skoru": 94,
+      "uyarlanabilirlik_skoru": 95,
+      "bu_formati_kullanan_sektorler": ["Emlak", "Otomotiv", "Restoran", "Güzellik", "Hukuk"],
+      "sektore_ozel_uyarlama": "POV: Müşteri 'bütçem 5 milyon' dedi ama istediği evi görünce...",
+      "uretim_zorlugu": "Düşük — telefon kamera yeterli, ekip gerekmez",
+      "marka_guvenligi": "Yüksek"
+    },
+    {
+      "sira": 2,
+      "format_adi": "Expectation vs Reality",
+      "format_aciklamasi": "Beklenti → Gerçek karşılaştırması; genellikle komik veya şaşırtıcı",
+      "ornek_hook": "İnsanların [sektör] hakkında düşündüğü vs gerçekte olan...",
+      "kurgu_yapisi": "2 bölüm: Beklenti sahnesi (3 sn) → 'vs' geçiş → Gerçek sahnesi (5 sn)",
+      "sure": "10–15 saniye",
+      "platform": "TikTok + Reels",
+      "trend_skoru": 88,
+      "uyarlanabilirlik_skoru": 98,
+      "bu_formati_kullanan_sektorler": ["Restoran", "Seyahat", "Fitness", "Emlak", "Moda"],
+      "sektore_ozel_uyarlama": "İnsanların hayal ettiği [şehir]'de deniz manzaralı ev vs gerçekte [şehir]'de bulabildiğimiz ev",
+      "uretim_zorlugu": "Düşük — iki farklı sahne yeterli",
+      "marka_guvenligi": "Yüksek"
+    },
+    {
+      "sira": 3,
+      "format_adi": "Nobody Knows I...",
+      "format_aciklamasi": "Sır/içeriden bilgi formatı; merak ve güven inşa eder",
+      "ornek_hook": "Kimsenin bilmediği şey: [sektör] hakkında...",
+      "kurgu_yapisi": "Hook (2 sn) → 3 madde birer birer açılıyor (6 sn) → CTA (2 sn)",
+      "sure": "10–12 saniye",
+      "platform": "TikTok + Reels",
+      "trend_skoru": 82,
+      "uyarlanabilirlik_skoru": 90,
+      "bu_formati_kullanan_sektorler": ["Hukuk", "Finans", "Sağlık", "Emlak", "Sigorta"],
+      "sektore_ozel_uyarlama": "Kimsenin söylemediği 3 şey: Ev satın almadan önce mutlaka bilin",
+      "uretim_zorlugu": "Çok Düşük — yüz + ses + yazı overlay yeterli",
+      "marka_guvenligi": "Yüksek"
     }
   ],
-  "sektör_trendleri": [
-    "Bu sektörde 'hikaye anlatımı' formatı öne çıkıyor",
-    "Müşteri yorumu videoları 3 kat daha fazla paylaşılıyor"
-  ],
-  "aksiyon_onerileri": [
-    "Bu haftanın 1 numaralı formatını uyarlayın — trend 2 haftada değişir",
-    "Viral Uyarlayıcı aracını kullanın (BR-11)"
-  ]
+  "format_tipleri_ozeti": {
+    "en_uyarlanabilir": "Expectation vs Reality — sektörden bağımsız çalışır",
+    "en_dusuk_uretim": "Nobody Knows I — kamera + ses yeterli",
+    "en_yuksek_trend_ivmesi": "POV Format"
+  },
+  "sektor_notu": "Sektörünüzde bu hafta öne çıkan format tipi: Storytelling / Mini drama"
 }
 ```
 
+### Format Puanlama Kriterleri
+
+Her format aşağıdaki kriterlere göre 100 üzerinden puanlanır:
+
+| Kriter | Ağırlık | Açıklama |
+|---|---|---|
+| Trend ivmesi | 25 | Son 7 günde kaç yeni kullanım var? |
+| Sektörler arası uyarlanabilirlik | 20 | Kaç farklı sektör kullanıyor? |
+| İzlenme potansiyeli | 20 | Ortalama görüntülenme performansı |
+| İlk 3 saniye hook gücü | 15 | Kullanıcıyı durduruyor mu? |
+| Üretim kolaylığı | 10 | Ekipsiz, az bütçeyle yapılabilir mi? |
+| Marka güvenliği | 10 | Kurumsal markalar güvenle kullanabilir mi? |
+
+### Format Tipleri Referansı
+
+| Format Tipi | Örnek Hook | En İyi Sektörler |
+|---|---|---|
+| **POV** | "POV: Müşteri 'sadece bakmaya geldim' dedi..." | Tüm sektörler |
+| **Expectation vs Reality** | "İnsanların hayal ettiği... vs gerçekte..." | Restoran, Emlak, Seyahat |
+| **Nobody Knows I...** | "Kimsenin söylemediği 3 şey..." | Hukuk, Finans, Sağlık |
+| **Micro-drama** | Bölüm 1 / 2 / 3 serisi | Emlak, Moda, Lifestyle |
+| **3 şey / 5 şey** | "X almadan önce bilmeniz gereken 5 şey" | Eğitim, Hizmet, B2B |
+| **Text overlay** | Kişi yok; sadece sahne + üstte yazı | Ürün odaklı tüm sektörler |
+| **Mini skeç** | Müşteri–satıcı diyalogu kurgusu | Perakende, Otomotiv, Hizmet |
+
 ### Yorumlama ve Aksiyon Kılavuzu
 
-- Trend verisi 24–48 saat içinde değişebilir — bugün bulduğunuzu bugün çekin
-- Viral Uyarlayıcı (BR-11) ile birlikte kullanın: Trend bulun → Uyarlayın
-- Maliyet nedeniyle bu aracı haftada 1 kez kullanın
+- **Format ≠ Video:** Aynı videoyu kopyalamayın; formatın kurgu mantığını alın, içeriği kendinize uyarlayın
+- **Trend ivmesi > İzlenme sayısı:** 500K izlenmiş ama şu an yükselen format, 10M izlenmiş ama düşen formattan daha değerlidir
+- **Trend verisi 24–48 saat içinde değişebilir** — bugün bulduğunuzu bugün üretin
+- **Viral Uyarlayıcı (BR-11) ile birlikte kullanın:** Format bulun → Uyarlayın → Çekin
+- **Maliyet nedeniyle bu aracı haftada 1 kez kullanın** (~20 TL/çalıştırma)
+- **Ajans kullanımı için:** Aynı formatı farklı müşteri sektörlerine ayrı ayrı uyarlayın — bir format 5–10 müşteri için içerik üretebilir
 
 ---
 
