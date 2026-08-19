@@ -84,7 +84,8 @@ function kolaykobi_ai_job_start(WP_REST_Request $request) {
 
     $params = $request->get_json_params();
     $prompt = $params['prompt'] ?? '';
-    if (!is_string($prompt) || $prompt === '' || strlen($prompt) > 20000) {
+    // prompt opsiyonel — trend-video ve viral-uyarlayici gibi araçlar prompt göndermez
+    if (!is_string($prompt) || strlen($prompt) > 20000) {
         return new WP_REST_Response(array('error' => 'Geçersiz prompt'), 400);
     }
 
