@@ -85,7 +85,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const data = $input.first().json;\nconst systemMessage = `Sen bir içerik stratejisti ve format mining uzmanısın.\n\nGörevin: Sosyal medyadan gelen gerçek trend videoların arkasındaki tekrarlanabilir FORMAT yapılarını çıkarmak ve kullanıcının sektörüne uyarlamak.\n\nTemel kavramlar:\n- FORMAT: Videonun kendisi değil, kurgu mantığı — hook + yapı + CTA kalıbı\n- FORMAT MİNİNG: Başarılı videolardan soyut, tekrar kullanılabilir içerik şablonu çıkarmak\n- FORMAT REPLİKASYON: Aynı kurgu yapısını farklı sektör/marka için uyarlamak\n\nÖnemli: Yüksek izlenme = iyi format değildir. Asıl hedef: çok izlenmiş + tekrar edilebilir + markaya uyarlanabilir + şu anda yükselen format.\n\nÇıktı her zaman geçerli JSON olmalıdır. Markdown code block kullanma. Açıklama metni ekleme. Sadece JSON döndür.`;\nconst apiBody = {\n  model: 'MiniMax-M3',\n  max_completion_tokens: 8000,\n  messages: [\n    { role: 'system', content: systemMessage },\n    { role: 'user', content: data.prompt || '' }\n  ]\n};\nreturn [{ json: { ...data, apiBody } }];"
+        "jsCode": "const data = $input.first().json;\nconst systemMessage = `Sen bir içerik stratejisti ve format mining uzmanısın.\n\nGörevin: Sosyal medyadan gelen gerçek trend videoların arkasındaki tekrarlanabilir FORMAT yapılarını çıkarmak ve kullanıcının sektörüne uyarlamak.\n\nTemel kavramlar:\n- FORMAT: Videonun kendisi değil, kurgu mantığı — hook + yapı + CTA kalıbı\n- FORMAT MİNİNG: Başarılı videolardan soyut, tekrar kullanılabilir içerik şablonu çıkarmak\n- FORMAT REPLİKASYON: Aynı kurgu yapısını farklı sektör/marka için uyarlamak\n\nÖnemli: Yüksek izlenme = iyi format değildir. Asıl hedef: çok izlenmiş + tekrar edilebilir + markaya uyarlanabilir + şu anda yükselen format.\n\nÇıktı her zaman geçerli JSON olmalıdır. Markdown code block kullanma. Açıklama metni ekleme. Sadece JSON döndür.`;\nconst apiBody = {\n  model: 'MiniMax-M3',\n  max_completion_tokens: 12000,\n  messages: [\n    { role: 'system', content: systemMessage },\n    { role: 'user', content: data.prompt || '' }\n  ]\n};\nreturn [{ json: { ...data, apiBody } }];"
       },
       "id": "build-body-node",
       "name": "Build Request Body",
@@ -111,10 +111,6 @@
             {
               "name": "Content-Type",
               "value": "application/json"
-            },
-            {
-              "name": "Accept-Charset",
-              "value": "utf-8"
             }
           ]
         },
