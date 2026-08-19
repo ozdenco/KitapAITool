@@ -12,8 +12,12 @@
       "name": "Webhook",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
-      "position": [240, 300],
-      "webhookId": "kolay-kobi-trend-video"
+      "position": [
+        240,
+        300
+      ],
+      "webhookId": "kolay-kobi-trend-video",
+      "disabled": false
     },
     {
       "parameters": {
@@ -23,7 +27,11 @@
       "name": "Rate Limit Check",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [460, 300]
+      "position": [
+        460,
+        300
+      ],
+      "disabled": false
     },
     {
       "parameters": {
@@ -51,7 +59,11 @@
       "name": "Rate Limited?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [680, 300]
+      "position": [
+        680,
+        300
+      ],
+      "disabled": false
     },
     {
       "parameters": {
@@ -65,7 +77,11 @@
       "name": "429 Response",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1,
-      "position": [900, 180]
+      "position": [
+        900,
+        180
+      ],
+      "disabled": false
     },
     {
       "parameters": {
@@ -75,7 +91,11 @@
       "name": "Build Request Body",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [900, 400]
+      "position": [
+        900,
+        400
+      ],
+      "disabled": false
     },
     {
       "parameters": {
@@ -109,8 +129,12 @@
       "name": "MiniMax API",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1120, 400],
-      "onError": "continueErrorOutput"
+      "position": [
+        1120,
+        400
+      ],
+      "onError": "continueErrorOutput",
+      "disabled": false
     },
     {
       "parameters": {
@@ -120,7 +144,11 @@
       "name": "Response Transform",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1340, 400]
+      "position": [
+        1340,
+        400
+      ],
+      "disabled": false
     },
     {
       "parameters": {
@@ -203,7 +231,11 @@
       "name": "Switch (Mode)",
       "type": "n8n-nodes-base.switch",
       "typeVersion": 3.2,
-      "position": [1560, 400]
+      "position": [
+        1560,
+        400
+      ],
+      "disabled": false
     },
     {
       "parameters": {
@@ -220,8 +252,12 @@
       "name": "Send Email (Once/Schedule)",
       "type": "n8n-nodes-base.gmail",
       "typeVersion": 2.1,
-      "position": [1780, 480],
-      "webhookId": "send-email-once"
+      "position": [
+        1780,
+        480
+      ],
+      "webhookId": "send-email-once",
+      "disabled": false
     },
     {
       "parameters": {
@@ -231,7 +267,11 @@
       "name": "Save Schedule",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [2000, 480]
+      "position": [
+        2000,
+        480
+      ],
+      "disabled": false
     },
     {
       "parameters": {
@@ -241,7 +281,11 @@
       "name": "Store Job Result",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [2000, 400]
+      "position": [
+        2000,
+        400
+      ],
+      "disabled": false
     },
     {
       "parameters": {
@@ -251,7 +295,11 @@
       "name": "Create Job",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [900, 260]
+      "position": [
+        900,
+        260
+      ],
+      "disabled": false
     },
     {
       "parameters": {
@@ -273,7 +321,11 @@
       "name": "Respond With Job ID",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1,
-      "position": [1120, 260]
+      "position": [
+        1120,
+        260
+      ],
+      "disabled": false
     },
     {
       "parameters": {
@@ -283,7 +335,11 @@
       "name": "Mark Job Error",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1340, 560]
+      "position": [
+        1340,
+        560
+      ],
+      "disabled": false
     },
     {
       "parameters": {
@@ -296,8 +352,12 @@
       "name": "Status Webhook",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
-      "position": [240, 700],
-      "webhookId": "kolay-kobi-trend-video-status"
+      "position": [
+        240,
+        700
+      ],
+      "webhookId": "kolay-kobi-trend-video-status",
+      "disabled": false
     },
     {
       "parameters": {
@@ -307,7 +367,11 @@
       "name": "Read Job Status",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [460, 700]
+      "position": [
+        460,
+        700
+      ],
+      "disabled": false
     },
     {
       "parameters": {
@@ -329,7 +393,11 @@
       "name": "Status Response",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1,
-      "position": [680, 700]
+      "position": [
+        680,
+        700
+      ],
+      "disabled": false
     },
     {
       "parameters": {
@@ -339,7 +407,11 @@
       "name": "Build Search Query",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1340, 260]
+      "position": [
+        1340,
+        260
+      ],
+      "disabled": false
     },
     {
       "parameters": {
@@ -365,8 +437,12 @@
       "name": "Apify TikTok Trending",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1560, 260],
-      "onError": "continueRegularOutput"
+      "position": [
+        1560,
+        260
+      ],
+      "onError": "continueRegularOutput",
+      "disabled": false
     },
     {
       "parameters": {
@@ -376,131 +452,215 @@
       "name": "Merge Search Results",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1780, 260]
+      "position": [
+        1780,
+        260
+      ],
+      "disabled": false
     }
   ],
   "connections": {
     "Webhook": {
       "main": [
         [
-          { "node": "Rate Limit Check", "type": "main", "index": 0 }
+          {
+            "node": "Rate Limit Check",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Rate Limit Check": {
       "main": [
         [
-          { "node": "Rate Limited?", "type": "main", "index": 0 }
+          {
+            "node": "Rate Limited?",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Rate Limited?": {
       "main": [
         [
-          { "node": "429 Response", "type": "main", "index": 0 }
+          {
+            "node": "429 Response",
+            "type": "main",
+            "index": 0
+          }
         ],
         [
-          { "node": "Create Job", "type": "main", "index": 0 }
+          {
+            "node": "Create Job",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Build Request Body": {
       "main": [
         [
-          { "node": "MiniMax API", "type": "main", "index": 0 }
+          {
+            "node": "MiniMax API",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "MiniMax API": {
       "main": [
         [
-          { "node": "Response Transform", "type": "main", "index": 0 }
+          {
+            "node": "Response Transform",
+            "type": "main",
+            "index": 0
+          }
         ],
         [
-          { "node": "Mark Job Error", "type": "main", "index": 0 }
+          {
+            "node": "Mark Job Error",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Response Transform": {
       "main": [
         [
-          { "node": "Switch (Mode)", "type": "main", "index": 0 }
+          {
+            "node": "Switch (Mode)",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Switch (Mode)": {
       "main": [
         [
-          { "node": "Store Job Result", "type": "main", "index": 0 }
+          {
+            "node": "Store Job Result",
+            "type": "main",
+            "index": 0
+          }
         ],
         [
-          { "node": "Send Email (Once/Schedule)", "type": "main", "index": 0 }
+          {
+            "node": "Send Email (Once/Schedule)",
+            "type": "main",
+            "index": 0
+          }
         ],
         [
-          { "node": "Save Schedule", "type": "main", "index": 0 }
+          {
+            "node": "Save Schedule",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Send Email (Once/Schedule)": {
       "main": [
         [
-          { "node": "Store Job Result", "type": "main", "index": 0 }
+          {
+            "node": "Store Job Result",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Save Schedule": {
       "main": [
         [
-          { "node": "Store Job Result", "type": "main", "index": 0 }
+          {
+            "node": "Store Job Result",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Create Job": {
       "main": [
         [
-          { "node": "Respond With Job ID", "type": "main", "index": 0 }
+          {
+            "node": "Respond With Job ID",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Respond With Job ID": {
       "main": [
         [
-          { "node": "Build Search Query", "type": "main", "index": 0 }
+          {
+            "node": "Build Search Query",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Status Webhook": {
       "main": [
         [
-          { "node": "Read Job Status", "type": "main", "index": 0 }
+          {
+            "node": "Read Job Status",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Read Job Status": {
       "main": [
         [
-          { "node": "Status Response", "type": "main", "index": 0 }
+          {
+            "node": "Status Response",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Build Search Query": {
       "main": [
         [
-          { "node": "Apify TikTok Trending", "type": "main", "index": 0 }
+          {
+            "node": "Apify TikTok Trending",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Merge Search Results": {
       "main": [
         [
-          { "node": "Build Request Body", "type": "main", "index": 0 }
+          {
+            "node": "Build Request Body",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Apify TikTok Trending": {
       "main": [
         [
-          { "node": "Merge Search Results", "type": "main", "index": 0 }
+          {
+            "node": "Merge Search Results",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     }
@@ -512,5 +672,8 @@
     "kolay-kobi",
     "minimax",
     "trend-video"
-  ]
+  ],
+  "meta": {
+    "instanceId": ""
+  }
 }
