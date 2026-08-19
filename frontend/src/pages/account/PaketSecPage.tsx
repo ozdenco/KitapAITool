@@ -127,7 +127,7 @@ function ActiveSubBanner({
       <p className="font-semibold mb-1">📦 {planLabel} devam ediyor</p>
       <p className="text-amber-800">
         <strong>{planLabel}</strong> aboneliğiniz <strong>{dateStr}</strong> tarihinde sona erecek.
-        {' '}Paket alımı bu tarihten itibaren aktif olacaktır.
+        {' '}Daha yüksek bir pakete <strong>şimdi yükseltebilirsiniz</strong> — aynı veya daha düşük paket süresi dolunca seçilebilir.
       </p>
     </div>
   )
@@ -149,6 +149,8 @@ export function PaketSecPage() {
     queryKey: ['subscription'],
     queryFn: () =>
       api.get<Subscription>('/subscriptions/me').then((r: { data: Subscription }) => r.data),
+    staleTime: 0,        // Her mount'ta taze veri — ödeme sonrası eski cache göstermesin
+    refetchOnMount: true,
   })
 
   const autoRenewMutation = useMutation({
@@ -161,13 +163,16 @@ export function PaketSecPage() {
 
   const isExpired = sub?.status === 'expired'
 
-  // Gerçek plan tipini kullan — admin için 'admin', normal kullanıcı için sub?.plan
+  // Görsel etiket için (admin rozeti, banner vb.)
   const rawPlan   = user?.isAdmin ? 'admin' : (sub?.plan ?? 'free')
-  // Süresi dolmuşsa free gibi davran (tüm paketler satın alınabilir)
   const currentPlan = isExpired ? 'free' : rawPlan
 
-  const currentTier = PLAN_TIER[currentPlan] ?? 0
-  const hasActiveSub = !isExpired && currentTier > 0  // ücretsiz veya admin değil, aktif
+  // Satın alım kararları için gerçek abonelik planını kullan (admin pseudo-tier değil)
+  // Admin flag sadece erişim hakkı verir; paket satın alımında gerçek sub plan baz alınır
+  const purchasePlan = isExpired ? 'free' : (sub?.plan ?? 'free')
+  const purchaseTier = PLAN_TIER[purchasePlan] ?? 0
+
+  const hasActiveSub = !isExpired && purchaseTier > 0
 
   const [loadingPlanId, setLoadingPlanId] = useState<number | null>(null)
   const [checkoutError, setCheckoutError] = useState<string | null>(null)
@@ -244,9 +249,10 @@ export function PaketSecPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {(plans ?? []).map((plan) => {
             const planTier      = PLAN_TIER[plan.type] ?? 0
-            const isActive      = currentPlan === plan.type
-            const isDowngrade   = planTier < currentTier    // mevcut plandan düşük veya eşit (aynı plan)
-            const isSameTier    = planTier === currentTier && !isActive
+            // Satın alım kısıtlamaları gerçek abonelik tier'ına göre (admin override değil)
+            const isActive      = !isExpired && purchasePlan === plan.type
+            const isDowngrade   = planTier < purchaseTier
+            const isSameTier    = planTier === purchaseTier && !isActive
             const isBlocked     = isActive || isDowngrade || isSameTier
             const isRecommended = plan.type === 'premium'
             const isEnterprise  = plan.type === 'enterprise'
@@ -359,7 +365,7 @@ export function PaketSecPage() {
                   >
                     {loadingPlanId === plan.id
                       ? '⏳ Yönlendiriliyor...'
-                      : currentPlan !== 'free'
+                      : purchasePlan !== 'free'
                         ? `⬆️ Yükselt — ₺${plan.priceMonthly.toLocaleString('tr-TR')}`
                         : `🛒 Satın Al — ₺${plan.priceMonthly.toLocaleString('tr-TR')}`}
                   </button>

@@ -101,7 +101,8 @@ builder.Services.AddHttpClient("paytr", client =>
 builder.Services.AddScoped<PayTrService>();
 
 // Günlük otomatik yenileme servisi (03:00 UTC)
-builder.Services.AddHostedService<RecurringRenewalService>();
+builder.Services.AddSingleton<RecurringRenewalService>();
+builder.Services.AddHostedService(sp => sp.GetRequiredService<RecurringRenewalService>());
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Pipeline

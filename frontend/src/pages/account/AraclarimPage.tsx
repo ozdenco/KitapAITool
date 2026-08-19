@@ -97,6 +97,8 @@ export function AraclarimPage() {
       api
         .get<Subscription>('/subscriptions/me')
         .then((r: { data: Subscription }) => r.data),
+    staleTime: 0,
+    refetchOnMount: true,
   })
 
   const { data: purchases, isLoading: purchasesLoading } = useQuery<ActiveToolPurchase[]>({
@@ -105,6 +107,8 @@ export function AraclarimPage() {
       api
         .get<{ success: boolean; data: ActiveToolPurchase[] }>('/payments/my-tools')
         .then((r: { data: { success: boolean; data: ActiveToolPurchase[] } }) => r.data.data ?? []),
+    staleTime: 0,
+    refetchOnMount: true,
   })
 
   const { data: toolPrices, isLoading: pricesLoading } = useQuery<ToolPrice[]>({
@@ -233,7 +237,7 @@ export function AraclarimPage() {
             ))}
           </div>
         ) : (
-          <div className={`grid grid-cols-1 sm:grid-cols-2 gap-3 ${hasActivePaidSub ? 'opacity-40 pointer-events-none select-none' : ''}`}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {TOOLS.map((tool) => {
               const purchase   = activePurchaseMap.get(tool.id)
               const basePrice  = priceMap.get(tool.id)
@@ -283,6 +287,16 @@ export function AraclarimPage() {
                           {purchase?.autoRenew ? 'Oto. yenileme açık' : 'Oto. yenileme kapalı'}
                         </span>
                       </div>
+                      {/* Fiyat bilgisi */}
+                      {basePrice != null && purchase?.monthlyLimit != null && (
+                        <p className="text-[11px] text-[#9A9792] mt-1 tabular-nums">
+                          10 kull./ay:{' '}
+                          <span className="font-semibold text-[#6B6963]">₺{basePrice.toLocaleString('tr-TR')}</span>
+                          <span className="mx-1.5 text-[#D3D1C7]">·</span>
+                          25 kull./ay:{' '}
+                          <span className="font-semibold text-[#6B6963]">₺{(basePrice * 2).toLocaleString('tr-TR')}</span>
+                        </p>
+                      )}
                     </div>
                   </div>
                 )
@@ -293,8 +307,11 @@ export function AraclarimPage() {
                   key={tool.id}
                   type="button"
                   onClick={() => toggleSelect(tool.id)}
+                  disabled={hasActivePaidSub}
                   className={`relative text-left bg-white rounded-2xl border-2 p-4 flex items-start gap-3 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1D9E75]/40 ${
-                    isSelected
+                    hasActivePaidSub
+                      ? 'border-[#E2E0D8] opacity-40 cursor-not-allowed select-none'
+                      : isSelected
                       ? 'border-[#1D9E75] shadow-md shadow-[#1D9E75]/10'
                       : 'border-[#E2E0D8] hover:border-[#9FE1CB] hover:shadow-sm'
                   }`}

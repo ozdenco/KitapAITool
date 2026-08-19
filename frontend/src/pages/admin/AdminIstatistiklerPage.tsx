@@ -1,7 +1,53 @@
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import api from '@/lib/api'
 import { UserActivityChart, ToolBreakdownChart } from './AdminCharts'
 import type { AdminStats } from './adminConstants'
+
+// ─── Renewal Trigger Card ────────────────────────────────────────────────────
+
+function RenewalTriggerCard() {
+  const [loading, setLoading] = useState(false)
+  const [result, setResult] = useState<{ ok: boolean; msg: string } | null>(null)
+
+  const trigger = async () => {
+    setLoading(true)
+    setResult(null)
+    try {
+      const res = await api.post<{ success: boolean; message: string }>('/admin/trigger-renewal', {})
+      setResult({ ok: true, msg: res.data.message ?? 'Tamamlandı.' })
+    } catch {
+      setResult({ ok: false, msg: 'Hata oluştu. Backend loglarını kontrol edin.' })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="bg-white rounded-2xl border border-[#E2E0D8] p-5 flex items-center justify-between gap-4">
+      <div>
+        <p className="text-[13px] font-semibold text-[#1C1B19]">🔄 Otomatik Yenileme Testi</p>
+        <p className="text-[12px] text-[#9A9792] mt-0.5">
+          Bugün sona eren araç/paket yenilemelerini şimdi tetikle (normalde gece 03:00 UTC'de çalışır)
+        </p>
+        {result && (
+          <p className={`text-[12px] mt-1.5 font-medium ${result.ok ? 'text-[#1D9E75]' : 'text-red-600'}`}>
+            {result.ok ? '✅' : '❌'} {result.msg}
+          </p>
+        )}
+      </div>
+      <button
+        onClick={trigger}
+        disabled={loading}
+        className="shrink-0 px-4 py-2 rounded-xl text-[13px] font-semibold bg-amber-500 text-white hover:bg-amber-600 transition-colors disabled:opacity-60 disabled:cursor-wait"
+      >
+        {loading ? '⏳ Çalışıyor...' : '▶ Şimdi Çalıştır'}
+      </button>
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 export function AdminIstatistiklerPage() {
   const { data: stats, isLoading, isError } = useQuery<AdminStats>({
@@ -53,6 +99,9 @@ export function AdminIstatistiklerPage() {
           </div>
         ))}
       </div>
+
+      {/* ── Test Araçları ── */}
+      <RenewalTriggerCard />
 
       {/* ── Charts ── */}
       <div className="grid grid-cols-2 gap-4">

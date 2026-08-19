@@ -390,11 +390,8 @@ public class EmailService(IConfiguration config, ILogger<EmailService> logger)
         message.To.Add(new MailboxAddress(toName, toEmail));
         message.Subject = subject;
 
-        // Yahoo/Gmail bulk sender requirements (2024):
-        // List-Unsubscribe + List-Unsubscribe-Post zorunlu
-        message.Headers.Add("List-Unsubscribe", $"<{unsubscribeUrl}>");
-        message.Headers.Add("List-Unsubscribe-Post", "List-Unsubscribe=One-Click");
-        message.Headers.Add("Precedence", "bulk");
+        // Transactional email — bulk başlığı ekleme (Yahoo/Gmail sessizce filtreler)
+        // List-Unsubscribe sadece abonelik yönetim maili için gerekli, satın alma bildirimleri için değil
 
         message.Body = new TextPart("html") { Text = htmlBody };
 
