@@ -401,6 +401,9 @@ async function generate() {
     updateRateBar();
 
     renderResults(parsed, videoUrl, bizText, sector);
+    // Formu küçülterek göster (tamamen gizleme)
+    const fs = document.getElementById('form-section');
+    if (fs) { fs.style.display = ''; collapseForm(); }
   } catch (e) {
     showErr([e, e.message].every(Boolean) ? e.message : String(e));
     setLoading(false);
