@@ -91,7 +91,6 @@ export const TOOLS: Tool[] = [
     isAsync: false,
     n8nPath: 'kolay-kobi-viral',
     purchasable: false,
-    active: false, // Format Replication mantığına geçiş sürecinde tüm UI'dan kaldırıldı
   },
   {
     id: 'trend-video',
@@ -102,7 +101,6 @@ export const TOOLS: Tool[] = [
     isAsync: true,
     n8nPath: 'kolay-kobi-trend',
     purchasable: false,
-    active: false, // Format Replication mantığına geçiş sürecinde tüm UI'dan kaldırıldı
   },
 ]
 
