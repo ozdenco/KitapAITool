@@ -94,6 +94,22 @@ public class ToolsController(
         return Ok(new { success = true, data = results });
     }
 
+    /// <summary>GET /api/tools/{toolId}/last-result — Kullanıcının o tool için son kayıtlı sonucu.</summary>
+    [HttpGet("{toolId}/last-result")]
+    public async Task<IActionResult> GetLastResult(string toolId)
+    {
+        var result = await db.ToolResults
+            .Where(r => r.UserId == CurrentUserId && r.ToolId == toolId)
+            .OrderByDescending(r => r.CreatedAt)
+            .Select(r => new { r.Id, r.ToolId, r.InputSummary, r.OutputJson, r.CreatedAt })
+            .FirstOrDefaultAsync();
+
+        if (result is null)
+            return NotFound(new { error = "Henüz sonuç yok." });
+
+        return Ok(new { success = true, data = result });
+    }
+
     /// <summary>GET /api/tools/results/{id} — Tek bir çıktının tam JSON içeriği.</summary>
     [HttpGet("results/{id:guid}")]
     public async Task<IActionResult> GetResult(Guid id)
@@ -190,6 +206,24 @@ public class ToolsController(
         {
             var response = await n8n.PollJobAsync(toolId, jobId, ct);
             var content = await response.Content.ReadAsStringAsync(ct);
+
+            // Async tool tamamlandığında sonucu DB'ye kaydet (kullanıcı tekrar başlatmasın diye)
+            if (TryParseCompleted(content, out var parsed) && parsed is not null)
+            {
+                var alreadySaved = await db.ToolResults
+                    .AnyAsync(r => r.UserId == CurrentUserId
+                                && r.ToolId == toolId
+                                && r.InputSummary != null && r.InputSummary.Contains(jobId), ct);
+
+                if (!alreadySaved)
+                {
+                    // InputSummary'ye jobId gömülü tutuyoruz — dedup için
+                    var fakePayload = System.Text.Json.JsonSerializer.Deserialize<JsonElement>(
+                        $"{{\"job_id\":\"{jobId}\"}}");
+                    await SaveToolResultAsync(CurrentUserId, toolId, fakePayload, content, ct);
+                }
+            }
+
             return Content(content, "application/json");
         }
         catch (HttpRequestException ex)
@@ -197,6 +231,23 @@ public class ToolsController(
             logger.LogError(ex, "n8n poll error for {ToolId}/{JobId}", toolId, jobId);
             return StatusCode(503, new { error = "Sonuç alınamadı. Lütfen tekrar deneyin." });
         }
+    }
+
+    private static bool TryParseCompleted(string json, out JsonElement? result)
+    {
+        result = null;
+        try
+        {
+            var doc = System.Text.Json.JsonDocument.Parse(json);
+            if (doc.RootElement.TryGetProperty("status", out var statusEl)
+                && statusEl.GetString() == "completed")
+            {
+                result = doc.RootElement;
+                return true;
+            }
+        }
+        catch { /* malformed JSON — ignore */ }
+        return false;
     }
 
     // ─── Helpers ──────────────────────────────────────────────────────────────

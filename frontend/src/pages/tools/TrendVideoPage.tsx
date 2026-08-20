@@ -74,32 +74,26 @@ const MAX_POLL_ATTEMPTS = 220
 const POLL_INTERVAL_MS  = 3000
 const LS_KEY = 'trend-video-last-result'
 
-// ─── localStorage helpers ─────────────────────────────────────────────────────
+// ─── localStorage helpers (hızlı fallback — backend asıl kaynak) ─────────────
 
 interface PersistedState {
   result: TrendResult
   bizName: string
   sector: string
-  savedAt: number  // ms — 2 saatin üzerinde eski sayılır
+  savedAt: number
 }
 
-function loadPersistedResult(): PersistedState | null {
+function loadLocalResult(): PersistedState | null {
   try {
     const raw = localStorage.getItem(LS_KEY)
     if (!raw) return null
-    const parsed: PersistedState = JSON.parse(raw)
-    const TWO_HOURS = 2 * 60 * 60 * 1000
-    if (Date.now() - parsed.savedAt > TWO_HOURS) {
-      localStorage.removeItem(LS_KEY)
-      return null
-    }
-    return parsed
+    return JSON.parse(raw) as PersistedState
   } catch {
     return null
   }
 }
 
-function savePersistedResult(result: TrendResult, bizName: string, sector: string) {
+function saveLocalResult(result: TrendResult, bizName: string, sector: string) {
   try {
     const data: PersistedState = { result, bizName, sector, savedAt: Date.now() }
     localStorage.setItem(LS_KEY, JSON.stringify(data))
@@ -215,15 +209,32 @@ export function TrendVideoPage() {
 
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
-  // ── Mount: localStorage'dan önceki sonucu geri yükle ─────────────────────
+  // ── Mount: Backend'den son kayıtlı sonucu yükle, yoksa localStorage'a bak ──
   useEffect(() => {
-    const persisted = loadPersistedResult()
-    if (persisted) {
-      setResult(persisted.result)
-      // Form alanlarını da geri getir — kullanıcı hangi parametrelerle aradığını görsün
-      if (persisted.bizName) setBizName(persisted.bizName)
-      if (persisted.sector)  setSector(persisted.sector)
+    // 1. Hızlı: localStorage'dan göster (gecikme yok)
+    const local = loadLocalResult()
+    if (local) {
+      setResult(local.result)
+      if (local.bizName) setBizName(local.bizName)
+      if (local.sector)  setSector(local.sector)
     }
+
+    // 2. Kalıcı: Backend'den son kayıtlı sonucu al (oturum/cihaz bağımsız)
+    api.get<{ success: boolean; data: { OutputJson: string; InputSummary: string; CreatedAt: string } }>(
+      '/tools/trend-video/last-result'
+    ).then((res) => {
+      if (!res.data?.success || !res.data.data?.OutputJson) return
+      try {
+        const parsed = JSON.parse(res.data.data.OutputJson) as { videos?: TikTokVideo[]; sector?: string }
+        if (!parsed.videos?.length) return
+        const backendResult: TrendResult = { videos: parsed.videos }
+        setResult(backendResult)
+        // Backend'in sektörü varsa form'a yaz
+        if (parsed.sector) setSector(parsed.sector)
+        // Local cache'i de taze tut
+        saveLocalResult(backendResult, '', parsed.sector ?? '')
+      } catch { /* JSON parse hatası — görmezden gel */ }
+    }).catch(() => { /* Backend henüz sonuç kaydetmemiş — sorun değil */ })
   }, [])
 
   const clearPolling = useCallback(() => {
@@ -259,8 +270,8 @@ export function TrendVideoPage() {
           setIsPending(false)
           const newResult = { videos: res.data.videos ?? [] }
           setResult(newResult)
-          // Sayfadan ayrılınca kaybolmaması için localStorage'a yaz
-          savePersistedResult(newResult, bizName, sector)
+          // localStorage'a da yaz — backend kayıt zaten PollStatus'ta otomatik yapılıyor
+          saveLocalResult(newResult, bizName, sector)
           void queryClient.invalidateQueries({ queryKey: ['tool-usage'] })
         } else if (res.data.status === 'error') {
           clearPolling()
@@ -300,6 +311,7 @@ export function TrendVideoPage() {
     setIsPending(false)
     setResult(null)
     setError(null)
+    // Local cache'i temizle — backend'deki kayıt kalır (geçmiş olarak erişilebilir)
     localStorage.removeItem(LS_KEY)
   }
 
