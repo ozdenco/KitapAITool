@@ -8,9 +8,10 @@ interface ToolCardProps {
   tool: Tool
   used: number
   limit: number | null
+  isLoading?: boolean
 }
 
-export function ToolCard({ tool, used, limit }: ToolCardProps) {
+export function ToolCard({ tool, used, limit, isLoading }: ToolCardProps) {
   const navigate = useNavigate()
   const isAtLimit = limit !== null && used >= limit
   const categoryLabel = TOOL_CATEGORIES[tool.category]
@@ -45,8 +46,12 @@ export function ToolCard({ tool, used, limit }: ToolCardProps) {
 
       {/* Footer */}
       <div className="flex items-center justify-between mt-auto pt-1 border-t border-gray-100">
-        <UsageBar used={used} limit={limit} />
-        {isAtLimit && (
+        {isLoading ? (
+          <div className="w-24 h-2 bg-gray-200 rounded-full animate-pulse" />
+        ) : (
+          <UsageBar used={used} limit={limit} />
+        )}
+        {!isLoading && isAtLimit && (
           <span className="text-xs text-red-500 font-medium">Limit doldu</span>
         )}
       </div>

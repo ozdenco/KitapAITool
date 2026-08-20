@@ -110,55 +110,47 @@ export function DashboardPage() {
         </div>
       </div>
 
-      {/* ── Tools by category ── */}
-      {isLoading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="h-40 rounded-xl bg-gray-100 animate-pulse" />
-          ))}
-        </div>
-      ) : (
-        <div className="flex flex-col gap-6">
-          {CATEGORIES.map((cat) => {
-            const catTools  = ACTIVE_TOOLS.filter((t) => t.category === cat)
-            const isOpen    = expanded[cat] ?? true
-            const catLabel  = TOOL_CATEGORIES[cat]
-            const catIcon   = CATEGORY_ICONS[cat] ?? '📦'
+      {/* ── Tools by category ── Araçlar static data; API yüklenmesini bekleme */}
+      <div className="flex flex-col gap-6">
+        {CATEGORIES.map((cat) => {
+          const catTools  = ACTIVE_TOOLS.filter((t) => t.category === cat)
+          const isOpen    = expanded[cat] ?? true
+          const catLabel  = TOOL_CATEGORIES[cat]
+          const catIcon   = CATEGORY_ICONS[cat] ?? '📦'
 
-            return (
-              <section key={cat}>
-                {/* Category header — clickable to toggle */}
-                <button
-                  type="button"
-                  onClick={() => toggleCategory(cat)}
-                  className="w-full flex items-center justify-between gap-3 group mb-3 px-4 py-3 rounded-2xl bg-[#F2F1ED] border border-[#E2E0D8] hover:bg-[#EDECEA] transition-colors"
-                >
-                  <div className="flex items-center gap-2.5">
-                    <span className="text-lg leading-none">{catIcon}</span>
-                    <span className="text-sm font-bold uppercase tracking-widest text-[#3A3935] group-hover:text-[#1C1B19] transition-colors">
-                      {catLabel}
-                    </span>
-                    <span className="text-xs text-[#9A9792] font-normal normal-case tracking-normal">
-                      ({catTools.length} araç)
-                    </span>
-                  </div>
-                  <Chevron open={isOpen} />
-                </button>
+          return (
+            <section key={cat}>
+              {/* Category header — clickable to toggle */}
+              <button
+                type="button"
+                onClick={() => toggleCategory(cat)}
+                className="w-full flex items-center justify-between gap-3 group mb-3 px-4 py-3 rounded-2xl bg-[#F2F1ED] border border-[#E2E0D8] hover:bg-[#EDECEA] transition-colors"
+              >
+                <div className="flex items-center gap-2.5">
+                  <span className="text-lg leading-none">{catIcon}</span>
+                  <span className="text-sm font-bold uppercase tracking-widest text-[#3A3935] group-hover:text-[#1C1B19] transition-colors">
+                    {catLabel}
+                  </span>
+                  <span className="text-xs text-[#9A9792] font-normal normal-case tracking-normal">
+                    ({catTools.length} araç)
+                  </span>
+                </div>
+                <Chevron open={isOpen} />
+              </button>
 
-                {/* Tool grid — animated collapse */}
-                {isOpen && (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {catTools.map((tool) => {
-                      const { used, limit } = getUsage(tool.id)
-                      return <ToolCard key={tool.id} tool={tool} used={used} limit={limit} />
-                    })}
-                  </div>
-                )}
-              </section>
-            )
-          })}
-        </div>
-      )}
+              {/* Tool grid — animated collapse */}
+              {isOpen && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {catTools.map((tool) => {
+                    const { used, limit } = getUsage(tool.id)
+                    return <ToolCard key={tool.id} tool={tool} used={used} limit={limit} isLoading={isLoading} />
+                  })}
+                </div>
+              )}
+            </section>
+          )
+        })}
+      </div>
     </div>
   )
 }
