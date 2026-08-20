@@ -75,6 +75,7 @@ export function ViralVideoPage() {
     const sectorParam = searchParams.get('sector')
     const bizParam    = searchParams.get('biz')
     const bizUrlParam = searchParams.get('bizUrl')
+    const tonesParam  = searchParams.get('tones')
 
     if (urlParam)    setVideoUrl(urlParam)
     if (descParam)   setVideoDesc(descParam.slice(0, 500))
@@ -82,10 +83,20 @@ export function ViralVideoPage() {
     if (bizUrlParam) setBizUrl(bizUrlParam)
 
     if (sectorParam) {
-      const match = SEKTORLER.find(
-        (s) => s === sectorParam || s.startsWith(sectorParam.split('/')[0].trim())
-      )
+      // 1. Tam eşleşme (TrendVideoPage sektör değerleri birebir aynı olmalı)
+      // 2. İlk kelime eşleşmesi — geriye dönük uyumluluk için
+      const exact   = SEKTORLER.find((s) => s === sectorParam)
+      const partial = SEKTORLER.find((s) => s.startsWith(sectorParam.split('/')[0].trim()))
+      const match   = exact ?? partial
       if (match) setSector(match)
+    }
+
+    if (tonesParam) {
+      // "Eğlenceli / Komik,Bilgilendirici" → ['Eğlenceli / Komik', 'Bilgilendirici']
+      // Sadece TONLAR listesindeki geçerli değerleri kabul et
+      const incoming = tonesParam.split(',').map((t) => t.trim()).filter(Boolean)
+      const valid    = incoming.filter((t) => TONLAR.includes(t))
+      if (valid.length > 0) setTones(valid)
     }
 
     if (urlParam || descParam) setFromTrend(true)

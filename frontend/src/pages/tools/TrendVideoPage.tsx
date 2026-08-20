@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import api from '@/lib/api'
@@ -31,32 +31,34 @@ interface TrendResult { videos: TikTokVideo[] }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
+// ⚠️ Bu değerler ViralVideoPage.tsx'teki SEKTORLER ile BİREBİR aynı olmalı —
+// "Bu Formatı Uyarla →" butonunda URL param olarak geçiyor ve exact match bekleniyor.
 const SEKTORLER = [
-  { value: 'ALL', label: '✨ Tüm Sektörler (genel tarama)' },
-  { value: 'Lojistik / Taşımacılık', label: 'Lojistik / Taşımacılık' },
-  { value: 'E-ticaret / Online Mağaza', label: 'E-ticaret / Online Mağaza' },
-  { value: 'Yiyecek / İçecek', label: 'Yiyecek / İçecek' },
-  { value: 'Güzellik / Estetik', label: 'Güzellik / Estetik' },
-  { value: 'Sağlık / Klinik', label: 'Sağlık / Klinik' },
-  { value: 'Eğitim / Kurs', label: 'Eğitim / Kurs' },
-  { value: 'Muhasebe / Finans', label: 'Muhasebe / Finans' },
-  { value: 'Hukuk / Danışmanlık', label: 'Hukuk / Danışmanlık' },
-  { value: 'İnşaat / Mühendislik', label: 'İnşaat / Mühendislik' },
-  { value: 'Perakende / Mağaza', label: 'Perakende / Mağaza' },
-  { value: 'Teknoloji / Yazılım', label: 'Teknoloji / Yazılım' },
-  { value: 'Otomotiv / Tamir', label: 'Otomotiv / Tamir' },
-  { value: 'Turizm / Otelcilik', label: 'Turizm / Otelcilik' },
-  { value: 'Eğlence / Etkinlik', label: 'Eğlence / Etkinlik' },
-  { value: 'Diğer', label: 'Diğer' },
+  { value: 'ALL',                            label: '✨ Tüm Sektörler (genel tarama)' },
+  { value: 'Lojistik / Taşımacılık',         label: 'Lojistik / Taşımacılık' },
+  { value: 'E-ticaret / Perakende',          label: 'E-ticaret / Perakende' },
+  { value: 'Restoran / Kafe / Yiyecek',      label: 'Restoran / Kafe / Yiyecek' },
+  { value: 'Güzellik / Kuaför / Estetik',    label: 'Güzellik / Kuaför / Estetik' },
+  { value: 'Sağlık / Klinik / Eczane',       label: 'Sağlık / Klinik / Eczane' },
+  { value: 'İnşaat / Gayrimenkul',           label: 'İnşaat / Gayrimenkul' },
+  { value: 'Muhasebe / Finans / Danışmanlık',label: 'Muhasebe / Finans / Danışmanlık' },
+  { value: 'Eğitim / Kurs / Koçluk',         label: 'Eğitim / Kurs / Koçluk' },
+  { value: 'Teknoloji / Yazılım',            label: 'Teknoloji / Yazılım' },
+  { value: 'Turizm / Otel / Seyahat',        label: 'Turizm / Otel / Seyahat' },
+  { value: 'Hukuk / Avukatlık',              label: 'Hukuk / Avukatlık' },
+  { value: 'Temizlik / Hizmet',              label: 'Temizlik / Hizmet' },
+  { value: 'Diğer',                          label: 'Diğer' },
 ]
 
+// ⚠️ Bu değerler ViralVideoPage.tsx'teki TONLAR ile BİREBİR aynı olmalı —
+// "Bu Formatı Uyarla →" URL param olarak geçiyor.
 const TONLAR = [
-  'Eğlendirici',
-  'Eğitici',
+  'Eğlenceli / Komik',
   'Bilgilendirici',
-  'Samimi ve yakın',
-  'Enerjik ve motive edici',
-  'Mizahi ve eğlenceli',
+  'İlham Verici',
+  'Duygusal / Samimi',
+  'Profesyonel / Kurumsal',
+  'Merak Uyandıran',
 ]
 
 const LOADING_MESSAGES = [
@@ -70,6 +72,41 @@ const LOADING_MESSAGES = [
 
 const MAX_POLL_ATTEMPTS = 220
 const POLL_INTERVAL_MS  = 3000
+const LS_KEY = 'trend-video-last-result'
+
+// ─── localStorage helpers ─────────────────────────────────────────────────────
+
+interface PersistedState {
+  result: TrendResult
+  bizName: string
+  sector: string
+  savedAt: number  // ms — 2 saatin üzerinde eski sayılır
+}
+
+function loadPersistedResult(): PersistedState | null {
+  try {
+    const raw = localStorage.getItem(LS_KEY)
+    if (!raw) return null
+    const parsed: PersistedState = JSON.parse(raw)
+    const TWO_HOURS = 2 * 60 * 60 * 1000
+    if (Date.now() - parsed.savedAt > TWO_HOURS) {
+      localStorage.removeItem(LS_KEY)
+      return null
+    }
+    return parsed
+  } catch {
+    return null
+  }
+}
+
+function savePersistedResult(result: TrendResult, bizName: string, sector: string) {
+  try {
+    const data: PersistedState = { result, bizName, sector, savedAt: Date.now() }
+    localStorage.setItem(LS_KEY, JSON.stringify(data))
+  } catch {
+    // storage quota exceeded — sessiz geç
+  }
+}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -178,6 +215,17 @@ export function TrendVideoPage() {
 
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
+  // ── Mount: localStorage'dan önceki sonucu geri yükle ─────────────────────
+  useEffect(() => {
+    const persisted = loadPersistedResult()
+    if (persisted) {
+      setResult(persisted.result)
+      // Form alanlarını da geri getir — kullanıcı hangi parametrelerle aradığını görsün
+      if (persisted.bizName) setBizName(persisted.bizName)
+      if (persisted.sector)  setSector(persisted.sector)
+    }
+  }, [])
+
   const clearPolling = useCallback(() => {
     if (intervalRef.current) {
       clearInterval(intervalRef.current)
@@ -209,7 +257,10 @@ export function TrendVideoPage() {
         if (res.data.status === 'completed') {
           clearPolling()
           setIsPending(false)
-          setResult({ videos: res.data.videos ?? [] })
+          const newResult = { videos: res.data.videos ?? [] }
+          setResult(newResult)
+          // Sayfadan ayrılınca kaybolmaması için localStorage'a yaz
+          savePersistedResult(newResult, bizName, sector)
           void queryClient.invalidateQueries({ queryKey: ['tool-usage'] })
         } else if (res.data.status === 'error') {
           clearPolling()
@@ -220,7 +271,7 @@ export function TrendVideoPage() {
         // Geçici ağ hatası — bir sonraki turda devam et
       }
     }, POLL_INTERVAL_MS)
-  }, [clearPolling, queryClient])
+  }, [clearPolling, queryClient, bizName, sector])
 
   const handleGenerate = async () => {
     if (!sector || tones.length === 0 || isPending) return
@@ -249,6 +300,7 @@ export function TrendVideoPage() {
     setIsPending(false)
     setResult(null)
     setError(null)
+    localStorage.removeItem(LS_KEY)
   }
 
   const canSubmit = sector.length > 0 && tones.length > 0 && !isPending
@@ -364,6 +416,7 @@ export function TrendVideoPage() {
                   desc:   (v.title ?? '').slice(0, 200),
                   sector: sector,
                   biz:    bizName,
+                  tones:  tones.join(','),
                 }).toString()
 
                 const trend    = trendBadge(v.trendDurumu)
