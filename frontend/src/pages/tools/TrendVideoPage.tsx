@@ -524,14 +524,17 @@ export function TrendVideoPage() {
                         </div>
                       )}
 
-                      {/* Hashtags */}
+                      {/* Hashtags — h string veya {name: string} olabilir (Apify formatı) */}
                       {(v.hashtags ?? []).length > 0 && (
                         <div className="flex flex-wrap gap-1.5">
-                          {(v.hashtags ?? []).map((h) => (
-                            <span key={h} className="text-[11px] px-2 py-0.5 bg-[#F0FAF6] border border-[#9FE1CB] text-[#085041] font-medium rounded-md">
-                              #{h}
-                            </span>
-                          ))}
+                          {(v.hashtags ?? [])
+                            .map((h) => (typeof h === 'string' ? h : (h as { name?: string })?.name ?? ''))
+                            .filter(Boolean)
+                            .map((tag) => (
+                              <span key={tag} className="text-[11px] px-2 py-0.5 bg-[#F0FAF6] border border-[#9FE1CB] text-[#085041] font-medium rounded-md">
+                                #{tag}
+                              </span>
+                            ))}
                         </div>
                       )}
 
