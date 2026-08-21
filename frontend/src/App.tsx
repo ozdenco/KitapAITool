@@ -34,6 +34,7 @@ import { AdminAracFiyatlariPage } from '@/pages/admin/AdminAracFiyatlariPage'
 import { AdminAnaSayfaPage } from '@/pages/admin/AdminAnaSayfaPage'
 import { SatisSozlesmesiPage } from '@/pages/legal/SatisSozlesmesiPage'
 import { IptalIadeKosullariPage } from '@/pages/legal/IptalIadeKosullariPage'
+import { KvkkPage } from '@/pages/legal/KvkkPage'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -59,6 +60,7 @@ function AppRoutes() {
           <Route path="/sifre-sifirla" element={<ResetPasswordPage />} />
           <Route path="/satis-sozlesmesi" element={<SatisSozlesmesiPage />} />
           <Route path="/iptal-iade-kosullari" element={<IptalIadeKosullariPage />} />
+          <Route path="/kvkk" element={<KvkkPage />} />
 
           {/* Protected */}
           <Route

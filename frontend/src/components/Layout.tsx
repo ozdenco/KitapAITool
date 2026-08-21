@@ -299,6 +299,12 @@ export function Layout() {
             >
               İptal &amp; İade
             </a>
+            <a
+              href="/kvkk"
+              className="px-3 py-1.5 rounded-lg text-sm text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-colors"
+            >
+              KVKK
+            </a>
           </nav>
 
           {/* User dropdown */}
@@ -341,6 +347,9 @@ export function Layout() {
             </a>
             <a href="/iptal-iade-kosullari" className="text-xs text-gray-400 hover:text-gray-600 transition-colors">
               İptal &amp; İade
+            </a>
+            <a href="/kvkk" className="text-xs text-gray-400 hover:text-gray-600 transition-colors">
+              KVKK
             </a>
             <span className="text-xs text-gray-400">Dijital ajansınız artık bir yazılım</span>
           </div>
