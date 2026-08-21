@@ -144,7 +144,7 @@
         7664,
         3392
       ],
-      "disabled": true
+      "disabled": false
     },
     {
       "parameters": {
@@ -242,7 +242,7 @@
         3376
       ],
       "disabled": false,
-      "onError": "continueRegularOutput"
+      "onError": "continueErrorOutput"
     },
     {
       "parameters": {
@@ -430,10 +430,16 @@
     },
     "Apify TikTok Trending": {
       "main": [
-        [],
         [
           {
             "node": "Format Results",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Mark Job Error",
             "type": "main",
             "index": 0
           }
