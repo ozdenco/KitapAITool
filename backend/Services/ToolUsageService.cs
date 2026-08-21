@@ -34,9 +34,19 @@ public class ToolUsageService(AppDbContext db)
         "musteri-geri-donus",
         "rakip-analiz",
         "chatbot-senaryo",
-        "ai-gorunurluk"
-        // viral-video ve trend-video: Format Replication geçiş sürecinde kaldırıldı
+        "ai-gorunurluk",
+        "trend-video"
+        // viral-video: Format Replication geçiş sürecinde kaldırıldı
     ];
+
+    /// <summary>
+    /// Araç bazlı özel aylık limit kısıtları.
+    /// Plan limitinden küçükse bu değer uygulanır (null plan = admin = bu kısıt da uygulanmaz).
+    /// </summary>
+    private static readonly Dictionary<string, int> ToolSpecificLimits = new()
+    {
+        { "trend-video", 1 },   // Apify maliyeti (~$0.40/çalıştırma) → admin dışı: ayda maks 1
+    };
 
     public async Task<List<ToolUsageSummary>> GetUsageSummaryAsync(Guid userId)
     {
@@ -64,10 +74,14 @@ public class ToolUsageService(AppDbContext db)
 
             // Araç satın alımı varsa onun limiti geçerli (null = sınırsız)
             if (toolPurchaseMap.TryGetValue(toolId, out var purchaseLimit))
-                return new ToolUsageSummary(toolId, used, purchaseLimit);
+            {
+                var effectivePurchaseLimit = ApplyToolSpecificLimit(toolId, purchaseLimit);
+                return new ToolUsageSummary(toolId, used, effectivePurchaseLimit);
+            }
 
-            // Yoksa plan limiti
-            return new ToolUsageSummary(toolId, used, plan?.UsagePerToolPerMonth);
+            // Yoksa plan limiti — araç bazlı kısıtı uygula
+            var limit = ApplyToolSpecificLimit(toolId, plan?.UsagePerToolPerMonth);
+            return new ToolUsageSummary(toolId, used, limit);
         }).ToList();
     }
 
@@ -165,9 +179,10 @@ public class ToolUsageService(AppDbContext db)
             .Select(toolId =>
             {
                 logCounts.TryGetValue(toolId, out var used);
-                int? limit = toolPurchaseMap.TryGetValue(toolId, out var purchaseLimit)
+                int? rawLimit = toolPurchaseMap.TryGetValue(toolId, out var purchaseLimit)
                     ? purchaseLimit
                     : planLimit;
+                var limit = ApplyToolSpecificLimit(toolId, rawLimit);
                 return new ToolPeriodUsage(toolId, used, limit);
             })
             .OrderByDescending(x => x.UsedCount)
@@ -195,15 +210,17 @@ public class ToolUsageService(AppDbContext db)
 
         if (activePurchase is not null)
         {
-            if (activePurchase.MonthlyLimit is null) return true;           // sınırsız
-            return used < activePurchase.MonthlyLimit;                      // aylık araç limiti
+            if (activePurchase.MonthlyLimit is null) return true;           // sınırsız satın alım
+            var purchaseEffective = ApplyToolSpecificLimit(toolId, activePurchase.MonthlyLimit);
+            return used < purchaseEffective;                                // aylık araç limiti (kısıtlı)
         }
 
         // Araç satın alımı yoksa — plan limitine bak
         var plan = await GetUserPlanAsync(userId);
         if (plan?.UsagePerToolPerMonth is null) return true;                // admin/enterprise
 
-        return used < plan.UsagePerToolPerMonth;
+        var effectiveLimit = ApplyToolSpecificLimit(toolId, plan.UsagePerToolPerMonth);
+        return used < effectiveLimit;
     }
 
     public async Task RecordUsageAsync(Guid userId, string toolId, bool success = true)
@@ -238,5 +255,16 @@ public class ToolUsageService(AppDbContext db)
                                    && (s.ExpiresAt == null || s.ExpiresAt > DateTime.UtcNow));
 
         return subscription?.Plan;
+    }
+
+    /// <summary>
+    /// Araç bazlı özel kısıtı uygular: null limit (admin/sınırsız) değişmez;
+    /// sonlu limitlerde ToolSpecificLimits değerini alt sınır olarak uygular.
+    /// </summary>
+    private static int? ApplyToolSpecificLimit(string toolId, int? planLimit)
+    {
+        if (planLimit is null) return null;  // admin/enterprise — kısıt yok
+        if (!ToolSpecificLimits.TryGetValue(toolId, out var toolLimit)) return planLimit;
+        return Math.Min(planLimit.Value, toolLimit);
     }
 }
