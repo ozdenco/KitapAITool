@@ -76,11 +76,13 @@ export function ViralVideoPage() {
     const bizParam    = searchParams.get('biz')
     const bizUrlParam = searchParams.get('bizUrl')
     const tonesParam  = searchParams.get('tones')
+    const extraParam  = searchParams.get('extra')
 
     if (urlParam)    setVideoUrl(urlParam)
     if (descParam)   setVideoDesc(descParam.slice(0, 500))
     if (bizParam)    setBizName(bizParam)
     if (bizUrlParam) setBizUrl(bizUrlParam)
+    if (extraParam)  setExtra(extraParam)
 
     if (sectorParam) {
       // 1. Tam eşleşme (TrendVideoPage sektör değerleri birebir aynı olmalı)
@@ -211,7 +213,7 @@ export function ViralVideoPage() {
                 </div>
 
                 <Textarea
-                  label="Ek Bağlam (isteğe bağlı)"
+                  label="Ek Not (isteğe bağlı)"
                   placeholder="Hedef kitlen, öne çıkarmak istediğin ürün/hizmet, ya da özellikle değinmek istediğin bir konu varsa yaz."
                   value={extra}
                   onChange={(e) => setExtra(e.target.value)}

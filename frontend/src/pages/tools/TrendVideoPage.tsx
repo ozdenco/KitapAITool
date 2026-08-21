@@ -380,7 +380,7 @@ export function TrendVideoPage() {
                 />
 
                 <Textarea
-                  label="Ek not (opsiyonel)"
+                  label="Ek Not (isteğe bağlı)"
                   placeholder="Örn: Penguen videosunu lojistik müşteriye uyarladık, benzer absürt/şaşırtıcı içerikler istiyoruz."
                   value={note}
                   onChange={(e) => setNote(e.target.value)}
