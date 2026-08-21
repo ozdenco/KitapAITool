@@ -320,9 +320,17 @@ export function Layout() {
 
       {/* Footer */}
       <footer className="border-t border-[#E2E0D8] bg-white">
-        <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
+        <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between flex-wrap gap-2">
           <span className="text-xs text-gray-400">© 2026 KolayKOBİ — kolaykobi.com</span>
-          <span className="text-xs text-gray-400">Dijital ajansınız artık bir yazılım</span>
+          <div className="flex items-center gap-4">
+            <a href="/satis-sozlesmesi" className="text-xs text-gray-400 hover:text-gray-600 transition-colors">
+              Satış Sözleşmesi
+            </a>
+            <a href="/iptal-iade-kosullari" className="text-xs text-gray-400 hover:text-gray-600 transition-colors">
+              İptal &amp; İade
+            </a>
+            <span className="text-xs text-gray-400">Dijital ajansınız artık bir yazılım</span>
+          </div>
         </div>
       </footer>
     </div>

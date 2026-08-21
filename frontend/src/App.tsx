@@ -32,6 +32,8 @@ import { AdminKullanimRaporuPage } from '@/pages/admin/AdminKullanimRaporuPage'
 import { AdminRaporDetayPage } from '@/pages/admin/AdminRaporDetayPage'
 import { AdminAracFiyatlariPage } from '@/pages/admin/AdminAracFiyatlariPage'
 import { AdminAnaSayfaPage } from '@/pages/admin/AdminAnaSayfaPage'
+import { SatisSozlesmesiPage } from '@/pages/legal/SatisSozlesmesiPage'
+import { IptalIadeKosullariPage } from '@/pages/legal/IptalIadeKosullariPage'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -55,6 +57,8 @@ function AppRoutes() {
           <Route path="/e-posta-dogrula" element={<VerifyEmailPage />} />
           <Route path="/sifremi-unuttum" element={<ForgotPasswordPage />} />
           <Route path="/sifre-sifirla" element={<ResetPasswordPage />} />
+          <Route path="/satis-sozlesmesi" element={<SatisSozlesmesiPage />} />
+          <Route path="/iptal-iade-kosullari" element={<IptalIadeKosullariPage />} />
 
           {/* Protected */}
           <Route
