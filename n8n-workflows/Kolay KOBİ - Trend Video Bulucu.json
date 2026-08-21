@@ -228,7 +228,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({\n  hashtags: $json.hashtags,\n  resultsPerPage: 20,\n  proxyCountryCode: 'TR',\n  commentsPerPost: 0,\n  topLevelCommentsPerPost: 0,\n  maxRepliesPerComment: 0,\n  maxFollowersPerProfile: 0,\n  maxFollowingPerProfile: 0,\n  excludePinnedPosts: false,\n  scrapeAdditionalAuthorMeta: false,\n  scrapeRelatedSearchWords: false,\n  scrapeRelatedVideos: false,\n  shouldDownloadAvatars: false,\n  shouldDownloadCovers: false,\n  shouldDownloadMusicCovers: false,\n  shouldDownloadSlideshowImages: false,\n  shouldDownloadVideos: false\n}) }}",
+        "jsonBody": "={{ JSON.stringify({\n  hashtags: $json.hashtags,\n  resultsPerPage: 10,\n  proxyCountryCode: 'TR',\n  commentsPerPost: 0,\n  topLevelCommentsPerPost: 0,\n  maxRepliesPerComment: 0,\n  maxFollowersPerProfile: 0,\n  maxFollowingPerProfile: 0,\n  excludePinnedPosts: false,\n  scrapeAdditionalAuthorMeta: false,\n  scrapeRelatedSearchWords: false,\n  scrapeRelatedVideos: false,\n  shouldDownloadAvatars: false,\n  shouldDownloadCovers: false,\n  shouldDownloadMusicCovers: false,\n  shouldDownloadSlideshowImages: false,\n  shouldDownloadVideos: false\n}) }}",
         "options": {
           "timeout": 120000
         }
