@@ -552,7 +552,7 @@ export function TrendVideoPage() {
                         )}
                         <button
                           type="button"
-                          onClick={() => navigate(`/araclar/viral-video?${uyarlaParams}`)}
+                          onClick={() => navigate(`/arac/viral-video?${uyarlaParams}`)}
                           className="inline-flex items-center gap-1.5 px-[16px] py-[7px] bg-[#1D9E75] text-white rounded-lg text-[13px] font-medium hover:bg-[#0F6E56] transition-colors"
                         >
                           🪄 Bu Formatı Uyarla →
