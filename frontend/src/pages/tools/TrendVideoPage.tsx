@@ -80,6 +80,8 @@ interface PersistedState {
   result: TrendResult
   bizName: string
   sector: string
+  tones: string[]
+  note: string
   savedAt: number
 }
 
@@ -93,9 +95,9 @@ function loadLocalResult(): PersistedState | null {
   }
 }
 
-function saveLocalResult(result: TrendResult, bizName: string, sector: string) {
+function saveLocalResult(result: TrendResult, bizName: string, sector: string, tones: string[], note: string) {
   try {
-    const data: PersistedState = { result, bizName, sector, savedAt: Date.now() }
+    const data: PersistedState = { result, bizName, sector, tones, note, savedAt: Date.now() }
     localStorage.setItem(LS_KEY, JSON.stringify(data))
   } catch {
     // storage quota exceeded — sessiz geç
@@ -215,8 +217,10 @@ export function TrendVideoPage() {
     const local = loadLocalResult()
     if (local) {
       setResult(local.result)
-      if (local.bizName) setBizName(local.bizName)
-      if (local.sector)  setSector(local.sector)
+      if (local.bizName)       setBizName(local.bizName)
+      if (local.sector)        setSector(local.sector)
+      if (local.tones?.length) setTones(local.tones)
+      if (local.note)          setNote(local.note)
     }
 
     // 2. Kalıcı: Backend'den son kayıtlı sonucu al (oturum/cihaz bağımsız)
@@ -231,8 +235,8 @@ export function TrendVideoPage() {
         setResult(backendResult)
         // Backend'in sektörü varsa form'a yaz
         if (parsed.sector) setSector(parsed.sector)
-        // Local cache'i de taze tut
-        saveLocalResult(backendResult, '', parsed.sector ?? '')
+        // Local cache'i de taze tut (tones/note mevcut local state'den korunur)
+        saveLocalResult(backendResult, '', parsed.sector ?? '', [], '')
       } catch { /* JSON parse hatası — görmezden gel */ }
     }).catch(() => { /* Backend henüz sonuç kaydetmemiş — sorun değil */ })
   }, [])
@@ -271,7 +275,7 @@ export function TrendVideoPage() {
           const newResult = { videos: res.data.videos ?? [] }
           setResult(newResult)
           // localStorage'a da yaz — backend kayıt zaten PollStatus'ta otomatik yapılıyor
-          saveLocalResult(newResult, bizName, sector)
+          saveLocalResult(newResult, bizName, sector, tones, note)
           void queryClient.invalidateQueries({ queryKey: ['tool-usage'] })
         } else if (res.data.status === 'error') {
           clearPolling()
@@ -282,7 +286,7 @@ export function TrendVideoPage() {
         // Geçici ağ hatası — bir sonraki turda devam et
       }
     }, POLL_INTERVAL_MS)
-  }, [clearPolling, queryClient, bizName, sector])
+  }, [clearPolling, queryClient, bizName, sector, tones, note])
 
   const handleGenerate = async () => {
     if (!sector || tones.length === 0 || isPending) return
@@ -429,6 +433,7 @@ export function TrendVideoPage() {
                   sector: sector,
                   biz:    bizName,
                   tones:  tones.join(','),
+                  ...(note ? { extra: note } : {}),
                 }).toString()
 
                 const trend    = trendBadge(v.trendDurumu)
