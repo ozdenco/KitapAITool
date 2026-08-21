@@ -35,6 +35,7 @@ import { AdminAnaSayfaPage } from '@/pages/admin/AdminAnaSayfaPage'
 import { SatisSozlesmesiPage } from '@/pages/legal/SatisSozlesmesiPage'
 import { IptalIadeKosullariPage } from '@/pages/legal/IptalIadeKosullariPage'
 import { KvkkPage } from '@/pages/legal/KvkkPage'
+import { LegalLayout } from '@/components/LegalLayout'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -58,9 +59,12 @@ function AppRoutes() {
           <Route path="/e-posta-dogrula" element={<VerifyEmailPage />} />
           <Route path="/sifremi-unuttum" element={<ForgotPasswordPage />} />
           <Route path="/sifre-sifirla" element={<ResetPasswordPage />} />
-          <Route path="/satis-sozlesmesi" element={<SatisSozlesmesiPage />} />
-          <Route path="/iptal-iade-kosullari" element={<IptalIadeKosullariPage />} />
-          <Route path="/kvkk" element={<KvkkPage />} />
+          {/* Legal pages — public, with site header */}
+          <Route element={<LegalLayout />}>
+            <Route path="/satis-sozlesmesi" element={<SatisSozlesmesiPage />} />
+            <Route path="/iptal-iade-kosullari" element={<IptalIadeKosullariPage />} />
+            <Route path="/kvkk" element={<KvkkPage />} />
+          </Route>
 
           {/* Protected */}
           <Route

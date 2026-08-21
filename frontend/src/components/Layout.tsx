@@ -286,25 +286,6 @@ export function Layout() {
             <ToolsDropdown />
 
             {user?.isAdmin && <AdminDropdown />}
-
-            <a
-              href="/satis-sozlesmesi"
-              className="px-3 py-1.5 rounded-lg text-sm text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-colors"
-            >
-              Satış Sözleşmesi
-            </a>
-            <a
-              href="/iptal-iade-kosullari"
-              className="px-3 py-1.5 rounded-lg text-sm text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-colors"
-            >
-              İptal &amp; İade
-            </a>
-            <a
-              href="/kvkk"
-              className="px-3 py-1.5 rounded-lg text-sm text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-colors"
-            >
-              KVKK
-            </a>
           </nav>
 
           {/* User dropdown */}

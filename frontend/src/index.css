@@ -84,6 +84,7 @@ body {
     width: 100% !important;
     background: #fff !important;
     overflow: visible !important;
+    zoom: 0.78;
   }
 
   /* Hedef içindeki tüm öğeler → tarayıcı varsayılanına dön */
