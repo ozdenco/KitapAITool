@@ -1162,7 +1162,92 @@ text = text.replace(TR_RE, ch => TR_RESTORE[ch] || ch);
 | v3.0 | 2026-08-06 | AI Görünürlük Skoru (App 9) eklendi; Form collapse/expand pattern; Formu Kaydet / Form Yükle (.json); Print CSS radio/checkbox fix; Accordion print fix; _template.html ve kkb-shared.js |
 | v2.0 | 2026-07-24 | 8 araç tamamlandı; n8n MiniMax-M3 entegrasyonu; WordPress REST API proxy; LocalStorage form kalıcılığı; Rate limiting |
 | v1.0 | 2026-06 | İlk MVP — Rakip Analiz Panosu ve temel mimari |
+| v3.2 | 2026-08-21 | SaaS platform, PayTR, Brevo, Apify, kullanım limitleri |
 
 ---
 
-*Kolay KOBİ AI Araçları — Teknik Tasarım Dokümanı v3.1 | 2026-08-07 | kolaykobi.com*
+## TD-SaaS: SaaS Platform Teknik Tasarım Notları
+
+> Bu bölüm Ağustos 2026'da tamamlanan React + .NET 8 SaaS mimarisini belgeler.
+
+### Auth Akışı
+
+```
+POST /auth/login → {accessToken, refreshToken, user}
+POST /auth/refresh → yeni token çifti
+POST /auth/forgot-password → e-posta gönder
+POST /auth/reset-password → token ile şifre değiştir
+POST /auth/verify-email?token=... → e-posta doğrula
+```
+
+- JWT access token: 15 dakika
+- Refresh token: 7 gün
+- E-posta doğrulanmadan araç kullanılamaz (`EMAIL_NOT_VERIFIED` exception)
+- Axios interceptor: 401 geldiğinde refresh dener; `/auth/*` endpoint'leri hariç (sonsuz döngü riski)
+
+### Kullanım Limiti Akışı
+
+```
+CanUseToolAsync(userId, toolId)
+  │
+  ├─ EmailVerified? → değilse throw EMAIL_NOT_VERIFIED
+  ├─ Aktif araç satın alımı var mı?
+  │   ├─ MonthlyLimit null → true (sınırsız)
+  │   └─ MonthlyLimit var → ApplyToolSpecificLimit → used < limit?
+  └─ Plan limiti:
+      ├─ UsagePerToolPerMonth null → true (admin/enterprise)
+      └─ var → ApplyToolSpecificLimit → used < effectiveLimit?
+
+ApplyToolSpecificLimit(toolId, planLimit):
+  null planLimit → null (admin bypass)
+  ToolSpecificLimits[toolId] varsa → Math.Min(planLimit, toolLimit)
+  yoksa → planLimit
+```
+
+### Abonelik Plan Tanımı (seed verisi)
+
+```csharp
+// Free: 3/tool/month
+// Standard: 10/tool/month, ₺199
+// Premium: 25/tool/month, ₺399
+// Enterprise: null (unlimited)
+```
+
+### PayTR Entegrasyon Notları
+
+- **Format:** PKI string (JSON değil) — `[key=val,nested=[k=v,...]]`
+- **Authorization:** `IYZWS apiKey:rnd:hash` — **rnd ortada** olmalı
+- **Hash:** `HMACSHA256(apiKey + rnd + secretKey + pkiBody)`
+- **paymentGroup:** `PRODUCT` (SUBSCRIPTION hata verir — errorCode:11)
+- **Test → Production:** `.env`'de `PAYTR_TEST_MODE=false` + container restart
+
+### Otomatik Yenileme (RecurringRenewalService)
+
+- Scheduler: her gün belirli saatte çalışır
+- `ExpiresAt <= şimdi + 1 gün` olan aktif abonelikler kontrol edilir
+- `AutoRenew=true` ve kart kayıtlıysa → PayTR recurring charge
+- Kart yoksa (admin oluşturdu) → ücretsiz ExpiresAt uzat
+- Başarısız → mail gönder, ExpiresAt uzatma
+
+### n8n Trend Video Bulucu Güncellemeleri (Ağustos 2026)
+
+**Değişiklikler:**
+- `Mock Apify Data` node: `"disabled": true`
+- `Apify TikTok Trending` node: `"disabled": false`
+- `Mark Job Error` node: `"disabled": false`, `onError: "continueErrorOutput"`
+- `resultsPerPage`: 20 → 10 (maliyet optimizasyonu)
+- Bağlantı: Apify `main[0]` → Format Results, `main[1]` → Mark Job Error
+
+**Error handler bağlantı şablonu:**
+```json
+"Apify TikTok Trending": {
+  "main": [
+    [{"node": "Format Results", "type": "main", "index": 0}],
+    [{"node": "Mark Job Error", "type": "main", "index": 0}]
+  ]
+}
+```
+
+---
+
+*Kolay KOBİ AI Araçları — Teknik Tasarım Dokümanı v3.2 | 2026-08-21 | kolaykobi.com*

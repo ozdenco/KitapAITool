@@ -401,3 +401,182 @@ Bu bölüm, geliştirme sırasında karşılaşılan ve çözümlenen teknik sor
 | `kolay-kobi-aivisibility.json` | AI Görünürlük Takipçisi |
 | `kolay-kobi-viral.json` | Viral Video Uyarlayıcı |
 | `kolay-kobi-trend.json` | Trend Video Bulucu (MiniMax + Apify) |
+
+---
+
+## 14. SaaS Platform Mimarisi (Ağustos 2026)
+
+Araçlar WordPress HTML'den çıkarılıp tam SaaS platformuna taşındı.
+
+### Tech Stack
+
+| Katman | Teknoloji | Notlar |
+|---|---|---|
+| Frontend | React 19 + Vite + TypeScript + Tailwind | `/frontend` |
+| Backend | .NET 10 Web API | `/backend` |
+| Veritabanı | PostgreSQL | Docker container |
+| Auth | JWT (access + refresh token) | E-posta doğrulama zorunlu |
+| Ödeme | PayTR iFrame API | Abonelik + araç satın alımı |
+| E-posta | Brevo SMTP | smtp-relay.brevo.com:587 |
+| Proxy | nginx + Traefik | HTTPS, SSL otomatik |
+| Hosting | Hostinger VPS | Docker Compose |
+
+### Sunucu Bilgileri
+
+- **IP:** `187.124.165.213` (veya `srv1492396.hstgr.cloud`)
+- **Proje dizini:** `/opt/kolaykobi/`
+- **Mimari:** Docker Compose — backend, frontend, nginx, postgres, Traefik
+
+### Deployment Sırası
+
+```bash
+# 1. Dosyaları kopyala (örnek: tek servis dosyası)
+scp backend/Services/ToolUsageService.cs root@srv1492396.hstgr.cloud:/opt/kolaykobi/backend/Services/
+
+# 2. Backend rebuild + force-recreate
+ssh root@srv1492396.hstgr.cloud "cd /opt/kolaykobi && \
+  docker compose build --no-cache backend && \
+  docker compose up -d --force-recreate backend"
+
+# 3. Doğrula
+ssh root@srv1492396.hstgr.cloud "cd /opt/kolaykobi && docker compose logs backend --tail=20"
+```
+
+> **KRİTİK:** `--force-recreate` olmadan container eski image ile çalışmaya devam eder.
+
+### Ortam Değişkenleri (`.env`)
+
+```env
+# Veritabanı
+POSTGRES_USER=kkbuser
+POSTGRES_PASSWORD=...
+POSTGRES_DB=kolaykobi
+
+# JWT
+JWT_SECRET=...
+
+# PayTR
+PAYTR_MERCHANT_ID=BURAYA_PAYTR_DEGERINI_YAZ
+PAYTR_MERCHANT_KEY=BURAYA_PAYTR_DEGERINI_YAZ
+PAYTR_MERCHANT_SALT=BURAYA_PAYTR_DEGERINI_YAZ
+PAYTR_TEST_MODE=true   # Production için false yap
+
+# Brevo SMTP
+BREVO_SMTP_KEY=...Q7APAT (SMTP key — panelden alınır)
+BREVO_FROM_EMAIL=info@kolaykobi.com
+
+# n8n
+N8N_BASE_URL=https://n8n.srv1492396.hstgr.cloud
+```
+
+### PayTR Production Geçişi
+
+Şu an `PAYTR_TEST_MODE=true` — gerçek ödeme almak için:
+
+```bash
+ssh root@srv1492396.hstgr.cloud "sed -i 's/PAYTR_TEST_MODE=true/PAYTR_TEST_MODE=false/' /opt/kolaykobi/.env && \
+  cd /opt/kolaykobi && docker compose up -d --force-recreate backend"
+```
+
+> Merchant ID/Key/Salt test ve production için aynı (tek hesap).
+
+---
+
+## 15. E-posta Altyapısı (Brevo)
+
+### SMTP Ayarları
+
+| Parametre | Değer |
+|---|---|
+| SMTP Server | smtp-relay.brevo.com |
+| Port | 587 |
+| Login | b4e0a5001@smtp-brevo.com |
+| SMTP Key | Brevo panelinden (KolayKOBI anahtarı) |
+
+### DNS Kayıtları (kolaykobi.com — güzelhosting)
+
+| Host | Tür | Değer |
+|---|---|---|
+| `brevo1._domainkey` | CNAME | b1.kolaykobi-com.dkim.brevo.com |
+| `brevo2._domainkey` | CNAME | b2.kolaykobi-com.dkim.brevo.com |
+| `_dmarc` | TXT | v=DMARC1; p=none; rua=mailto:rua@dmarc.brevo.com |
+| `@` | TXT | brevo-code:4cb863d5af1d3a3a843cb90abdf5a9fc |
+| `@` | TXT | v=spf1 ip4:89.252.181.50 +a +mx +include:relay.guzelhosting.com include:spf.brevo.com ~all |
+
+### Brevo Authorized IPs
+
+- `187.124.165.213` (Hostinger VPS — production)
+- `2a02:4780:79:395::1` (Hostinger IPv6)
+
+---
+
+## 16. Kullanım Limiti Sistemi (Backend)
+
+`backend/Services/ToolUsageService.cs` — tüm limit mantığı burada:
+
+### Plan Limitleri
+
+| Plan | `UsagePerToolPerMonth` |
+|---|---|
+| Ücretsiz | 3 |
+| Standart | 10 |
+| Premium | 25 |
+| Kurumsal / Admin | null (sınırsız) |
+
+### Araç Bazlı Özel Limitler (`ToolSpecificLimits`)
+
+```csharp
+private static readonly Dictionary<string, int> ToolSpecificLimits = new()
+{
+    { "trend-video", 1 },   // Apify maliyeti → admin dışı: ayda maks 1
+};
+```
+
+`ApplyToolSpecificLimit()` her limit hesaplamasında `Math.Min(planLimit, toolLimit)` uygular. Null (admin) geçilirse dokunulmaz.
+
+### AllToolIds
+
+Tüm araçlar için kullanım özeti şu listeden üretilir:
+```
+gorunurluk-skoru, musteri-persona, icerik-takvimi, whatsapp-satis,
+reklam-butce, musteri-geri-donus, rakip-analiz, chatbot-senaryo,
+ai-gorunurluk, viral-video, trend-video
+```
+
+---
+
+## 17. Local Development
+
+### Vite Proxy (frontend/.env.local)
+
+```env
+VITE_API_PROXY_TARGET=https://app.kolaykobi.com   # production backend
+# veya:
+VITE_API_PROXY_TARGET=http://localhost:5000         # local backend
+```
+
+> **ÖNEMLİ:** `process.env.VITE_*` vite.config.ts'de çalışmaz. `loadEnv(mode, process.cwd(), '')` kullanılmalı.
+
+### Bilinen Çakışma
+
+macOS AirPlay Receiver port 3000'i kullanır. Sistem Ayarları → Genel → AirDrop ve Handoff → AirPlay Receiver'ı kapat.
+
+### Auth Interceptor Kuralı
+
+`/auth/*` endpoint'leri (login, register, refresh) için 401 hatası token yenileme döngüsünü tetiklememeli. `frontend/src/lib/api.ts`'de `isAuthEndpoint` koruması mevcut.
+
+---
+
+## 18. Apify — Trend Video Bulucu Yapılandırması
+
+| Parametre | Değer |
+|---|---|
+| Actor | clockworks~tiktok-scraper |
+| Endpoint | run-sync-get-dataset-items |
+| resultsPerPage | 10 (maliyet optimizasyonu için 20'den indirildi) |
+| Timeout | 120.000ms |
+| Mock node | Devre dışı (`disabled: true`) |
+| Error handler | Mark Job Error aktif (`onError: continueErrorOutput`) |
+| Apify free plan | $5/ay — billing dönemi 29'unda sıfırlanır |
+
+**Eylül 2026:** Apify testi devam edecek ($5 kredi sıfırlandığında).

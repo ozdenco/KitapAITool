@@ -737,4 +737,99 @@ Tüm 11 araçta uygulanması zorunlu standart özellikler:
 
 ---
 
-*Kolay KOBİ AI Araçları — İş Gereksinimleri Dokümanı v3.1 | 2026-08-07 | kolaykobi.com*
+---
+
+## BR-14: SaaS Platform — Abonelik Modeli
+
+> Ağustos 2026 itibarıyla araçlar WordPress HTML'den çıkarılıp React + .NET 8 SaaS platformuna taşındı.
+
+### Planlar
+
+| Plan | Araç Başına Aylık Kullanım | Fiyat | Notlar |
+|---|---|---|---|
+| Ücretsiz | 3 | ₺0 | Kayıt sonrası varsayılan |
+| Standart | 10 | ₺199/ay | PayTR otomatik yenileme |
+| Premium | 25 | ₺399/ay | PayTR otomatik yenileme |
+| Kurumsal | Sınırsız | İletişime göre | Admin tarafından manuel oluşturulur |
+
+**Admin hesabı:** Aboneliği olmayan (null plan) kullanıcılar admin sayılır ve sınırsız erişime sahiptir.
+
+### Araç Bazlı Özel Limitler
+
+Bazı araçlarda API maliyeti nedeniyle plan limitinin altına ek kısıt uygulanır:
+
+| Araç | Özel Limit | Neden |
+|---|---|---|
+| Trend Video Bulucu | Ayda 1 (admin hariç) | Apify ~$0.20–0.40/çalıştırma maliyeti |
+
+---
+
+## BR-15: Paket ve Araç Satın Alım Kuralları
+
+### Abonelik Kartı Buton Mantığı
+
+Her plan kartında kullanıcının mevcut durumuna göre buton belirlenir:
+
+| Durum | Buton |
+|---|---|
+| `purchaseTier == planTier` ve `isActive` | "🔄 Otomatik Yeniliyor" (disabled) |
+| `purchaseTier > planTier` (daha düşük plan) | "⛔ Engellendi" (disabled) — downgrade izin verilmez |
+| `purchaseTier < planTier` (daha yüksek plan) | "⬆️ Yükselt — ₺{fiyat}" (aktif) |
+| Kurumsal plan | "🤝 İletişime Geç" |
+
+**Downgrade yasağı:** Kullanıcı aktif aboneliğini düşük plana değiştiremez — sadece iptal edebilir.
+
+### Araç Bazlı Satın Alım
+
+Kullanıcılar abonelik almadan tek bir aracı satın alabilir:
+- Araç satın alımı, plan limitinden bağımsız kendi `MonthlyLimit` değerine sahiptir
+- Satın alınan araç, plan limitinden yüksekse satın alım limiti geçerlidir
+- `ExpiresAt`: aylık yenileme tarihine göre hesaplanır
+
+---
+
+## BR-16: Otomatik Yenileme Kuralları
+
+| Durum | Ne Olur | E-posta |
+|---|---|---|
+| `AutoRenew=✅`, kart var | PayTR çekim → `ExpiresAt +1 ay` | ✅ "Otomatik Yenileme Başarılı" |
+| `AutoRenew=✅`, kart yok (admin oluşturdu) | Ücretsiz yenileme → `ExpiresAt +1 ay` | ✅ Aynı mail gönderilir |
+| `AutoRenew=✅`, PayTR başarısız | `ExpiresAt` uzatılmaz | ⚠️ "Otomatik Yenileme Başarısız" |
+
+Yenileme `RecurringRenewalService` tarafından otomatik işlenir. Admin tarafından oluşturulan ücretsiz abonelikler PayTR'ye gitmeden `ExpiresAt` uzatılır.
+
+---
+
+## BR-17: E-posta Bildirim Sistemi
+
+E-posta gönderimi Brevo SMTP üzerinden yapılır. Tetikleyici olaylar:
+
+| Olay | Alıcı | Konu |
+|---|---|---|
+| Kayıt | Kullanıcı | E-posta doğrulama linki |
+| Şifre sıfırlama | Kullanıcı | Şifre sıfırlama linki |
+| Abonelik başladı | Kullanıcı | Hoş geldin / Plan aktivasyonu |
+| Otomatik yenileme başarılı | Kullanıcı | Yenileme onayı |
+| Otomatik yenileme başarısız | Kullanıcı | Ödeme hatası bildirimi |
+
+**Spam/blok sorununa çözüm (Ağustos 2026):**
+- Brevo SMTP entegrasyonu yapıldı (smtp-relay.brevo.com:587)
+- DKIM kayıtları eklendi: `brevo1._domainkey` ve `brevo2._domainkey`
+- SPF kaydı güncellendi: `v=spf1 ip4:89.252.181.50 +a +mx +include:relay.guzelhosting.com include:spf.brevo.com ~all`
+- DMARC eklendi: `v=DMARC1; p=none; rua=mailto:rua@dmarc.brevo.com`
+
+---
+
+## BR-18: Trend Video Bulucu — Apify Entegrasyonu
+
+**Ağustos 2026 güncellemesi:** Mock data kaldırıldı, gerçek Apify TikTok scraper aktifleştirildi.
+
+- **Actor:** `clockworks~tiktok-scraper`
+- **Maliyet:** ~$0.20–0.40 / çalıştırma (10 sonuç)
+- **Hata yönetimi:** `Mark Job Error` node 402 ve diğer hataları yakalar; kullanıcıya anlamlı hata mesajı döner
+- **Kullanım limiti:** Admin dışı tüm kullanıcılar için ayda 1 çalıştırma (backend `ToolSpecificLimits` ile zorlanır)
+- **Apify free plan:** $5/ay, her ayın 29'unda sıfırlanır
+
+---
+
+*Kolay KOBİ AI Araçları — İş Gereksinimleri Dokümanı v3.2 | 2026-08-21 | kolaykobi.com*
