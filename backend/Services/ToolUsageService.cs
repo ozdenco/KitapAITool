@@ -35,8 +35,8 @@ public class ToolUsageService(AppDbContext db)
         "rakip-analiz",
         "chatbot-senaryo",
         "ai-gorunurluk",
+        "viral-video",
         "trend-video"
-        // viral-video: Format Replication geçiş sürecinde kaldırıldı
     ];
 
     /// <summary>
