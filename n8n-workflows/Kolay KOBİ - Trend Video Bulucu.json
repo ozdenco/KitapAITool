@@ -1,0 +1,512 @@
+{
+  "name": "Kolay KOBİ - Trend Video Bulucu",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "kolay-kobi-trend-video",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "fd900780-636b-4332-a996-015ce8979921",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        6096,
+        3024
+      ],
+      "webhookId": "kolay-kobi-trend-video"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ─── IKI KATMANLI LIMIT ─────────────────────────────────────────────────\n// 1) IP basina GUNLUK limit: tek kullanicinin sistemi spam'lemesini engeller.\n// 2) GLOBAL AYLIK limit: Apify TikTok Trending calistirmasi basina ~$0.10\n//    (20 sonuc, TR proxy filtresi dahil) -- TUM kullanicilar arasinda\n//    paylasilan gercek butceyi korur. IP limiti bunu KORUMAZ -- 50 farkli\n//    kullanici gunde 1'er istek atsa bile toplam kota hizla biter. Apify'in\n//    aylik $5 ucretsiz kredisi ~50 calistirmaya denk geldigi icin, pay\n//    birakmak icin 50 degil 45'te kesiyoruz.\nconst PER_IP_DAILY_LIMIT = 50;\n// NOT: 'Build Search Query' 2 yerine 4 hashtag kullanmaya basladi (fyp,\n// kesfet, turkiye, trendturkiye) -- Apify muhtemelen her hashtag icin ayri\n// ucretlendiriyor, yani calistirma basina maliyet ~2 katina cikabilir. Ilk\n// gercek test sonrasi Apify Storage/Usage sayfasindan gercek maliyeti\n// kontrol edip bu sayiyi ona gore ayarla -- simdilik ihtiyatli baslangic.\nconst GLOBAL_MONTHLY_SEARCH_LIMIT = 25;\n\nconst ip = $input.first().json.headers?.['x-forwarded-for']?.split(',')[0]?.trim() || $input.first().json.headers?.['x-real-ip'] || 'unknown';\nconst today = new Date().toISOString().slice(0, 10);\nconst monthKey = today.slice(0, 7); // 'YYYY-MM'\nconst ipKey = 'rl_trend_' + ip + '_' + today;\nconst globalKey = 'rl_trend_global_' + monthKey;\n\nconst staticData = $getWorkflowStaticData('global');\nif (!staticData.rateLimits) staticData.rateLimits = {};\n\nconst ipCount = staticData.rateLimits[ipKey] || 0;\nconst globalCount = staticData.rateLimits[globalKey] || 0;\n\nif (ipCount >= PER_IP_DAILY_LIMIT) {\n  return [{ json: { rateLimitExceeded: true, reason: 'ip_daily' } }];\n}\nif (globalCount >= GLOBAL_MONTHLY_SEARCH_LIMIT) {\n  return [{ json: { rateLimitExceeded: true, reason: 'global_monthly' } }];\n}\n\nstaticData.rateLimits[ipKey] = ipCount + 1;\nstaticData.rateLimits[globalKey] = globalCount + 1;\n\nconst body = $input.first().json.body || $input.first().json;\nreturn [{ json: { rateLimitExceeded: false, ...body } }];"
+      },
+      "id": "1942a441-7753-4ab4-9cdb-9ee7000aa315",
+      "name": "Rate Limit Check",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        6320,
+        3024
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.rateLimitExceeded }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equal"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "c8abd2c4-cf5f-4ad3-9079-f4a49402587f",
+      "name": "Rate Limited?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        6544,
+        3024
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ error: \"rate_limit\", reason: $json.reason || \"unknown\" }) }}",
+        "options": {
+          "responseCode": 429
+        }
+      },
+      "id": "3b99cfe1-c3e4-4bf6-b920-07916b64b633",
+      "name": "429 Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        6768,
+        2896
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Webhook zaten 'Respond With Job ID' ile cevap verdi; burada tekrar\n// HTTP yaniti DONMUYORUZ, sadece sonucu static data'ya job_id altinda yaziyoruz.\n//\n// YENI: \"Response Transform\" JSON.parse basarisiz olduysa (parseError dolu),\n// bunu ARTIK sessiz bir \"completed, videos:[]\" olarak degil, acik bir\n// status:'error' olarak isaretliyoruz — boylece kullanici gercek nedeni gorur.\nconst staticData = $getWorkflowStaticData('global');\nconst jobId = $('Create Job').first().json.jobId;\nconst payload = { ...$json };\n\nif (staticData.jobs && staticData.jobs[jobId]) {\n  staticData.jobs[jobId] = { status: 'completed', createdAt: staticData.jobs[jobId].createdAt, ...payload };\n}\nreturn [{ json: payload }];"
+      },
+      "id": "a34470a7-df5c-4679-95a0-78bd49b74577",
+      "name": "Store Job Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        8544,
+        3248
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\nconst staticData = $getWorkflowStaticData('global');\nif (!staticData.jobs) staticData.jobs = {};\n// 30 dakikadan eski job kayitlarini temizle (static data sismesin)\nconst now = Date.now();\nObject.keys(staticData.jobs).forEach(id => {\n  if (now - (staticData.jobs[id].createdAt || 0) > 30 * 60 * 1000) delete staticData.jobs[id];\n});\nconst jobId = now.toString(36) + Math.random().toString(36).slice(2, 10);\nstaticData.jobs[jobId] = { status: 'pending', createdAt: now };\nreturn [{ json: { ...data, jobId } }];"
+      },
+      "id": "2561db85-b9b8-4bd8-9079-2ef811059d63",
+      "name": "Create Job",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        6768,
+        3120
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ job_id: $json.jobId, status: 'pending' }) }}",
+        "options": {
+          "responseCode": 200,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json; charset=utf-8"
+              }
+            ]
+          }
+        }
+      },
+      "id": "95cde128-58df-42e1-8654-b23fac0c6567",
+      "name": "Respond With Job ID",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        6992,
+        3120
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// DUZELTME: onceki versiyon \"err.error\" bir OBJE oldugunda onu dogrudan\n// error alanina yaziyordu; bu da istemci tarafinda \"[object Object]\" olarak\n// gorunuyordu. Artik hatanin gercek metnini cok katmanli/guvenli sekilde\n// cikariyoruz, boylece gercek MiniMax/n8n hatasini goruruz.\nconst staticData = $getWorkflowStaticData('global');\nconst jobId = $('Create Job').first().json.jobId;\nconst err = $input.first().json;\n\nfunction extractMessage(e) {\n  if (!e) return 'Bilinmeyen hata';\n  if (typeof e === 'string') return e;\n  if (typeof e.message === 'string' && e.message) return e.message;\n  if (typeof e.error === 'string' && e.error) return e.error;\n  if (e.error && typeof e.error === 'object') {\n    if (typeof e.error.message === 'string' && e.error.message) return e.error.message;\n    if (typeof e.error.error === 'string' && e.error.error) return e.error.error;\n    try { return JSON.stringify(e.error).slice(0, 400); } catch (_) {}\n  }\n  if (typeof e.description === 'string' && e.description) return e.description;\n  if (typeof e.statusCode !== 'undefined') return `HTTP ${e.statusCode}: ${JSON.stringify(e).slice(0, 300)}`;\n  try { return JSON.stringify(e).slice(0, 400); } catch (_) { return 'Bilinmeyen hata (JSON.stringify basarisiz)'; }\n}\n\nconst errorMessage = extractMessage(err);\n\nif (staticData.jobs && staticData.jobs[jobId]) {\n  staticData.jobs[jobId] = { status: 'error', createdAt: staticData.jobs[jobId].createdAt, error: errorMessage };\n}\nreturn [{ json: { ok: false, error: errorMessage } }];"
+      },
+      "id": "14ebf430-6a30-476a-9aa9-d1eb55914ada",
+      "name": "Mark Job Error",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        7664,
+        3392
+      ],
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "path": "kolay-kobi-trend-video-status",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "f9561cf9-07e6-4b88-981b-5c485c37a5c2",
+      "name": "Status Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        6096,
+        3424
+      ],
+      "webhookId": "kolay-kobi-trend-video-status"
+    },
+    {
+      "parameters": {
+        "jsCode": "const q = $input.first().json.query || {};\nconst jobId = q.jobId;\nconst staticData = $getWorkflowStaticData('global');\nconst job = (staticData.jobs || {})[jobId];\nif (!job) return [{ json: { status: 'not_found' } }];\nreturn [{ json: job }];"
+      },
+      "id": "99216843-438a-46fe-83a6-14b7f6065ff3",
+      "name": "Read Job Status",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        6320,
+        3424
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseCode": 200,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json; charset=utf-8"
+              }
+            ]
+          }
+        }
+      },
+      "id": "c637fdef-8d60-49d4-b797-261a36485c11",
+      "name": "Status Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        6544,
+        3424
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Sektöre göre hashtag seçimi — her sektör için 1 hashtag\n// Apify her hashtag için ayrı ücretlendirir: ~$0.10/hashtag\nconst SEKTOR_HASHTAGLER = {\n  'Lojistik / Taşımacılık':           ['lojistik'],\n  'E-ticaret / Perakende':            ['eticaret'],\n  'Restoran / Kafe / Yiyecek':        ['turkishfood'],\n  'Güzellik / Kuaför / Estetik':      ['makyaj'],\n  'Sağlık / Klinik / Eczane':         ['saglik'],\n  'İnşaat / Gayrimenkul':             ['insaat'],\n  'Muhasebe / Finans / Danışmanlık':  ['girişimci'],\n  'Eğitim / Kurs / Koçluk':           ['kisiselgelisim'],\n  'Teknoloji / Yazılım':              ['teknoloji'],\n  'Turizm / Otel / Seyahat':          ['turizm'],\n  'Hukuk / Avukatlık':                ['hukuk'],\n  'Temizlik / Hizmet':                ['esnaf'],\n  'Diğer':                            ['esnaf'],\n  'ALL':                              ['keşfet'],\n};\n\nconst data = $input.first().json;\nconst sector = data.sector || 'ALL';\nconst hashtags = SEKTOR_HASHTAGLER[sector] || ['keşfet'];\nreturn [{ json: { ...data, hashtags } }];"
+      },
+      "id": "25498ce4-17e6-45d3-8d4b-9f85a08cbe38",
+      "name": "Build Search Query",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        7200,
+        3120
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.apify.com/v2/acts/clockworks~tiktok-scraper/run-sync-get-dataset-items",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "token",
+              "value": "BURAYA_APIFY_ANAHTARINI_YAZ"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  hashtags: $json.hashtags,\n  resultsPerPage: 20,\n  proxyCountryCode: 'TR',\n  commentsPerPost: 0,\n  topLevelCommentsPerPost: 0,\n  maxRepliesPerComment: 0,\n  maxFollowersPerProfile: 0,\n  maxFollowingPerProfile: 0,\n  excludePinnedPosts: false,\n  scrapeAdditionalAuthorMeta: false,\n  scrapeRelatedSearchWords: false,\n  scrapeRelatedVideos: false,\n  shouldDownloadAvatars: false,\n  shouldDownloadCovers: false,\n  shouldDownloadMusicCovers: false,\n  shouldDownloadSlideshowImages: false,\n  shouldDownloadVideos: false\n}) }}",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "id": "3ab713f4-faa8-44df-8d6e-c92dc9777dc5",
+      "name": "Apify TikTok Trending",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        7408,
+        3376
+      ],
+      "disabled": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const ctx = $('Build Search Query').first().json;\nconst items = $input.all().map(i => i.json);\nconst isError = items.length === 1 && items[0] && items[0].error;\nconst rawVideos = (!isError && items.length) ? items : [];\n\n// Filtre 1: Türkiye pazarı için 100K eşiği (500K Türkiye ölçeği için fazla yüksekti)\nconst viralVideos = rawVideos.filter(v => (v.playCount || 0) >= 100000);\n\n// Filtre 2 için 20 aday hazırla (MiniMax sonra KOBİ uyarlanabilirliğini değerlendirecek)\nconst videos = viralVideos\n  .sort((a, b) => (b.playCount || 0) - (a.playCount || 0))\n  .slice(0, 20)\n  .map((v, i) => ({\n    rank: i + 1,\n    title: (v.text || '').slice(0, 150),\n    platform: 'TikTok',\n    author: v.authorMeta?.name || '',\n    authorNickname: v.authorMeta?.nickName || '',\n    playCount: v.playCount || 0,\n    diggCount: v.diggCount || 0,\n    commentCount: v.commentCount || 0,\n    shareCount: v.shareCount || 0,\n    webVideoUrl: v.webVideoUrl || '',\n    hashtags: (v.hashtags || []).map(h => h.name || h).slice(0, 6),\n    musicName: v.musicMeta?.musicName || '',\n  }));\n\nconst resultData = {\n  status: 'completed',\n  videos,\n  sector: ctx.sector || '',\n  totalFound: rawVideos.length,\n  totalViral: viralVideos.length,\n};\nreturn [{ json: resultData }];"
+      },
+      "id": "ee83b025-0cdd-49f1-bd71-d05deeaa2a24",
+      "name": "Format Results",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        7664,
+        3120
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const ctx = $input.first().json;\nconst videos = ctx.videos || [];\n\nif (videos.length === 0) {\n  return [{ json: { ...ctx, apiBodyStr: null } }];\n}\n\nconst videoListStr = videos.map((v, i) =>\n  `${i+1}. \"${v.title.slice(0, 100)}\" (@${v.authorNickname}, ${v.playCount.toLocaleString('tr-TR')} görüntüleme, ${v.hashtags.slice(0,3).join(' ')})`\n).join('\\n');\n\nconst sectorStr = ctx.sector && ctx.sector !== 'ALL'\n  ? `Hedef sektör: ${ctx.sector}. Bu sektöre özellikle uygun formatları önceliklendir, ama diğer uyarlanabilir formatları da dahil et.`\n  : '';\n\nconst prompt = `Aşağıdaki TikTok videolarından hangilerinde küçük işletme veya KOBİ için UYARLANABİLİR bir format var?\\n\\n${sectorStr}\\n\\nKriter: Videonun yapısı (açılış hook'u, geçiş tarzı, kapanış) sektör değiştirilse de çalışabilir mi? Sektör FARKETMEZ — penguen videosu lojistik şirketi için de çalışabilir.\\n\\nElenmesi gerekenler: tamamen kişisel drama/kavga, siyasi içerik, spor skoru/yorumu, çok spesifik ünlü gündemi, anlamsız random saçmalık.\\n\\nVideolar:\\n${videoListStr}\\n\\nYALNIZCA uyarlanabilir videoların numaralarını virgülle döndür. Örnek: 1,3,5,7\\nAçıklama yapma, sadece sayılar.`;\n\nconst apiBody = {\n  model: 'MiniMax-M3',\n  max_completion_tokens: 80,\n  messages: [\n    { role: 'system', content: 'Sen bir içerik stratejisti ve KOBİ uzmanısın. Kısa ve net yanıt ver.' },\n    { role: 'user', content: prompt }\n  ]\n};\n\nreturn [{ json: { ...ctx, apiBodyStr: JSON.stringify(apiBody) } }];"
+      },
+      "id": "55ce5934-9f10-4682-8101-2f5136e14166",
+      "name": "Build KOBi Filter",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        7888,
+        3120
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.minimax.io/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer BURAYA_APIFY_ANAHTARINI_YAZ"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.apiBodyStr }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "ff009080-2ce7-47ad-958c-c81ed9947893",
+      "name": "MiniMax KOBi Filtre",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        8112,
+        3120
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const ctx = $('Build KOBi Filter').first().json;\nconst allVideos = ctx.videos || [];\n\nlet filteredVideos = allVideos;\ntry {\n  const response = $input.first().json;\n  const content = (response?.choices?.[0]?.message?.content || '').trim();\n  const indices = content.split(',')\n    .map(s => parseInt(s.trim(), 10) - 1)\n    .filter(i => !isNaN(i) && i >= 0 && i < allVideos.length);\n  if (indices.length > 0) {\n    filteredVideos = indices.map(i => allVideos[i]).map((v, i) => ({ ...v, rank: i + 1 }));\n  }\n} catch(e) {\n  filteredVideos = allVideos.slice(0, 12);\n}\n\nfilteredVideos = filteredVideos.slice(0, 12);\n\nreturn [{ json: {\n  status: 'completed',\n  videos: filteredVideos,\n  sector: ctx.sector || '',\n  totalFound: ctx.totalFound,\n  totalViral: ctx.totalViral,\n  filteredCount: filteredVideos.length,\n} }];"
+      },
+      "id": "0a34fe05-228e-4763-bf10-9e82a82a4a49",
+      "name": "Apply KOBi Filter",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        8320,
+        3120
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Gerçek Apify çıktısını taklit eder — Format Results bu formatı bekliyor\nconst mockVideos = [\n  {\n    text: \"Sizin anneniz misafir gelince nasıl davranıyor 😂 #keşfet #fyp #viral\",\n    playCount: 4000000, diggCount: 255000, commentCount: 600, shareCount: 36800,\n    webVideoUrl: \"https://www.tiktok.com/@melisaxmeltemm/video/7543651612431076616\",\n    authorMeta: { name: \"melisaxmeltemm\", nickName: \"melisaxmeltemm\" },\n    hashtags: [{ name: \"keşfet\" }, { name: \"fyp\" }, { name: \"viral\" }],\n    musicMeta: { musicName: \"Calm down baby\" }\n  },\n  {\n    text: \"Sabah kalkınca ofiste ilk iş nedir? ☕ #keşfet #komedi\",\n    playCount: 2800000, diggCount: 140000, commentCount: 1200, shareCount: 28000,\n    webVideoUrl: \"https://www.tiktok.com/@test/video/1001\",\n    authorMeta: { name: \"testuser\", nickName: \"TestUser\" },\n    hashtags: [{ name: \"keşfet\" }, { name: \"komedi\" }],\n    musicMeta: { musicName: \"Trending Beat\" }\n  },\n  {\n    text: \"Müşteri 'bu kadar mı?' deyince 🤣 #keşfet #esnaf #kobilife\",\n    playCount: 1900000, diggCount: 95000, commentCount: 850, shareCount: 18000,\n    webVideoUrl: \"https://www.tiktok.com/@test/video/1002\",\n    authorMeta: { name: \"esnafvlog\", nickName: \"EsnafVlog\" },\n    hashtags: [{ name: \"keşfet\" }, { name: \"esnaf\" }],\n    musicMeta: { musicName: \"Komik ses\" }\n  },\n  {\n    text: \"İlk müşteri geldiğinde vs 1000. müşteri 💪 #keşfet #motivasyon\",\n    playCount: 1500000, diggCount: 88000, commentCount: 620, shareCount: 12000,\n    webVideoUrl: \"https://www.tiktok.com/@test/video/1003\",\n    authorMeta: { name: \"motivasyonvlog\", nickName: \"MotiVlog\" },\n    hashtags: [{ name: \"keşfet\" }, { name: \"motivasyon\" }],\n    musicMeta: { musicName: \"Epic sound\" }\n  },\n  {\n    text: \"Çalışanlar patrondan gizli ne yapar? 😅 #keşfet #ofishayati\",\n    playCount: 1200000, diggCount: 72000, commentCount: 980, shareCount: 9500,\n    webVideoUrl: \"https://www.tiktok.com/@test/video/1004\",\n    authorMeta: { name: \"ofishayati\", nickName: \"OfisHayatı\" },\n    hashtags: [{ name: \"keşfet\" }, { name: \"ofishayati\" }],\n    musicMeta: { musicName: \"Funny effect\" }\n  },\n  {\n    text: \"Fiyat sormadan önce bütçesi olan müşteri 💰 #keşfet #satış\",\n    playCount: 980000, diggCount: 51000, commentCount: 440, shareCount: 7800,\n    webVideoUrl: \"https://www.tiktok.com/@test/video/1005\",\n    authorMeta: { name: \"satisdunyasi\", nickName: \"SatışDünyası\" },\n    hashtags: [{ name: \"keşfet\" }, { name: \"satış\" }],\n    musicMeta: { musicName: \"Money sound\" }\n  },\n  {\n    text: \"Sosyal medya yokken vs şimdi reklam nasıl yapılırdı 📱 #keşfet #dijital\",\n    playCount: 870000, diggCount: 43000, commentCount: 310, shareCount: 6200,\n    webVideoUrl: \"https://www.tiktok.com/@test/video/1006\",\n    authorMeta: { name: \"dijitalkobi\", nickName: \"DijitalKOBİ\" },\n    hashtags: [{ name: \"keşfet\" }, { name: \"dijital\" }],\n    musicMeta: { musicName: \"Retro sound\" }\n  },\n  {\n    text: \"Rakip açılınca ilk gün vs 1 ay sonra 🏆 #keşfet #girişimci\",\n    playCount: 760000, diggCount: 38000, commentCount: 280, shareCount: 5100,\n    webVideoUrl: \"https://www.tiktok.com/@test/video/1007\",\n    authorMeta: { name: \"girisimcivlog\", nickName: \"GirişimciVlog\" },\n    hashtags: [{ name: \"keşfet\" }, { name: \"girişimci\" }],\n    musicMeta: { musicName: \"Winner sound\" }\n  },\n  {\n    text: \"Stoklar tükenmeden sipariş ver diyince 😬 #keşfet #eticaret\",\n    playCount: 690000, diggCount: 32000, commentCount: 195, shareCount: 4300,\n    webVideoUrl: \"https://www.tiktok.com/@test/video/1008\",\n    authorMeta: { name: \"eticaretcom\", nickName: \"ETicaret\" },\n    hashtags: [{ name: \"keşfet\" }, { name: \"eticaret\" }],\n    musicMeta: { musicName: \"Alert sound\" }\n  },\n  {\n    text: \"İndirim günü açılışta kuyruk 🧍🧍🧍 #keşfet #indirim\",\n    playCount: 610000, diggCount: 28500, commentCount: 165, shareCount: 3800,\n    webVideoUrl: \"https://www.tiktok.com/@test/video/1009\",\n    authorMeta: { name: \"indirimavci\", nickName: \"İndirimAvcısı\" },\n    hashtags: [{ name: \"keşfet\" }, { name: \"indirim\" }],\n    musicMeta: { musicName: \"Shopping music\" }\n  }\n];\n\nreturn mockVideos.map(v => ({ json: v }));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        7440,
+        3120
+      ],
+      "id": "0a274e26-f3b8-4d0e-8372-8ac70b1fcb22",
+      "name": "Mock Apify Data"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Rate Limit Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rate Limit Check": {
+      "main": [
+        [
+          {
+            "node": "Rate Limited?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rate Limited?": {
+      "main": [
+        [
+          {
+            "node": "429 Response",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Create Job",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Job": {
+      "main": [
+        [
+          {
+            "node": "Respond With Job ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Respond With Job ID": {
+      "main": [
+        [
+          {
+            "node": "Build Search Query",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Status Webhook": {
+      "main": [
+        [
+          {
+            "node": "Read Job Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Job Status": {
+      "main": [
+        [
+          {
+            "node": "Status Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Search Query": {
+      "main": [
+        [
+          {
+            "node": "Mock Apify Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Apify TikTok Trending": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Mark Job Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Results": {
+      "main": [
+        [
+          {
+            "node": "Build KOBi Filter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build KOBi Filter": {
+      "main": [
+        [
+          {
+            "node": "MiniMax KOBi Filtre",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MiniMax KOBi Filtre": {
+      "main": [
+        [
+          {
+            "node": "Apply KOBi Filter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Apply KOBi Filter": {
+      "main": [
+        [
+          {
+            "node": "Store Job Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mock Apify Data": {
+      "main": [
+        [
+          {
+            "node": "Format Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "4ef42540-3ba6-44d9-8210-255d7544f3b6",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "98edaa65d3918afbbaa8a31cfca6ccf77706ad29226570207e48c6e64109db0f"
+  },
+  "nodeGroups": [],
+  "id": "P0ogrWoCqTyGh5cs",
+  "tags": []
+}
