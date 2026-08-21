@@ -1,7 +1,7 @@
 # KolayKOBİ SaaS Platformu — Proje İlerleme Raporu
 
-**Tarih:** 15 Ağustos 2026  
-**Versiyon:** 2.1  
+**Tarih:** 21 Ağustos 2026  
+**Versiyon:** 2.2  
 **Hazırlayan:** Özden Çolak  
 **Gizlilik:** İç Kullanım
 
@@ -40,15 +40,43 @@
 
 ---
 
-### 🟡 İP3 — Gelişmiş Özellikler & Büyüme Altyapısı (~70% Devam Ediyor)
+### 🟡 İP3 — Gelişmiş Özellikler & Büyüme Altyapısı (~85% — İlerledi)
 
-- [x] Yenileme bildirimleri e-postası (başarı / hata)
-- [x] Admin kullanım raporları
-- [x] Ödeme geçmişi — tarih aralığı, araç adları, paket özellikleri
-- [ ] PayTR production aktivasyonu — test modu kaldırma _(bekliyor)_
-- [ ] PDF rapor indirme (araç çıktıları) _(planlandı)_
-- [ ] Referans / affiliate sistemi _(planlandı)_
-- [ ] Kullanıcı geri bildirim widget'ı (NPS tarzı) _(planlandı)_
+#### ✅ Son 1 Haftada Tamamlananlar (15–21 Ağustos 2026)
+
+- [x] **Trend Video Bulucu — Apify TikTok entegrasyonu canlı**  
+  Mock node devre dışı, gerçek Apify akışı aktif. n8n'de Mark Job Error node bağlandı.  
+  Maliyet optimizasyonu: resultsPerPage 20→10 (~$0.20/çalıştırma).
+
+- [x] **Araç bazlı kullanım limiti mekanizması** (`ToolSpecificLimits`)  
+  trend-video: admin dışı kullanıcılar için ayda maks 1 çalıştırma.  
+  viral-video: AllToolIds listesine geri eklendi.
+
+- [x] **Yasal sayfalar oluşturuldu ve canlıya alındı**  
+  `/satis-sozlesmesi`, `/iptal-iade-kosullari`, `/kvkk` — PayTR canlı mod zorunluluğu.  
+  Footer'da ve yasal sayfalarda kendi navbar'ları mevcut.
+
+- [x] **PDF yazdırma kalitesi iyileştirildi**  
+  Yazdırma zoom %78'e ayarlandı; form kapalıyken PDF doğru çıkıyor.
+
+#### 🔴 Bekleyen — Kritik
+
+- [ ] **PayTR canlı mod aktivasyonu** _(bu hafta — SEZGİN ÇOLAK arayacak)_  
+  Adım 1–3 ✅ tamamlandı. Adım 4 (Kimlik Doğrulama): yetkili kişi kaydı boş görünüyor,  
+  SMS gelmiyor. PayTR destek hattı: **0850 252 0 729**.  
+  Çözüm sonrası tek komut: `PAYTR_TEST_MODE=true → false` + container restart.
+
+- [ ] **Apify test tamamlama** _(29 Ağustos'ta kredi yenilenir)_  
+  Free plan $5/ay. Ağustos kotası doldu ($4.52/$5.00 kullanıldı).  
+  Eylül başında trend-video end-to-end testi yapılacak.
+
+#### 🟡 Planlandı
+
+- [ ] n8n trend-video workflow'u production n8n'e import edilecek _(Apify testi sonrası)_
+- [ ] Form boyutları küçültülecek — 100% zoom'da çok büyük, 80%'de normal
+- [ ] PDF rapor indirme (araç çıktıları)
+- [ ] Referans / affiliate sistemi
+- [ ] Kullanıcı geri bildirim widget'ı (NPS tarzı)
 
 ---
 
@@ -118,9 +146,9 @@
 
 | Hafta | Tarih | Öncelik | Eylemler |
 |-------|-------|---------|----------|
-| H1 | 20–27 Ağu | **KRİTİK** | Analytics kurulumu, e-posta listesi altyapısı, sosyal medya profilleri, `/araclar` landing page yayına |
-| H2 | 27 Ağu–3 Eyl | **KRİTİK** | Kitap duyuru içerikleri yayına: LinkedIn carousel + Instagram Reels. PayTR canlıya alma |
-| H3 | 3–10 Eyl | YÜKSEK | Video serisi çekimine başla (2 video/hafta hedefi); e-posta listesi formu siteye eklenir |
+| H1 | 20–27 Ağu | **KRİTİK** | PayTR canlı mod (SEZGİN ÇOLAK arayacak); Analytics kurulumu; sosyal medya profilleri |
+| H2 | 27 Ağu–3 Eyl | **KRİTİK** | Apify kredisi yenilenir (29 Ağu) → trend-video testi; kitap duyuru içerikleri; `/araclar` landing page |
+| H3 | 3–10 Eyl | YÜKSEK | Video serisi çekimine başla (2 video/hafta); e-posta listesi formu siteye eklenir |
 | H4 | 10–17 Eyl | YÜKSEK | İlk workshop duyurusu; ortaklık görüşmeleri başlar (3 hedef kuruluş) |
 | H5–6 | 17 Eyl–1 Eki | ORTA | Video serisi devam; hoş geldin e-posta serisi kurulumu ve A/B testi |
 | H7 | 1–8 Eki | YÜKSEK | İlk workshop — online, ücretsiz, Zoom ile **30+ kişi hedefi**; katılımcıları platforma davet |
@@ -128,3 +156,17 @@
 | H11–12 | 29 Eki–12 Kas | ORTA | Basın bülteni gönderimi; podcast pitching; 2. workshop planı; Q4 büyüme hedefleri |
 
 > *Takvim, geliştirme öncelikleri ve ekip kapasitesine göre kaydırılabilir.*
+
+---
+
+## Sıradaki Görevler (Bu Hafta Öncelik Sırası)
+
+| # | Görev | Durum | Kim |
+|---|-------|-------|-----|
+| 1 | PayTR kimlik doğrulama — destek hattını ara | 🔴 Bekliyor | SEZGİN ÇOLAK |
+| 2 | PayTR onaylanınca `PAYTR_TEST_MODE=false` + deploy | 🟡 Hazır | Özden |
+| 3 | Apify 29 Ağustos kredi yenilenmesini bekle | ⏳ Bekliyor | — |
+| 4 | n8n trend-video workflow production import | 🟡 Planlandı | Özden |
+| 5 | Google Analytics / Posthog kurulumu | 🟡 Planlandı | Özden |
+| 6 | Form boyutları küçültme (100% zoom sorunu) | 🟡 Planlandı | Özden |
+| 7 | Kitap duyuru içeriklerini hazırla (LinkedIn carousel) | 🟡 Planlandı | Özden |
