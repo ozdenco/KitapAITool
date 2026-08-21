@@ -546,12 +546,77 @@ function RenderViralVideo({ data }: { data: Record<string, unknown> }) {
   )
 }
 
-// trend-video
-interface TrendVideo { sira: number; baslik: string; platform: string; neden_trend: string; uyarlama: string; ipucu?: string; etiketler?: string[] }
-interface TrendResult { ozet?: string; videolar: TrendVideo[]; ctaText?: string }
+// trend-video — iki şema destekleniyor:
+// Eski: { videolar: [{sira, baslik, platform, neden_trend, uyarlama}] }
+// Yeni (TikTok): { videos: [{rank, title, author, webVideoUrl, playCount, hashtags}] }
+interface TrendVideoLegacy { sira: number; baslik: string; platform: string; neden_trend: string; uyarlama: string; ipucu?: string; etiketler?: string[] }
+interface TrendVideoNew { rank: number; title: string; author: string; webVideoUrl?: string; playCount?: number; diggCount?: number; hashtags?: (string | { name?: string })[]; adaptabilityScore?: number; formatAdi?: string }
+interface TrendResultAny { ozet?: string; videolar?: TrendVideoLegacy[]; videos?: TrendVideoNew[]; ctaText?: string; sector?: string }
+
+function formatCount(n?: number): string {
+  if (!n) return ''
+  if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + 'M'
+  if (n >= 1_000) return (n / 1_000).toFixed(1) + 'K'
+  return n.toLocaleString('tr-TR')
+}
 
 function RenderTrendVideo({ data }: { data: Record<string, unknown> }) {
-  const d = data as unknown as TrendResult
+  const d = data as unknown as TrendResultAny
+
+  // Yeni format (TikTok videos dizisi)
+  if (d.videos?.length) {
+    return (
+      <div className="flex flex-col gap-4">
+        {d.sector && d.sector !== 'ALL' && (
+          <div className="text-xs text-gray-500 font-medium px-1">
+            Sektör: <span className="text-[#1D9E75]">{d.sector}</span>
+          </div>
+        )}
+        {d.videos.map((v) => {
+          const tags = (v.hashtags ?? []).map((h) => (typeof h === 'string' ? h : (h as { name?: string })?.name ?? '')).filter(Boolean)
+          return (
+            <div key={v.rank} className="bg-white rounded-2xl border border-[#E2E0D8] shadow-sm overflow-hidden">
+              <div className="flex items-center gap-3 px-5 py-3.5 bg-[#1D9E75]/5 border-b border-[#F1EFE8]">
+                <div className="w-7 h-7 rounded-full bg-[#1D9E75] text-white text-xs font-bold flex items-center justify-center shrink-0">
+                  {v.rank}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-[#085041] leading-snug line-clamp-2">{v.title || '—'}</p>
+                  <p className="text-xs text-gray-400 mt-0.5">@{v.author}</p>
+                </div>
+                {v.adaptabilityScore != null && (
+                  <span className="text-xs font-bold px-2 py-1 rounded-full bg-[#F0FAF6] text-[#085041] shrink-0">
+                    {v.adaptabilityScore}
+                  </span>
+                )}
+              </div>
+              <div className="px-5 py-3 flex flex-col gap-2">
+                <div className="flex items-center gap-4 text-xs text-gray-500">
+                  {v.playCount != null && <span>▶ {formatCount(v.playCount)}</span>}
+                  {v.diggCount != null && <span>❤ {formatCount(v.diggCount)}</span>}
+                  {v.formatAdi && <span className="px-2 py-0.5 bg-gray-100 rounded-full">{v.formatAdi}</span>}
+                </div>
+                {tags.length > 0 && (
+                  <div className="flex gap-1.5 flex-wrap">
+                    {tags.map((tag) => (
+                      <span key={tag} className="text-[11px] px-2 py-0.5 bg-[#F0FAF6] border border-[#9FE1CB] text-[#085041] font-medium rounded-md">#{tag}</span>
+                    ))}
+                  </div>
+                )}
+                {v.webVideoUrl && (
+                  <a href={v.webVideoUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-[#1D9E75] hover:underline">
+                    ↗ TikTok'ta Aç
+                  </a>
+                )}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    )
+  }
+
+  // Eski format
   if (!d.videolar?.length) return null
   return (
     <div className="flex flex-col gap-4">
