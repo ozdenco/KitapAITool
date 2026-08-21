@@ -32,17 +32,21 @@ export function ToolShell({
 
   const isAtLimit = usage != null && usage.limit != null && usage.usedCount >= usage.limit
 
-  // PDF/Yazdır — tarayıcı başlığını geçici olarak araç adına çekeriz
-  // böylece "KolayKOBİ Frontend" yerine "İşletme Görünürlük Skoru_Sonuç" çıkar.
+  // PDF/Yazdır — form geçici açılır (1. sayfa) + başlık araç adına çekilir
   const handlePrint = () => {
     const prev = document.title
     document.title = `${title}_Sonuç`
+    const wasOpen = isFormOpen
+    // Formu aç ki 1. sayfada form, 2. sayfada sonuçlar çıksın
+    setIsFormOpen(true)
     const restore = () => {
       document.title = prev
+      setIsFormOpen(wasOpen)
       window.removeEventListener('afterprint', restore)
     }
     window.addEventListener('afterprint', restore)
-    window.print()
+    // React re-render'ın DOM'a yansıması için kısa bekleme
+    setTimeout(() => window.print(), 80)
   }
 
   // ── header: title + description, rendered at the top of each page's form card ─
