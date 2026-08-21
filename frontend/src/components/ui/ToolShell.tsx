@@ -50,10 +50,10 @@ export function ToolShell({
     <div className="pt-[6px] mb-[8px]">
       {/* Emoji icon + title row */}
       <div className="flex items-center gap-[10px] mb-[10px]">
-        <span className="text-[26px] leading-none">{icon}</span>
-        <h1 className="text-[22px] font-medium text-[#1C1B19]">{title}</h1>
+        <span className="text-[22px] leading-none">{icon}</span>
+        <h1 className="text-[19px] font-medium text-[#1C1B19]">{title}</h1>
       </div>
-      <p className="text-[14px] text-[#6B6963] leading-relaxed">{description}</p>
+      <p className="text-[13px] text-[#6B6963] leading-relaxed">{description}</p>
     </div>
   )
 
