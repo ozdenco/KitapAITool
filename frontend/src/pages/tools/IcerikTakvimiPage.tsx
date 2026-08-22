@@ -127,23 +127,37 @@ export function IcerikTakvimiPage() {
 
   // Polling helper — job_id ile status endpoint'ini sorgular, tamamlandığında sonucu döner
   const pollJobResult = async (jobId: string): Promise<TakvimiResult> => {
-    const MAX_ATTEMPTS = 100  // 100 × 3s = ~5 dakika
-    for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
-      await new Promise((r) => setTimeout(r, 3000))
-      const poll = await api.get<{ status: string } & Record<string, unknown>>(
-        `/tools/icerik-takvimi/status/${jobId}`
-      )
-      const data = poll.data
-      if (data?.status === 'completed') {
-        // n8n worker: { status: 'completed', result: { content: '<AI JSON metni>' } }
-        const resultContent = (data as Record<string, unknown>)?.result as Record<string, unknown> | undefined
-        const content = resultContent?.content as string | undefined
-        if (content) return parseAiJson<TakvimiResult>(content)
-        // Fallback: doğrudan data içinde olabilir
-        return parseAiJson<TakvimiResult>(data as unknown)
+    const POLL_INTERVAL_MS = 4000
+    const DEADLINE = Date.now() + 15 * 60 * 1000  // 15 dakika (canlıda 12dk+ sürebildiği görüldü)
+
+    while (Date.now() < DEADLINE) {
+      await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS))
+      let poll: { data: { status: string } & Record<string, unknown> }
+      try {
+        // Cache-busting: URL tabanlı önbelleklerin aynı yanıtı tekrar dönmesini engelle
+        poll = await api.get(`/tools/icerik-takvimi/status/${jobId}?_=${Date.now()}`, {
+          headers: { 'Cache-Control': 'no-store' },
+        })
+      } catch {
+        continue  // Ağ hatası — bir sonraki poll'da tekrar dene
       }
-      if (data?.status === 'failed' || data?.status === 'error') {
+      const data = poll.data
+      if (!data?.status || data.status === 'pending' || data.status === 'not_found') continue
+      if (data.status === 'failed' || data.status === 'error') {
         throw new Error('İçerik takvimi oluşturulamadı. Lütfen tekrar deneyin.')
+      }
+      if (data.status === 'completed') {
+        // n8n worker format: { status: 'completed', result: { content: [{ text: '...' }] } }
+        const resultBlock = data.result as Record<string, unknown> | undefined
+        const contentArr = resultBlock?.content as Array<{ text?: string }> | undefined
+        if (contentArr) {
+          const text = contentArr.map((b) => b.text ?? '').join('')
+          return parseAiJson<TakvimiResult>(text)
+        }
+        // Fallback: content düz string ise
+        const contentStr = resultBlock?.content as string | undefined
+        if (contentStr) return parseAiJson<TakvimiResult>(contentStr)
+        return parseAiJson<TakvimiResult>(data as unknown)
       }
     }
     throw new Error('Zaman aşımı — yapay zeka yanıt vermedi. Lütfen tekrar deneyin.')
