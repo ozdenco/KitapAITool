@@ -125,12 +125,46 @@ export function IcerikTakvimiPage() {
   const [elapsedSec, setElapsedSec] = useState(0)
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
+  // Polling helper — job_id ile status endpoint'ini sorgular, tamamlandığında sonucu döner
+  const pollJobResult = async (jobId: string): Promise<TakvimiResult> => {
+    const MAX_ATTEMPTS = 100  // 100 × 3s = ~5 dakika
+    for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+      await new Promise((r) => setTimeout(r, 3000))
+      const poll = await api.get<{ status: string } & Record<string, unknown>>(
+        `/tools/icerik-takvimi/status/${jobId}`
+      )
+      const data = poll.data
+      if (data?.status === 'completed') {
+        // Sonuç doğrudan response body'de ya da iç içe olabilir
+        const content = (data as Record<string, unknown>)?.content as string | undefined
+        if (content) return parseAiJson<TakvimiResult>(content)
+        return parseAiJson<TakvimiResult>(data as unknown)
+      }
+      if (data?.status === 'failed' || data?.status === 'error') {
+        throw new Error('İçerik takvimi oluşturulamadı. Lütfen tekrar deneyin.')
+      }
+    }
+    throw new Error('Zaman aşımı — yapay zeka yanıt vermedi. Lütfen tekrar deneyin.')
+  }
+
   const mutation = useMutation({
     mutationFn: async () => {
       const prompt = buildPrompt({ bizName, sector, audience, platform, gunler, ton, lang, ozelGunler, startDate })
-      const res = await api.post('/tools/icerik-takvimi/run', { prompt })
-      const content = res.data?.content?.[0]?.text ?? res.data
-      return parseAiJson<TakvimiResult>(content)
+      const res = await api.post<{ job_id?: string; status?: string } & Record<string, unknown>>(
+        '/tools/icerik-takvimi/run',
+        { prompt }
+      )
+      const data = res.data
+
+      // Async job: job_id + pending → polling başlat
+      if (data?.job_id && (data?.status === 'pending' || data?.status === 'running')) {
+        return await pollJobResult(data.job_id)
+      }
+
+      // Sync yanıt (veya hata yoksa direkt JSON)
+      const content = (data as Record<string, unknown>)?.content as string | undefined
+      if (content) return parseAiJson<TakvimiResult>(content)
+      return parseAiJson<TakvimiResult>(data as unknown)
     },
     onSuccess: (data) => {
       setResult(data)
