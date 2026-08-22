@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '@/lib/api'
 import { parseAiJson } from '@/lib/parseAiJson'
@@ -122,6 +122,8 @@ export function IcerikTakvimiPage() {
   const [ozelGunler, setOzelGunler] = useState('')
   const [startDate, setStartDate] = useState('')
   const [result, setResult] = useState<TakvimiResult | null>(null)
+  const [elapsedSec, setElapsedSec] = useState(0)
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const mutation = useMutation({
     mutationFn: async () => {
@@ -136,6 +138,22 @@ export function IcerikTakvimiPage() {
     },
   })
 
+  // Elapsed seconds timer — mutation.isPending olduğu sürece her saniye artar
+  useEffect(() => {
+    if (mutation.isPending) {
+      setElapsedSec(0)
+      timerRef.current = setInterval(() => setElapsedSec((s) => s + 1), 1000)
+    } else {
+      if (timerRef.current) {
+        clearInterval(timerRef.current)
+        timerRef.current = null
+      }
+    }
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current)
+    }
+  }, [mutation.isPending])
+
   const getData = () => ({ bizName, sector, audience, platform, gunler, ton, lang, ozelGunler, startDate })
 
   const canSubmit = (bizName.trim() || sector) && platform && gunler && !mutation.isPending
@@ -148,6 +166,7 @@ export function IcerikTakvimiPage() {
       description="Sektörünüze, hedef kitlenize ve marka sesinize uygun 30 günlük sosyal medya takvimi oluşturalım. Her gün için konu, format önerisi ve hazır taslak metin üretiyoruz."
       hasResult={!!result}
       formHasInput={!!bizName.trim() || !!sector}
+      isPending={mutation.isPending}
     >
       {({ isFormOpen, header, rateBar }) => (
         <>
@@ -286,7 +305,9 @@ export function IcerikTakvimiPage() {
                   📅 30 Günlük İçerik Takvimi Oluştur
                 </Button>
                 {mutation.isPending && (
-                  <p className="text-center text-sm text-gray-400 animate-pulse">İçerik takvimi oluşturuluyor — 1-2 dakika sürebilir...</p>
+                  <p className="text-center text-sm text-gray-400 animate-pulse">
+                    İçerik takvimi oluşturuluyor ({elapsedSec} sn geçti)...
+                  </p>
                 )}
               </div>
             </div>
@@ -301,37 +322,39 @@ export function IcerikTakvimiPage() {
                 </div>
               )}
 
-              <div className="bg-white rounded-2xl border border-[#E2E0D8] shadow-sm p-5">
-                <h3 className="text-sm font-semibold text-[#1C1B19] mb-4">📅 {result.icerik_takvimi.length} İçerik Planı</h3>
-                <div className="flex flex-col gap-3">
-                  {result.icerik_takvimi.map((item, i) => (
-                    <div key={i} className="rounded-xl border border-[#F1EFE8] p-4 hover:border-[#1D9E75]/30 transition">
-                      <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
-                        <div className="flex items-center gap-2">
-                          <span>{PLATFORM_EMOJIS[item.platform] ?? '📝'}</span>
-                          <span className="text-xs font-semibold text-gray-500">{item.platform}</span>
-                          <span className="text-xs text-gray-400">·</span>
-                          <span className="text-xs text-gray-400">{item.gun}{item.tarih ? ` · ${item.tarih}` : ''}</span>
+              {(result.icerik_takvimi ?? []).length > 0 && (
+                <div className="bg-white rounded-2xl border border-[#E2E0D8] shadow-sm p-5">
+                  <h3 className="text-sm font-semibold text-[#1C1B19] mb-4">📅 {(result.icerik_takvimi ?? []).length} İçerik Planı</h3>
+                  <div className="flex flex-col gap-3">
+                    {(result.icerik_takvimi ?? []).map((item, i) => (
+                      <div key={i} className="rounded-xl border border-[#F1EFE8] p-4 hover:border-[#1D9E75]/30 transition">
+                        <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
+                          <div className="flex items-center gap-2">
+                            <span>{PLATFORM_EMOJIS[item.platform] ?? '📝'}</span>
+                            <span className="text-xs font-semibold text-gray-500">{item.platform}</span>
+                            <span className="text-xs text-gray-400">·</span>
+                            <span className="text-xs text-gray-400">{item.gun}{item.tarih ? ` · ${item.tarih}` : ''}</span>
+                          </div>
+                          <span className="text-xs bg-gray-100 px-2 py-0.5 rounded-full text-gray-500">{item.icerik_turu}</span>
                         </div>
-                        <span className="text-xs bg-gray-100 px-2 py-0.5 rounded-full text-gray-500">{item.icerik_turu}</span>
+                        <p className="font-semibold text-sm text-gray-800 mb-1">{item.baslik}</p>
+                        {item.konu && item.konu !== item.baslik && (
+                          <p className="text-xs text-gray-400 mb-2 italic">{item.konu}</p>
+                        )}
+                        <p className="text-sm text-[#1C1B19] leading-relaxed mb-3 whitespace-pre-wrap">{item.icerik}</p>
+                        <div className="flex flex-wrap gap-1 mb-2">
+                          {(item.hashtag ?? []).map((tag, j) => (
+                            <span key={j} className="text-xs text-[#1D9E75]">{tag}</span>
+                          ))}
+                        </div>
+                        {item.en_iyi_saat && (
+                          <p className="text-xs text-gray-400">⏰ En iyi paylaşım saati: {item.en_iyi_saat}</p>
+                        )}
                       </div>
-                      <p className="font-semibold text-sm text-gray-800 mb-1">{item.baslik}</p>
-                      {item.konu && item.konu !== item.baslik && (
-                        <p className="text-xs text-gray-400 mb-2 italic">{item.konu}</p>
-                      )}
-                      <p className="text-sm text-[#1C1B19] leading-relaxed mb-3 whitespace-pre-wrap">{item.icerik}</p>
-                      <div className="flex flex-wrap gap-1 mb-2">
-                        {item.hashtag.map((tag, j) => (
-                          <span key={j} className="text-xs text-[#1D9E75]">{tag}</span>
-                        ))}
-                      </div>
-                      {item.en_iyi_saat && (
-                        <p className="text-xs text-gray-400">⏰ En iyi paylaşım saati: {item.en_iyi_saat}</p>
-                      )}
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
 
               {result.ipuclari && result.ipuclari.length > 0 && (
                 <div className="bg-white rounded-2xl border border-[#E2E0D8] shadow-sm p-5">
