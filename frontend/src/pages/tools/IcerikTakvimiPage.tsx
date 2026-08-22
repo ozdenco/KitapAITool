@@ -135,9 +135,11 @@ export function IcerikTakvimiPage() {
       )
       const data = poll.data
       if (data?.status === 'completed') {
-        // Sonuç doğrudan response body'de ya da iç içe olabilir
-        const content = (data as Record<string, unknown>)?.content as string | undefined
+        // n8n worker: { status: 'completed', result: { content: '<AI JSON metni>' } }
+        const resultContent = (data as Record<string, unknown>)?.result as Record<string, unknown> | undefined
+        const content = resultContent?.content as string | undefined
         if (content) return parseAiJson<TakvimiResult>(content)
+        // Fallback: doğrudan data içinde olabilir
         return parseAiJson<TakvimiResult>(data as unknown)
       }
       if (data?.status === 'failed' || data?.status === 'error') {
