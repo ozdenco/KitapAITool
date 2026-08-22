@@ -320,20 +320,33 @@ export function Layout() {
 
       {/* Footer */}
       <footer className="border-t border-[#E2E0D8] bg-white">
-        <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between flex-wrap gap-2">
-          <span className="text-xs text-gray-400">© 2026 KolayKOBİ — kolaykobi.com</span>
-          <div className="flex items-center gap-4">
-            <a href="/satis-sozlesmesi" className="text-xs text-gray-400 hover:text-gray-600 transition-colors">
-              Satış Sözleşmesi
+        <div className="max-w-6xl mx-auto px-4 py-3 grid grid-cols-3 gap-6">
+
+          {/* Sol: Bize Ulaşın */}
+          <div className="flex flex-col gap-1">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 mb-0.5">Bize Ulaşın</p>
+            <a href="mailto:merhaba@kolaykobi.com" className="text-[12px] text-gray-500 hover:text-[#1D9E75] transition-colors flex items-center gap-1.5">
+              <span>✉️</span> merhaba@kolaykobi.com
             </a>
-            <a href="/iptal-iade-kosullari" className="text-xs text-gray-400 hover:text-gray-600 transition-colors">
-              İptal &amp; İade
+            <a href="tel:+905322902089" className="text-[12px] text-gray-500 hover:text-[#1D9E75] transition-colors flex items-center gap-1.5">
+              <span>📱</span> 0532 290 20 89
             </a>
-            <a href="/kvkk" className="text-xs text-gray-400 hover:text-gray-600 transition-colors">
-              KVKK
-            </a>
-            <span className="text-xs text-gray-400">Dijital ajansınız artık bir yazılım</span>
           </div>
+
+          {/* Orta: Destek */}
+          <div className="flex flex-col gap-1">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 mb-0.5">Destek</p>
+            <a href="/satis-sozlesmesi" className="text-[12px] text-gray-500 hover:text-[#1D9E75] transition-colors">Satış Sözleşmesi</a>
+            <a href="/iptal-iade-kosullari" className="text-[12px] text-gray-500 hover:text-[#1D9E75] transition-colors">İptal &amp; İade Koşulları</a>
+            <a href="/kvkk" className="text-[12px] text-gray-500 hover:text-[#1D9E75] transition-colors">KVKK / Gizlilik</a>
+            <a href="/teslimat-kosullari" className="text-[12px] text-gray-500 hover:text-[#1D9E75] transition-colors">Teslimat Koşulları</a>
+          </div>
+
+          {/* Sağ: telif */}
+          <div className="flex items-end justify-end">
+            <span className="text-[11px] text-gray-400">© 2026 KolayKOBİ · kolaykobi.com</span>
+          </div>
+
         </div>
       </footer>
     </div>

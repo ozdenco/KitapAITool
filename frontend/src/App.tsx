@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { useAnalyticsPageView } from '@/hooks/useAnalyticsPageView'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { GoogleOAuthProvider } from '@react-oauth/google'
 import { Layout } from '@/components/Layout'
@@ -35,6 +36,7 @@ import { AdminAnaSayfaPage } from '@/pages/admin/AdminAnaSayfaPage'
 import { SatisSozlesmesiPage } from '@/pages/legal/SatisSozlesmesiPage'
 import { IptalIadeKosullariPage } from '@/pages/legal/IptalIadeKosullariPage'
 import { KvkkPage } from '@/pages/legal/KvkkPage'
+import { TeslimatKosullariPage } from '@/pages/legal/TeslimatKosullariPage'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -47,10 +49,16 @@ const queryClient = new QueryClient({
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID ?? ''
 
+function AnalyticsPageTracker() {
+  useAnalyticsPageView()
+  return null
+}
+
 function AppRoutes() {
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
+        <AnalyticsPageTracker />
         <Routes>
           {/* Public */}
           <Route path="/giris" element={<LoginPage />} />
@@ -63,6 +71,7 @@ function AppRoutes() {
             <Route path="/satis-sozlesmesi" element={<SatisSozlesmesiPage />} />
             <Route path="/iptal-iade-kosullari" element={<IptalIadeKosullariPage />} />
             <Route path="/kvkk" element={<KvkkPage />} />
+            <Route path="/teslimat-kosullari" element={<TeslimatKosullariPage />} />
           </Route>
 
           {/* Protected */}
