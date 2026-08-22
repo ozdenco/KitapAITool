@@ -1,7 +1,11 @@
+import { useNavigate } from 'react-router-dom'
+
 export function TeslimatKosullariPage() {
+  const navigate = useNavigate()
   return (
     <div className="min-h-screen bg-[#FAF9F6]">
       <div className="max-w-3xl mx-auto px-6 py-8">
+        <button type="button" onClick={() => navigate(-1)} className="flex items-center gap-1.5 mb-4 text-[13px] text-[#6B6963] hover:text-[#1D9E75] transition-colors"><svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>Geri Dön</button>
         <h1 className="text-[18px] font-bold text-gray-900 mb-1">Teslimat ve Hizmet Kullanım Koşulları</h1>
         <p className="text-[12px] text-gray-500 mb-5">Son güncelleme: Ağustos 2026</p>
 

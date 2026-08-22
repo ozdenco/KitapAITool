@@ -1,14 +1,18 @@
+import { useNavigate } from 'react-router-dom'
+
 export function SatisSozlesmesiPage() {
+  const navigate = useNavigate()
   return (
     <div className="min-h-screen bg-[#FAF9F6]">
-      <div className="max-w-3xl mx-auto px-6 py-12">
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">Mesafeli Satış Sözleşmesi</h1>
-        <p className="text-sm text-gray-500 mb-8">Son güncelleme: Ağustos 2026</p>
+      <div className="max-w-3xl mx-auto px-6 py-8">
+        <button type="button" onClick={() => navigate(-1)} className="flex items-center gap-1.5 mb-4 text-[13px] text-[#6B6963] hover:text-[#1D9E75] transition-colors"><svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>Geri Dön</button>
+        <h1 className="text-[18px] font-bold text-gray-900 mb-1">Mesafeli Satış Sözleşmesi</h1>
+        <p className="text-[12px] text-gray-500 mb-5">Son güncelleme: Ağustos 2026</p>
 
-        <div className="prose prose-sm max-w-none text-gray-700 space-y-6">
+        <div className="max-w-none text-[13px] text-gray-700 leading-relaxed space-y-4">
 
           <section>
-            <h2 className="text-base font-semibold text-gray-900 mb-2">1. Taraflar</h2>
+            <h2 className="text-[12px] font-semibold text-gray-900 mb-1.5">1. Taraflar</h2>
             <p>
               Bu Mesafeli Satış Sözleşmesi ("Sözleşme"), aşağıda belirtilen taraflar arasında akdedilmiştir:
             </p>
@@ -23,7 +27,7 @@ export function SatisSozlesmesiPage() {
           </section>
 
           <section>
-            <h2 className="text-base font-semibold text-gray-900 mb-2">2. Konu ve Kapsam</h2>
+            <h2 className="text-[12px] font-semibold text-gray-900 mb-1.5">2. Konu ve Kapsam</h2>
             <p>
               Bu Sözleşme; Müşteri'nin KolayKOBİ platformu üzerinden satın aldığı dijital abonelik planları ve
               tekil araç kullanım paketlerine ilişkin hak ve yükümlülükleri düzenler. Platform, yapay zeka destekli
@@ -32,7 +36,7 @@ export function SatisSozlesmesiPage() {
           </section>
 
           <section>
-            <h2 className="text-base font-semibold text-gray-900 mb-2">3. Hizmet Kapsamı</h2>
+            <h2 className="text-[12px] font-semibold text-gray-900 mb-1.5">3. Hizmet Kapsamı</h2>
             <p>KolayKOBİ bünyesindeki abonelik planları aşağıdaki seçenekleri içermektedir:</p>
             <ul className="list-disc ml-5 mt-2 space-y-1">
               <li><strong>Ücretsiz Plan:</strong> Her araç için aylık 3 kullanım hakkı</li>
@@ -47,7 +51,7 @@ export function SatisSozlesmesiPage() {
           </section>
 
           <section>
-            <h2 className="text-base font-semibold text-gray-900 mb-2">4. Hizmet Bedeli ve Ödeme</h2>
+            <h2 className="text-[12px] font-semibold text-gray-900 mb-1.5">4. Hizmet Bedeli ve Ödeme</h2>
             <p>
               Abonelik ücretleri ve tekil paket fiyatları platform üzerinde ilgili satın alma sayfasında
               Türk Lirası (TL) cinsinden belirtilmektedir. Ödemeler PayTR altyapısı üzerinden güvenli biçimde
@@ -60,7 +64,7 @@ export function SatisSozlesmesiPage() {
           </section>
 
           <section>
-            <h2 className="text-base font-semibold text-gray-900 mb-2">5. Hizmetin İfası ve Teslimi</h2>
+            <h2 className="text-[12px] font-semibold text-gray-900 mb-1.5">5. Hizmetin İfası ve Teslimi</h2>
             <p>
               KolayKOBİ dijital bir hizmet sunmaktadır. Ödeme onayının ardından hizmet erişimi anında ve
               elektronik ortamda sağlanır; fiziksel bir teslimat söz konusu değildir. Hizmet kesintisiz
@@ -70,7 +74,7 @@ export function SatisSozlesmesiPage() {
           </section>
 
           <section>
-            <h2 className="text-base font-semibold text-gray-900 mb-2">6. Cayma Hakkı</h2>
+            <h2 className="text-[12px] font-semibold text-gray-900 mb-1.5">6. Cayma Hakkı</h2>
             <p>
               6502 sayılı Tüketicinin Korunması Hakkında Kanun ve Mesafeli Sözleşmeler Yönetmeliği
               kapsamında, tüketiciler dijital içerik ve hizmet sözleşmelerinde 14 (on dört) gün içinde
@@ -92,7 +96,7 @@ export function SatisSozlesmesiPage() {
           </section>
 
           <section>
-            <h2 className="text-base font-semibold text-gray-900 mb-2">7. Gizlilik</h2>
+            <h2 className="text-[12px] font-semibold text-gray-900 mb-1.5">7. Gizlilik</h2>
             <p>
               Müşteri'ye ait kişisel veriler 6698 sayılı Kişisel Verilerin Korunması Kanunu (KVKK)
               çerçevesinde işlenir. Veriler üçüncü kişilerle, hizmetin ifası için zorunlu olan durumlar
@@ -101,7 +105,7 @@ export function SatisSozlesmesiPage() {
           </section>
 
           <section>
-            <h2 className="text-base font-semibold text-gray-900 mb-2">8. Uyuşmazlıkların Çözümü</h2>
+            <h2 className="text-[12px] font-semibold text-gray-900 mb-1.5">8. Uyuşmazlıkların Çözümü</h2>
             <p>
               Bu Sözleşme'den doğabilecek uyuşmazlıklarda Türkiye Cumhuriyeti mahkemeleri ve
               Tüketici Hakem Heyetleri yetkilidir. Yasal sınırlar dahilindeki uyuşmazlıklar için
@@ -110,7 +114,7 @@ export function SatisSozlesmesiPage() {
           </section>
 
           <section>
-            <h2 className="text-base font-semibold text-gray-900 mb-2">9. İletişim</h2>
+            <h2 className="text-[12px] font-semibold text-gray-900 mb-1.5">9. İletişim</h2>
             <p>
               Sözleşme'ye ilişkin sorularınız için:<br />
               E-posta: <a href="mailto:destek@kolaykobi.com" className="text-[#4A7C59]">destek@kolaykobi.com</a>

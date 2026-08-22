@@ -1,6 +1,8 @@
-import { type ReactNode, useEffect, useState } from 'react'
+import { type ReactNode, useEffect, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useToolUsageById } from '@/hooks/useToolUsage'
 import { useBeforeUnload } from '@/hooks/useBeforeUnload'
+import { trackToolOpened, trackToolCompleted } from '@/lib/analytics'
 
 interface ToolShellProps {
   toolId: string
@@ -9,6 +11,7 @@ interface ToolShellProps {
   description: string
   hasResult: boolean
   formHasInput: boolean
+  isPending?: boolean
   children: (props: { isFormOpen: boolean; header: ReactNode; rateBar: ReactNode }) => ReactNode
 }
 
@@ -19,14 +22,38 @@ export function ToolShell({
   description,
   hasResult,
   formHasInput,
+  isPending = false,
   children,
 }: ToolShellProps) {
+  const navigate = useNavigate()
   const { usage, isLoading: usageLoading } = useToolUsageById(toolId)
   const [isFormOpen, setIsFormOpen] = useState(true)
+  const resultTracked = useRef(false)
+  const submitStartedAt = useRef<number | null>(null)
 
+  // Araç açıldığında izle
   useEffect(() => {
+    trackToolOpened(toolId, title)
+  }, [toolId, title])
+
+  // Form submit başladığında süreyi kaydet
+  useEffect(() => {
+    if (isPending && submitStartedAt.current == null) {
+      submitStartedAt.current = performance.now()
+    }
+  }, [isPending])
+
+  // Sonuç geldiğinde izle (yalnızca ilk kez) — süreyle birlikte
+  useEffect(() => {
+    if (hasResult && !resultTracked.current) {
+      resultTracked.current = true
+      const durationMs = submitStartedAt.current != null
+        ? performance.now() - submitStartedAt.current
+        : undefined
+      trackToolCompleted(toolId, title, durationMs)
+    }
     if (hasResult) setIsFormOpen(false)
-  }, [hasResult])
+  }, [hasResult, toolId, title])
 
   useBeforeUnload(formHasInput && !hasResult)
 
@@ -128,6 +155,18 @@ export function ToolShell({
 
   return (
     <div className="w-full max-w-[720px] px-4 py-8">
+      {/* Geri Dön */}
+      <button
+        type="button"
+        onClick={() => navigate(-1)}
+        className="no-print flex items-center gap-1.5 mb-4 text-[13px] text-[#6B6963] hover:text-[#1D9E75] transition-colors"
+      >
+        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+        </svg>
+        Geri Dön
+      </button>
+
       {/*
         Sonuç varsa daima bir toggle çubuğu göster.
         Form açıkken → "▲ Formu Gizle"
