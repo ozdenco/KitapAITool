@@ -14,22 +14,24 @@ interface ToolPrice {
 }
 
 // Her araç için hangi AI motorunu kaç birim kullandığı
+// Token sayıları: araç çalıştırıldıkça gerçek değerler bildirilecek, şimdilik 0 = bilinmiyor
 const TOOL_ENGINE_MAP: Record<string, {
-  engine: 'minimax' | 'anthropic' | 'apify'
-  unitsPerRun: number   // token veya run birimi
+  engine: 'minimax' | 'gemini' | 'apify'
+  unitsPerRun: number   // token veya run birimi (0 = henüz bilinmiyor)
   unitLabel: string
+  note?: string
 }> = {
-  'icerik-takvimi':     { engine: 'minimax',    unitsPerRun: 10,  unitLabel: 'token/çalıştırma' },
-  'trend-video':        { engine: 'apify',      unitsPerRun: 1,   unitLabel: 'run/çalıştırma' },
-  'gorunurluk-skoru':   { engine: 'anthropic',  unitsPerRun: 2,   unitLabel: 'kr-token/çalıştırma' },
-  'musteri-persona':    { engine: 'anthropic',  unitsPerRun: 3,   unitLabel: 'kr-token/çalıştırma' },
-  'whatsapp-satis':     { engine: 'anthropic',  unitsPerRun: 2,   unitLabel: 'kr-token/çalıştırma' },
-  'reklam-butce':       { engine: 'anthropic',  unitsPerRun: 2,   unitLabel: 'kr-token/çalıştırma' },
-  'musteri-geri-donus': { engine: 'anthropic',  unitsPerRun: 3,   unitLabel: 'kr-token/çalıştırma' },
-  'rakip-analiz':       { engine: 'anthropic',  unitsPerRun: 4,   unitLabel: 'kr-token/çalıştırma' },
-  'chatbot-senaryo':    { engine: 'anthropic',  unitsPerRun: 3,   unitLabel: 'kr-token/çalıştırma' },
-  'ai-gorunurluk':      { engine: 'anthropic',  unitsPerRun: 3,   unitLabel: 'kr-token/çalıştırma' },
-  'viral-video':        { engine: 'anthropic',  unitsPerRun: 3,   unitLabel: 'kr-token/çalıştırma' },
+  'icerik-takvimi':     { engine: 'minimax', unitsPerRun: 10, unitLabel: 'token/çalıştırma', note: 'İlk ölçüm: 10 token' },
+  'trend-video':        { engine: 'apify',   unitsPerRun: 1,  unitLabel: 'run/çalıştırma' },
+  'rakip-analiz':       { engine: 'gemini',  unitsPerRun: 0,  unitLabel: 'token/çalıştırma', note: 'MiniMax + Gemini Flash — token henüz ölçülmedi' },
+  'gorunurluk-skoru':   { engine: 'minimax', unitsPerRun: 0,  unitLabel: 'token/çalıştırma', note: 'Henüz ölçülmedi' },
+  'musteri-persona':    { engine: 'minimax', unitsPerRun: 0,  unitLabel: 'token/çalıştırma', note: 'Henüz ölçülmedi' },
+  'whatsapp-satis':     { engine: 'minimax', unitsPerRun: 0,  unitLabel: 'token/çalıştırma', note: 'Henüz ölçülmedi' },
+  'reklam-butce':       { engine: 'minimax', unitsPerRun: 0,  unitLabel: 'token/çalıştırma', note: 'Henüz ölçülmedi' },
+  'musteri-geri-donus': { engine: 'minimax', unitsPerRun: 0,  unitLabel: 'token/çalıştırma', note: 'Henüz ölçülmedi' },
+  'chatbot-senaryo':    { engine: 'minimax', unitsPerRun: 0,  unitLabel: 'token/çalıştırma', note: 'Henüz ölçülmedi' },
+  'ai-gorunurluk':      { engine: 'minimax', unitsPerRun: 0,  unitLabel: 'token/çalıştırma', note: 'Henüz ölçülmedi' },
+  'viral-video':        { engine: 'minimax', unitsPerRun: 0,  unitLabel: 'token/çalıştırma', note: 'Henüz ölçülmedi' },
 }
 
 const TOOL_ICONS: Record<string, string> = {
@@ -97,42 +99,48 @@ function MaliyetPaneli({ prices }: { prices?: ToolPrice[] }) {
 
   // ── Form state (kullanıcı girişi) ─────────────────────────────────────────
   const [form, setForm] = useState({
-    minimaxBudgetUsd:    5,      // $5
-    minimaxTokens:       5000,   // 5000 token
-    anthropicMonthlyUsd: 20,     // $20/ay
-    anthropicEstRuns:    1000,   // aylık tahmini toplam çalıştırma (Anthropic araçları)
-    apifyBudgetUsd:      29,     // $29
-    apifyRuns:           50,     // 50 run
-    n8nUsd:              20,     // $20/ay
-    hostingerUsd:        10,     // $10/ay
-    activeUsers:         50,     // aktif kullanıcı sayısı
-    profitMultiplier:    3,      // kâr marjı çarpanı
-    stdPackageRuns:      10,     // standart paket run sayısı
+    minimaxBudgetUsd:   5,      // $5
+    minimaxTokens:      5000,   // 5000 token
+    minimaxMonthlyUsd:  5,      // $5/ay sabit MiniMax maliyeti
+    claudeUsd:          20,     // $20/ay Claude (geliştirici sabit)
+    geminiEstRunsMonth: 100,    // Gemini Flash tahmini aylık run (Rakip Analiz)
+    geminiCostPerRunUsd:0.003,  // Gemini Flash $/run (tahmini)
+    apifyBudgetUsd:     29,     // $29
+    apifyRuns:          50,     // 50 run
+    n8nUsd:             20,     // $20/ay
+    hostingerUsd:       10,     // $10/ay
+    activeUsers:        50,     // aktif kullanıcı sayısı
+    profitMultiplier:   3,      // kâr marjı çarpanı
+    stdPackageRuns:     10,     // standart paket run sayısı
   })
   const setF = (k: keyof typeof form) => (v: number) =>
     setForm(prev => ({ ...prev, [k]: v }))
 
   // ── Hesaplama ─────────────────────────────────────────────────────────────
-  const minimaxCostPerToken   = form.minimaxBudgetUsd / form.minimaxTokens        // $/token
-  const apifyCostPerRun       = form.apifyBudgetUsd   / form.apifyRuns             // $/run
-  const anthropicCostPerRun   = form.anthropicMonthlyUsd / Math.max(1, form.anthropicEstRuns)
+  const minimaxCostPerToken = form.minimaxBudgetUsd / form.minimaxTokens   // $/token
+  const apifyCostPerRun     = form.apifyBudgetUsd   / form.apifyRuns        // $/run
 
-  const totalInfraUsd         = form.n8nUsd + form.hostingerUsd + form.anthropicMonthlyUsd
-  const infraPerUserTry       = (totalInfraUsd / Math.max(1, form.activeUsers)) * usdTry
+  // MiniMax sabit aylık $5 + Claude $20 altyapıya dahil; per-run maliyet ayrı
+  const totalInfraUsd   = form.n8nUsd + form.hostingerUsd + form.minimaxMonthlyUsd + form.claudeUsd
+  const infraPerUserTry = (totalInfraUsd / Math.max(1, form.activeUsers)) * usdTry
 
   function costPerRunUsd(toolId: string): number {
     const m = TOOL_ENGINE_MAP[toolId]
-    if (!m) return 0
-    if (m.engine === 'minimax')    return minimaxCostPerToken * m.unitsPerRun
-    if (m.engine === 'apify')      return apifyCostPerRun     * m.unitsPerRun
-    if (m.engine === 'anthropic')  return anthropicCostPerRun * m.unitsPerRun
+    if (!m || m.unitsPerRun === 0) return 0
+    if (m.engine === 'minimax') return minimaxCostPerToken * m.unitsPerRun
+    if (m.engine === 'apify')   return apifyCostPerRun     * m.unitsPerRun
+    if (m.engine === 'gemini')  return form.geminiCostPerRunUsd
     return 0
   }
 
   // Standart paket için ortalama AI maliyeti (Apify hariç — ayrı fiyatlandırılmalı)
-  const nonApifyTools   = (prices ?? []).filter(p => TOOL_ENGINE_MAP[p.toolId]?.engine !== 'apify')
-  const avgAiUsd        = nonApifyTools.length
-    ? nonApifyTools.reduce((s, p) => s + costPerRunUsd(p.toolId), 0) / nonApifyTools.length
+  // Sıfır tokenlı araçlar hesaba katılmaz (henüz ölçülmedi)
+  const measuredNonApifyTools = (prices ?? []).filter(p => {
+    const m = TOOL_ENGINE_MAP[p.toolId]
+    return m && m.engine !== 'apify' && m.unitsPerRun > 0
+  })
+  const avgAiUsd        = measuredNonApifyTools.length
+    ? measuredNonApifyTools.reduce((s, p) => s + costPerRunUsd(p.toolId), 0) / measuredNonApifyTools.length
     : 0
   const stdAiTotalTry   = avgAiUsd * form.stdPackageRuns * usdTry
   const stdTotalCostTry = stdAiTotalTry + infraPerUserTry
@@ -165,37 +173,36 @@ function MaliyetPaneli({ prices }: { prices?: ToolPrice[] }) {
 
         {/* MiniMax */}
         <div className="bg-[#F7F6F2] rounded-xl p-4 flex flex-col gap-3">
-          <p className="text-[12px] font-semibold text-[#1C1B19]">🧠 MiniMax</p>
-          <NumInput label="Bütçe (USD)" value={form.minimaxBudgetUsd}  onChange={setF('minimaxBudgetUsd')}  suffix="$" step={1} />
-          <NumInput label="Token sayısı"  value={form.minimaxTokens}      onChange={setF('minimaxTokens')}      suffix="token" step={100} />
+          <p className="text-[12px] font-semibold text-[#1C1B19]">🧠 MiniMax (tüm araçlar)</p>
+          <NumInput label="Paket bütçesi (USD)" value={form.minimaxBudgetUsd} onChange={setF('minimaxBudgetUsd')} suffix="$" step={1} />
+          <NumInput label="Token sayısı"         value={form.minimaxTokens}    onChange={setF('minimaxTokens')}    suffix="token" step={100} />
+          <NumInput label="Sabit aylık maliyet"  value={form.minimaxMonthlyUsd} onChange={setF('minimaxMonthlyUsd')} suffix="$/ay" step={1} />
           <div className="text-[11px] text-[#6B6963] bg-white rounded-lg px-3 py-2">
-            <span className="font-medium text-[#1C1B19]">${(minimaxCostPerToken).toFixed(4)}</span> / token
+            <span className="font-medium text-[#1C1B19]">${minimaxCostPerToken.toFixed(4)}</span> / token
             <span className="mx-2 text-[#D3D1C7]">·</span>
             İçerik Takvimi: <span className="font-medium text-[#1C1B19]">${(minimaxCostPerToken * 10).toFixed(4)}</span>/run
           </div>
         </div>
 
-        {/* Anthropic */}
+        {/* Gemini */}
         <div className="bg-[#F7F6F2] rounded-xl p-4 flex flex-col gap-3">
-          <p className="text-[12px] font-semibold text-[#1C1B19]">🤖 Anthropic (Claude)</p>
-          <NumInput label="Aylık bütçe (USD)" value={form.anthropicMonthlyUsd}  onChange={setF('anthropicMonthlyUsd')}  suffix="$/ay" step={1} />
-          <NumInput label="Aylık tahmini run"  value={form.anthropicEstRuns}      onChange={setF('anthropicEstRuns')}      suffix="run" step={100} />
-          <div className="text-[11px] text-[#6B6963] bg-white rounded-lg px-3 py-2">
-            <span className="font-medium text-[#1C1B19]">${anthropicCostPerRun.toFixed(4)}</span> / run
-            <span className="mx-2 text-[#D3D1C7]">·</span>
-            Diğer 9 araç bu motorla çalışır
+          <p className="text-[12px] font-semibold text-[#1C1B19]">✨ Gemini Flash (Rakip Analiz)</p>
+          <NumInput label="Çalıştırma başı maliyet" value={form.geminiCostPerRunUsd} onChange={setF('geminiCostPerRunUsd')} suffix="$/run" step={0.001} />
+          <NumInput label="Aylık tahmini run"        value={form.geminiEstRunsMonth}  onChange={setF('geminiEstRunsMonth')}  suffix="run" step={10} />
+          <div className="text-[11px] text-amber-700 bg-amber-50 rounded-lg px-3 py-2">
+            ⚠️ Token miktarı henüz ölçülmedi. Rakip Analiz çalıştırıldığında bildiriyorsun.
           </div>
         </div>
 
         {/* Apify */}
         <div className="bg-[#F7F6F2] rounded-xl p-4 flex flex-col gap-3">
-          <p className="text-[12px] font-semibold text-[#1C1B19]">🕷️ Apify</p>
+          <p className="text-[12px] font-semibold text-[#1C1B19]">🕷️ Apify (Trend Video)</p>
           <NumInput label="Plan fiyatı (USD)" value={form.apifyBudgetUsd}  onChange={setF('apifyBudgetUsd')}  suffix="$/ay" step={1} />
           <NumInput label="Aylık run hakkı"   value={form.apifyRuns}        onChange={setF('apifyRuns')}        suffix="run" step={5} />
           <div className="text-[11px] text-[#6B6963] bg-white rounded-lg px-3 py-2">
             <span className="font-medium text-[#1C1B19]">${apifyCostPerRun.toFixed(3)}</span> / run
             <span className="mx-2 text-[#D3D1C7]">·</span>
-            Trend Video: 1 run/çalıştırma
+            Trend Video: 1 run/çalıştırma · <span className="text-red-600 font-medium">paket dışı</span>
           </div>
         </div>
       </div>
@@ -207,11 +214,13 @@ function MaliyetPaneli({ prices }: { prices?: ToolPrice[] }) {
         <div className="bg-[#F7F6F2] rounded-xl p-4 flex flex-col gap-3">
           <p className="text-[12px] font-semibold text-[#1C1B19]">🏗️ Sabit Altyapı (aylık)</p>
           <div className="flex flex-col gap-2">
-            <NumInput label="n8n"       value={form.n8nUsd}       onChange={setF('n8nUsd')}       suffix="$/ay" />
-            <NumInput label="Hostinger" value={form.hostingerUsd} onChange={setF('hostingerUsd')} suffix="$/ay" />
+            <NumInput label="n8n"             value={form.n8nUsd}           onChange={setF('n8nUsd')}           suffix="$/ay" />
+            <NumInput label="Hostinger"       value={form.hostingerUsd}     onChange={setF('hostingerUsd')}     suffix="$/ay" />
+            <NumInput label="MiniMax (sabit)" value={form.minimaxMonthlyUsd} onChange={setF('minimaxMonthlyUsd')} suffix="$/ay" />
+            <NumInput label="Claude (geliştirici)" value={form.claudeUsd}   onChange={setF('claudeUsd')}        suffix="$/ay" />
           </div>
           <div className="border-t border-[#E2E0D8] pt-2 text-[12px] text-[#1C1B19]">
-            Toplam (Anthropic dahil):{' '}
+            Toplam:{' '}
             <strong className="tabular-nums">${totalInfraUsd} · ₺{(totalInfraUsd * usdTry).toFixed(0)}/ay</strong>
           </div>
           <NumInput label="Aktif kullanıcı sayısı" value={form.activeUsers} onChange={setF('activeUsers')} step={1} />
@@ -268,40 +277,46 @@ function MaliyetPaneli({ prices }: { prices?: ToolPrice[] }) {
             </thead>
             <tbody>
               {(prices ?? []).map(tool => {
-                const m   = TOOL_ENGINE_MAP[tool.toolId]
+                const m         = TOOL_ENGINE_MAP[tool.toolId]
                 if (!m) return null
-                const usd = costPerRunUsd(tool.toolId)
-                const tryV   = usd * usdTry
-                const tryN   = tryV * form.stdPackageRuns
-                const expensive = m.engine === 'apify'
+                const usd       = costPerRunUsd(tool.toolId)
+                const tryV      = usd * usdTry
+                const tryN      = tryV * form.stdPackageRuns
+                const isApify   = m.engine === 'apify'
+                const isUnknown = m.unitsPerRun === 0 && m.engine !== 'apify'
                 return (
                   <tr key={tool.toolId} className="border-b border-[#F0EFE9] last:border-b-0 hover:bg-[#FAFAF7]">
                     <td className="px-3 py-2.5">
                       <div className="flex items-center gap-2">
                         <span className="text-[14px]">{TOOL_ICONS[tool.toolId] ?? '🔧'}</span>
-                        <span className="text-[13px] font-medium text-[#1C1B19]">{tool.toolName}</span>
+                        <div>
+                          <span className="text-[13px] font-medium text-[#1C1B19]">{tool.toolName}</span>
+                          {m.note && <p className="text-[10px] text-[#9A9792]">{m.note}</p>}
+                        </div>
                       </div>
                     </td>
                     <td className="px-3 py-2.5">
                       <span className={`text-[11px] px-2 py-0.5 rounded-full font-medium ${
-                        m.engine === 'minimax'   ? 'bg-blue-100 text-blue-700' :
-                        m.engine === 'apify'     ? 'bg-red-100 text-red-700' :
+                        m.engine === 'minimax' ? 'bg-blue-100 text-blue-700' :
+                        m.engine === 'apify'   ? 'bg-red-100 text-red-700' :
+                        m.engine === 'gemini'  ? 'bg-purple-100 text-purple-700' :
                         'bg-[#E6F9F2] text-[#085041]'
                       }`}>
-                        {m.engine === 'minimax' ? 'MiniMax' : m.engine === 'apify' ? 'Apify' : 'Claude Haiku'}
+                        {m.engine === 'minimax' ? 'MiniMax' : m.engine === 'apify' ? 'Apify' : m.engine === 'gemini' ? 'MiniMax+Gemini' : m.engine}
                       </span>
                     </td>
                     <td className="px-3 py-2.5 text-right text-[12px] tabular-nums text-[#6B6963]">
-                      ${usd.toFixed(4)}
+                      {isUnknown ? <span className="text-amber-500">ölçülmedi</span> : `$${usd.toFixed(4)}`}
                     </td>
                     <td className="px-3 py-2.5 text-right text-[12px] tabular-nums font-medium text-[#1C1B19]">
-                      ₺{tryV.toFixed(3)}
+                      {isUnknown ? '—' : `₺${tryV.toFixed(3)}`}
                     </td>
                     <td className={`px-3 py-2.5 text-right text-[12px] tabular-nums font-semibold ${
-                      expensive ? 'text-red-600' : 'text-[#085041]'
+                      isApify ? 'text-red-600' : isUnknown ? 'text-amber-500' : 'text-[#085041]'
                     }`}>
-                      ₺{tryN.toFixed(2)}
-                      {expensive && <span className="ml-1 text-[10px] text-red-400">⚠️ayrı fiyat</span>}
+                      {isUnknown ? '—' : `₺${tryN.toFixed(2)}`}
+                      {isApify   && <span className="ml-1 text-[10px] text-red-400">⚠️paket dışı</span>}
+                      {isUnknown && <span className="ml-1 text-[10px] text-amber-400">⏳bildir</span>}
                     </td>
                   </tr>
                 )
