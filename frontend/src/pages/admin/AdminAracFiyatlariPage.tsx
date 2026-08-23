@@ -13,7 +13,24 @@ interface ToolPrice {
   updatedAt: string
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// Her araç için hangi AI motorunu kaç birim kullandığı
+const TOOL_ENGINE_MAP: Record<string, {
+  engine: 'minimax' | 'anthropic' | 'apify'
+  unitsPerRun: number   // token veya run birimi
+  unitLabel: string
+}> = {
+  'icerik-takvimi':     { engine: 'minimax',    unitsPerRun: 10,  unitLabel: 'token/çalıştırma' },
+  'trend-video':        { engine: 'apify',      unitsPerRun: 1,   unitLabel: 'run/çalıştırma' },
+  'gorunurluk-skoru':   { engine: 'anthropic',  unitsPerRun: 2,   unitLabel: 'kr-token/çalıştırma' },
+  'musteri-persona':    { engine: 'anthropic',  unitsPerRun: 3,   unitLabel: 'kr-token/çalıştırma' },
+  'whatsapp-satis':     { engine: 'anthropic',  unitsPerRun: 2,   unitLabel: 'kr-token/çalıştırma' },
+  'reklam-butce':       { engine: 'anthropic',  unitsPerRun: 2,   unitLabel: 'kr-token/çalıştırma' },
+  'musteri-geri-donus': { engine: 'anthropic',  unitsPerRun: 3,   unitLabel: 'kr-token/çalıştırma' },
+  'rakip-analiz':       { engine: 'anthropic',  unitsPerRun: 4,   unitLabel: 'kr-token/çalıştırma' },
+  'chatbot-senaryo':    { engine: 'anthropic',  unitsPerRun: 3,   unitLabel: 'kr-token/çalıştırma' },
+  'ai-gorunurluk':      { engine: 'anthropic',  unitsPerRun: 3,   unitLabel: 'kr-token/çalıştırma' },
+  'viral-video':        { engine: 'anthropic',  unitsPerRun: 3,   unitLabel: 'kr-token/çalıştırma' },
+}
 
 const TOOL_ICONS: Record<string, string> = {
   'gorunurluk-skoru':  '📊',
@@ -27,6 +44,274 @@ const TOOL_ICONS: Record<string, string> = {
   'ai-gorunurluk':     '✨',
   'viral-video':       '🎬',
   'trend-video':       '📱',
+}
+
+// ─── Kur çekme ────────────────────────────────────────────────────────────────
+
+function useUsdTry() {
+  return useQuery<number>({
+    queryKey: ['usd-try-rate'],
+    queryFn: async () => {
+      const res  = await fetch('https://api.frankfurter.app/latest?from=USD&to=TRY')
+      const json = await res.json()
+      return (json.rates?.TRY as number) ?? 48
+    },
+    staleTime: 1000 * 60 * 30,
+    placeholderData: 48,
+  })
+}
+
+// ─── Sayı input yardımcısı ────────────────────────────────────────────────────
+
+function NumInput({
+  label, value, onChange, suffix, step = 1,
+}: {
+  label: string
+  value: number
+  onChange: (v: number) => void
+  suffix?: string
+  step?: number
+}) {
+  return (
+    <label className="flex flex-col gap-1">
+      <span className="text-[11px] font-medium text-[#6B6963] uppercase tracking-wide">{label}</span>
+      <div className="flex items-center gap-1.5">
+        <input
+          type="number"
+          min={0}
+          step={step}
+          value={value}
+          onChange={e => onChange(parseFloat(e.target.value) || 0)}
+          className="w-24 px-2.5 py-1.5 rounded-lg border border-[#D3D1C7] text-[13px] font-medium text-right tabular-nums bg-white focus:outline-none focus:border-[#1D9E75] focus:ring-1 focus:ring-[#1D9E75]/20"
+        />
+        {suffix && <span className="text-[12px] text-[#9A9792]">{suffix}</span>}
+      </div>
+    </label>
+  )
+}
+
+// ─── Maliyet Analizi Paneli ───────────────────────────────────────────────────
+
+function MaliyetPaneli({ prices }: { prices?: ToolPrice[] }) {
+  const { data: usdTry = 48, isFetching: kurYukleniyor } = useUsdTry()
+
+  // ── Form state (kullanıcı girişi) ─────────────────────────────────────────
+  const [form, setForm] = useState({
+    minimaxBudgetUsd:    5,      // $5
+    minimaxTokens:       5000,   // 5000 token
+    anthropicMonthlyUsd: 20,     // $20/ay
+    anthropicEstRuns:    1000,   // aylık tahmini toplam çalıştırma (Anthropic araçları)
+    apifyBudgetUsd:      29,     // $29
+    apifyRuns:           50,     // 50 run
+    n8nUsd:              20,     // $20/ay
+    hostingerUsd:        10,     // $10/ay
+    activeUsers:         50,     // aktif kullanıcı sayısı
+    profitMultiplier:    3,      // kâr marjı çarpanı
+    stdPackageRuns:      10,     // standart paket run sayısı
+  })
+  const setF = (k: keyof typeof form) => (v: number) =>
+    setForm(prev => ({ ...prev, [k]: v }))
+
+  // ── Hesaplama ─────────────────────────────────────────────────────────────
+  const minimaxCostPerToken   = form.minimaxBudgetUsd / form.minimaxTokens        // $/token
+  const apifyCostPerRun       = form.apifyBudgetUsd   / form.apifyRuns             // $/run
+  const anthropicCostPerRun   = form.anthropicMonthlyUsd / Math.max(1, form.anthropicEstRuns)
+
+  const totalInfraUsd         = form.n8nUsd + form.hostingerUsd + form.anthropicMonthlyUsd
+  const infraPerUserTry       = (totalInfraUsd / Math.max(1, form.activeUsers)) * usdTry
+
+  function costPerRunUsd(toolId: string): number {
+    const m = TOOL_ENGINE_MAP[toolId]
+    if (!m) return 0
+    if (m.engine === 'minimax')    return minimaxCostPerToken * m.unitsPerRun
+    if (m.engine === 'apify')      return apifyCostPerRun     * m.unitsPerRun
+    if (m.engine === 'anthropic')  return anthropicCostPerRun * m.unitsPerRun
+    return 0
+  }
+
+  // Standart paket için ortalama AI maliyeti (Apify hariç — ayrı fiyatlandırılmalı)
+  const nonApifyTools   = (prices ?? []).filter(p => TOOL_ENGINE_MAP[p.toolId]?.engine !== 'apify')
+  const avgAiUsd        = nonApifyTools.length
+    ? nonApifyTools.reduce((s, p) => s + costPerRunUsd(p.toolId), 0) / nonApifyTools.length
+    : 0
+  const stdAiTotalTry   = avgAiUsd * form.stdPackageRuns * usdTry
+  const stdTotalCostTry = stdAiTotalTry + infraPerUserTry
+  const recPriceTry     = Math.ceil(stdTotalCostTry * form.profitMultiplier / 10) * 10
+
+  return (
+    <div className="bg-white rounded-2xl border border-[#E2E0D8] p-5 flex flex-col gap-6">
+
+      {/* ── Başlık + kur ─── */}
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div>
+          <h2 className="text-[14px] font-semibold text-[#1C1B19] flex items-center gap-2">
+            <span>📊</span> Çalıştırma Maliyet Analizi
+          </h2>
+          <p className="text-[12px] text-[#6B6963] mt-0.5">
+            Maliyetleri gir, canlı hesaplama görün
+          </p>
+        </div>
+        <div className="flex items-center gap-2 bg-[#F7F6F2] rounded-xl px-4 py-2">
+          <span className="text-[12px] text-[#6B6963]">1 USD =</span>
+          <span className="text-[15px] font-bold text-[#1C1B19] tabular-nums">
+            {kurYukleniyor ? '…' : `₺${usdTry.toFixed(2)}`}
+          </span>
+          <span className="text-[10px] text-[#9A9792]">Frankfurter API · otomatik</span>
+        </div>
+      </div>
+
+      {/* ── Form girdileri ─── */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+
+        {/* MiniMax */}
+        <div className="bg-[#F7F6F2] rounded-xl p-4 flex flex-col gap-3">
+          <p className="text-[12px] font-semibold text-[#1C1B19]">🧠 MiniMax</p>
+          <NumInput label="Bütçe (USD)" value={form.minimaxBudgetUsd}  onChange={setF('minimaxBudgetUsd')}  suffix="$" step={1} />
+          <NumInput label="Token sayısı"  value={form.minimaxTokens}      onChange={setF('minimaxTokens')}      suffix="token" step={100} />
+          <div className="text-[11px] text-[#6B6963] bg-white rounded-lg px-3 py-2">
+            <span className="font-medium text-[#1C1B19]">${(minimaxCostPerToken).toFixed(4)}</span> / token
+            <span className="mx-2 text-[#D3D1C7]">·</span>
+            İçerik Takvimi: <span className="font-medium text-[#1C1B19]">${(minimaxCostPerToken * 10).toFixed(4)}</span>/run
+          </div>
+        </div>
+
+        {/* Anthropic */}
+        <div className="bg-[#F7F6F2] rounded-xl p-4 flex flex-col gap-3">
+          <p className="text-[12px] font-semibold text-[#1C1B19]">🤖 Anthropic (Claude)</p>
+          <NumInput label="Aylık bütçe (USD)" value={form.anthropicMonthlyUsd}  onChange={setF('anthropicMonthlyUsd')}  suffix="$/ay" step={1} />
+          <NumInput label="Aylık tahmini run"  value={form.anthropicEstRuns}      onChange={setF('anthropicEstRuns')}      suffix="run" step={100} />
+          <div className="text-[11px] text-[#6B6963] bg-white rounded-lg px-3 py-2">
+            <span className="font-medium text-[#1C1B19]">${anthropicCostPerRun.toFixed(4)}</span> / run
+            <span className="mx-2 text-[#D3D1C7]">·</span>
+            Diğer 9 araç bu motorla çalışır
+          </div>
+        </div>
+
+        {/* Apify */}
+        <div className="bg-[#F7F6F2] rounded-xl p-4 flex flex-col gap-3">
+          <p className="text-[12px] font-semibold text-[#1C1B19]">🕷️ Apify</p>
+          <NumInput label="Plan fiyatı (USD)" value={form.apifyBudgetUsd}  onChange={setF('apifyBudgetUsd')}  suffix="$/ay" step={1} />
+          <NumInput label="Aylık run hakkı"   value={form.apifyRuns}        onChange={setF('apifyRuns')}        suffix="run" step={5} />
+          <div className="text-[11px] text-[#6B6963] bg-white rounded-lg px-3 py-2">
+            <span className="font-medium text-[#1C1B19]">${apifyCostPerRun.toFixed(3)}</span> / run
+            <span className="mx-2 text-[#D3D1C7]">·</span>
+            Trend Video: 1 run/çalıştırma
+          </div>
+        </div>
+      </div>
+
+      {/* ── Altyapı + Paket ─── */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+
+        {/* Altyapı */}
+        <div className="bg-[#F7F6F2] rounded-xl p-4 flex flex-col gap-3">
+          <p className="text-[12px] font-semibold text-[#1C1B19]">🏗️ Sabit Altyapı (aylık)</p>
+          <div className="flex flex-col gap-2">
+            <NumInput label="n8n"       value={form.n8nUsd}       onChange={setF('n8nUsd')}       suffix="$/ay" />
+            <NumInput label="Hostinger" value={form.hostingerUsd} onChange={setF('hostingerUsd')} suffix="$/ay" />
+          </div>
+          <div className="border-t border-[#E2E0D8] pt-2 text-[12px] text-[#1C1B19]">
+            Toplam (Anthropic dahil):{' '}
+            <strong className="tabular-nums">${totalInfraUsd} · ₺{(totalInfraUsd * usdTry).toFixed(0)}/ay</strong>
+          </div>
+          <NumInput label="Aktif kullanıcı sayısı" value={form.activeUsers} onChange={setF('activeUsers')} step={1} />
+          <div className="text-[11px] text-[#6B6963]">
+            Kullanıcı başı altyapı:{' '}
+            <strong className="text-[#1C1B19]">₺{infraPerUserTry.toFixed(1)}/ay</strong>
+          </div>
+        </div>
+
+        {/* Standart paket sonuç */}
+        <div className="bg-[#E6F9F2] border border-[#9FE1CB] rounded-xl p-4 flex flex-col gap-3">
+          <p className="text-[12px] font-semibold text-[#085041]">💡 Standart Paket Hesabı</p>
+          <div className="flex flex-col gap-2">
+            <NumInput label="Paketteki run sayısı" value={form.stdPackageRuns}      onChange={setF('stdPackageRuns')}      step={5} />
+            <NumInput label="Kâr marjı çarpanı"    value={form.profitMultiplier}     onChange={setF('profitMultiplier')}    step={0.5} />
+          </div>
+          <div className="flex flex-col gap-1 text-[12px] text-[#1C1B19]">
+            <div className="flex justify-between">
+              <span className="text-[#6B6963]">Ort. AI maliyeti ({form.stdPackageRuns} run, Apify hariç)</span>
+              <span className="tabular-nums font-medium">₺{stdAiTotalTry.toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-[#6B6963]">Altyapı payı ({form.activeUsers} kullanıcı)</span>
+              <span className="tabular-nums font-medium">₺{infraPerUserTry.toFixed(2)}</span>
+            </div>
+            <div className="border-t border-[#9FE1CB] pt-1.5 flex justify-between font-semibold text-[#085041]">
+              <span>Toplam maliyet</span>
+              <span className="tabular-nums">₺{stdTotalCostTry.toFixed(2)}</span>
+            </div>
+          </div>
+          <div className="bg-white rounded-xl p-3 text-center">
+            <p className="text-[11px] text-[#6B6963] mb-1">{form.profitMultiplier}× kâr marjıyla önerilen fiyat</p>
+            <p className="text-[32px] font-black text-[#085041] tabular-nums leading-none">₺{recPriceTry}</p>
+            <p className="text-[10px] text-[#9A9792] mt-1">
+              /ay · {form.stdPackageRuns} kullanım · tüm araçlar (Trend Video hariç)
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Araç başı maliyet tablosu ─── */}
+      <div>
+        <p className="text-[12px] font-semibold text-[#1C1B19] mb-2">Araç Başı Maliyet</p>
+        <div className="overflow-x-auto rounded-xl border border-[#E2E0D8]">
+          <table className="w-full">
+            <thead>
+              <tr className="bg-[#F7F6F2] border-b border-[#E2E0D8]">
+                <th className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wider text-[#9A9792]">Araç</th>
+                <th className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wider text-[#9A9792]">Motor</th>
+                <th className="px-3 py-2 text-right text-[11px] font-semibold uppercase tracking-wider text-[#9A9792]">$/çalıştırma</th>
+                <th className="px-3 py-2 text-right text-[11px] font-semibold uppercase tracking-wider text-[#9A9792]">₺/çalıştırma</th>
+                <th className="px-3 py-2 text-right text-[11px] font-semibold uppercase tracking-wider text-[#9A9792]">₺ / {form.stdPackageRuns} run</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(prices ?? []).map(tool => {
+                const m   = TOOL_ENGINE_MAP[tool.toolId]
+                if (!m) return null
+                const usd = costPerRunUsd(tool.toolId)
+                const tryV   = usd * usdTry
+                const tryN   = tryV * form.stdPackageRuns
+                const expensive = m.engine === 'apify'
+                return (
+                  <tr key={tool.toolId} className="border-b border-[#F0EFE9] last:border-b-0 hover:bg-[#FAFAF7]">
+                    <td className="px-3 py-2.5">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[14px]">{TOOL_ICONS[tool.toolId] ?? '🔧'}</span>
+                        <span className="text-[13px] font-medium text-[#1C1B19]">{tool.toolName}</span>
+                      </div>
+                    </td>
+                    <td className="px-3 py-2.5">
+                      <span className={`text-[11px] px-2 py-0.5 rounded-full font-medium ${
+                        m.engine === 'minimax'   ? 'bg-blue-100 text-blue-700' :
+                        m.engine === 'apify'     ? 'bg-red-100 text-red-700' :
+                        'bg-[#E6F9F2] text-[#085041]'
+                      }`}>
+                        {m.engine === 'minimax' ? 'MiniMax' : m.engine === 'apify' ? 'Apify' : 'Claude Haiku'}
+                      </span>
+                    </td>
+                    <td className="px-3 py-2.5 text-right text-[12px] tabular-nums text-[#6B6963]">
+                      ${usd.toFixed(4)}
+                    </td>
+                    <td className="px-3 py-2.5 text-right text-[12px] tabular-nums font-medium text-[#1C1B19]">
+                      ₺{tryV.toFixed(3)}
+                    </td>
+                    <td className={`px-3 py-2.5 text-right text-[12px] tabular-nums font-semibold ${
+                      expensive ? 'text-red-600' : 'text-[#085041]'
+                    }`}>
+                      ₺{tryN.toFixed(2)}
+                      {expensive && <span className="ml-1 text-[10px] text-red-400">⚠️ayrı fiyat</span>}
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  )
 }
 
 // ─── Inline editable row ──────────────────────────────────────────────────────
@@ -43,15 +328,8 @@ function PriceRow({
   const [saving, setSaving] = useState(false)
   const [dirty, setDirty]   = useState(false)
 
-  const handlePriceChange = (v: string) => {
-    setPrice(v)
-    setDirty(true)
-  }
-
-  const handleActiveChange = (v: boolean) => {
-    setActive(v)
-    setDirty(true)
-  }
+  const handlePriceChange = (v: string) => { setPrice(v);  setDirty(true) }
+  const handleActiveChange = (v: boolean) => { setActive(v); setDirty(true) }
 
   const handleSave = async () => {
     const numPrice = parseFloat(price)
@@ -69,10 +347,9 @@ function PriceRow({
 
   return (
     <tr className="border-b border-[#F0EFE9] last:border-b-0 hover:bg-[#FAFAF7] transition-colors">
-      {/* Araç */}
-      <td className="px-5 py-3.5">
+      <td className="px-4 py-2.5">
         <div className="flex items-center gap-2">
-          <span className="text-[17px] shrink-0">{icon}</span>
+          <span className="text-[15px] shrink-0">{icon}</span>
           <div>
             <p className="text-[13px] font-medium text-[#1C1B19]">{tool.toolName}</p>
             <p className="text-[11px] text-[#9A9792] font-mono">{tool.toolId}</p>
@@ -80,7 +357,6 @@ function PriceRow({
         </div>
       </td>
 
-      {/* Fiyat */}
       <td className="px-5 py-3.5 w-36">
         <div className="flex items-center gap-1.5">
           <span className="text-[13px] text-[#9A9792]">₺</span>
@@ -90,14 +366,13 @@ function PriceRow({
             max={9999}
             step={1}
             value={price}
-            onChange={(e) => handlePriceChange(e.target.value)}
+            onChange={e => handlePriceChange(e.target.value)}
             className="w-20 px-2.5 py-1 rounded-lg border border-[#D3D1C7] text-[13px] font-medium text-[#1C1B19] text-right focus:outline-none focus:border-[#1D9E75] focus:ring-1 focus:ring-[#1D9E75]/20 bg-white tabular-nums"
           />
           <span className="text-[11px] text-[#9A9792]">/ay</span>
         </div>
       </td>
 
-      {/* Aktif */}
       <td className="px-5 py-3.5 w-24">
         <label className="flex items-center gap-2 cursor-pointer select-none">
           <div
@@ -105,16 +380,14 @@ function PriceRow({
             aria-checked={active}
             tabIndex={0}
             onClick={() => handleActiveChange(!active)}
-            onKeyDown={(e) => e.key === 'Enter' || e.key === ' ' ? handleActiveChange(!active) : null}
+            onKeyDown={e => (e.key === 'Enter' || e.key === ' ') && handleActiveChange(!active)}
             className={`relative w-9 h-5 rounded-full transition-colors cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-[#1D9E75]/40 ${
               active ? 'bg-[#1D9E75]' : 'bg-[#D3D1C7]'
             }`}
           >
-            <span
-              className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${
-                active ? 'translate-x-4' : 'translate-x-0'
-              }`}
-            />
+            <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${
+              active ? 'translate-x-4' : 'translate-x-0'
+            }`} />
           </div>
           <span className={`text-[12px] font-medium ${active ? 'text-[#085041]' : 'text-[#9A9792]'}`}>
             {active ? 'Aktif' : 'Pasif'}
@@ -122,7 +395,6 @@ function PriceRow({
         </label>
       </td>
 
-      {/* Son güncelleme */}
       <td className="px-5 py-3.5 w-36">
         <span className="text-[11px] text-[#9A9792]">
           {new Date(tool.updatedAt).toLocaleDateString('tr-TR', {
@@ -131,7 +403,6 @@ function PriceRow({
         </span>
       </td>
 
-      {/* Kaydet */}
       <td className="px-5 py-3.5 w-24 text-right">
         {dirty && (
           <button
@@ -175,25 +446,27 @@ export function AdminAracFiyatlariPage() {
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-4">
       {/* ── Title ── */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <div className="flex items-center gap-[10px] mb-[4px]">
             <span className="text-[20px] leading-none">🏷️</span>
-            <h1 className="text-[18px] font-semibold text-[#1C1B19]">Araç Fiyatları</h1>
+            <h1 className="text-[16px] font-semibold text-[#1C1B19]">Araç Fiyatları</h1>
           </div>
           <p className="text-[13px] text-[#6B6963]">
-            Tekil araç satın alımı için aylık fiyatları buradan ayarlayın
+            Tekil araç satın alımı fiyatları ve maliyet analizi
           </p>
         </div>
-
         {successMsg && (
           <span className="text-[12px] font-medium text-[#085041] bg-[#E6F9F2] border border-[#9FE1CB] px-3 py-1.5 rounded-lg">
             {successMsg}
           </span>
         )}
       </div>
+
+      {/* ── Maliyet Analizi ── */}
+      <MaliyetPaneli prices={prices} />
 
       {/* ── Info banner ── */}
       <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-[12px] text-amber-800">
@@ -214,15 +487,15 @@ export function AdminAracFiyatlariPage() {
           <table className="w-full">
             <thead>
               <tr className="bg-[#F7F6F2] border-b border-[#E2E0D8]">
-                <th className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-[#9A9792]">Araç</th>
-                <th className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-[#9A9792]">Aylık Standart Paket Fiyatı</th>
-                <th className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-[#9A9792]">Durum</th>
-                <th className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-[#9A9792]">Son Güncelleme</th>
-                <th className="px-5 py-3" />
+                <th className="px-4 py-2 text-left text-[11px] font-semibold uppercase tracking-wider text-[#9A9792]">Araç</th>
+                <th className="px-4 py-2 text-left text-[11px] font-semibold uppercase tracking-wider text-[#9A9792]">Aylık Standart Paket Fiyatı</th>
+                <th className="px-4 py-2 text-left text-[11px] font-semibold uppercase tracking-wider text-[#9A9792]">Durum</th>
+                <th className="px-4 py-2 text-left text-[11px] font-semibold uppercase tracking-wider text-[#9A9792]">Son Güncelleme</th>
+                <th className="px-4 py-2" />
               </tr>
             </thead>
             <tbody>
-              {(prices ?? []).map((tool) => (
+              {(prices ?? []).map(tool => (
                 <PriceRow key={tool.id} tool={tool} onSave={handleSave} />
               ))}
             </tbody>
