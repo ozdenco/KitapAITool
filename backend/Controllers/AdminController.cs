@@ -638,4 +638,92 @@ public class AdminController(AppDbContext db, EmailService email, RecurringRenew
     public record UpdateUserSubscriptionRequest(
         string Action,    // "set" | "free" | "expire"
         int? PlanId);
+
+    // ── GET /api/admin/all-results ────────────────────────────────────────────
+    // Tüm kullanıcıların kayıtlı çıktıları; userId ve ay/yıl filtresi opsiyonel.
+    [HttpGet("all-results")]
+    public async Task<IActionResult> GetAllResults(
+        [FromQuery] Guid?   userId = null,
+        [FromQuery] int?    year   = null,
+        [FromQuery] int?    month  = null,
+        [FromQuery] int     limit  = 200)
+    {
+        limit = Math.Clamp(limit, 1, 500);
+
+        IQueryable<ToolResult> query = db.ToolResults
+            .Include(r => r.User);
+
+        if (userId.HasValue)
+            query = query.Where(r => r.UserId == userId.Value);
+
+        if (year.HasValue && month.HasValue)
+        {
+            var from = new DateTime(year.Value, month.Value, 1, 0, 0, 0, DateTimeKind.Utc);
+            var to   = from.AddMonths(1);
+            query    = query.Where(r => r.CreatedAt >= from && r.CreatedAt < to);
+        }
+        else if (year.HasValue)
+        {
+            var from = new DateTime(year.Value, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+            var to   = from.AddYears(1);
+            query    = query.Where(r => r.CreatedAt >= from && r.CreatedAt < to);
+        }
+
+        var results = await query
+            .OrderByDescending(r => r.CreatedAt)
+            .Take(limit)
+            .Select(r => new
+            {
+                r.Id,
+                r.ToolId,
+                r.InputSummary,
+                r.CreatedAt,
+                userId    = r.UserId,
+                userName  = r.User.Name,
+                userEmail = r.User.Email,
+            })
+            .ToListAsync();
+
+        // Filtre dropdown için kullanıcı listesi
+        var users = await db.ToolResults
+            .Include(r => r.User)
+            .Select(r => new { id = r.UserId, name = r.User.Name, email = r.User.Email })
+            .Distinct()
+            .OrderBy(u => u.name)
+            .Take(200)
+            .ToListAsync();
+
+        return Ok(new { success = true, data = results, meta = new { users } });
+    }
+
+    // ── GET /api/admin/users/{id}/payments ────────────────────────────────────
+    // Belirli bir kullanıcının ödeme geçmişi
+    [HttpGet("users/{id:guid}/payments")]
+    public async Task<IActionResult> GetUserPayments(Guid id)
+    {
+        var user = await db.Users.FindAsync(id);
+        if (user is null)
+            return NotFound(new { success = false, error = "Kullanıcı bulunamadı." });
+
+        var orders = await db.PaymentOrders
+            .Include(o => o.Plan)
+            .Where(o => o.UserId == id)
+            .OrderByDescending(o => o.CreatedAt)
+            .Take(50)
+            .Select(o => new
+            {
+                o.Id,
+                o.Amount,
+                o.Status,
+                planName    = o.Plan != null ? o.Plan.Name : null,
+                o.ToolId,
+                o.ToolIds,
+                o.UsesPerTool,
+                o.CreatedAt,
+                o.CompletedAt,
+            })
+            .ToListAsync();
+
+        return Ok(new { success = true, data = orders, meta = new { userName = user.Name, userEmail = user.Email } });
+    }
 }

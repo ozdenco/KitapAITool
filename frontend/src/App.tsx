@@ -33,6 +33,8 @@ import { AdminKullanimRaporuPage } from '@/pages/admin/AdminKullanimRaporuPage'
 import { AdminRaporDetayPage } from '@/pages/admin/AdminRaporDetayPage'
 import { AdminAracFiyatlariPage } from '@/pages/admin/AdminAracFiyatlariPage'
 import { AdminAnaSayfaPage } from '@/pages/admin/AdminAnaSayfaPage'
+import { AdminTumCiktilarPage } from '@/pages/admin/AdminTumCiktilarPage'
+import { AdminKullaniciOdemeleriPage } from '@/pages/admin/AdminKullaniciOdemeleriPage'
 import { SatisSozlesmesiPage } from '@/pages/legal/SatisSozlesmesiPage'
 import { IptalIadeKosullariPage } from '@/pages/legal/IptalIadeKosullariPage'
 import { KvkkPage } from '@/pages/legal/KvkkPage'
@@ -117,6 +119,7 @@ function AppRoutes() {
               <Route path="paket-islemleri"     element={<AdminPaketIslemleriPage />} />
               <Route path="arac-fiyatlari"      element={<AdminAracFiyatlariPage />} />
               <Route path="kullanim-raporu"     element={<AdminKullanimRaporuPage />} />
+              <Route path="tum-ciktilar"        element={<AdminTumCiktilarPage />} />
             </Route>
 
             {/* Admin: user usage history — outside AdminLayout (full-page) */}
@@ -125,6 +128,16 @@ function AppRoutes() {
               element={
                 <AdminGuard>
                   <AdminKullaniciGecmisiPage />
+                </AdminGuard>
+              }
+            />
+
+            {/* Admin: user payment history — outside AdminLayout (full-page) */}
+            <Route
+              path="/admin/kullanici/:userId/odemeler"
+              element={
+                <AdminGuard>
+                  <AdminKullaniciOdemeleriPage />
                 </AdminGuard>
               }
             />

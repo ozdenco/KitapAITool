@@ -7,11 +7,12 @@ const ADMIN_NAV_ITEMS = [
   { to: '/admin/paket-islemleri',    label: 'Paket İşlemleri',    icon: '📦' },
   { to: '/admin/arac-fiyatlari',     label: 'Araç Fiyatları',     icon: '🏷️' },
   { to: '/admin/kullanim-raporu',    label: 'Kullanım Raporu',    icon: '📋' },
+  { to: '/admin/tum-ciktilar',       label: 'Tüm Çıktılar',       icon: '📄' },
 ] as const
 
 export function AdminLayout() {
   return (
-    <div className="w-full max-w-[1200px] px-6 py-8 flex gap-6 items-start">
+    <div className="w-full max-w-[1200px] px-4 py-5 flex gap-4 items-start">
       {/* ── Sidebar ── */}
       <aside className="shrink-0 w-[210px]">
         <div className="bg-white rounded-2xl border border-[#E2E0D8]">
