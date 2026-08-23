@@ -81,6 +81,7 @@ export function AraclarimPage() {
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [tier, setTier] = useState<UsageTier>(10)
   const [isChecking, setIsChecking] = useState(false)
+  const [upgradingToolId, setUpgradingToolId] = useState<string | null>(null)
   const [checkoutError, setCheckoutError] = useState<string | null>(null)
   const queryClient = useQueryClient()
 
@@ -169,14 +170,34 @@ export function AraclarimPage() {
     }
   }
 
+  // Aktif 10-kullanımlı aracı 25 kullanıma yükselt
+  const handleUpgradeCheckout = async (toolId: string) => {
+    if (upgradingToolId !== null) return
+    setCheckoutError(null)
+    setUpgradingToolId(toolId)
+    try {
+      const res = await api.post<{ paymentPageUrl: string }>(
+        '/payments/bulk-tool-checkout',
+        { toolIds: [toolId], usesPerTool: 25 }
+      )
+      window.location.href = res.data.paymentPageUrl
+    } catch (err: unknown) {
+      const msg =
+        (err as { response?: { data?: { error?: string } } })?.response?.data?.error ??
+        'Ödeme başlatılamadı. Lütfen tekrar deneyin.'
+      setCheckoutError(msg)
+      setUpgradingToolId(null)
+    }
+  }
+
   return (
     <>
-      <div className="flex flex-col gap-6 pb-32">
+      <div className="flex flex-col gap-4 pb-28">
         {/* ── Title ── */}
         <div>
           <div className="flex items-center gap-[10px] mb-[4px]">
             <span className="text-[22px] leading-none">🛒</span>
-            <h1 className="text-[20px] font-medium text-[#1C1B19]">Araç Satın Al</h1>
+            <h1 className="text-[16px] font-medium text-[#1C1B19]">Araç Satın Al</h1>
           </div>
           <p className="text-[13px] text-[#6B6963]">
             İstediğiniz araçları seçin, aylık kullanım miktarını belirleyin — tek seferde ödeyin
@@ -185,7 +206,7 @@ export function AraclarimPage() {
 
         {/* ── Aktif abonelik engeli ── */}
         {!isLoading && hasActivePaidSub && (
-          <div className="bg-amber-50 border border-amber-200 rounded-2xl px-5 py-4 flex gap-3">
+          <div className="bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3 flex gap-3">
             <span className="text-[22px] leading-none shrink-0">📦</span>
             <div>
               <p className="text-[13px] font-semibold text-amber-800 leading-snug">
@@ -211,7 +232,7 @@ export function AraclarimPage() {
 
         {/* ── Nasıl çalışır? ── */}
         {!hasActivePaidSub && (
-          <div className="bg-[#F7F6F2] rounded-2xl px-5 py-4 flex flex-col gap-2">
+          <div className="bg-[#F7F6F2] rounded-2xl px-4 py-3 flex flex-col gap-1.5">
             <p className="text-[12px] font-semibold text-[#3A3935]">📌 Nasıl çalışır?</p>
             <ul className="flex flex-col gap-1">
               {[
@@ -257,7 +278,7 @@ export function AraclarimPage() {
                         ✓ Aktif
                       </span>
                     </div>
-                    <span className="text-[28px] leading-none shrink-0 mt-0.5">{tool.icon}</span>
+                    <span className="text-[22px] leading-none shrink-0 mt-0.5">{tool.icon}</span>
                     <div className="flex-1 min-w-0 pr-14">
                       <p className="text-[13px] font-semibold text-[#1C1B19] leading-snug">{tool.name}</p>
                       {purchase?.monthlyLimit != null && (
@@ -296,6 +317,20 @@ export function AraclarimPage() {
                           25 kull./ay:{' '}
                           <span className="font-semibold text-[#6B6963]">₺{(basePrice * 2).toLocaleString('tr-TR')}</span>
                         </p>
+                      )}
+
+                      {/* 10→25 yükseltme butonu — sadece 10 kullanımlı aktif araçlarda */}
+                      {purchase?.monthlyLimit === 10 && basePrice != null && !hasActivePaidSub && (
+                        <button
+                          type="button"
+                          onClick={() => handleUpgradeCheckout(tool.id)}
+                          disabled={upgradingToolId !== null}
+                          className="mt-3 w-full py-2 rounded-xl text-[12px] font-semibold bg-[#1D9E75] text-white hover:bg-[#178a65] transition-colors disabled:opacity-60 disabled:cursor-wait"
+                        >
+                          {upgradingToolId === tool.id
+                            ? '⏳ Yönlendiriliyor...'
+                            : `📈 25 kullanıma yükselt — ₺${(basePrice * 2).toLocaleString('tr-TR')}`}
+                        </button>
                       )}
                     </div>
                   </div>
@@ -360,7 +395,7 @@ export function AraclarimPage() {
       {selected.size > 0 && !hasActivePaidSub && (
         <div className="fixed bottom-0 left-0 right-0 z-50 flex justify-center pointer-events-none">
           <div className="w-full max-w-[1100px] px-6 pb-5 pointer-events-auto">
-            <div className="bg-[#1C1B19] rounded-2xl px-5 py-4 flex flex-col gap-3 shadow-2xl">
+            <div className="bg-[#1C1B19] rounded-2xl px-4 py-3 flex flex-col gap-2 shadow-2xl">
 
               {/* Adım göstergesi */}
               <div className="flex items-center gap-2 text-[11px] text-[#9A9792]">

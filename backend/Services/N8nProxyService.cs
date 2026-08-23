@@ -30,11 +30,11 @@ public class N8nProxyService(HttpClient http, IConfiguration config, ILogger<N8n
     private static readonly HashSet<string> AsyncToolIds = ["icerik-takvimi", "trend-video"];
 
     // Araçların durum sorgulama webhook'ları ana path'den AYRI olabilir.
-    // trend-video: n8n'de ayrı bir Status Webhook var — path + query param kullanır.
-    // Diğer async araçlar (icerik-takvimi) varsayılan {mainPath}/status/{jobId} pattern'ini kullanır.
+    // Her async araç için ayrı bir Status Webhook path + ?jobId= query param kullanılır.
     private static readonly Dictionary<string, string> StatusWebhookPaths = new()
     {
-        ["trend-video"] = "/webhook/kolay-kobi-trend-video-status"
+        ["trend-video"]    = "/webhook/kolay-kobi-trend-video-status",
+        ["icerik-takvimi"] = "/webhook/kolay-kobi-takvim-status"
     };
 
     public async Task<HttpResponseMessage> ForwardAsync(

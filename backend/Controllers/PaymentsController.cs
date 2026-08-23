@@ -365,12 +365,23 @@ public class PaymentsController(
                 var toolIds         = JsonSerializer.Deserialize<string[]>(order.ToolIds) ?? [];
                 var monthly         = order.UsesPerTool;   // 10 veya 25
                 var priceMultiplier = monthly == 25 ? 2m : 1m;
+                var now             = DateTime.UtcNow;
 
                 // Araç başına gerçek fiyatı ToolPrices tablosundan al
                 // (eşit bölme yerine doğru bireysel fiyat)
                 var toolPriceMap = await db.ToolPrices
                     .Where(tp => toolIds.Contains(tp.ToolId))
                     .ToDictionaryAsync(tp => tp.ToolId, tp => tp.PriceMonthly);
+
+                // Aynı araçlar için mevcut aktif satın alımları sona erdir
+                // (10→25 yükseltme senaryosu: eski kaydı devre dışı bırak)
+                var oldPurchases = await db.ToolPurchases
+                    .Where(p => p.UserId == order.UserId
+                             && toolIds.Contains(p.ToolId)
+                             && (p.ExpiresAt == null || p.ExpiresAt > now))
+                    .ToListAsync();
+                foreach (var old in oldPurchases)
+                    old.ExpiresAt = now;
 
                 foreach (var tid in toolIds)
                 {
@@ -386,8 +397,8 @@ public class PaymentsController(
                         UsesRemaining   = monthly ?? 10,
                         AmountPaid      = toolAmount,
                         IyzicoPaymentId = form.MerchantOid,
-                        PurchasedAt     = DateTime.UtcNow,
-                        ExpiresAt       = DateTime.UtcNow.AddMonths(1).AddDays(-1),
+                        PurchasedAt     = now,
+                        ExpiresAt       = now.AddMonths(1).AddDays(-1),
                         AutoRenew       = true,
                     });
                 }

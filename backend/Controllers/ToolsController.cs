@@ -220,7 +220,9 @@ public class ToolsController(
                     // InputSummary'ye jobId gömülü tutuyoruz — dedup için
                     var fakePayload = System.Text.Json.JsonSerializer.Deserialize<JsonElement>(
                         $"{{\"job_id\":\"{jobId}\"}}");
-                    await SaveToolResultAsync(CurrentUserId, toolId, fakePayload, content, ct);
+                    // n8n wrapper'ından ({status,result:{content:[{text}]}}) gerçek çıktıyı çıkar
+                    var actualOutput = ExtractAsyncOutput(content) ?? content;
+                    await SaveToolResultAsync(CurrentUserId, toolId, fakePayload, actualOutput, ct);
                 }
             }
 
@@ -231,6 +233,38 @@ public class ToolsController(
             logger.LogError(ex, "n8n poll error for {ToolId}/{JobId}", toolId, jobId);
             return StatusCode(503, new { error = "Sonuç alınamadı. Lütfen tekrar deneyin." });
         }
+    }
+
+    /// <summary>
+    /// n8n async poll yanıtından ({status, result:{content:[{text}]}}) gerçek araç çıktısını çıkarır.
+    /// Geçmiş Çıktılar'da doğru render olması için wrapper olmadan kaydedilmesi gerekir.
+    /// </summary>
+    private static string? ExtractAsyncOutput(string wrappedJson)
+    {
+        try
+        {
+            var doc = JsonDocument.Parse(wrappedJson);
+            var root = doc.RootElement;
+
+            // { "status": "completed", "result": { "content": [{"type":"text","text":"..."}] } }
+            if (!root.TryGetProperty("result", out var resultEl)) return null;
+
+            if (resultEl.TryGetProperty("content", out var contentArr))
+            {
+                var texts = new System.Text.StringBuilder();
+                foreach (var item in contentArr.EnumerateArray())
+                {
+                    if (item.TryGetProperty("text", out var textEl))
+                        texts.Append(textEl.GetString() ?? "");
+                }
+                var combined = texts.ToString().Trim();
+                if (!string.IsNullOrEmpty(combined)) return combined;
+            }
+
+            // content dizisi yoksa result'ı direkt dön
+            return resultEl.GetRawText();
+        }
+        catch { return null; }
     }
 
     private static bool TryParseCompleted(string json, out JsonElement? result)

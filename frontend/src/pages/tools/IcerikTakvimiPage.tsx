@@ -70,7 +70,7 @@ function buildPrompt(f: {
   platform: string; gunler: string; ton: string
   lang: string; ozelGunler: string; startDate: string
 }): string {
-  return `Sen sosyal medya içerik stratejisti ve metin yazarısın. 30 günlük kapsamlı içerik takvimi oluşturuyorsun.
+  return `Sen sosyal medya içerik stratejisti ve metin yazarısın.
 
 İşletme: ${f.bizName || 'belirtilmemiş'}
 Sektör: ${f.sector || 'belirtilmemiş'}
@@ -82,30 +82,33 @@ Marka tonu: ${f.ton || 'Profesyonel ve güvenilir'}
 Özel günler / kampanyalar: ${f.ozelGunler || 'yok'}
 Başlangıç tarihi: ${f.startDate || 'bugün'}
 
-${f.bizName || 'Bu işletme'} için ${f.platform}'da ${f.gunler} günleri paylaşılacak 30 günlük içerik takvimi oluştur.
-Her içerik için hazır metin taslağı yaz. Hashtag öner. ${f.lang} dilinde olsun.
-Varsa özel günleri (${f.ozelGunler || 'belirtilmemiş'}) içeriğe yansıt.
+GÖREV: ${f.platform}'da her ${f.gunler} için 30 günlük içerik takvimi (4-5 gönderi).
+Varsa özel günleri (${f.ozelGunler || 'yok'}) ilgili haftaya yansıt.
 
-SADECE JSON döndür:
+KRİTİK KISITLAMALAR:
+- "icerik" alanı her gönderi için en fazla 120 kelime olsun
+- Tarih hesaplamalarını dahili yap, JSON'a yalnızca sonucu yaz
+- Gereksiz açıklama ekleme, doğrudan JSON döndür
+
+SADECE geçerli JSON döndür, başka hiçbir şey yazma:
 {
   "icerik_takvimi": [
     {
       "gun": "<haftanın günü, ör: Pazartesi>",
-      "tarih": "<gün numarası, ör: 1. hafta>",
+      "tarih": "<ör: 1. Hafta (23 Haziran 2026)>",
       "platform": "${f.platform}",
-      "icerik_turu": "<Gönderi / Video / Hikaye / Carousel vb.>",
-      "konu": "<içerik konusu, 1 cümle>",
+      "icerik_turu": "<Gönderi / Carousel / Video / Hikaye>",
+      "konu": "<1 cümle>",
       "baslik": "<içerik başlığı>",
-      "icerik": "<hazır paylaşım metni, emojiler kullanabilirsin>",
+      "icerik": "<paylaşım metni, max 120 kelime, emoji kullanabilirsin>",
       "hashtag": ["#hashtag1", "#hashtag2", "#hashtag3"],
-      "en_iyi_saat": "<ör: 18:00-20:00>"
+      "en_iyi_saat": "<ör: 09:00-10:00>"
     }
   ],
-  "ozet": "<30 günlük strateji özeti, 1-2 cümle>",
-  "ipuclari": ["<3 pratik içerik ipucu>"],
-  "ctaText": "<${f.bizName || 'işletme'} için motivasyon cümlesi>"
-}
-Her haftada ${f.gunler} günü olan tarihlere denk gelecek şekilde yaklaşık 4-5 içerik üret. Türkçe veya ${f.lang} dilinde, sektöre özgü, uygulanabilir olsun.`
+  "ozet": "<30 günlük strateji özeti, 1 cümle>",
+  "ipuclari": ["<ipucu 1>", "<ipucu 2>", "<ipucu 3>"],
+  "ctaText": "<motivasyon cümlesi>"
+}`
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -127,7 +130,7 @@ export function IcerikTakvimiPage() {
 
   // Polling helper — job_id ile status endpoint'ini sorgular, tamamlandığında sonucu döner
   const pollJobResult = async (jobId: string): Promise<TakvimiResult> => {
-    const POLL_INTERVAL_MS = 4000
+    const POLL_INTERVAL_MS = 10000
     const DEADLINE = Date.now() + 15 * 60 * 1000  // 15 dakika (canlıda 12dk+ sürebildiği görüldü)
 
     while (Date.now() < DEADLINE) {
@@ -351,7 +354,7 @@ export function IcerikTakvimiPage() {
                   <p className="text-sm text-red-500">{(mutation.error as Error)?.message || 'Bir hata oluştu. Lütfen tekrar deneyin.'}</p>
                 )}
 
-                <Button onClick={() => mutation.mutate()} disabled={!canSubmit} loading={mutation.isPending} className="mt-1 w-full">
+<Button onClick={() => mutation.mutate()} disabled={!canSubmit} loading={mutation.isPending} className="mt-1 w-full">
                   📅 30 Günlük İçerik Takvimi Oluştur
                 </Button>
                 {mutation.isPending && (
