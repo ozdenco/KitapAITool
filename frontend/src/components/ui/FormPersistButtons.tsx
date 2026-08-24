@@ -6,9 +6,43 @@ interface Props {
   filename?: string
 }
 
+/**
+ * Eski standalone HTML araçları formu farklı bir şemayla kaydediyordu:
+ *   { "f-biz": "...", "f-sector": "...", "faq-1": "...", "f-redirect-goal": "..." }
+ * SaaS sürümü ise camelCase + dizi kullanıyor:
+ *   { biz, sector, faqs: [...], redirectGoal }
+ * Eski dosyalar da yüklenebilsin diye anahtarları çeviriyoruz.
+ */
+function normalizeLegacyForm(raw: Record<string, unknown>): Record<string, unknown> {
+  const hasLegacyKeys = Object.keys(raw).some((k) => k.startsWith('f-') || k.startsWith('faq-'))
+  if (!hasLegacyKeys) return raw
+
+  const out: Record<string, unknown> = { ...raw }
+
+  // "f-redirect-goal" → "redirectGoal", "f-biz" → "biz"
+  for (const [key, value] of Object.entries(raw)) {
+    if (!key.startsWith('f-')) continue
+    const camel = key
+      .slice(2)
+      .replace(/-([a-z])/g, (_, c: string) => c.toUpperCase())
+    if (out[camel] === undefined) out[camel] = value
+  }
+
+  // "faq-1".."faq-5" → faqs: [...]
+  const faqKeys = Object.keys(raw)
+    .filter((k) => /^faq-\d+$/.test(k))
+    .sort((a, b) => Number(a.slice(4)) - Number(b.slice(4)))
+  if (faqKeys.length > 0 && out.faqs === undefined) {
+    out.faqs = faqKeys.map((k) => String(raw[k] ?? '').trim())
+  }
+
+  return out
+}
+
 export function FormPersistButtons({ getData, onLoad, filename = 'form.json' }: Props) {
   const inputRef = useRef<HTMLInputElement>(null)
   const [notice, setNotice] = useState(false)
+  const [error, setError]   = useState(false)
 
   const handleSave = () => {
     const json = JSON.stringify(getData(), null, 2)
@@ -27,12 +61,14 @@ export function FormPersistButtons({ getData, onLoad, filename = 'form.json' }: 
     const reader = new FileReader()
     reader.onload = (ev) => {
       try {
-        const data = JSON.parse(ev.target?.result as string) as Record<string, unknown>
-        onLoad(data)
+        const raw = JSON.parse(ev.target?.result as string) as Record<string, unknown>
+        onLoad(normalizeLegacyForm(raw))
         setNotice(true)
         setTimeout(() => setNotice(false), 2500)
-      } catch {
-        // bozuk dosya — sessizce görmezden gel
+      } catch (error) {
+        console.error('Form yüklenemedi:', error)
+        setError(true)
+        setTimeout(() => setError(false), 4000)
       }
     }
     reader.readAsText(file)
@@ -64,6 +100,12 @@ export function FormPersistButtons({ getData, onLoad, filename = 'form.json' }: 
       {notice && (
         <span className="text-xs text-[#1D9E75] flex items-center gap-1">
           ✓ Form yüklendi
+        </span>
+      )}
+
+      {error && (
+        <span className="text-xs text-red-500 flex items-center gap-1">
+          ✕ Dosya okunamadı — geçerli bir .json seçin
         </span>
       )}
     </div>

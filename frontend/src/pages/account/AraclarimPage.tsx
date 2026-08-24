@@ -259,9 +259,16 @@ export function AraclarimPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {ACTIVE_TOOLS.filter((t) => t.purchasable !== false).map((tool) => {
+            {ACTIVE_TOOLS.filter((t) => {
+              if (t.purchasable === false) return false
+              // Yönetici tarafından pasife alınan araçlar tool-prices'ta dönmez.
+              // Satın alınmamışsa kartı hiç gösterme; satın alınmışsa hakkı
+              // bitene kadar görünür kalsın (yenileme/yükseltme kapalı olacak).
+              return priceMap.has(t.id) || activePurchaseMap.has(t.id)
+            }).map((tool) => {
               const purchase   = activePurchaseMap.get(tool.id)
               const basePrice  = priceMap.get(tool.id)
+              const isRetired  = !priceMap.has(tool.id)   // pasife alınmış
               const isActive   = Boolean(purchase)
               const isSelected = selected.has(tool.id)
               const days       = purchase ? daysLeft(purchase.expiresAt) : null
@@ -273,7 +280,15 @@ export function AraclarimPage() {
                     key={tool.id}
                     className="relative bg-white rounded-2xl border-2 border-[#1D9E75]/50 p-4 flex items-start gap-3"
                   >
-                    <div className="absolute top-3 right-3">
+                    <div className="absolute top-3 right-3 flex items-center gap-1.5">
+                      {isRetired && (
+                        <span
+                          title="Bu araç satışa kapatıldı. Mevcut hakkınız bitiş tarihine kadar geçerli."
+                          className="text-[10px] font-semibold px-2 py-[3px] rounded-full bg-[#F7F6F2] text-[#9A9792] border border-[#D3D1C7]"
+                        >
+                          Satışta değil
+                        </span>
+                      )}
                       <span className="text-[10px] font-semibold px-2 py-[3px] rounded-full bg-[#E6F9F2] text-[#085041] border border-[#9FE1CB]">
                         ✓ Aktif
                       </span>
