@@ -26,12 +26,14 @@ public class ToolsController(
     [HttpGet("usage")]
     public async Task<IActionResult> GetUsage()
     {
-        var summary = await usage.GetUsageSummaryAsync(CurrentUserId);
+        var summary  = await usage.GetUsageSummaryAsync(CurrentUserId);
+        var planName = await usage.GetPlanNameAsync(CurrentUserId);
         var data = summary.Select(s => new
         {
             toolId = s.ToolId,
             usedCount = s.UsedCount,
-            limit = s.Limit
+            limit = s.Limit,
+            planLabel = planName      // frontend limit==null'dan plan tahmin etmesin
         });
         return Ok(new { success = true, data });
     }

@@ -48,9 +48,16 @@ public class ToolUsageService(AppDbContext db)
         { "trend-video", 1 },   // Apify maliyeti (~$0.40/çalıştırma) → admin dışı: ayda maks 1
     };
 
+    /// <summary>
+    /// Aktif aboneliği olmayan (veya süresi dolmuş) kullanıcıların düştüğü limit.
+    /// Plans tablosundaki "Ücretsiz" planla aynı olmalıdır.
+    /// </summary>
+    private const int    FreePlanLimit = 3;
+    private const string FreePlanName  = "Ücretsiz";
+
     public async Task<List<ToolUsageSummary>> GetUsageSummaryAsync(Guid userId)
     {
-        var plan = await GetUserPlanAsync(userId);
+        var planLimit  = await GetPlanLimitAsync(userId);
         var monthStart = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1, 0, 0, 0, DateTimeKind.Utc);
 
         // Bu ayki kullanım sayaçları
@@ -80,7 +87,7 @@ public class ToolUsageService(AppDbContext db)
             }
 
             // Yoksa plan limiti — araç bazlı kısıtı uygula
-            var limit = ApplyToolSpecificLimit(toolId, plan?.UsagePerToolPerMonth);
+            var limit = ApplyToolSpecificLimit(toolId, planLimit);
             return new ToolUsageSummary(toolId, used, limit);
         }).ToList();
     }
@@ -171,8 +178,7 @@ public class ToolUsageService(AppDbContext db)
             .ToDictionaryAsync(x => x.ToolId, x => x.MonthlyLimit);
 
         // Plan limitini kullanıcı aboneliğinden al (dönem anındaki snapshot yerine mevcut plan kullanılır)
-        var plan = await GetUserPlanAsync(userId);
-        var planLimit = plan?.UsagePerToolPerMonth;
+        var planLimit = await GetPlanLimitAsync(userId);
 
         // Tüm araçlar — kullananları üstte sırala
         return AllToolIds
@@ -215,11 +221,13 @@ public class ToolUsageService(AppDbContext db)
             return used < purchaseEffective;                                // aylık araç limiti (kısıtlı)
         }
 
-        // Araç satın alımı yoksa — plan limitine bak
-        var plan = await GetUserPlanAsync(userId);
-        if (plan?.UsagePerToolPerMonth is null) return true;                // admin/enterprise
+        // Araç satın alımı yoksa — plan limitine bak.
+        // planLimit null SADECE gerçek sınırsızlıkta olur (yönetici veya Kurumsal plan);
+        // aboneliği olmayan/süresi dolmuş kullanıcı ücretsiz plan limitine düşer.
+        var planLimit = await GetPlanLimitAsync(userId);
+        if (planLimit is null) return true;                                 // yönetici / Kurumsal
 
-        var effectiveLimit = ApplyToolSpecificLimit(toolId, plan.UsagePerToolPerMonth);
+        var effectiveLimit = ApplyToolSpecificLimit(toolId, planLimit);
         return used < effectiveLimit;
     }
 
@@ -231,7 +239,7 @@ public class ToolUsageService(AppDbContext db)
         var usageCountBefore = await db.ToolUsageLogs
             .CountAsync(l => l.UserId == userId && l.ToolId == toolId && l.UsedAt >= monthStart);
 
-        var plan = await GetUserPlanAsync(userId);
+        var (planName, planLimit) = await GetPlanSnapshotAsync(userId);
 
         db.ToolUsageLogs.Add(new ToolUsageLog
         {
@@ -239,22 +247,57 @@ public class ToolUsageService(AppDbContext db)
             ToolId           = toolId,
             Success          = success,
             UsageCountBefore = usageCountBefore,
-            LimitAtTime      = plan?.UsagePerToolPerMonth,
-            PlanNameAtTime   = plan?.Name ?? "Ücretsiz",
+            // Araç bazlı kısıt dahil gerçek limit (ör. trend-video → 1)
+            LimitAtTime      = ApplyToolSpecificLimit(toolId, planLimit),
+            PlanNameAtTime   = planName,
         });
         await db.SaveChangesAsync();
     }
 
-    private async Task<Plan?> GetUserPlanAsync(Guid userId)
+    /// <summary>
+    /// Kullanıcının araç başına aylık plan limiti.
+    /// Dönüş <c>null</c> ise SINIRSIZ demektir — bu yalnızca iki durumda olur:
+    /// yönetici hesabı (IsAdmin) veya UsagePerToolPerMonth'u null olan Kurumsal plan.
+    ///
+    /// ÖNEMLİ: Eskiden bu iş <c>GetUserPlanAsync</c> ile yapılıyor ve aktif abonelik
+    /// bulunamadığında <c>null</c> dönülüyordu. Çağıran taraflar null'ı "sınırsız"
+    /// saydığı için süresi dolan abonelikler ücretsiz plana düşmek yerine SINIRSIZ
+    /// hakka kavuşuyordu (24 Ağu 2026'da canlıda tespit edildi: Premium aboneliği
+    /// 1 Ağustos'ta biten kullanıcı sınırsız araç çalıştırabiliyordu). Artık
+    /// "plan bulunamadı" ile "sınırsız" aynı değerle temsil edilmiyor.
+    /// </summary>
+    private async Task<int?> GetPlanLimitAsync(Guid userId)
+        => (await GetPlanSnapshotAsync(userId)).Limit;
+
+    /// <summary>
+    /// Kullanıcının görüntülenecek plan adı ("Admin", "Ücretsiz", "Premium"...).
+    /// Frontend bunu rozet olarak gösterir; limitin null olmasına bakarak
+    /// tahmin yürütmemelidir.
+    /// </summary>
+    public async Task<string> GetPlanNameAsync(Guid userId)
+        => (await GetPlanSnapshotAsync(userId)).Name;
+
+    /// <summary>
+    /// Kullanıcının geçerli plan adı ve limiti. Kullanım kaydında (ToolUsageLog)
+    /// o anki planı saklamak için de kullanılır.
+    /// </summary>
+    private async Task<(string Name, int? Limit)> GetPlanSnapshotAsync(Guid userId)
     {
-        // Süresi dolmuş abonelik ücretsiz plan gibi davranır — ExpiresAt kontrolü zorunlu
+        var user = await db.Users.FindAsync(userId);
+        if (user?.IsAdmin == true) return ("Admin", null);   // yönetici → sınırsız
+
         var subscription = await db.Subscriptions
             .Include(s => s.Plan)
             .FirstOrDefaultAsync(s => s.UserId == userId
                                    && s.Status == SubscriptionStatus.Active
                                    && (s.ExpiresAt == null || s.ExpiresAt > DateTime.UtcNow));
 
-        return subscription?.Plan;
+        // Kurumsal planda UsagePerToolPerMonth null'dır → sınırsız
+        if (subscription?.Plan is not null)
+            return (subscription.Plan.Name, subscription.Plan.UsagePerToolPerMonth);
+
+        // Abonelik yok / iptal / süresi dolmuş → ücretsiz plan limiti
+        return (FreePlanName, FreePlanLimit);
     }
 
     /// <summary>

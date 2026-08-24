@@ -29,7 +29,7 @@ const TOOL_ENGINE_MAP: Record<string, {
   'whatsapp-satis':     { engine: 'minimax', unitsPerRun: 0,  unitLabel: 'token/çalıştırma', note: 'Henüz ölçülmedi' },
   'reklam-butce':       { engine: 'minimax', unitsPerRun: 2,  unitLabel: 'token/çalıştırma', note: '2 kanal seçiminde 2 token · kanal sayısıyla orantılı' },
   'musteri-geri-donus': { engine: 'minimax', unitsPerRun: 5,  unitLabel: 'token/çalıştırma', note: '5 token gözlendi (2 kanalda 4 token da görüldü)' },
-  'chatbot-senaryo':    { engine: 'minimax', unitsPerRun: 0,  unitLabel: 'token/çalıştırma', note: 'Henüz ölçülmedi' },
+  'chatbot-senaryo':    { engine: 'minimax', unitsPerRun: 2,  unitLabel: 'token/çalıştırma', note: '5 SSS · 2 token · n8n 14 sn' },
   'ai-gorunurluk':      { engine: 'minimax', unitsPerRun: 0,  unitLabel: 'token/çalıştırma', note: 'Henüz ölçülmedi' },
   'viral-video':        { engine: 'minimax', unitsPerRun: 0,  unitLabel: 'token/çalıştırma', note: 'Henüz ölçülmedi' },
 }
