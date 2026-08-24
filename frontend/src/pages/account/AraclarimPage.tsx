@@ -134,6 +134,20 @@ export function AraclarimPage() {
     sub.expiresAt != null &&
     new Date(sub.expiresAt) > new Date()
 
+  /**
+   * Aylık hakkı tükenmiş araç mı?
+   *
+   * Paket aboneliği tüm araçlara aynı limiti verir (ör. Standart = 10/araç).
+   * Tek bir araçta bu hak bitince kullanıcının ay sonunu beklemesi gerekiyordu;
+   * artık o araç için tekil satın alma (25/ay) açılıyor. Backend'de zaten
+   * ToolPurchase limiti plan limitinin önüne geçtiği için ek bir değişiklik
+   * gerekmiyor: satın alım sonrası limit 25'e çıkar, kullanılmış sayaç korunur.
+   */
+  const hakkiDolmus = (toolId: string): boolean => {
+    const u = usageMap.get(toolId)
+    return u?.limit != null && u.usedCount >= u.limit
+  }
+
   const activePurchaseMap = new Map(
     (purchases ?? []).map((p) => [p.toolId, p])
   )
@@ -146,8 +160,12 @@ export function AraclarimPage() {
     0
   )
 
+  /** Paket aboneliği varken yalnızca hakkı tükenmiş araçlar satın alınabilir */
+  const secilebilir = (toolId: string): boolean =>
+    !hasActivePaidSub || hakkiDolmus(toolId)
+
   const toggleSelect = (toolId: string) => {
-    if (hasActivePaidSub) return
+    if (!secilebilir(toolId)) return
     setSelected((prev) => {
       const next = new Set(prev)
       if (next.has(toolId)) next.delete(toolId)
@@ -157,7 +175,8 @@ export function AraclarimPage() {
   }
 
   const handleCheckout = async () => {
-    if (selected.size === 0 || isChecking || hasActivePaidSub) return
+    if (selected.size === 0 || isChecking) return
+    if ([...selected].some((id) => !secilebilir(id))) return
     setCheckoutError(null)
     setIsChecking(true)
     try {
@@ -222,7 +241,9 @@ export function AraclarimPage() {
                 <span className="font-semibold">
                   {formatDate(sub!.expiresAt!)}
                 </span>{' '}
-                tarihinde sona erecek. Araç satın alımı bu tarihten itibaren kullanılabilir olacaktır.
+                tarihinde sona erecek. Paketiniz devam ederken yalnızca{' '}
+                <span className="font-semibold">aylık hakkı dolan araçlar</span> için ek kullanım
+                satın alabilirsiniz — diğerleri paket bitiminde açılır.
               </p>
             </div>
           </div>
@@ -368,9 +389,9 @@ export function AraclarimPage() {
                   key={tool.id}
                   type="button"
                   onClick={() => toggleSelect(tool.id)}
-                  disabled={hasActivePaidSub}
+                  disabled={!secilebilir(tool.id)}
                   className={`relative text-left bg-white rounded-2xl border-2 p-4 flex items-start gap-3 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1D9E75]/40 ${
-                    hasActivePaidSub
+                    !secilebilir(tool.id)
                       ? 'border-[#E2E0D8] opacity-40 cursor-not-allowed select-none'
                       : isSelected
                       ? 'border-[#1D9E75] shadow-md shadow-[#1D9E75]/10'
@@ -393,6 +414,13 @@ export function AraclarimPage() {
                   <span className="text-[28px] leading-none shrink-0 mt-0.5">{tool.icon}</span>
                   <div className="flex-1 min-w-0 pr-10">
                     <p className="text-[13px] font-semibold text-[#1C1B19] leading-snug">{tool.name}</p>
+
+                    {/* Paket aboneliği sürerken bu araç neden seçilebilir? */}
+                    {hasActivePaidSub && hakkiDolmus(tool.id) && (
+                      <span className="inline-block mt-1 px-2 py-[2px] rounded-full bg-amber-50 border border-amber-200 text-[10px] font-medium text-amber-700">
+                        Aylık hakkınız doldu — ek kullanım alabilirsiniz
+                      </span>
+                    )}
                     <p className="text-[11px] text-[#9A9792] mt-0.5 leading-relaxed line-clamp-2">
                       {tool.description}
                     </p>
@@ -418,7 +446,7 @@ export function AraclarimPage() {
       </div>
 
       {/* ── Sticky bottom bar — sadece araç seçildiyse ve aktif abonelik yoksa ── */}
-      {selected.size > 0 && !hasActivePaidSub && (
+      {selected.size > 0 && (
         <div className="fixed bottom-0 left-0 right-0 z-50 flex justify-center pointer-events-none">
           <div className="w-full max-w-[1100px] px-6 pb-5 pointer-events-auto">
             <div className="bg-[#1C1B19] rounded-2xl px-4 py-3 flex flex-col gap-2 shadow-2xl">

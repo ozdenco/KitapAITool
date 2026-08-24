@@ -15,6 +15,7 @@ public class PaymentsController(
     AppDbContext                db,
     PayTrService                paytr,
     SubscriptionService         subs,
+    ToolUsageService            usage,
     IConfiguration              config,
     EmailService                email,
     ILogger<PaymentsController> logger) : ControllerBase
@@ -226,13 +227,28 @@ public class PaymentsController(
 
         if (activePaidSub is not null)
         {
-            var expiryFormatted = activePaidSub.ExpiresAt!.Value.ToString("dd.MM.yyyy");
-            return BadRequest(new
+            // İSTİSNA: aylık hakkı dolan araçlar satın alınabilir. Paket tüm araçlara
+            // aynı limiti verdiği için (ör. Standart = 10/araç), tek bir araçta hak
+            // bitince kullanıcı ay sonuna kadar o aracı kullanamıyordu.
+            var hakkiDolmayanlar = new List<string>();
+            foreach (var toolId in req.ToolIds.Distinct())
             {
-                error = $"Aktif paket aboneliğiniz ({activePaidSub.Plan!.Name}) süresince araç satın alımı mevcut değildir. " +
-                        $"Aboneliğiniz {expiryFormatted} tarihinde sona erdikten sonra araç satın alabilirsiniz.",
-                subscriptionExpiresAt = activePaidSub.ExpiresAt.Value.ToString("yyyy-MM-dd")
-            });
+                if (!await usage.IsLimitReachedAsync(CurrentUserId, toolId))
+                    hakkiDolmayanlar.Add(toolId);
+            }
+
+            if (hakkiDolmayanlar.Count > 0)
+            {
+                var expiryFormatted = activePaidSub.ExpiresAt!.Value.ToString("dd.MM.yyyy");
+                return BadRequest(new
+                {
+                    error = $"Aktif paket aboneliğiniz ({activePaidSub.Plan!.Name}) süresince yalnızca aylık hakkı " +
+                            $"dolan araçlar için ek kullanım satın alabilirsiniz. Diğer araçlar aboneliğiniz " +
+                            $"{expiryFormatted} tarihinde sona erdikten sonra satın alınabilir.",
+                    subscriptionExpiresAt = activePaidSub.ExpiresAt.Value.ToString("yyyy-MM-dd"),
+                    limitiDolmayanAraclar = hakkiDolmayanlar
+                });
+            }
         }
 
         // Fiyatları yükle ve toplamı hesapla

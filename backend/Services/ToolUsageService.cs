@@ -270,6 +270,22 @@ public class ToolUsageService(AppDbContext db)
         => (await GetPlanSnapshotAsync(userId)).Limit;
 
     /// <summary>
+    /// Bu aracın aylık hakkı tükendi mi?
+    ///
+    /// Paket aboneliği süresince tekil araç satın alımı kapalıdır; tek istisna,
+    /// aylık hakkı dolan araçlardır (kullanıcı ay sonunu beklemek zorunda kalmasın).
+    /// Satın alma uçları bu kontrolü kullanır.
+    /// </summary>
+    public async Task<bool> IsLimitReachedAsync(Guid userId, string toolId)
+    {
+        var summary = await GetUsageSummaryAsync(userId);
+        var tool    = summary.FirstOrDefault(s => s.ToolId == toolId);
+
+        // Limit null = sınırsız (yönetici / Kurumsal) → hak dolmaz
+        return tool?.Limit is not null && tool.UsedCount >= tool.Limit;
+    }
+
+    /// <summary>
     /// Kullanıcının görüntülenecek plan adı ("Admin", "Ücretsiz", "Premium"...).
     /// Frontend bunu rozet olarak gösterir; limitin null olmasına bakarak
     /// tahmin yürütmemelidir.
