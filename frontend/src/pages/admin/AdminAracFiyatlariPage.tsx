@@ -94,27 +94,82 @@ function NumInput({
 
 // ─── Maliyet Analizi Paneli ───────────────────────────────────────────────────
 
+const MALIYET_STORAGE_KEY = 'kkb-maliyet-parametreleri'
+
+const VARSAYILAN_PARAMETRELER = {
+  minimaxBudgetUsd:   5,      // $5
+  minimaxTokens:      5000,   // 5000 token
+  minimaxMonthlyUsd:  5,      // $5/ay sabit MiniMax maliyeti
+  claudeUsd:          20,     // $20/ay Claude (geliştirici sabit)
+  geminiEstRunsMonth: 100,    // Gemini Flash tahmini aylık run (Rakip Analiz)
+  geminiCostPerRunUsd:0.003,  // Gemini Flash $/run (tahmini)
+  apifyBudgetUsd:     29,     // $29
+  apifyRuns:          50,     // 50 run
+  n8nUsd:             20,     // $20/ay
+  hostingerUsd:       10,     // $10/ay
+  activeUsers:        50,     // aktif kullanıcı sayısı
+  profitMultiplier:   3,      // kâr marjı çarpanı
+  stdPackageRuns:     10,     // standart paket run sayısı
+} as const
+
+type MaliyetParametreleri = { -readonly [K in keyof typeof VARSAYILAN_PARAMETRELER]: number }
+
+/** Kayıtlı parametreleri oku; bozuk/eksik alanlar varsayılana düşer. */
+function kayitliParametreleriOku(): MaliyetParametreleri {
+  const varsayilan: MaliyetParametreleri = { ...VARSAYILAN_PARAMETRELER }
+  try {
+    const raw = localStorage.getItem(MALIYET_STORAGE_KEY)
+    if (!raw) return varsayilan
+
+    const kayitli = JSON.parse(raw) as Record<string, unknown>
+    return Object.keys(varsayilan).reduce((acc, key) => {
+      const deger = kayitli[key]
+      return typeof deger === 'number' && Number.isFinite(deger)
+        ? { ...acc, [key]: deger }
+        : acc
+    }, varsayilan)
+  } catch (error) {
+    console.error('Maliyet parametreleri okunamadı:', error)
+    return varsayilan
+  }
+}
+
 function MaliyetPaneli({ prices }: { prices?: ToolPrice[] }) {
   const { data: usdTry = 48, isFetching: kurYukleniyor } = useUsdTry()
 
-  // ── Form state (kullanıcı girişi) ─────────────────────────────────────────
-  const [form, setForm] = useState({
-    minimaxBudgetUsd:   5,      // $5
-    minimaxTokens:      5000,   // 5000 token
-    minimaxMonthlyUsd:  5,      // $5/ay sabit MiniMax maliyeti
-    claudeUsd:          20,     // $20/ay Claude (geliştirici sabit)
-    geminiEstRunsMonth: 100,    // Gemini Flash tahmini aylık run (Rakip Analiz)
-    geminiCostPerRunUsd:0.003,  // Gemini Flash $/run (tahmini)
-    apifyBudgetUsd:     29,     // $29
-    apifyRuns:          50,     // 50 run
-    n8nUsd:             20,     // $20/ay
-    hostingerUsd:       10,     // $10/ay
-    activeUsers:        50,     // aktif kullanıcı sayısı
-    profitMultiplier:   3,      // kâr marjı çarpanı
-    stdPackageRuns:     10,     // standart paket run sayısı
-  })
-  const setF = (k: keyof typeof form) => (v: number) =>
-    setForm(prev => ({ ...prev, [k]: v }))
+  // `form`  → hesaplamalarda kullanılan, kaydedilmiş değerler
+  // `draft` → input'larda düzenlenen, henüz kaydedilmemiş değerler
+  const [form,  setForm]  = useState<MaliyetParametreleri>(kayitliParametreleriOku)
+  const [draft, setDraft] = useState<MaliyetParametreleri>(kayitliParametreleriOku)
+  const [kaydedildi, setKaydedildi] = useState(false)
+
+  const setF = (k: keyof MaliyetParametreleri) => (v: number) =>
+    setDraft(prev => ({ ...prev, [k]: v }))
+
+  const degisiklikVar = (Object.keys(draft) as (keyof MaliyetParametreleri)[])
+    .some(k => draft[k] !== form[k])
+
+  const handleKaydet = () => {
+    try {
+      localStorage.setItem(MALIYET_STORAGE_KEY, JSON.stringify(draft))
+    } catch (error) {
+      console.error('Maliyet parametreleri kaydedilemedi:', error)
+    }
+    setForm(draft)                                  // hesaplamalar yeni değerlerle yenilenir
+    setKaydedildi(true)
+    setTimeout(() => setKaydedildi(false), 2500)
+  }
+
+  const handleSifirla = () => {
+    const varsayilan: MaliyetParametreleri = { ...VARSAYILAN_PARAMETRELER }
+    try {
+      localStorage.removeItem(MALIYET_STORAGE_KEY)
+    } catch (error) {
+      console.error('Maliyet parametreleri sıfırlanamadı:', error)
+    }
+    setDraft(varsayilan)
+    setForm(varsayilan)
+  }
 
   // ── Hesaplama ─────────────────────────────────────────────────────────────
   const minimaxCostPerToken = form.minimaxBudgetUsd / form.minimaxTokens   // $/token
@@ -161,7 +216,7 @@ function MaliyetPaneli({ prices }: { prices?: ToolPrice[] }) {
             <span>📊</span> Çalıştırma Maliyet Analizi
           </h2>
           <p className="text-[12px] text-[#6B6963] mt-0.5">
-            Maliyetleri gir, canlı hesaplama görün
+            Maliyetleri gir, <strong>Kaydet</strong>'e bas — değerler tarayıcında saklanır
           </p>
         </div>
         <div className="flex items-center gap-2 bg-[#F7F6F2] rounded-xl px-4 py-2">
@@ -173,15 +228,49 @@ function MaliyetPaneli({ prices }: { prices?: ToolPrice[] }) {
         </div>
       </div>
 
+      {/* ── Kaydet / Sıfırla ─── */}
+      <div className={`flex items-center gap-3 flex-wrap rounded-xl px-4 py-3 border transition-colors ${
+        degisiklikVar ? 'bg-amber-50 border-amber-200' : 'bg-[#F7F6F2] border-[#E2E0D8]'
+      }`}>
+        <button
+          type="button"
+          onClick={handleKaydet}
+          disabled={!degisiklikVar}
+          className="px-4 py-2 rounded-lg text-[13px] font-semibold bg-[#1D9E75] text-white hover:bg-[#178a65] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          💾 Kaydet ve Hesapla
+        </button>
+
+        <button
+          type="button"
+          onClick={handleSifirla}
+          className="px-3 py-2 rounded-lg text-[12px] font-medium text-[#6B6963] bg-white border border-[#D3D1C7] hover:border-[#9A9792] transition-colors"
+        >
+          ↺ Varsayılanlara dön
+        </button>
+
+        {degisiklikVar ? (
+          <span className="text-[12px] text-amber-700 font-medium">
+            ⚠️ Kaydedilmemiş değişiklik var — aşağıdaki hesaplamalar hâlâ eski değerleri gösteriyor
+          </span>
+        ) : kaydedildi ? (
+          <span className="text-[12px] text-[#1D9E75] font-medium">✓ Kaydedildi</span>
+        ) : (
+          <span className="text-[12px] text-[#9A9792]">
+            Tüm hesaplamalar kayıtlı değerlerle yapılıyor
+          </span>
+        )}
+      </div>
+
       {/* ── Form girdileri ─── */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
 
         {/* MiniMax */}
         <div className="bg-[#F7F6F2] rounded-xl p-4 flex flex-col gap-3">
           <p className="text-[12px] font-semibold text-[#1C1B19]">🧠 MiniMax (tüm araçlar)</p>
-          <NumInput label="Paket bütçesi (USD)" value={form.minimaxBudgetUsd} onChange={setF('minimaxBudgetUsd')} suffix="$" step={1} />
-          <NumInput label="Token sayısı"         value={form.minimaxTokens}    onChange={setF('minimaxTokens')}    suffix="token" step={100} />
-          <NumInput label="Sabit aylık maliyet"  value={form.minimaxMonthlyUsd} onChange={setF('minimaxMonthlyUsd')} suffix="$/ay" step={1} />
+          <NumInput label="Paket bütçesi (USD)" value={draft.minimaxBudgetUsd} onChange={setF('minimaxBudgetUsd')} suffix="$" step={1} />
+          <NumInput label="Token sayısı"         value={draft.minimaxTokens}    onChange={setF('minimaxTokens')}    suffix="token" step={100} />
+          <NumInput label="Sabit aylık maliyet"  value={draft.minimaxMonthlyUsd} onChange={setF('minimaxMonthlyUsd')} suffix="$/ay" step={1} />
           <div className="text-[11px] text-[#6B6963] bg-white rounded-lg px-3 py-2">
             <span className="font-medium text-[#1C1B19]">${minimaxCostPerToken.toFixed(4)}</span> / token
             <span className="mx-2 text-[#D3D1C7]">·</span>
@@ -192,8 +281,8 @@ function MaliyetPaneli({ prices }: { prices?: ToolPrice[] }) {
         {/* Gemini */}
         <div className="bg-[#F7F6F2] rounded-xl p-4 flex flex-col gap-3">
           <p className="text-[12px] font-semibold text-[#1C1B19]">✨ Gemini Flash (Rakip Analiz)</p>
-          <NumInput label="Çalıştırma başı maliyet" value={form.geminiCostPerRunUsd} onChange={setF('geminiCostPerRunUsd')} suffix="$/run" step={0.001} />
-          <NumInput label="Aylık tahmini run"        value={form.geminiEstRunsMonth}  onChange={setF('geminiEstRunsMonth')}  suffix="run" step={10} />
+          <NumInput label="Çalıştırma başı maliyet" value={draft.geminiCostPerRunUsd} onChange={setF('geminiCostPerRunUsd')} suffix="$/run" step={0.001} />
+          <NumInput label="Aylık tahmini run"        value={draft.geminiEstRunsMonth}  onChange={setF('geminiEstRunsMonth')}  suffix="run" step={10} />
           <div className="text-[11px] text-amber-700 bg-amber-50 rounded-lg px-3 py-2">
             ⚠️ Token miktarı henüz ölçülmedi. Rakip Analiz çalıştırıldığında bildiriyorsun.
           </div>
@@ -202,8 +291,8 @@ function MaliyetPaneli({ prices }: { prices?: ToolPrice[] }) {
         {/* Apify */}
         <div className="bg-[#F7F6F2] rounded-xl p-4 flex flex-col gap-3">
           <p className="text-[12px] font-semibold text-[#1C1B19]">🕷️ Apify (Trend Video)</p>
-          <NumInput label="Plan fiyatı (USD)" value={form.apifyBudgetUsd}  onChange={setF('apifyBudgetUsd')}  suffix="$/ay" step={1} />
-          <NumInput label="Aylık run hakkı"   value={form.apifyRuns}        onChange={setF('apifyRuns')}        suffix="run" step={5} />
+          <NumInput label="Plan fiyatı (USD)" value={draft.apifyBudgetUsd}  onChange={setF('apifyBudgetUsd')}  suffix="$/ay" step={1} />
+          <NumInput label="Aylık run hakkı"   value={draft.apifyRuns}        onChange={setF('apifyRuns')}        suffix="run" step={5} />
           <div className="text-[11px] text-[#6B6963] bg-white rounded-lg px-3 py-2">
             <span className="font-medium text-[#1C1B19]">${apifyCostPerRun.toFixed(3)}</span> / run
             <span className="mx-2 text-[#D3D1C7]">·</span>
@@ -219,16 +308,16 @@ function MaliyetPaneli({ prices }: { prices?: ToolPrice[] }) {
         <div className="bg-[#F7F6F2] rounded-xl p-4 flex flex-col gap-3">
           <p className="text-[12px] font-semibold text-[#1C1B19]">🏗️ Sabit Altyapı (aylık)</p>
           <div className="flex flex-col gap-2">
-            <NumInput label="n8n"             value={form.n8nUsd}           onChange={setF('n8nUsd')}           suffix="$/ay" />
-            <NumInput label="Hostinger"       value={form.hostingerUsd}     onChange={setF('hostingerUsd')}     suffix="$/ay" />
-            <NumInput label="MiniMax (sabit)" value={form.minimaxMonthlyUsd} onChange={setF('minimaxMonthlyUsd')} suffix="$/ay" />
-            <NumInput label="Claude (geliştirici)" value={form.claudeUsd}   onChange={setF('claudeUsd')}        suffix="$/ay" />
+            <NumInput label="n8n"             value={draft.n8nUsd}           onChange={setF('n8nUsd')}           suffix="$/ay" />
+            <NumInput label="Hostinger"       value={draft.hostingerUsd}     onChange={setF('hostingerUsd')}     suffix="$/ay" />
+            <NumInput label="MiniMax (sabit)" value={draft.minimaxMonthlyUsd} onChange={setF('minimaxMonthlyUsd')} suffix="$/ay" />
+            <NumInput label="Claude (geliştirici)" value={draft.claudeUsd}   onChange={setF('claudeUsd')}        suffix="$/ay" />
           </div>
           <div className="border-t border-[#E2E0D8] pt-2 text-[12px] text-[#1C1B19]">
             Toplam:{' '}
             <strong className="tabular-nums">${totalInfraUsd} · ₺{(totalInfraUsd * usdTry).toFixed(0)}/ay</strong>
           </div>
-          <NumInput label="Aktif kullanıcı sayısı" value={form.activeUsers} onChange={setF('activeUsers')} step={1} />
+          <NumInput label="Aktif kullanıcı sayısı" value={draft.activeUsers} onChange={setF('activeUsers')} step={1} />
           <div className="text-[11px] text-[#6B6963]">
             Kullanıcı başı altyapı:{' '}
             <strong className="text-[#1C1B19]">₺{infraPerUserTry.toFixed(1)}/ay</strong>
@@ -239,8 +328,8 @@ function MaliyetPaneli({ prices }: { prices?: ToolPrice[] }) {
         <div className="bg-[#E6F9F2] border border-[#9FE1CB] rounded-xl p-4 flex flex-col gap-3">
           <p className="text-[12px] font-semibold text-[#085041]">💡 Standart Paket Hesabı</p>
           <div className="flex flex-col gap-2">
-            <NumInput label="Paketteki run sayısı" value={form.stdPackageRuns}      onChange={setF('stdPackageRuns')}      step={5} />
-            <NumInput label="Kâr marjı çarpanı"    value={form.profitMultiplier}     onChange={setF('profitMultiplier')}    step={0.5} />
+            <NumInput label="Paketteki run sayısı" value={draft.stdPackageRuns}      onChange={setF('stdPackageRuns')}      step={5} />
+            <NumInput label="Kâr marjı çarpanı"    value={draft.profitMultiplier}     onChange={setF('profitMultiplier')}    step={0.5} />
           </div>
           <div className="flex flex-col gap-1 text-[12px] text-[#1C1B19]">
             <div className="flex justify-between">
