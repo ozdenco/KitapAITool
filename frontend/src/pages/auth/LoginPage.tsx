@@ -49,6 +49,8 @@ export function LoginPage() {
   const loginError = getLoginErrorMessage(error)
   const gError = googleError instanceof Error ? googleError.message : null
   const passwordWasReset = (location.state as Record<string, unknown> | null)?.passwordReset === true
+  // api.ts, oturum geçersizleştiğinde buraya ?oturum=sonlandi ile yönlendirir
+  const oturumSonlandi = new URLSearchParams(location.search).get('oturum') === 'sonlandi'
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-[#1D9E75]/5 flex items-center justify-center p-4">
@@ -62,6 +64,13 @@ export function LoginPage() {
         {/* Card */}
         <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-5">Giriş Yap</h2>
+
+          {/* Oturum süresi doldu bilgisi */}
+          {oturumSonlandi && !passwordWasReset && (
+            <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
+              Oturumunuzun süresi doldu. Lütfen tekrar giriş yapın.
+            </div>
+          )}
 
           {/* Şifre sıfırlama başarı mesajı */}
           {passwordWasReset && (

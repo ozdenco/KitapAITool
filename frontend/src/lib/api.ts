@@ -28,25 +28,39 @@ api.interceptors.response.use(
       original._retry = true
       const refreshToken = localStorage.getItem('refresh_token')
 
-      if (refreshToken) {
-        try {
-          const accessToken = localStorage.getItem('access_token')
-          const { data } = await axios.post<ApiResponse<AuthTokens>>('/api/auth/refresh', {
-            accessToken,
-            refreshToken,
-          })
-          if (data.success && data.data) {
-            localStorage.setItem('access_token', data.data.accessToken)
-            localStorage.setItem('refresh_token', data.data.refreshToken)
-            original.headers.Authorization = `Bearer ${data.data.accessToken}`
-            return api(original)
-          }
-        } catch {
-          // refresh başarısız → oturumu kapat
-          localStorage.removeItem('access_token')
-          localStorage.removeItem('refresh_token')
-          window.location.href = '/giris'
+      // Oturumu kapat ve giriş sayfasına gönder.
+      // Not: refresh token yoksa VEYA yenileme başarısızsa (hem exception hem
+      // de success:false yanıtı) buraya düşülür — aksi halde kullanıcı sayfada
+      // kalıp anlamsız bir "401" hatası görüyordu.
+      const oturumuKapat = () => {
+        localStorage.removeItem('access_token')
+        localStorage.removeItem('refresh_token')
+        if (!window.location.pathname.startsWith('/giris')) {
+          window.location.href = '/giris?oturum=sonlandi'
         }
+        return Promise.reject(
+          new Error('Oturumunuz sonlandı. Lütfen tekrar giriş yapın.'),
+        )
+      }
+
+      if (!refreshToken) return oturumuKapat()
+
+      try {
+        const accessToken = localStorage.getItem('access_token')
+        const { data } = await axios.post<ApiResponse<AuthTokens>>('/api/auth/refresh', {
+          accessToken,
+          refreshToken,
+        })
+        if (data.success && data.data) {
+          localStorage.setItem('access_token', data.data.accessToken)
+          localStorage.setItem('refresh_token', data.data.refreshToken)
+          original.headers.Authorization = `Bearer ${data.data.accessToken}`
+          return api(original)
+        }
+        return oturumuKapat()   // HTTP 200 ama success:false
+      } catch (refreshError) {
+        console.error('Token yenilenemedi:', refreshError)
+        return oturumuKapat()
       }
     }
 
