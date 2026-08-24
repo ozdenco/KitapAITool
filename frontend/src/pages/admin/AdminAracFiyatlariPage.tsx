@@ -21,14 +21,14 @@ const TOOL_ENGINE_MAP: Record<string, {
   unitLabel: string
   note?: string
 }> = {
-  'icerik-takvimi':     { engine: 'minimax', unitsPerRun: 10, unitLabel: 'token/çalıştırma', note: 'İlk ölçüm: 10 token' },
+  'icerik-takvimi':     { engine: 'minimax', unitsPerRun: 10, unitLabel: 'token/çalıştırma', note: '1 gün + 1 platform · 10-11 token gözlendi' },
   'trend-video':        { engine: 'apify',   unitsPerRun: 1,  unitLabel: 'run/çalıştırma' },
   'rakip-analiz':       { engine: 'gemini',  unitsPerRun: 0,  unitLabel: 'token/çalıştırma', note: 'MiniMax + Gemini Flash — token henüz ölçülmedi' },
   'gorunurluk-skoru':   { engine: 'minimax', unitsPerRun: 0,  unitLabel: 'token/çalıştırma', note: 'Henüz ölçülmedi' },
   'musteri-persona':    { engine: 'minimax', unitsPerRun: 0,  unitLabel: 'token/çalıştırma', note: 'Henüz ölçülmedi' },
   'whatsapp-satis':     { engine: 'minimax', unitsPerRun: 0,  unitLabel: 'token/çalıştırma', note: 'Henüz ölçülmedi' },
-  'reklam-butce':       { engine: 'minimax', unitsPerRun: 0,  unitLabel: 'token/çalıştırma', note: 'Henüz ölçülmedi' },
-  'musteri-geri-donus': { engine: 'minimax', unitsPerRun: 0,  unitLabel: 'token/çalıştırma', note: 'Henüz ölçülmedi' },
+  'reklam-butce':       { engine: 'minimax', unitsPerRun: 2,  unitLabel: 'token/çalıştırma', note: '2 kanal seçiminde 2 token · kanal sayısıyla orantılı' },
+  'musteri-geri-donus': { engine: 'minimax', unitsPerRun: 5,  unitLabel: 'token/çalıştırma', note: '5 token gözlendi (2 kanalda 4 token da görüldü)' },
   'chatbot-senaryo':    { engine: 'minimax', unitsPerRun: 0,  unitLabel: 'token/çalıştırma', note: 'Henüz ölçülmedi' },
   'ai-gorunurluk':      { engine: 'minimax', unitsPerRun: 0,  unitLabel: 'token/çalıştırma', note: 'Henüz ölçülmedi' },
   'viral-video':        { engine: 'minimax', unitsPerRun: 0,  unitLabel: 'token/çalıştırma', note: 'Henüz ölçülmedi' },
