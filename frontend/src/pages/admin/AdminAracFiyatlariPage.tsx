@@ -24,11 +24,11 @@ const TOOL_ENGINE_MAP: Record<string, {
   'icerik-takvimi':     { engine: 'minimax', unitsPerRun: 10, unitLabel: 'token/çalıştırma', note: '1 gün + 1 platform · 10-11 token gözlendi' },
   'trend-video':        { engine: 'apify',   unitsPerRun: 1,  unitLabel: 'run/çalıştırma' },
   'rakip-analiz':       { engine: 'gemini',  unitsPerRun: 0,  unitLabel: 'token/çalıştırma', note: 'MiniMax + Gemini Flash — token henüz ölçülmedi' },
-  'gorunurluk-skoru':   { engine: 'minimax', unitsPerRun: 0,  unitLabel: 'token/çalıştırma', note: 'Henüz ölçülmedi' },
+  'gorunurluk-skoru':   { engine: 'minimax', unitsPerRun: 3,  unitLabel: 'token/çalıştırma', note: '3 token · n8n 20 sn' },
   'musteri-persona':    { engine: 'minimax', unitsPerRun: 0,  unitLabel: 'token/çalıştırma', note: 'Henüz ölçülmedi' },
   'whatsapp-satis':     { engine: 'minimax', unitsPerRun: 0,  unitLabel: 'token/çalıştırma', note: 'Henüz ölçülmedi' },
   'reklam-butce':       { engine: 'minimax', unitsPerRun: 2,  unitLabel: 'token/çalıştırma', note: '2 kanal seçiminde 2 token · kanal sayısıyla orantılı' },
-  'musteri-geri-donus': { engine: 'minimax', unitsPerRun: 5,  unitLabel: 'token/çalıştırma', note: '5 token gözlendi (2 kanalda 4 token da görüldü)' },
+  'musteri-geri-donus': { engine: 'minimax', unitsPerRun: 3,  unitLabel: 'token/çalıştırma', note: '3 token · n8n 27 sn (önceki ölçümler 4-5 token)' },
   'chatbot-senaryo':    { engine: 'minimax', unitsPerRun: 2,  unitLabel: 'token/çalıştırma', note: '5 SSS · 2 token · n8n 14 sn' },
   'ai-gorunurluk':      { engine: 'minimax', unitsPerRun: 0,  unitLabel: 'token/çalıştırma', note: 'Henüz ölçülmedi' },
   'viral-video':        { engine: 'minimax', unitsPerRun: 0,  unitLabel: 'token/çalıştırma', note: 'Henüz ölçülmedi' },
@@ -328,8 +328,9 @@ function MaliyetPaneli({ prices }: { prices?: ToolPrice[] }) {
         <div className="bg-[#E6F9F2] border border-[#9FE1CB] rounded-xl p-4 flex flex-col gap-3">
           <p className="text-[12px] font-semibold text-[#085041]">💡 Standart Paket Hesabı</p>
           <div className="flex flex-col gap-2">
-            <NumInput label="Paketteki run sayısı" value={draft.stdPackageRuns}      onChange={setF('stdPackageRuns')}      step={5} />
-            <NumInput label="Kâr marjı çarpanı"    value={draft.profitMultiplier}     onChange={setF('profitMultiplier')}    step={0.5} />
+            <NumInput label="Paketteki run sayısı" value={draft.stdPackageRuns}      onChange={setF('stdPackageRuns')}      step={1} />
+            {/* 0.1 adım: 1,1 · 1,2 · 1,3 gibi ince ayar yapılabilsin */}
+            <NumInput label="Kâr marjı çarpanı"    value={draft.profitMultiplier}     onChange={setF('profitMultiplier')}    step={0.1} />
           </div>
           <div className="flex flex-col gap-1 text-[12px] text-[#1C1B19]">
             <div className="flex justify-between">

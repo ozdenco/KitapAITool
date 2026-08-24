@@ -8,6 +8,7 @@ import { Select } from '@/components/ui/Select'
 import { Textarea } from '@/components/ui/Textarea'
 import { FormPersistButtons } from '@/components/ui/FormPersistButtons'
 import { ToolShell } from '@/components/ui/ToolShell'
+import { MiniChatbotTest } from '@/components/tools/MiniChatbotTest'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -122,6 +123,7 @@ export function ChatbotSenaryoPage() {
       description="İşletme bilgilerini ve sıkça sorulan soruları girin; hazır chatbot akış senaryosu ve mesaj metinleri oluşturalım."
       hasResult={!!result}
       formHasInput={!!biz.trim()}
+      isPending={mutation.isPending}
     >
       {({ isFormOpen, header, rateBar }) => (
         <>
@@ -286,6 +288,13 @@ export function ChatbotSenaryoPage() {
                   <p className="text-sm text-[#1D9E75] font-medium">{result.ctaText}</p>
                 </div>
               )}
+
+              {/* Senaryoyu canlı denemek için — AI çağrısı yapmaz */}
+              <MiniChatbotTest
+                bizName={biz}
+                ozelMesajlar={result.ozel_mesajlar ?? []}
+                sssKartlari={result.sss_kartlari ?? []}
+              />
 
               <button onClick={() => setResult(null)} className="text-sm text-gray-400 underline text-center no-print">
                 Yeni senaryo oluştur

@@ -64,10 +64,20 @@ export function ToolShell({
   const handlePrint = () => {
     const prev = document.title
     document.title = `${title}_Sonuç`
+
     const restore = () => {
       document.title = prev
+      // Safari, yazdırma ESC ile iptal edildiğinde @media print stillerini
+      // ekranda bırakabiliyor ve sayfa boş görünüyor. Reflow zorlayarak
+      // tarayıcıyı yeniden boyama yapmaya mecbur bırakıyoruz.
+      requestAnimationFrame(() => {
+        document.body.style.display = 'none'
+        void document.body.offsetHeight          // reflow tetikler
+        document.body.style.display = ''
+      })
       window.removeEventListener('afterprint', restore)
     }
+
     window.addEventListener('afterprint', restore)
     window.print()
   }
