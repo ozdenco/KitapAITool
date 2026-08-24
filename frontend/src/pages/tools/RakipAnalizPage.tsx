@@ -8,6 +8,7 @@ import { Select } from '@/components/ui/Select'
 import { Textarea } from '@/components/ui/Textarea'
 import { FormPersistButtons } from '@/components/ui/FormPersistButtons'
 import { ToolShell } from '@/components/ui/ToolShell'
+import { useElapsedSeconds } from '@/hooks/useElapsedSeconds'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -161,6 +162,9 @@ export function RakipAnalizPage() {
     },
   })
 
+  // Bekleme sirasinda gecen sureyi gosterir (sabit mesaj donmus hissi veriyordu)
+  const elapsedSec = useElapsedSeconds(mutation.isPending)
+
   const canSubmit = biz.trim() && sector && rakip1.ad.trim() && !mutation.isPending
 
   return (
@@ -171,6 +175,7 @@ export function RakipAnalizPage() {
       description="Kendi işletmenizi ve rakiplerinizi girin; karşılaştırmalı analiz, güçlü/zayıf yönler ve aksiyon önerileri alın."
       hasResult={!!result}
       formHasInput={!!biz.trim()}
+      isPending={mutation.isPending}
     >
       {({ isFormOpen, header, rateBar }) => (
         <>
@@ -327,7 +332,7 @@ export function RakipAnalizPage() {
                   🔍 Rakip Analizi Başlat
                 </Button>
                 {mutation.isPending && (
-                  <p className="text-center text-sm text-gray-400 animate-pulse">Rakip analizi yapılıyor — 1-2 dakika sürebilir...</p>
+                  <p className="text-center text-sm text-gray-400 animate-pulse">Rakip analizi yapılıyor — {elapsedSec} sn geçti</p>
                 )}
               </div>
             </div>

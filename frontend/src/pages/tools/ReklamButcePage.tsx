@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
 import { FormPersistButtons } from '@/components/ui/FormPersistButtons'
 import { ToolShell } from '@/components/ui/ToolShell'
+import { useElapsedSeconds } from '@/hooks/useElapsedSeconds'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -111,6 +112,9 @@ export function ReklamButcePage() {
     },
   })
 
+  // Bekleme sirasinda gecen sureyi gosterir (sabit mesaj donmus hissi veriyordu)
+  const elapsedSec = useElapsedSeconds(mutation.isPending)
+
   const canSubmit = biz.trim() && sector && budget && goal && channels.length > 0 && !mutation.isPending
 
   return (
@@ -121,6 +125,7 @@ export function ReklamButcePage() {
       description="Aylık reklam bütçenizi girin; kanal bazlı dağılım, tahmini tıklama ve beklenen lead sayısını hesaplayalım."
       hasResult={!!result}
       formHasInput={!!biz.trim()}
+      isPending={mutation.isPending}
     >
       {({ isFormOpen, header, rateBar }) => (
         <>
@@ -235,7 +240,7 @@ export function ReklamButcePage() {
                   📊 Bütçe Dağılımını Hesapla
                 </Button>
                 {mutation.isPending && (
-                  <p className="text-center text-sm text-gray-400 animate-pulse">Bütçe dağılımı hesaplanıyor — 1-2 dakika sürebilir...</p>
+                  <p className="text-center text-sm text-gray-400 animate-pulse">Bütçe dağılımı hesaplanıyor — {elapsedSec} sn geçti</p>
                 )}
               </div>
             </div>

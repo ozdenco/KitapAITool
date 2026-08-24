@@ -8,6 +8,7 @@ import { Select } from '@/components/ui/Select'
 import { Textarea } from '@/components/ui/Textarea'
 import { FormPersistButtons } from '@/components/ui/FormPersistButtons'
 import { ToolShell } from '@/components/ui/ToolShell'
+import { useElapsedSeconds } from '@/hooks/useElapsedSeconds'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -126,6 +127,9 @@ export function ViralVideoPage() {
     },
   })
 
+  // Bekleme sirasinda gecen sureyi gosterir (sabit mesaj donmus hissi veriyordu)
+  const elapsedSec = useElapsedSeconds(mutation.isPending)
+
   const canSubmit = videoUrl.trim() && videoDesc.trim() && sector && !mutation.isPending
 
   return (
@@ -136,6 +140,7 @@ export function ViralVideoPage() {
       description="Sosyal medyada gördüğün viral bir videoyu yapıştır. Yapay zeka videonun formatını analiz edip işletmene özel uyarlama fikirleri üretir."
       hasResult={!!result}
       formHasInput={!!videoUrl.trim()}
+      isPending={mutation.isPending}
     >
       {({ isFormOpen, header, rateBar }) => (
         <>
@@ -252,7 +257,7 @@ export function ViralVideoPage() {
 
                 {mutation.isPending && (
                   <p className="text-center text-[13px] text-[#9A9792] animate-pulse">
-                    Format analiz ediliyor, uyarlama fikirleri üretiliyor — 10–30 saniye sürebilir...
+                    Format analiz ediliyor, uyarlama fikirleri üretiliyor — {elapsedSec} sn geçti
                   </p>
                 )}
               </div>

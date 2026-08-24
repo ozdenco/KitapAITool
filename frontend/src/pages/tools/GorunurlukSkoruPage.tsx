@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
 import { FormPersistButtons } from '@/components/ui/FormPersistButtons'
 import { ToolShell } from '@/components/ui/ToolShell'
+import { useElapsedSeconds } from '@/hooks/useElapsedSeconds'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -154,6 +155,9 @@ export function GorunurlukSkoruPage() {
     },
   })
 
+  // Bekleme sirasinda gecen sureyi gosterir (sabit mesaj donmus hissi veriyordu)
+  const elapsedSec = useElapsedSeconds(mutation.isPending)
+
   const canSubmit = name.trim() && sector && city.trim() && !mutation.isPending
   const colors = result ? scoreColor(result.score) : null
 
@@ -165,6 +169,7 @@ export function GorunurlukSkoruPage() {
       description="İşletmenizin Google, sosyal medya ve web'deki varlığını analiz edip 0–100 arası görünürlük puanı ve öncelikli aksiyon listesi hazırlıyoruz."
       hasResult={!!result}
       formHasInput={!!name.trim()}
+      isPending={mutation.isPending}
     >
       {({ isFormOpen, header, rateBar }) => (
         <>
@@ -296,7 +301,7 @@ export function GorunurlukSkoruPage() {
 
                 {mutation.isPending && (
                   <p className="text-center text-sm text-gray-400 animate-pulse">
-                    Yapay zeka analiz ediyor — bu işlem 1-2 dakika sürebilir...
+                    Yapay zeka analiz ediyor — {elapsedSec} sn geçti
                   </p>
                 )}
               </div>

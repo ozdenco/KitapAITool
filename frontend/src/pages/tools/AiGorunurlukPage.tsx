@@ -8,6 +8,7 @@ import { Select } from '@/components/ui/Select'
 import { Textarea } from '@/components/ui/Textarea'
 import { FormPersistButtons } from '@/components/ui/FormPersistButtons'
 import { ToolShell } from '@/components/ui/ToolShell'
+import { useElapsedSeconds } from '@/hooks/useElapsedSeconds'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -213,6 +214,9 @@ export function AiGorunurlukPage() {
     q_keywords: qKeywords, q_lang: qLang, extra,
   })
 
+  // Bekleme sirasinda gecen sureyi gosterir (sabit mesaj donmus hissi veriyordu)
+  const elapsedSec = useElapsedSeconds(mutation.isPending)
+
   const canSubmit = biz.trim() && sector && city.trim() && !mutation.isPending
 
   const genelColor = result
@@ -235,6 +239,7 @@ export function AiGorunurlukPage() {
       description="Yapay zeka uygulamaları işletmenizi araştırdığında sizi bulabilir mi? Soruları yanıtlayın, AI'ın sizi nasıl gördüğünü öğrenin."
       hasResult={!!result}
       formHasInput={!!biz.trim()}
+      isPending={mutation.isPending}
     >
       {({ isFormOpen, header, rateBar }) => (
         <>
@@ -417,7 +422,7 @@ export function AiGorunurlukPage() {
                   ✨ AI Görünürlük Skorunu Hesapla
                 </Button>
                 {mutation.isPending && (
-                  <p className="text-center text-sm text-gray-400 animate-pulse">Veriler analiz ediliyor, skor hesaplanıyor — 15–40 saniye sürebilir...</p>
+                  <p className="text-center text-sm text-gray-400 animate-pulse">Veriler analiz ediliyor, skor hesaplanıyor — {elapsedSec} sn geçti</p>
                 )}
               </div>
             </div>

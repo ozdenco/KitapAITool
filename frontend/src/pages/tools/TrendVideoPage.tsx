@@ -329,6 +329,7 @@ export function TrendVideoPage() {
       description="Sektörünüze uygun TikTok'ta trend olan videoları bulun; markanıza uyarlayın."
       hasResult={!!result}
       formHasInput={!!sector}
+      isPending={isPending}
     >
       {({ isFormOpen, header, rateBar }) => (
         <>

@@ -8,6 +8,7 @@ import { Select } from '@/components/ui/Select'
 import { Textarea } from '@/components/ui/Textarea'
 import { FormPersistButtons } from '@/components/ui/FormPersistButtons'
 import { ToolShell } from '@/components/ui/ToolShell'
+import { useElapsedSeconds } from '@/hooks/useElapsedSeconds'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -121,6 +122,9 @@ export function MusteriGeriDonusPage() {
     },
   })
 
+  // Bekleme sirasinda gecen sureyi gosterir (sabit mesaj donmus hissi veriyordu)
+  const elapsedSec = useElapsedSeconds(mutation.isPending)
+
   const canSubmit = biz.trim() && sector && frequency && service.trim() && channels.length > 0 && !mutation.isPending
 
   return (
@@ -131,6 +135,7 @@ export function MusteriGeriDonusPage() {
       description="Sektörünüzü ve müşteri profilinizi girin; 5 adımlık otomatik müşteri takip senaryosu oluşturalım."
       hasResult={!!result}
       formHasInput={!!biz.trim()}
+      isPending={mutation.isPending}
     >
       {({ isFormOpen, header, rateBar }) => (
         <>
@@ -229,7 +234,7 @@ export function MusteriGeriDonusPage() {
                   🔄 Senaryo Oluştur
                 </Button>
                 {mutation.isPending && (
-                  <p className="text-center text-sm text-gray-400 animate-pulse">Takip senaryosu hazırlanıyor — 1-2 dakika sürebilir...</p>
+                  <p className="text-center text-sm text-gray-400 animate-pulse">Takip senaryosu hazırlanıyor — {elapsedSec} sn geçti</p>
                 )}
               </div>
             </div>

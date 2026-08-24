@@ -8,6 +8,7 @@ import { Select } from '@/components/ui/Select'
 import { Textarea } from '@/components/ui/Textarea'
 import { FormPersistButtons } from '@/components/ui/FormPersistButtons'
 import { ToolShell } from '@/components/ui/ToolShell'
+import { useElapsedSeconds } from '@/hooks/useElapsedSeconds'
 import { MiniChatbotTest } from '@/components/tools/MiniChatbotTest'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -112,6 +113,9 @@ export function ChatbotSenaryoPage() {
       void queryClient.invalidateQueries({ queryKey: ['tool-usage'] })
     },
   })
+
+  // Bekleme sirasinda gecen sureyi gosterir (sabit mesaj donmus hissi veriyordu)
+  const elapsedSec = useElapsedSeconds(mutation.isPending)
 
   const canSubmit = biz.trim() && sector && services.trim() && faqs.filter(Boolean).length >= 3 && redirectGoal && !mutation.isPending
 
@@ -223,7 +227,7 @@ export function ChatbotSenaryoPage() {
                   🤖 Chatbot Senaryosu Oluştur
                 </Button>
                 {mutation.isPending && (
-                  <p className="text-center text-sm text-gray-400 animate-pulse">Chatbot senaryosu hazırlanıyor — 1-2 dakika sürebilir...</p>
+                  <p className="text-center text-sm text-gray-400 animate-pulse">Chatbot senaryosu hazırlanıyor — {elapsedSec} sn geçti</p>
                 )}
               </div>
             </div>
