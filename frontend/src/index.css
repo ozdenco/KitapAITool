@@ -45,19 +45,38 @@ body {
   }
 
   /* ── Araç sayfaları: normal yazdırma modu ──────────────────────────────── */
-  body:not([data-printing-result]) * { visibility: hidden; }
-  body:not([data-printing-result]) main,
-  body:not([data-printing-result]) main * { visibility: visible; }
+  /*
+   * DİKKAT: Burada `main` ASLA position:absolute olmamalı. Absolute konumlu
+   * içerik sayfa kırılımı yapamaz; Safari tek sayfayı aşan çıktıda içeriği
+   * tamamen düşürüyor ve BOŞ PDF üretiyordu (24 Ağu 2026, Chatbot Senaryosu).
+   * Chrome bunu tolere ettiği için sorun uzun süre fark edilmedi.
+   *
+   * Bunun yerine yazdırılmayacak bölümler display:none ile tamamen kaldırılır
+   * (visibility:hidden alan kaplamaya devam ettiği için üstte boşluk bırakırdı),
+   * `main` ise normal akışta kalır ve sayfalara doğal olarak bölünür.
+   */
+  body:not([data-printing-result]) header,
+  body:not([data-printing-result]) footer,
+  body:not([data-printing-result]) .no-print {
+    display: none !important;
+  }
+
   body:not([data-printing-result]) main {
-    position: absolute !important;
-    left: 0 !important;
-    top: 0 !important;
+    display: block !important;
     width: 100% !important;
     max-width: 100% !important;
     padding: 0 !important;
     margin: 0 !important;
     /* Yazı boyutunu küçült — px tabanlı Tailwind sınıflarını da etkiler */
     zoom: 0.78;
+  }
+
+  /* Ekran yüksekliğine kilitli sarmalayıcılar sayfa sonunda boş sayfa yaratır */
+  body:not([data-printing-result]) #root,
+  body:not([data-printing-result]) #root > * {
+    display: block !important;
+    min-height: 0 !important;
+    height: auto !important;
   }
 
   /* ── Geçmiş Çıktılarım: sadece seçili sonuç paneli ─────────────────────── */
