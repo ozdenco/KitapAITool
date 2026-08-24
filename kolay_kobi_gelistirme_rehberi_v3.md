@@ -1154,7 +1154,120 @@ text = text.replace(TR_RE, ch => TR_RESTORE[ch] || ch);
 
 ---
 
-## 16. Sürüm Geçmişi
+## 16. MiniMax `<think>` Bloğu — JSON Çıkarım Hatası
+
+**TD-15c** — MiniMax-M3 bir *reasoning* modelidir; yanıtın başına `<think>...</think>` bloğu ekler. `Response Transform` düğümündeki naif JSON çıkarımı bu blok yüzünden bozuk çıktı üretiyordu. **24 Ağustos 2026'da canlıda tespit edildi**, 8 workflow'da düzeltildi.
+
+### Kök Neden
+
+Hatalı kod ham metnin tamamında ilk süslü parantezi arıyordu:
+
+```javascript
+const jsonStart = text.indexOf('{');      // ← <think> içindeki parantezi yakalar
+const jsonEnd = text.lastIndexOf('}');
+if (jsonStart !== -1 && jsonEnd !== -1) text = text.slice(jsonStart, jsonEnd + 1);
+```
+
+Model düşünme metninde kullanıcının prompt'unu alıntılarsa (`{"ozel_mesajlar":[]}` gibi), `indexOf('{')` **gerçek yanıtı değil, think içindeki alıntıyı** bulur. Kesit think metnini de kapsadığı için JSON bozulur.
+
+**Hata kararsızdır** — teşhisi zorlaştıran nokta budur:
+
+| Durum | Sonuç |
+|---|---|
+| `<think>` içinde `{` var | ❌ Bozuk JSON |
+| `<think>` içinde `{` yok | ✅ Çalışır |
+
+Aynı araç aynı formla bazen çalışır, bazen "standart/generic cevap" verir. Belirti n8n'e hiç gidilmemiş gibi görünür; oysa `Executions` sekmesinde çalıştırma **Succeeded** olarak listelenir.
+
+### Düzeltme
+
+`Response Transform` içinde JSON aramadan **önce** temizlik yapılmalı:
+
+```javascript
+// content bos ise reasoning_content'e dus
+let text = data.choices?.[0]?.message?.content
+        || data.choices?.[0]?.message?.reasoning_content || '';
+
+// <think> blogunu tamamen at (son </think>'ten sonrasi gercek yanittir)
+const thinkEnd = text.lastIndexOf('</think>');
+if (thinkEnd !== -1) text = text.slice(thinkEnd + '</think>'.length);
+
+// ```json ... ``` sarmalayicisini kaldir
+text = text.replace(/```(?:json)?/gi, '');
+
+const jsonStart = text.indexOf('{');
+const jsonEnd = text.lastIndexOf('}');
+if (jsonStart !== -1 && jsonEnd !== -1) text = text.slice(jsonStart, jsonEnd + 1);
+```
+
+`lastIndexOf('</think>')` kullanılır çünkü model iç içe/tekrarlı think bloğu üretebilir; son kapanıştan sonrası daima gerçek yanıttır.
+
+> **Çıktı sözleşmesini değiştirmeyin.** Araçlar iki farklı format döndürür:
+> `{ content: [{ type:'text', text }] }` (senkron) ve `{ content: [...], jobId }` (async worker).
+> Temizlik adımı eklenirken bu dönüş yapısı korunmalıdır — aksi halde frontend `parseAiJson` kırılır.
+
+### n8n Workflow Güncellemede Kritik Tuzak
+
+`n8n import:workflow` mevcut bir workflow'u güncellerken **otomatik olarak deaktive eder**:
+
+```
+Deactivating workflow "Kolay KOBİ - ChatBot Senaryosu".
+Successfully imported 1 workflow.
+```
+
+`n8n update:workflow --id=<ID> --active=true` yalnızca **veritabanını** günceller; çalışan n8n süreci webhook'ları yeniden kaydetmez:
+
+```
+Note: Changes will not take effect if n8n is running.
+```
+
+Sonuç: tüm webhook'lar **404** döner. Doğru sıra:
+
+```bash
+# 1) Once tam yedek al
+docker exec n8n-n8n-1 n8n export:workflow --all --separate --output=/tmp/wf-backup
+
+# 2) Import et
+docker exec n8n-n8n-1 n8n import:workflow --input=/tmp/patched.json
+
+# 3) DB'de yeniden aktif et
+docker exec n8n-n8n-1 n8n update:workflow --id=<ID> --active=true
+
+# 4) ZORUNLU: webhook kayitlari icin n8n'i yeniden baslat
+docker restart n8n-n8n-1
+
+# 5) Dogrula (202 = async job kabul edildi, normaldir)
+curl -s -o /dev/null -w '%{http_code}\n' -X POST \
+  http://localhost:5678/webhook/kolay-kobi-chatbot \
+  -H 'Content-Type: application/json' -d '{"prompt":"x"}'
+```
+
+Adım 4 atlanırsa üretim kesintiye girer. Toplu güncellemelerde tüm workflow'ları import edip **tek** restart atmak, her biri için ayrı restart atmaktan güvenlidir.
+
+### Etkilenen Workflow'lar
+
+Düzeltilenler: ChatBot Senaryosu · Müşteri Persona · Müşteri Geri Dönüş · Reklam Bütçe · WhatsApp Satış · İşletme Görünürlük Skoru · İçerik Takvimi · İçerik Takvimi Worker
+
+Zaten düzeltilmiş olanlar (dokunulmadı): Viral Video · AI Görünürlük · Trend Video Worker · Rakip Analiz
+
+> **Asıl ders:** Bölüm 13'teki workflow şablonu `<think>` temizliğini, TR_RESTORE'u ve
+> markdown fence temizliğini **zaten içeriyordu**. Hata, canlıdaki workflow'ların zamanla
+> şablondan sapmasıydı — n8n arayüzünden elle yapılan düzenlemeler repo'ya ve şablona
+> geri yansımadı. Yeni araç eklerken şablonu temel alın; mevcut workflow'ları da periyodik
+> olarak denetleyin:
+>
+> ```bash
+> # Sablondan sapmis (think temizligi olmayan) workflow'lari bul
+> docker exec n8n-n8n-1 n8n export:workflow --all --separate --output=/tmp/wf-check
+> grep -L 'think' /tmp/wf-check/*.json
+> ```
+>
+> Canlıda yapılan her workflow değişikliği `n8n-workflows/` klasörüne export edilip
+> commit'lenmelidir; aksi halde repo ile üretim arasındaki fark sessizce büyür.
+
+---
+
+## 17. Sürüm Geçmişi
 
 | Sürüm | Tarih | Değişiklikler |
 |---|---|---|
@@ -1163,6 +1276,7 @@ text = text.replace(TR_RE, ch => TR_RESTORE[ch] || ch);
 | v2.0 | 2026-07-24 | 8 araç tamamlandı; n8n MiniMax-M3 entegrasyonu; WordPress REST API proxy; LocalStorage form kalıcılığı; Rate limiting |
 | v1.0 | 2026-06 | İlk MVP — Rakip Analiz Panosu ve temel mimari |
 | v3.2 | 2026-08-21 | SaaS platform, PayTR, Brevo, Apify, kullanım limitleri |
+| **v3.3** | 2026-08-24 | MiniMax `<think>` bloğu JSON çıkarım hatası (bölüm 16) — 8 workflow düzeltildi; n8n import/restart tuzağı belgelendi; Admin "Tüm Çıktılar" ve kullanıcı ödeme geçmişi sayfaları; Araç Fiyatları maliyet analizi (toplam maliyet + önerilen fiyat kolonları); pasif araçların satın alma listesinden çıkarılması; eski HTML form dosyalarının (.json) yüklenebilmesi |
 
 ---
 
