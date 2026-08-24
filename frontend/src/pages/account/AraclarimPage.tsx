@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '@/lib/api'
 import { ACTIVE_TOOLS } from '@/lib/tools'
+import { useToolUsage } from '@/hooks/useToolUsage'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -119,6 +120,10 @@ export function AraclarimPage() {
         .get<{ success: boolean; data: ToolPrice[] }>('/payments/tool-prices')
         .then((r: { data: { success: boolean; data: ToolPrice[] } }) => r.data.data ?? []),
   })
+
+  // Yükseltme butonunu yalnızca hak dolduğunda göstermek için kullanım verisi
+  const { data: usageList } = useToolUsage()
+  const usageMap = new Map((usageList ?? []).map((u) => [u.toolId as string, u]))
 
   const isLoading = subLoading || purchasesLoading || pricesLoading
 
@@ -334,8 +339,14 @@ export function AraclarimPage() {
                         </p>
                       )}
 
-                      {/* 10→25 yükseltme butonu — sadece 10 kullanımlı aktif araçlarda */}
-                      {purchase?.monthlyLimit === 10 && basePrice != null && !hasActivePaidSub && (
+                      {/*
+                        10→25 yükseltme butonu.
+                        Yalnızca 10'luk hak TÜKENDİĞİNDE gösterilir: hak dolmadan
+                        yükseltmek "kalan hakkın üstüne ne eklenecek" belirsizliği
+                        yaratıyordu. Hak bitince kullanıcı zaten yenileme kararı veriyor.
+                      */}
+                      {purchase?.monthlyLimit === 10 && basePrice != null && !hasActivePaidSub
+                        && (usageMap.get(tool.id)?.usedCount ?? 0) >= 10 && (
                         <button
                           type="button"
                           onClick={() => handleUpgradeCheckout(tool.id)}

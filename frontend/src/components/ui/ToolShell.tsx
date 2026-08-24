@@ -36,14 +36,21 @@ export function ToolShell({
     trackToolOpened(toolId, title)
   }, [toolId, title])
 
-  // Form submit başladığında süreyi kaydet
+  // Form submit başladığında süreyi kaydet.
+  //
+  // Not: eskiden `submitStartedAt.current == null` koşulu vardı ve iki hataya
+  // yol açıyordu — başlangıç zamanı bir daha güncellenmediği için ikinci
+  // çalıştırmanın süresi ilk submit'ten itibaren ölçülüyor, `resultTracked`
+  // de sıfırlanmadığı için ikinci ve sonraki sonuçlar PostHog'a HİÇ
+  // gönderilmiyordu. Her yeni çalıştırmada ikisini de sıfırlıyoruz.
   useEffect(() => {
-    if (isPending && submitStartedAt.current == null) {
+    if (isPending) {
       submitStartedAt.current = performance.now()
+      resultTracked.current = false
     }
   }, [isPending])
 
-  // Sonuç geldiğinde izle (yalnızca ilk kez) — süreyle birlikte
+  // Sonuç geldiğinde izle — süreyle birlikte
   useEffect(() => {
     if (hasResult && !resultTracked.current) {
       resultTracked.current = true

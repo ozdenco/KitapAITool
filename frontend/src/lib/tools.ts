@@ -90,7 +90,6 @@ export const TOOLS: Tool[] = [
     category: 'video',
     isAsync: false,
     n8nPath: 'kolay-kobi-viral',
-    purchasable: false,
   },
   {
     id: 'trend-video',

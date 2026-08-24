@@ -124,7 +124,7 @@ export function AbonelikPage() {
       <div>
         <div className="flex items-center gap-[10px] mb-[4px]">
           <span className="text-[22px] leading-none">📦</span>
-          <h1 className="text-[20px] font-medium text-[#1C1B19]">Paket Bilgilerim</h1>
+          <h1 className="text-[16px] font-medium text-[#1C1B19]">Paket Bilgilerim</h1>
         </div>
         <p className="text-[13px] text-[#6B6963]">Aktif paketiniz ve kullanım detaylarınız</p>
       </div>
@@ -132,15 +132,23 @@ export function AbonelikPage() {
       {/* ── Süresi doldu uyarısı ── */}
       {isExpired && (() => {
         const activeToolCount  = activeTools?.length ?? 0
-        const toolLimitPerTool = activeTools?.[0]?.monthlyLimit ?? null
+        // Araçlar farklı limitlerle satın alınmış olabilir (10 ve 25 karışık);
+        // yalnızca ilk aracın limitine bakmak yanıltıcı bir metin üretiyordu.
+        const limitler = [...new Set(
+          (activeTools ?? [])
+            .map((t) => t.monthlyLimit)
+            .filter((l): l is number => l != null),
+        )].sort((a, b) => a - b)
 
         // Aktif araç aboneliği varken farklı mesaj göster
         if (activeToolCount > 0) {
           const limitText = user?.isAdmin
             ? 'sınırsız'
-            : toolLimitPerTool != null
-              ? `${toolLimitPerTool} kullanım/ay`
-              : 'sınırsız'
+            : limitler.length === 0
+              ? 'sınırsız'
+              : limitler.length === 1
+                ? `${limitler[0]} kullanım/ay`
+                : `araca göre ${limitler[0]}–${limitler[limitler.length - 1]} kullanım/ay`
           return (
             <div className="bg-blue-50 border border-blue-200 rounded-2xl px-5 py-4">
               <div className="flex items-start gap-3">
