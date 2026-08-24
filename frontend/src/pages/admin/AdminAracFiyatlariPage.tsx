@@ -124,6 +124,11 @@ function MaliyetPaneli({ prices }: { prices?: ToolPrice[] }) {
   const totalInfraUsd   = form.n8nUsd + form.hostingerUsd + form.minimaxMonthlyUsd + form.claudeUsd
   const infraPerUserTry = (totalInfraUsd / Math.max(1, form.activeUsers)) * usdTry
 
+  // Sabit altyapı payı araç başına: kullanıcı başı aylık altyapı / araç sayısı.
+  // Aylık bir gider olduğu için çalıştırma sayısıyla ÇARPILMAZ, doğrudan eklenir.
+  const toolCount       = (prices ?? []).length || 1
+  const infraPerToolTry = infraPerUserTry / toolCount
+
   function costPerRunUsd(toolId: string): number {
     const m = TOOL_ENGINE_MAP[toolId]
     if (!m || m.unitsPerRun === 0) return 0
@@ -272,7 +277,21 @@ function MaliyetPaneli({ prices }: { prices?: ToolPrice[] }) {
                 <th className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wider text-[#9A9792]">Motor</th>
                 <th className="px-3 py-2 text-right text-[11px] font-semibold uppercase tracking-wider text-[#9A9792]">$/çalıştırma</th>
                 <th className="px-3 py-2 text-right text-[11px] font-semibold uppercase tracking-wider text-[#9A9792]">₺/çalıştırma</th>
-                <th className="px-3 py-2 text-right text-[11px] font-semibold uppercase tracking-wider text-[#9A9792]">₺ / {form.stdPackageRuns} run</th>
+                <th className="px-3 py-2 text-right text-[11px] font-semibold uppercase tracking-wider text-[#9A9792]">
+                  AI ₺ / {form.stdPackageRuns} run
+                </th>
+                <th
+                  title={`AI maliyeti + araç başına sabit altyapı payı (₺${infraPerToolTry.toFixed(2)}/ay)`}
+                  className="px-3 py-2 text-right text-[11px] font-semibold uppercase tracking-wider text-[#6B6963] bg-[#F0EFE9]"
+                >
+                  Toplam maliyet ⓘ
+                </th>
+                <th
+                  title={`Toplam maliyet × ${form.profitMultiplier} kâr çarpanı`}
+                  className="px-3 py-2 text-right text-[11px] font-semibold uppercase tracking-wider text-[#085041] bg-[#E6F9F2]"
+                >
+                  Önerilen fiyat
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -284,6 +303,9 @@ function MaliyetPaneli({ prices }: { prices?: ToolPrice[] }) {
                 const tryN      = tryV * form.stdPackageRuns
                 const isApify   = m.engine === 'apify'
                 const isUnknown = m.unitsPerRun === 0 && m.engine !== 'apify'
+                // Gerçek maliyet: değişken AI gideri + araç başına düşen sabit altyapı payı
+                const totalCostTry = tryN + infraPerToolTry
+                const recTry       = Math.ceil(totalCostTry * form.profitMultiplier)
                 return (
                   <tr key={tool.toolId} className="border-b border-[#F0EFE9] last:border-b-0 hover:bg-[#FAFAF7]">
                     <td className="px-3 py-2.5">
@@ -317,6 +339,26 @@ function MaliyetPaneli({ prices }: { prices?: ToolPrice[] }) {
                       {isUnknown ? '—' : `₺${tryN.toFixed(2)}`}
                       {isApify   && <span className="ml-1 text-[10px] text-red-400">⚠️paket dışı</span>}
                       {isUnknown && <span className="ml-1 text-[10px] text-amber-400">⏳bildir</span>}
+                    </td>
+
+                    {/* Toplam maliyet = AI + sabit altyapı payı */}
+                    <td className="px-3 py-2.5 text-right text-[12px] tabular-nums font-semibold text-[#3A3935] bg-[#F7F6F2]">
+                      {isUnknown ? '—' : `₺${totalCostTry.toFixed(2)}`}
+                      {!isUnknown && (
+                        <p className="text-[9px] font-normal text-[#9A9792]">
+                          +₺{infraPerToolTry.toFixed(2)} sabit
+                        </p>
+                      )}
+                    </td>
+
+                    {/* Önerilen satış fiyatı */}
+                    <td className="px-3 py-2.5 text-right text-[13px] tabular-nums font-bold text-[#085041] bg-[#E6F9F2]">
+                      {isUnknown ? '—' : `₺${recTry}`}
+                      {!isUnknown && (
+                        <p className="text-[9px] font-normal text-[#1D9E75]">
+                          ×{form.profitMultiplier} kâr
+                        </p>
+                      )}
                     </td>
                   </tr>
                 )
