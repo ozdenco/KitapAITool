@@ -25,7 +25,7 @@ const TOOL_ENGINE_MAP: Record<string, {
   'trend-video':        { engine: 'apify',   unitsPerRun: 1,  unitLabel: 'run/çalıştırma' },
   'rakip-analiz':       { engine: 'gemini',  unitsPerRun: 0,  unitLabel: 'token/çalıştırma', note: 'MiniMax + Gemini Flash — token henüz ölçülmedi' },
   'gorunurluk-skoru':   { engine: 'minimax', unitsPerRun: 3,  unitLabel: 'token/çalıştırma', note: '3 token · n8n 20 sn' },
-  'musteri-persona':    { engine: 'minimax', unitsPerRun: 0,  unitLabel: 'token/çalıştırma', note: 'Henüz ölçülmedi' },
+  'musteri-persona':    { engine: 'minimax', unitsPerRun: 2,  unitLabel: 'token/çalıştırma', note: '2 token · n8n 41 sn' },
   'whatsapp-satis':     { engine: 'minimax', unitsPerRun: 0,  unitLabel: 'token/çalıştırma', note: 'Henüz ölçülmedi' },
   'reklam-butce':       { engine: 'minimax', unitsPerRun: 2,  unitLabel: 'token/çalıştırma', note: '2 kanal seçiminde 2 token · kanal sayısıyla orantılı' },
   'musteri-geri-donus': { engine: 'minimax', unitsPerRun: 3,  unitLabel: 'token/çalıştırma', note: '3 token · n8n 27 sn (önceki ölçümler 4-5 token)' },

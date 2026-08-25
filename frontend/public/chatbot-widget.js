@@ -30,14 +30,27 @@
 
   // ─── Eşleştirme mantığı (KolayKOBİ önizlemesiyle aynı) ───────────────────
 
-  var KAPANIS_RE = /teşekkür|tamam|anladım|görüşürüz|iyi ki|harika|süper|mükemmel|tamamdır|iyi günler|hoşça kal|güle güle/i
-  var MESAI_RE = /şu an mevcut|müsait misiniz|açık mısınız|mesai|hafta sonu|akşam|gece/i
-  var ETKISIZ = ['nedir','nasıl','nerede','neden','hangi','kaç','kadar','için','veya','ile','mi','mı','mu','mü','musunuz','misiniz','mısınız','var','yok','bir','bu','şu','siz','sizin','bizim','olan','yapabilir','alabilir','sunuyor','çalışıyor','ediyor']
-
-  function kelimeler(metin) {
+  /**
+   * Türkçe karakterleri ASCII'ye indirger. Ziyaretçiler sıklıkla Türkçe klavye
+   * kullanmadan yazar ("tesekkurler", "acik misiniz"); normalize etmezsek bu
+   * mesajlar hiç eşleşmez. Hem kalıplar hem girdi bu haliyle karşılaştırılır.
+   */
+  function sadelestir(metin) {
     return String(metin || '')
       .toLocaleLowerCase('tr')
-      .replace(/[^\wğüşıöçĞÜŞİÖÇ\s]/g, ' ')
+      .replace(/ş/g, 's').replace(/ğ/g, 'g').replace(/ü/g, 'u')
+      .replace(/ö/g, 'o').replace(/ç/g, 'c').replace(/ı/g, 'i')
+      .replace(/â/g, 'a').replace(/î/g, 'i').replace(/û/g, 'u')
+  }
+
+  // Kalıplar sadeleştirilmiş metne uygulanır → hem "teşekkür" hem "tesekkur" yakalanır
+  var KAPANIS_RE = /tesekkur|tamam|anladim|gorusuruz|iyi ki|harika|super|mukemmel|iyi gunler|hosca kal|gule gule/
+  var MESAI_RE = /su an mevcut|musait misiniz|acik misiniz|mesai|hafta sonu|aksam|gece/
+  var ETKISIZ = ['nedir','nasil','nerede','neden','hangi','kac','kadar','icin','veya','ile','mi','mu','musunuz','misiniz','var','yok','bir','siz','sizin','bizim','olan','yapabilir','alabilir','sunuyor','calisiyor','ediyor']
+
+  function kelimeler(metin) {
+    return sadelestir(metin)
+      .replace(/[^a-z0-9\s]/g, ' ')
       .split(/\s+/)
       .filter(function (k) { return k.length >= 3 && ETKISIZ.indexOf(k) === -1 })
   }
@@ -50,7 +63,7 @@
 
   function mesajBul(mesajlar, anahtarlar) {
     for (var i = 0; i < (mesajlar || []).length; i++) {
-      var tip = String(mesajlar[i].tip || '').toLocaleLowerCase('tr')
+      var tip = sadelestir(mesajlar[i].tip)
       for (var j = 0; j < anahtarlar.length; j++) {
         if (tip.indexOf(anahtarlar[j]) !== -1) return mesajlar[i].metin
       }
@@ -59,14 +72,14 @@
   }
 
   function yanitUret(senaryo, girdi) {
-    var kucuk = String(girdi).toLocaleLowerCase('tr')
+    var kucuk = sadelestir(girdi)
 
     if (MESAI_RE.test(kucuk)) {
       return mesajBul(senaryo.ozel_mesajlar, ['mesai'])
         || 'Şu an mesai saatleri dışındayız. En kısa sürede size dönüş yapacağız.'
     }
     if (KAPANIS_RE.test(kucuk)) {
-      return mesajBul(senaryo.ozel_mesajlar, ['kapanış', 'kapanis', 'teşekkür'])
+      return mesajBul(senaryo.ozel_mesajlar, ['kapanis', 'tesekkur'])
         || 'Yardımcı olabildiysem ne mutlu! Başka bir sorunuz olursa buradayım.'
     }
 
@@ -175,7 +188,7 @@
     kapat.addEventListener('click', function () { ac(false) })
 
     // Karşılama mesajı
-    var karsilama = mesajBul(senaryo.ozel_mesajlar, ['karşılama', 'karsilama', 'hoş geldin'])
+    var karsilama = mesajBul(senaryo.ozel_mesajlar, ['karsilama', 'hos geldin'])
     if (karsilama) balonEkle('bot', karsilama)
   }
 

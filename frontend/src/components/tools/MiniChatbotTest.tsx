@@ -26,18 +26,33 @@ interface Mesaj {
 
 // ─── Sabitler ─────────────────────────────────────────────────────────────────
 
+/**
+ * Türkçe karakterleri ASCII'ye indirger. Kullanıcılar sıklıkla Türkçe klavye
+ * kullanmadan yazar ("tesekkurler", "acik misiniz"); normalize etmezsek bu
+ * mesajlar hiç eşleşmiyordu. Gömülü widget (public/chatbot-widget.js) ile
+ * aynı davranışı korumak için orada da aynısı uygulanır.
+ */
+function sadelestir(metin: string): string {
+  return metin
+    .toLocaleLowerCase('tr')
+    .replace(/ş/g, 's').replace(/ğ/g, 'g').replace(/ü/g, 'u')
+    .replace(/ö/g, 'o').replace(/ç/g, 'c').replace(/ı/g, 'i')
+    .replace(/â/g, 'a').replace(/î/g, 'i').replace(/û/g, 'u')
+}
+
+// Kalıplar sadeleştirilmiş metne uygulanır → hem "teşekkür" hem "tesekkur" yakalanır
 const KAPANIS_REGEX =
-  /teşekkür|tamam|anladım|görüşürüz|iyi ki|harika|süper|mükemmel|tamamdır|iyi günler|hoşça kal|güle güle/i
+  /tesekkur|tamam|anladim|gorusuruz|iyi ki|harika|super|mukemmel|iyi gunler|hosca kal|gule gule/
 
 const MESAI_DISI_REGEX =
-  /şu an mevcut|müsait misiniz|açık mısınız|mesai|hafta sonu|akşam|gece/i
+  /su an mevcut|musait misiniz|acik misiniz|mesai|hafta sonu|aksam|gece/
 
-/** Anahtar kelime çıkarımında elenecek Türkçe soru/bağlaç kelimeleri */
+/** Anahtar kelime çıkarımında elenecek (sadeleştirilmiş) soru/bağlaç kelimeleri */
 const ETKISIZ_KELIMELER = new Set([
-  'nedir', 'nasıl', 'nerede', 'neden', 'hangi', 'kaç', 'kadar', 'için',
-  'veya', 'ile', 'mi', 'mı', 'mu', 'mü', 'musunuz', 'misiniz', 'mısınız',
-  'var', 'yok', 'bir', 'bu', 'şu', 'siz', 'sizin', 'bizim', 'olan',
-  'yapabilir', 'alabilir', 'sunuyor', 'çalışıyor', 'ediyor',
+  'nedir', 'nasil', 'nerede', 'neden', 'hangi', 'kac', 'kadar', 'icin',
+  'veya', 'ile', 'mi', 'mu', 'musunuz', 'misiniz',
+  'var', 'yok', 'bir', 'siz', 'sizin', 'bizim', 'olan',
+  'yapabilir', 'alabilir', 'sunuyor', 'calisiyor', 'ediyor',
 ])
 
 const VARSAYILAN_FALLBACK =
@@ -51,7 +66,7 @@ const MESAI_TEST_METNI = 'şu an açık mısınız?'
 /** Belirli bir mesaj tipini "içeren" ilk mesajı bulur (tip adları AI'dan geldiği için esnek eşleşme) */
 function mesajBul(mesajlar: OzelMesaj[], ...anahtarlar: string[]): string | null {
   const bulunan = mesajlar.find((m) =>
-    anahtarlar.some((a) => m.tip.toLocaleLowerCase('tr').includes(a)),
+    anahtarlar.some((a) => sadelestir(m.tip).includes(a)),
   )
   return bulunan?.metin ?? null
 }
@@ -62,9 +77,8 @@ function mesajBul(mesajlar: OzelMesaj[], ...anahtarlar: string[]): string | null
  * keyword döndürmediği için soru metninden çıkarıyoruz.
  */
 function anahtarKelimeler(soru: string): string[] {
-  return soru
-    .toLocaleLowerCase('tr')
-    .replace(/[^\p{L}\p{N}\s]/gu, ' ')
+  return sadelestir(soru)
+    .replace(/[^a-z0-9\s]/g, ' ')
     .split(/\s+/)
     .filter((k) => k.length >= 3 && !ETKISIZ_KELIMELER.has(k))
 }
@@ -86,11 +100,11 @@ function kokEslesir(a: string, b: string): boolean {
 
 export function MiniChatbotTest({ bizName, ozelMesajlar, sssKartlari }: Props) {
   const karsilama = useMemo(
-    () => mesajBul(ozelMesajlar, 'karşılama', 'karsilama', 'hoş geldin'),
+    () => mesajBul(ozelMesajlar, 'karsilama', 'hos geldin'),
     [ozelMesajlar],
   )
   const kapanis = useMemo(
-    () => mesajBul(ozelMesajlar, 'kapanış', 'kapanis', 'teşekkür'),
+    () => mesajBul(ozelMesajlar, 'kapanis', 'tesekkur'),
     [ozelMesajlar],
   )
   const mesaiDisi = useMemo(
@@ -123,7 +137,7 @@ export function MiniChatbotTest({ bizName, ozelMesajlar, sssKartlari }: Props) {
    * "Mesai Dışını Test Et" butonuyla tetiklenir — gerçek saatten bağımsızdır.
    */
   const botYaniti = (metin: string): string => {
-    const kucuk = metin.toLocaleLowerCase('tr')
+    const kucuk = sadelestir(metin)
 
     if (MESAI_DISI_REGEX.test(kucuk)) {
       return mesaiDisi ?? 'Şu an mesai saatleri dışındayız. En kısa sürede size dönüş yapacağız. 🌙'
