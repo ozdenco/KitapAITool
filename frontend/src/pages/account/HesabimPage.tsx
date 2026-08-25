@@ -62,7 +62,7 @@ export function HesabimPage() {
 
   return (
     <div className="w-full max-w-2xl px-4 py-8">
-      <h1 className="text-2xl font-bold text-gray-900 mb-8">Hesabım</h1>
+      <h1 className="text-[16px] font-bold text-gray-900 mb-4">Hesabım</h1>
 
       {/* Current plan */}
       <section className="mb-8">

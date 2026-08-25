@@ -1,0 +1,112 @@
+import * as pdfjsLib from 'pdfjs-dist'
+import {
+  KABUL_EDILEN_TIPLER,
+  MAKS_DOSYA_BOYUTU,
+  MAKS_METIN_KARAKTER,
+  DosyaHatasi,
+  type CikarilanMetin,
+} from '@/lib/fileTextConstants'
+
+// Vite: worker'ı ayrı bir chunk olarak paketler, çalışma zamanında URL'den yükler
+pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
+  'pdfjs-dist/build/pdf.worker.min.mjs',
+  import.meta.url,
+).toString()
+
+// ─── Doğrulama ────────────────────────────────────────────────────────────────
+
+function dosyaTipiniDogrula(file: File): void {
+  const uzanti = '.' + (file.name.split('.').pop() ?? '').toLowerCase()
+  if (!KABUL_EDILEN_TIPLER.includes(uzanti as (typeof KABUL_EDILEN_TIPLER)[number])) {
+    throw new DosyaHatasi(`Desteklenmeyen dosya türü. Yalnızca ${KABUL_EDILEN_TIPLER.join(', ')} kabul edilir.`)
+  }
+  if (file.size > MAKS_DOSYA_BOYUTU) {
+    throw new DosyaHatasi(`Dosya çok büyük (maks. ${MAKS_DOSYA_BOYUTU / 1024 / 1024} MB).`)
+  }
+}
+
+// ─── Metin temizleme ────────────────────────────────────────────────────────
+
+/**
+ * Ham çıkarılan metindeki gürültüyü azaltır — token maliyetini düşürmek için:
+ *  - fazla boşluk/satır sonu sıkıştırılır
+ *  - yalnızca sayfa numarasından ibaret satırlar atılır ("12", "Sayfa 3/10")
+ *  - art arda tekrar eden satırlar (üstbilgi/altbilgi) bir kereye indirilir
+ */
+function metniTemizle(ham: string): string {
+  const SAYFA_NO_REGEX = /^(sayfa\s*)?\d+(\s*\/\s*\d+)?$/i
+
+  const satirlar = ham
+    .split('\n')
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0 && !SAYFA_NO_REGEX.test(s))
+
+  const tekillestirilmis: string[] = []
+  for (const satir of satirlar) {
+    const oncekiyleAyni = tekillestirilmis[tekillestirilmis.length - 1] === satir
+    if (!oncekiyleAyni) tekillestirilmis.push(satir)
+  }
+
+  return tekillestirilmis.join('\n').replace(/[ \t]{2,}/g, ' ').trim()
+}
+
+function kirp(metin: string): CikarilanMetin {
+  const hamKarakterSayisi = metin.length
+  if (metin.length <= MAKS_METIN_KARAKTER) {
+    return { metin, kirpildiMi: false, hamKarakterSayisi }
+  }
+  return {
+    metin: metin.slice(0, MAKS_METIN_KARAKTER) + '\n[…metin uzunluk sınırı nedeniyle kısaltıldı]',
+    kirpildiMi: true,
+    hamKarakterSayisi,
+  }
+}
+
+// ─── PDF ──────────────────────────────────────────────────────────────────────
+
+async function pdfMetniniCikar(file: File): Promise<string> {
+  const buffer = await file.arrayBuffer()
+  const pdf = await pdfjsLib.getDocument({ data: buffer }).promise
+
+  const sayfaMetinleri: string[] = []
+  for (let sayfaNo = 1; sayfaNo <= pdf.numPages; sayfaNo++) {
+    const sayfa = await pdf.getPage(sayfaNo)
+    const icerik = await sayfa.getTextContent()
+    const satir = icerik.items
+      .map((item) => ('str' in item ? item.str : ''))
+      .join(' ')
+    sayfaMetinleri.push(satir)
+  }
+  return sayfaMetinleri.join('\n')
+}
+
+// ─── Genel giriş noktası ────────────────────────────────────────────────────
+
+/**
+ * Bir dosyadan (PDF veya TXT) metin çıkarır, gürültüyü temizler ve token
+ * bütçesine göre kırpar. Tamamen tarayıcıda çalışır — dosya hiçbir zaman
+ * backend'e veya n8n'e gönderilmez, yalnızca çıkan metin AI prompt'una eklenir.
+ *
+ * Sayfa bileşenleri bu fonksiyonu `await import('@/lib/extractFileText')`
+ * ile DİNAMİK çağırmalı — bkz. fileTextConstants.ts başındaki not.
+ */
+export async function extractFileText(file: File): Promise<CikarilanMetin> {
+  dosyaTipiniDogrula(file)
+
+  let ham: string
+  try {
+    ham = file.name.toLowerCase().endsWith('.pdf')
+      ? await pdfMetniniCikar(file)
+      : await file.text()
+  } catch (error) {
+    console.error('Dosya metni çıkarılamadı:', error)
+    throw new DosyaHatasi('Dosya okunamadı. Dosyanın bozuk olmadığından emin olun.')
+  }
+
+  const temiz = metniTemizle(ham)
+  if (temiz.length === 0) {
+    throw new DosyaHatasi('Dosyadan metin çıkarılamadı (taranmış görsel PDF olabilir).')
+  }
+
+  return kirp(temiz)
+}

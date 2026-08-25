@@ -2,6 +2,13 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '@/lib/api'
 import { useAuthStore } from '@/store/auth'
+import { ACTIVE_TOOLS } from '@/lib/tools'
+
+// Standart/Premium paketlere dahil araçlar. `purchasable: false` olanlar (şu an
+// yalnızca Trend Video — Apify maliyeti nedeniyle ayda 1'e sabit) hariç tutulur.
+const KAPSANAN_ARAC_ADLARI = ACTIVE_TOOLS
+  .filter((t) => t.purchasable !== false)
+  .map((t) => t.name)
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -27,20 +34,20 @@ interface Subscription {
 const PLAN_FEATURES: Record<string, string[]> = {
   free: [
     '3 araç kullanım hakkı / araç / ay',
-    'Tüm 11 araca erişim',
+    '10 araç*',
     'Temel rapor çıktısı',
     'E-posta desteği',
   ],
   standard: [
     '10 araç kullanım hakkı / araç / ay',
-    'Tüm 11 araca erişim',
+    '10 araç*',
     'PDF rapor indirme',
     'Yapay zeka destekli analiz',
     'Uygulama kullanım desteği',
   ],
   premium: [
     '25 araç kullanım hakkı / araç / ay',
-    'Tüm 11 araca erişim',
+    '10 araç*',
     'PDF rapor indirme',
     'Yapay zeka destekli analiz',
     'Öncelikli uygulama desteği',
@@ -202,12 +209,12 @@ export function PaketSecPage() {
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-4">
       {/* ── Title ── */}
       <div>
         <div className="flex items-center gap-[10px] mb-[4px]">
           <span className="text-[22px] leading-none">⬆️</span>
-          <h1 className="text-[20px] font-medium text-[#1C1B19]">Paket Seçimi</h1>
+          <h1 className="text-[16px] font-medium text-[#1C1B19]">Paket Seçimi</h1>
         </div>
         <p className="text-[13px] text-[#6B6963]">İhtiyacınıza uygun paketi seçin ve araçları kullanmaya başlayın</p>
       </div>
@@ -246,7 +253,7 @@ export function PaketSecPage() {
           ))}
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {(plans ?? []).map((plan) => {
             const planTier      = PLAN_TIER[plan.type] ?? 0
             // Satın alım kısıtlamaları gerçek abonelik tier'ına göre (admin override değil)
@@ -277,7 +284,7 @@ export function PaketSecPage() {
             return (
               <div
                 key={plan.id}
-                className={`relative rounded-2xl border-2 p-5 flex flex-col gap-4 transition-shadow ${
+                className={`relative rounded-2xl border-2 p-4 flex flex-col gap-3 transition-shadow ${
                   isRecommended && !isBlocked
                     ? 'border-[#1D9E75] shadow-lg shadow-[#1D9E75]/10'
                     : isActive
@@ -296,11 +303,11 @@ export function PaketSecPage() {
 
                 {/* Plan header */}
                 <div>
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="text-xl">{icon}</span>
-                    <h3 className="text-[15px] font-semibold text-[#1C1B19]">{plan.name}</h3>
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <span className="text-[18px] leading-none">{icon}</span>
+                    <h3 className="text-[13px] font-semibold text-[#1C1B19]">{plan.name}</h3>
                     {isActive && (
-                      <span className={`ml-auto text-[11px] font-semibold px-2 py-0.5 rounded-full ${badge.bg} ${badge.text} border ${badge.border}`}>
+                      <span className={`ml-auto text-[10px] font-semibold px-2 py-0.5 rounded-full ${badge.bg} ${badge.text} border ${badge.border}`}>
                         Aktif Paket
                       </span>
                     )}
@@ -309,21 +316,21 @@ export function PaketSecPage() {
                   {/* Price */}
                   <div className="flex items-baseline gap-1">
                     {isEnterprise ? (
-                      <span className="text-[22px] font-bold text-[#B45309]">Özel Fiyat</span>
+                      <span className="text-[18px] font-bold text-[#B45309]">Özel Fiyat</span>
                     ) : (
                       <>
-                        <span className="text-[26px] font-bold text-[#1C1B19]">
+                        <span className="text-[20px] font-bold text-[#1C1B19]">
                           {plan.priceMonthly === 0
                             ? '₺0'
                             : `₺${plan.priceMonthly.toLocaleString('tr-TR')}`}
                         </span>
-                        <span className="text-[13px] text-[#9A9792]">/ Ay</span>
+                        <span className="text-[12px] text-[#9A9792]">/ ay</span>
                       </>
                     )}
                   </div>
 
                   {/* Usage summary */}
-                  <p className="text-[12px] text-[#6B6963] mt-1">
+                  <p className="text-[11px] text-[#6B6963] mt-0.5">
                     {isEnterprise
                       ? 'İhtiyaç analizi ile başlayın'
                       : plan.usagePerToolPerMonth == null
@@ -333,9 +340,9 @@ export function PaketSecPage() {
                 </div>
 
                 {/* Features */}
-                <ul className="flex flex-col gap-2 flex-1">
+                <ul className="flex flex-col gap-1 flex-1">
                   {features.map((f) => (
-                    <li key={f} className="flex items-start gap-2 text-[12px] text-[#3A3935]">
+                    <li key={f} className="flex items-start gap-1.5 text-[11px] text-[#3A3935]">
                       <span className="text-[#1D9E75] font-bold mt-0.5 shrink-0">✓</span>
                       {f}
                     </li>
@@ -346,14 +353,14 @@ export function PaketSecPage() {
                 {plan.type === 'free' || isBlocked ? (
                   <button
                     disabled
-                    className="w-full py-2.5 rounded-xl text-[13px] font-medium bg-[#F7F6F2] border border-[#D3D1C7] text-[#9A9792] cursor-default"
+                    className="w-full py-2 rounded-xl text-[12px] font-medium bg-[#F7F6F2] border border-[#D3D1C7] text-[#9A9792] cursor-default"
                   >
                     {disabledLabel}
                   </button>
                 ) : isEnterprise ? (
                   <button
                     onClick={() => handleUpgrade(plan)}
-                    className="w-full py-2.5 rounded-xl text-[13px] font-medium bg-amber-600 text-white hover:bg-amber-700 transition-colors"
+                    className="w-full py-2 rounded-xl text-[12px] font-medium bg-amber-600 text-white hover:bg-amber-700 transition-colors"
                   >
                     🤝 İletişime Geç
                   </button>
@@ -361,7 +368,7 @@ export function PaketSecPage() {
                   <button
                     onClick={() => handleUpgrade(plan)}
                     disabled={loadingPlanId !== null}
-                    className="w-full py-2.5 rounded-xl text-[13px] font-medium transition-colors disabled:opacity-60 disabled:cursor-wait bg-[#1D9E75] text-white hover:bg-[#178a65]"
+                    className="w-full py-2 rounded-xl text-[12px] font-medium transition-colors disabled:opacity-60 disabled:cursor-wait bg-[#1D9E75] text-white hover:bg-[#178a65]"
                   >
                     {loadingPlanId === plan.id
                       ? '⏳ Yönlendiriliyor...'
@@ -376,9 +383,25 @@ export function PaketSecPage() {
         </div>
       )}
 
+      {/* ── Kapsanan araçlar dipnotu ── */}
+      {!isLoading && (
+        <div className="bg-[#F7F6F2] border border-[#E2E0D8] rounded-2xl px-5 py-4 text-center">
+          <p className="text-[12px] font-medium text-[#6B6963] mb-2">
+            * Standart ve Premium Paketler kapsamındaki araçlar
+          </p>
+          <p className="text-[12px] text-[#9A9792] leading-relaxed">
+            {KAPSANAN_ARAC_ADLARI.join(' · ')}
+          </p>
+          <p className="text-[11px] text-[#C0BDB5] mt-2">
+            Trend Video Bulucu, Apify altyapı maliyeti nedeniyle paketlere dahil değildir —
+            tüm kullanıcılar için ayda 1 kullanım hakkı geçerlidir.
+          </p>
+        </div>
+      )}
+
       {/* ── Note ── */}
       <p className="text-[12px] text-[#9A9792] text-center">
-        Tüm paketler tüm araçlara erişim içerir. Herhangi bir sorunuz için{' '}
+        Herhangi bir sorunuz için{' '}
         <a href="mailto:destek@kolaykobi.com" className="text-[#1D9E75] hover:underline">
           destek@kolaykobi.com
         </a>{' '}

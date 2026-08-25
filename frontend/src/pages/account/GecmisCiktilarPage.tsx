@@ -405,7 +405,7 @@ export function GecmisCiktilarPage() {
       <div>
         <div className="flex items-center gap-[10px] mb-[4px]">
           <span className="text-[22px] leading-none">📋</span>
-          <h1 className="text-[20px] font-medium text-[#1C1B19]">Geçmiş Çıktılarım</h1>
+          <h1 className="text-[16px] font-medium text-[#1C1B19]">Geçmiş Çıktılarım</h1>
         </div>
         <p className="text-[13px] text-[#6B6963]">Çalıştırdığınız araçların kayıtlı sonuçlarına ulaşın</p>
       </div>

@@ -85,6 +85,7 @@ function BarChart({ data }: { data: PeriodUsage[] }) {
     <svg
       viewBox={`0 0 ${totalW} ${chartH + 44}`}
       className="w-full overflow-visible"
+      style={{ maxHeight: '220px' }}
       aria-label="Fatura dönemi kullanım grafiği"
     >
       <line x1={padX} y1={chartH} x2={totalW - padX} y2={chartH} stroke="#E2E0D8" strokeWidth={1} />
@@ -146,7 +147,7 @@ function PeriodDetailTable({
 
   if (isLoading) {
     return (
-      <div className="flex flex-col gap-[1px] px-5 pb-5 pt-2">
+      <div className="flex flex-col gap-[1px] px-4 pb-4 pt-2">
         {[1, 2, 3, 4, 5].map((n) => (
           <div key={n} className="h-10 bg-[#F7F6F2] rounded animate-pulse mb-1" />
         ))}
@@ -171,13 +172,13 @@ function PeriodDetailTable({
     <table className="w-full text-[13px]">
       <thead>
         <tr className="border-b border-[#E2E0D8] bg-[#F7F6F2]">
-          <th className="px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-[#9A9792] text-left">
+          <th className="px-4 py-2 text-[11px] font-semibold uppercase tracking-wider text-[#9A9792] text-left">
             Araç
           </th>
-          <th className="px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-[#9A9792] text-right">
+          <th className="px-4 py-2 text-[11px] font-semibold uppercase tracking-wider text-[#9A9792] text-right">
             Kullanım
           </th>
-          <th className="px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-[#9A9792] text-right pr-5" style={{ width: 160 }}>
+          <th className="px-4 py-2 text-[11px] font-semibold uppercase tracking-wider text-[#9A9792] text-right pr-4" style={{ width: 160 }}>
             Doluluk
           </th>
         </tr>
@@ -196,7 +197,7 @@ function PeriodDetailTable({
               className="border-b border-[#F2F1ED] last:border-0 hover:bg-[#FAFAF8] transition-colors"
             >
               {/* Araç adı */}
-              <td className="px-5 py-[11px]">
+              <td className="px-4 py-[7px]">
                 <div className="flex items-center gap-2">
                   <span className="text-[16px] leading-none shrink-0">{toolIcon(row.toolId)}</span>
                   <span className={`text-[13px] ${row.usedCount > 0 ? 'text-[#1C1B19] font-medium' : 'text-[#9A9792]'}`}>
@@ -220,7 +221,7 @@ function PeriodDetailTable({
               </td>
 
               {/* Doluluk bar */}
-              <td className="px-5 py-[11px]">
+              <td className="px-4 py-[7px]">
                 <div className="flex items-center justify-end gap-2">
                   {row.limit != null ? (
                     <>
@@ -294,12 +295,12 @@ export function KullanimGecmisiPage() {
   const monthlyAvg   = activeMonths > 0 ? Math.round(totalUsed / activeMonths) : 0
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-4">
       {/* ── Title ── */}
       <div>
         <div className="flex items-center gap-[10px] mb-[4px]">
           <span className="text-[22px] leading-none">📊</span>
-          <h1 className="text-[20px] font-medium text-[#1C1B19]">Kullanım Geçmişi</h1>
+          <h1 className="text-[16px] font-medium text-[#1C1B19]">Kullanım Geçmişi</h1>
         </div>
         <p className="text-[13px] text-[#6B6963]">
           Son 6 fatura dönemi araç kullanım istatistikleriniz
@@ -311,34 +312,34 @@ export function KullanimGecmisiPage() {
 
       {/* ── Stat cards ── */}
       <div className="grid grid-cols-3 gap-3">
-        <div className="bg-white rounded-2xl border border-[#E2E0D8] p-4 text-center">
+        <div className="bg-white rounded-2xl border border-[#E2E0D8] p-3 text-center">
           <p className="text-[11px] text-[#9A9792] mb-1">Toplam Kullanım</p>
-          <p className="text-[24px] font-bold text-[#1C1B19] leading-none mb-1">
+          <p className="text-[20px] font-bold text-[#1C1B19] leading-none mb-1">
             {isLoading ? '—' : String(totalUsed)}
           </p>
           <p className="text-[11px] text-[#9A9792]">son 6 dönem</p>
         </div>
 
-        <div className="bg-white rounded-2xl border border-[#E2E0D8] p-4 text-center">
+        <div className="bg-white rounded-2xl border border-[#E2E0D8] p-3 text-center">
           <p className="text-[11px] text-[#9A9792] mb-1">Aktif Dönem</p>
           {isLoading ? (
-            <p className="text-[24px] font-bold text-[#1C1B19] leading-none mb-1">—</p>
+            <p className="text-[20px] font-bold text-[#1C1B19] leading-none mb-1">—</p>
           ) : activeMonths === 0 ? (
             <>
-              <p className="text-[24px] font-bold text-[#C0BDB5] leading-none mb-1">—</p>
+              <p className="text-[20px] font-bold text-[#C0BDB5] leading-none mb-1">—</p>
               <p className="text-[11px] text-[#C0BDB5]">henüz kullanım yok</p>
             </>
           ) : (
             <>
-              <p className="text-[24px] font-bold text-[#1C1B19] leading-none mb-1">{activeMonths}</p>
+              <p className="text-[20px] font-bold text-[#1C1B19] leading-none mb-1">{activeMonths}</p>
               <p className="text-[11px] text-[#9A9792]">dönem kullanım var</p>
             </>
           )}
         </div>
 
-        <div className="bg-white rounded-2xl border border-[#E2E0D8] p-4 text-center">
+        <div className="bg-white rounded-2xl border border-[#E2E0D8] p-3 text-center">
           <p className="text-[11px] text-[#9A9792] mb-1">Dönem Ortalaması</p>
-          <p className="text-[24px] font-bold text-[#1C1B19] leading-none mb-1">
+          <p className="text-[20px] font-bold text-[#1C1B19] leading-none mb-1">
             {isLoading ? '—' : activeMonths === 0 ? '—' : String(monthlyAvg)}
           </p>
           <p className="text-[11px] text-[#9A9792]">kullanım/dönem</p>
@@ -346,8 +347,8 @@ export function KullanimGecmisiPage() {
       </div>
 
       {/* ── Bar Chart ── */}
-      <div className="bg-white rounded-2xl border border-[#E2E0D8] p-5">
-        <h2 className="text-[13px] font-semibold text-[#6B6963] uppercase tracking-wider mb-4">
+      <div className="bg-white rounded-2xl border border-[#E2E0D8] p-4">
+        <h2 className="text-[13px] font-semibold text-[#6B6963] uppercase tracking-wider mb-3">
           Dönem Başına Kullanım
         </h2>
         {isLoading && <div className="h-[166px] bg-[#F7F6F2] rounded-lg animate-pulse" />}
@@ -361,7 +362,7 @@ export function KullanimGecmisiPage() {
       {/* ── Dönem Detayı ── */}
       <div className="bg-white rounded-2xl border border-[#E2E0D8] overflow-hidden">
         {/* Header + dönem seçici */}
-        <div className="px-5 pt-5 pb-4 flex items-center justify-between gap-4 border-b border-[#F0EFE9]">
+        <div className="px-4 pt-3 pb-2 flex items-center justify-between gap-4 border-b border-[#F0EFE9]">
           <h2 className="text-[13px] font-semibold text-[#6B6963] uppercase tracking-wider shrink-0">
             Dönem Detayı
           </h2>
@@ -408,7 +409,7 @@ export function KullanimGecmisiPage() {
 
         {/* Dipnot */}
         {activePeriod && (
-          <div className="px-5 pb-4 pt-2 border-t border-[#F2F1ED]">
+          <div className="px-4 pb-3 pt-2 border-t border-[#F2F1ED]">
             <p className="text-[11px] text-[#9A9792]">
               💡 Araç başına kullanım limitiniz için{' '}
               <a href="/hesabim/arac-kullanim" className="text-[#1D9E75] hover:underline">Araç Başına Kullanım</a>{' '}

@@ -145,19 +145,19 @@ function ToolBadges({ toolIds }: { toolIds: string[] }) {
   return (
     <div className="flex flex-wrap gap-1">
       {shown.map((id) => (
-        <span key={id} className="px-2 py-0.5 rounded-full bg-[#1D9E75]/10 text-[#085041] text-xs">
+        <span key={id} className="px-1.5 py-0.5 rounded-full bg-[#1D9E75]/10 text-[#085041] text-[10px]">
           {TOOL_LABELS[id] ?? id}
         </span>
       ))}
       {!expanded && remaining > 0 && (
         <button onClick={() => setExpanded(true)}
-          className="px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 text-xs hover:bg-gray-200">
+          className="px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-500 text-[10px] hover:bg-gray-200">
           +{remaining}
         </button>
       )}
       {expanded && toolIds.length > 2 && (
         <button onClick={() => setExpanded(false)}
-          className="px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 text-xs hover:bg-gray-200">
+          className="px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-500 text-[10px] hover:bg-gray-200">
           gizle
         </button>
       )}
@@ -175,12 +175,14 @@ interface UserActionSidebarProps {
   onToggleStatus: () => void
   onDelete: () => void
   onDetail: () => void
+  onCiktilar: () => void
+  onOdemeler: () => void
   onPaketDegistir: () => void
 }
 
-function UserActionSidebar({ user, isPending, onEdit, onResetPassword, onToggleStatus, onDelete, onDetail, onPaketDegistir }: UserActionSidebarProps) {
+function UserActionSidebar({ user, isPending, onEdit, onResetPassword, onToggleStatus, onDelete, onDetail, onCiktilar, onOdemeler, onPaketDegistir }: UserActionSidebarProps) {
   return (
-    <aside className="shrink-0 w-[190px] sticky top-4">
+    <aside className="shrink-0 w-[160px] sticky top-4">
       <div className="bg-white rounded-2xl border border-[#E2E0D8]">
         <div className="px-4 pt-4 pb-3">
           <p className="text-[10px] font-semibold uppercase tracking-widest text-[#9A9792]">
@@ -206,6 +208,8 @@ function UserActionSidebar({ user, isPending, onEdit, onResetPassword, onToggleS
               {[
                 { icon: '✎',  label: 'Düzenle',           onClick: onEdit,          cls: 'text-[#3A3935] hover:bg-[#F0FAF6] hover:text-[#085041]' },
                 { icon: '📊', label: 'Kullanım Geçmişi',  onClick: onDetail,        cls: 'text-[#3A3935] hover:bg-[#F0FAF6] hover:text-[#085041]' },
+                { icon: '📄', label: 'Geçmiş Çıktılar',  onClick: onCiktilar,      cls: 'text-[#3A3935] hover:bg-[#F0FAF6] hover:text-[#085041]' },
+                { icon: '💳', label: 'Ödeme Geçmişi',    onClick: onOdemeler,      cls: 'text-[#3A3935] hover:bg-[#F0FAF6] hover:text-[#085041]' },
                 { icon: '📦', label: 'Paket Değiştir',    onClick: onPaketDegistir, cls: 'text-[#1D9E75] hover:bg-[#E6F9F2]' },
                 { icon: '🔑', label: 'Şifre Sıfırla',     onClick: onResetPassword, cls: 'text-amber-700 hover:bg-amber-50' },
                 {
@@ -294,7 +298,7 @@ export function AdminKullaniciListesiPage() {
       {/* ── Header ── */}
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h1 className="text-[20px] font-semibold text-[#1C1B19]">👥 Kullanıcı Listesi</h1>
+          <h1 className="text-[16px] font-semibold text-[#1C1B19]">👥 Kullanıcı Listesi</h1>
           <p className="text-[13px] text-[#6B6963] mt-0.5">Tüm kayıtlı kullanıcılar</p>
         </div>
         <input
@@ -322,11 +326,11 @@ export function AdminKullaniciListesiPage() {
           {!isLoading && !isError && (
             <div className="bg-white rounded-2xl border border-[#E2E0D8] shadow-sm overflow-hidden">
               <div className="overflow-x-auto">
-                <table className="w-full text-sm">
+                <table className="w-full text-[12px]">
                   <thead>
                     <tr className="border-b border-[#E2E0D8] bg-[#F7F6F2]">
                       {['Ad / E-posta', 'Şirket', 'Plan', 'Kayıt', 'Son Giriş', 'Araçlar', 'Toplam', 'Durum'].map((col) => (
-                        <th key={col} className="text-left px-4 py-3 text-[11px] font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">
+                        <th key={col} className="text-left px-3 py-2 text-[10px] font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">
                           {col}
                         </th>
                       ))}
@@ -349,24 +353,24 @@ export function AdminKullaniciListesiPage() {
                             : `hover:bg-[#F7F6F2]/60 ${!user.isActive ? 'opacity-50' : ''}`
                         }`}
                       >
-                        <td className="px-4 py-3">
+                        <td className="px-3 py-2">
                           <div className="font-medium text-gray-900">{user.name}</div>
-                          <div className="text-xs text-gray-400">{user.email}</div>
+                          <div className="text-[11px] text-gray-400">{user.email}</div>
                         </td>
-                        <td className="px-4 py-3 text-gray-600">{user.company || <span className="text-gray-300">—</span>}</td>
-                        <td className="px-4 py-3">
-                          <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${PLAN_COLORS[user.planType] ?? 'bg-gray-100 text-gray-600'}`}>
+                        <td className="px-3 py-2 text-gray-600">{user.company || <span className="text-gray-300">—</span>}</td>
+                        <td className="px-3 py-2">
+                          <span className={`px-2 py-0.5 rounded-full text-[11px] font-medium ${PLAN_COLORS[user.planType] ?? 'bg-gray-100 text-gray-600'}`}>
                             {PLAN_LABELS[user.planType] ?? user.planType}
                           </span>
                         </td>
-                        <td className="px-4 py-3 text-xs text-gray-500 whitespace-nowrap">{formatDate(user.createdAt)}</td>
-                        <td className="px-4 py-3 text-xs text-gray-500 whitespace-nowrap" title={formatDate(user.lastLoginAt)}>{timeAgo(user.lastLoginAt)}</td>
-                        <td className="px-4 py-3 max-w-[160px]"><ToolBadges toolIds={user.toolsUsed} /></td>
-                        <td className="px-4 py-3 text-center">
+                        <td className="px-3 py-2 text-[11px] text-gray-500 whitespace-nowrap">{formatDate(user.createdAt)}</td>
+                        <td className="px-3 py-2 text-[11px] text-gray-500 whitespace-nowrap" title={formatDate(user.lastLoginAt)}>{timeAgo(user.lastLoginAt)}</td>
+                        <td className="px-3 py-2 max-w-[140px]"><ToolBadges toolIds={user.toolsUsed} /></td>
+                        <td className="px-3 py-2 text-center">
                           <span className="font-semibold text-gray-700">{user.totalToolUses}</span>
                           <div className="text-[10px] text-gray-400">kullanım</div>
                         </td>
-                        <td className="px-4 py-3">
+                        <td className="px-3 py-2">
                           <div className="flex flex-col gap-1">
                             <span className={`inline-flex items-center gap-1 text-xs font-medium ${user.isActive ? 'text-green-600' : 'text-gray-400'}`}>
                               <span className={`w-1.5 h-1.5 rounded-full ${user.isActive ? 'bg-green-500' : 'bg-gray-300'}`} />
@@ -395,6 +399,8 @@ export function AdminKullaniciListesiPage() {
           onToggleStatus={() => { if (selectedUser) toggleStatusMutation.mutate(selectedUser.id) }}
           onDelete={() => { if (selectedUser) setDeleteConfirm(selectedUser) }}
           onDetail={() => { if (selectedUser) navigate(`/admin/kullanici/${selectedUser.id}/gecmis`) }}
+          onCiktilar={() => { if (selectedUser) navigate(`/admin/tum-ciktilar?userId=${selectedUser.id}`) }}
+          onOdemeler={() => { if (selectedUser) navigate(`/admin/kullanici/${selectedUser.id}/odemeler`) }}
           onPaketDegistir={() => { if (selectedUser) setPaketDegistirUser(selectedUser) }}
         />
       </div>

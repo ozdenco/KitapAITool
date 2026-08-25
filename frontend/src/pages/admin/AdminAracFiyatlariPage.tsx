@@ -206,6 +206,18 @@ function MaliyetPaneli({ prices }: { prices?: ToolPrice[] }) {
   const stdTotalCostTry = stdAiTotalTry + infraPerUserTry
   const recPriceTry     = Math.ceil(stdTotalCostTry * form.profitMultiplier / 10) * 10
 
+  // ── Araç Başı Maliyet tablosunun alt toplamı ──────────────────────────────
+  // Yukarıdaki stdAiTotalTry ORTALAMA maliyeti (tek "temsili" araç) kullanır;
+  // burada her ölçülen aracın GERÇEK maliyeti tek tek toplanır. Bu, bir
+  // kullanıcının paketteki TÜM araçları aylık limitine kadar kullanması
+  // durumundaki gerçek maliyeti verir — fiyatlandırma için daha güvenli üst sınır.
+  const trendVideoDahilDegil   = (prices ?? []).some(p => TOOL_ENGINE_MAP[p.toolId]?.engine === 'apify')
+  const toplamAiMaliyetiTry    = measuredNonApifyTools.reduce(
+    (s, p) => s + costPerRunUsd(p.toolId) * usdTry * form.stdPackageRuns, 0,
+  )
+  const toplamPaketMaliyetiTry = toplamAiMaliyetiTry + infraPerUserTry
+  const onerilenPaketFiyatiTry = Math.ceil(toplamPaketMaliyetiTry * form.profitMultiplier / 10) * 10
+
   return (
     <div className="bg-white rounded-2xl border border-[#E2E0D8] p-5 flex flex-col gap-6">
 
@@ -454,8 +466,33 @@ function MaliyetPaneli({ prices }: { prices?: ToolPrice[] }) {
                 )
               })}
             </tbody>
+            <tfoot>
+              <tr className="border-t-2 border-[#D3D1C7] bg-[#F7F6F2]">
+                <td colSpan={4} className="px-3 py-2.5 text-[12px] font-semibold text-[#1C1B19]">
+                  Toplam ({measuredNonApifyTools.length} ölçülen araç, {form.stdPackageRuns} run/araç —
+                  bir kullanıcı tüm araçları limitine kadar kullanırsa)
+                </td>
+                <td className="px-3 py-2.5 text-right text-[12px] tabular-nums font-bold text-[#3A3935]">
+                  ₺{toplamPaketMaliyetiTry.toFixed(2)}
+                  <p className="text-[9px] font-normal text-[#9A9792]">
+                    AI ₺{toplamAiMaliyetiTry.toFixed(2)} + altyapı ₺{infraPerUserTry.toFixed(2)}
+                  </p>
+                </td>
+                <td className="px-3 py-2.5 text-right text-[14px] tabular-nums font-black text-[#085041]">
+                  ₺{onerilenPaketFiyatiTry}
+                  <p className="text-[9px] font-normal text-[#1D9E75]">
+                    ×{form.profitMultiplier} kâr — bu paketi bu fiyata satmalısınız
+                  </p>
+                </td>
+              </tr>
+            </tfoot>
           </table>
         </div>
+        {trendVideoDahilDegil && (
+          <p className="text-[11px] text-[#9A9792] mt-2">
+            Trend Video Bulucu (Apify) toplama dahil değildir — ayrı fiyatlandırılır, paket dışıdır.
+          </p>
+        )}
       </div>
     </div>
   )

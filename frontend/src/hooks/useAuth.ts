@@ -2,6 +2,7 @@ import { useMutation } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import api from '@/lib/api'
 import { useAuthStore } from '@/store/auth'
+import { resetAnalyticsUser } from '@/lib/analytics'
 import type { ApiResponse, AuthTokens, LoginRequest, RegisterRequest, User } from '@/types'
 
 type AuthResult = { tokens: AuthTokens; user: User }
@@ -124,6 +125,7 @@ export function useLogout() {
   const navigate = useNavigate()
 
   return () => {
+    resetAnalyticsUser()
     logout()
     navigate('/giris')
   }

@@ -2,6 +2,9 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css' // eslint-disable-line
 import App from './App.tsx'
+import { initAnalytics } from '@/lib/analytics'
+
+initAnalytics()
 
 const root = document.getElementById('root')
 if (!root) throw new Error('Root element not found')

@@ -23,6 +23,17 @@ public class PaymentsController(
     private Guid CurrentUserId =>
         Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
 
+    /// <summary>
+    /// Tekil/toplu araç satın alımı kapsamı dışında tutulan araçlar.
+    /// Frontend'de lib/tools.ts içindeki `purchasable: false` ile eşleşmeli.
+    /// Trend Video, Apify çalıştırma maliyeti (~$0.40) sabit 10/25 kullanım
+    /// paketlerine uymadığı ve kullanım zaten ayda 1'e sabitlendiği için
+    /// (bkz. ToolUsageService.ToolSpecificLimits) burada da hariç tutulur —
+    /// aksi halde ToolPrices satırı aktif kaldığı sürece kullanıcı 25 kullanım
+    /// için ödeme yapıp yalnızca 1'ini kullanabilirdi.
+    /// </summary>
+    private static readonly HashSet<string> PaketDisiAraclar = ["trend-video"];
+
     // ── POST /api/payments/checkout-form ─────────────────────────────────────
 
     [HttpPost("checkout-form")]
@@ -124,6 +135,9 @@ public class PaymentsController(
     [Authorize]
     public async Task<IActionResult> CreateToolCheckout([FromBody] ToolCheckoutRequest req)
     {
+        if (PaketDisiAraclar.Contains(req.ToolId))
+            return BadRequest(new { error = "Bu araç tekil/toplu satın alım kapsamında değildir." });
+
         var toolPrice = await db.ToolPrices
             .FirstOrDefaultAsync(p => p.ToolId == req.ToolId && p.IsActive);
 
@@ -212,6 +226,10 @@ public class PaymentsController(
 
         if (req.UsesPerTool != 10 && req.UsesPerTool != 25)
             return BadRequest(new { error = "Geçersiz kullanım miktarı. 10 veya 25 olmalı." });
+
+        var paketDisiSecilen = req.ToolIds.Where(PaketDisiAraclar.Contains).ToArray();
+        if (paketDisiSecilen.Length > 0)
+            return BadRequest(new { error = "Bu araçlar tekil/toplu satın alım kapsamında değildir.", araclar = paketDisiSecilen });
 
         var user = await db.Users.FindAsync(CurrentUserId);
         if (user is null) return Unauthorized();

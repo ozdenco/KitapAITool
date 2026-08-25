@@ -33,7 +33,7 @@ export function OdemeSonucPage() {
       {isSuccess ? (
         <>
           <div className="text-[56px] mb-4">🎉</div>
-          <h1 className="text-[22px] font-semibold text-[#1C1B19] mb-2">
+          <h1 className="text-[16px] font-semibold text-[#1C1B19] mb-2">
             Ödeme Başarılı!
           </h1>
           <p className="text-[14px] text-[#6B6963] mb-1">
@@ -63,7 +63,7 @@ export function OdemeSonucPage() {
       ) : (
         <>
           <div className="text-[56px] mb-4">❌</div>
-          <h1 className="text-[22px] font-semibold text-[#1C1B19] mb-2">
+          <h1 className="text-[16px] font-semibold text-[#1C1B19] mb-2">
             Ödeme Başarısız
           </h1>
           <p className="text-[14px] text-[#6B6963] mb-1">

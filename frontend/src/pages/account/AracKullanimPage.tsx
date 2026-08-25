@@ -80,12 +80,12 @@ export function AracKullanimPage() {
   })
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-4">
       {/* ── Title ── */}
       <div>
         <div className="flex items-center gap-[10px] mb-[4px]">
           <span className="text-[22px] leading-none">📊</span>
-          <h1 className="text-[20px] font-medium text-[#1C1B19]">Araç Başına Kullanım</h1>
+          <h1 className="text-[16px] font-medium text-[#1C1B19]">Araç Başına Kullanım</h1>
         </div>
         <p className="text-[13px] text-[#6B6963]">Bu ayki kullanım hakkınız araç bazında</p>
       </div>
@@ -93,7 +93,7 @@ export function AracKullanimPage() {
       {/* ── Table ── */}
       <div className="bg-white rounded-2xl border border-[#E2E0D8] overflow-hidden">
         {/* Header */}
-        <div className="grid grid-cols-[1fr_190px_110px_80px] gap-3 px-5 py-3 bg-[#F7F6F2] border-b border-[#E2E0D8]">
+        <div className="grid grid-cols-[1fr_190px_110px_80px] gap-3 px-4 py-2 bg-[#F7F6F2] border-b border-[#E2E0D8]">
           <span className="text-[11px] font-semibold uppercase tracking-wider text-[#9A9792]">Araç</span>
           <span className="text-[11px] font-semibold uppercase tracking-wider text-[#9A9792] text-center">Geçerlilik</span>
           <span className="text-[11px] font-semibold uppercase tracking-wider text-[#9A9792] text-center">Kullanım</span>
@@ -103,7 +103,7 @@ export function AracKullanimPage() {
         {isLoading && (
           <div className="flex flex-col gap-[1px]">
             {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map((n) => (
-              <div key={n} className="h-[62px] bg-white border-b border-[#F0EFE9] last:border-b-0 animate-pulse" />
+              <div key={n} className="h-[48px] bg-white border-b border-[#F0EFE9] last:border-b-0 animate-pulse" />
             ))}
           </div>
         )}
@@ -132,11 +132,11 @@ export function AracKullanimPage() {
           return (
             <div
               key={tool.id}
-              className="grid grid-cols-[1fr_190px_110px_80px] gap-3 px-5 py-[13px] items-center border-b border-[#F0EFE9] last:border-b-0 hover:bg-[#FAFAF7] transition-colors"
+              className="grid grid-cols-[1fr_190px_110px_80px] gap-3 px-4 py-[9px] items-center border-b border-[#F0EFE9] last:border-b-0 hover:bg-[#FAFAF7] transition-colors"
             >
               {/* Araç adı */}
               <div className="flex items-center gap-[10px] min-w-0">
-                <span className="text-[20px] shrink-0 leading-none">{tool.icon}</span>
+                <span className="text-[17px] shrink-0 leading-none">{tool.icon}</span>
                 <p className="text-[13px] font-medium text-[#1C1B19] truncate">{tool.name}</p>
               </div>
 

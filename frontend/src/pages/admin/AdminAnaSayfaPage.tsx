@@ -93,7 +93,7 @@ export function AdminAnaSayfaPage() {
       <div>
         <div className="flex items-center gap-[10px] mb-[4px]">
           <span className="text-[22px] leading-none">🔐</span>
-          <h1 className="text-[20px] font-medium text-[#1C1B19]">Yönetici Paneli</h1>
+          <h1 className="text-[16px] font-medium text-[#1C1B19]">Yönetici Paneli</h1>
         </div>
         <p className="text-[13px] text-[#6B6963]">
           Platform yönetimi — kullanıcılar, paketler, araçlar ve raporlar

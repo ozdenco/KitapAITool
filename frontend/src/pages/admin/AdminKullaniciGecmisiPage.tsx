@@ -100,7 +100,7 @@ export function AdminKullaniciGecmisiPage() {
       <div className="mb-6">
         <div className="flex items-center gap-[10px] mb-1">
           <span className="text-[22px] leading-none">📊</span>
-          <h1 className="text-[20px] font-medium text-[#1C1B19]">Kullanım Geçmişi</h1>
+          <h1 className="text-[16px] font-medium text-[#1C1B19]">Kullanım Geçmişi</h1>
         </div>
         {data && (
           <p className="text-[13px] text-[#6B6963]">

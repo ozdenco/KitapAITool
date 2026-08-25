@@ -117,7 +117,7 @@ export function AdminKullanimRaporuPage() {
         <div>
           <div className="flex items-center gap-[10px] mb-[4px]">
             <span className="text-[22px] leading-none">📋</span>
-            <h1 className="text-[20px] font-medium text-[#1C1B19]">Kullanım Raporu</h1>
+            <h1 className="text-[16px] font-medium text-[#1C1B19]">Kullanım Raporu</h1>
           </div>
           <p className="text-[13px] text-[#6B6963]">
             Araç çalıştırma logları · paket · limit · rapor özeti
@@ -242,13 +242,13 @@ export function AdminKullanimRaporuPage() {
                     { label: 'Tarih / Saat',       align: 'left'  },
                     { label: 'Rapor',              align: 'left'  },
                     { label: 'Paketi (o an)',      align: 'center'},
-                    { label: 'Limit/Araç (o an)', align: 'right' },
+                    { label: 'Limit',              align: 'right' },
                     { label: 'Önce → Sonra',      align: 'right' },
                     { label: 'Durum',              align: 'center'},
                   ].map(({ label, align }) => (
                     <th
                       key={label}
-                      className={`px-4 py-3 text-[10px] font-semibold uppercase tracking-wider text-[#9A9792] text-${align}`}
+                      className={`px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-[#9A9792] text-${align} whitespace-nowrap`}
                     >
                       {label}
                     </th>
@@ -273,13 +273,13 @@ export function AdminKullanimRaporuPage() {
                       className="border-b border-[#F2F1ED] last:border-0 hover:bg-[#FAFAF8] transition-colors"
                     >
                       {/* Kişi */}
-                      <td className="px-4 py-3 min-w-[150px]">
+                      <td className="px-3 py-2 min-w-[120px]">
                         <p className="font-medium text-[#1C1B19] leading-tight">{e.userName}</p>
                         <p className="text-[11px] text-[#9A9792] leading-tight">{e.userEmail}</p>
                       </td>
 
                       {/* Araç */}
-                      <td className="px-4 py-3 min-w-[160px]">
+                      <td className="px-3 py-2 min-w-[130px]">
                         <div className="flex items-center gap-1.5">
                           <span className="text-[14px] leading-none">{tool?.icon ?? '🔧'}</span>
                           <span className="text-[#3A3935] font-medium leading-tight">
@@ -289,12 +289,12 @@ export function AdminKullanimRaporuPage() {
                       </td>
 
                       {/* Tarih/Saat */}
-                      <td className="px-4 py-3 whitespace-nowrap text-[#6B6963] tabular-nums">
+                      <td className="px-3 py-2 whitespace-nowrap text-[#6B6963] tabular-nums">
                         {formatDateTime(e.usedAt)}
                       </td>
 
                       {/* Rapor */}
-                      <td className="px-4 py-3 max-w-[200px]">
+                      <td className="px-3 py-2 max-w-[140px]">
                         {e.toolResultId ? (
                           <button
                             onClick={() => navigate(`/admin/rapor/${e.toolResultId}`)}
@@ -308,7 +308,7 @@ export function AdminKullanimRaporuPage() {
                       </td>
 
                       {/* Paketi (o an) */}
-                      <td className="px-4 py-3 text-center">
+                      <td className="px-3 py-2 text-center">
                         <span className={`inline-block text-[10px] font-semibold px-2 py-0.5 rounded-full ${badge.cls}`}>
                           {badge.label}
                         </span>
@@ -316,7 +316,7 @@ export function AdminKullanimRaporuPage() {
                       </td>
 
                       {/* Limit/Araç (o an) */}
-                      <td className="px-4 py-3 text-right font-medium tabular-nums">
+                      <td className="px-3 py-2 text-right font-medium tabular-nums">
                         {limit == null ? (
                           <span className="text-[#1D9E75]">∞</span>
                         ) : (
@@ -325,7 +325,7 @@ export function AdminKullanimRaporuPage() {
                       </td>
 
                       {/* Önce → Sonra */}
-                      <td className="px-4 py-3 text-right">
+                      <td className="px-3 py-2 text-right">
                         <div className="flex items-center justify-end gap-1.5">
                           <span className="tabular-nums text-[#9A9792]">{before}</span>
                           <span className="text-[#C5C3BB] text-[10px]">→</span>
@@ -334,7 +334,7 @@ export function AdminKullanimRaporuPage() {
                           </span>
                           {pctAfter != null && (
                             <div className="flex items-center gap-1 ml-1">
-                              <div className="w-10 h-[4px] bg-[#E2E0D8] rounded-full overflow-hidden">
+                              <div className="w-7 h-[4px] bg-[#E2E0D8] rounded-full overflow-hidden">
                                 <div
                                   className={`h-full rounded-full ${isHigh ? 'bg-amber-400' : 'bg-[#1D9E75]'}`}
                                   style={{ width: `${pctAfter}%` }}
@@ -352,7 +352,7 @@ export function AdminKullanimRaporuPage() {
                       </td>
 
                       {/* Durum */}
-                      <td className="px-4 py-3 text-center">
+                      <td className="px-3 py-2 text-center whitespace-nowrap">
                         {e.success ? (
                           <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[#F0FAF6] text-[#085041]">
                             ✓ Başarılı

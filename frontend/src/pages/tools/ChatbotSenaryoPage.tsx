@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '@/lib/api'
 import { parseAiJson } from '@/lib/parseAiJson'
@@ -10,6 +10,7 @@ import { FormPersistButtons } from '@/components/ui/FormPersistButtons'
 import { ToolShell } from '@/components/ui/ToolShell'
 import { useElapsedSeconds } from '@/hooks/useElapsedSeconds'
 import { MiniChatbotTest } from '@/components/tools/MiniChatbotTest'
+import { DosyaHatasi, KABUL_EDILEN_TIPLER } from '@/lib/fileTextConstants'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -52,8 +53,15 @@ const YONLENDIRME_HEDEFLERI = [
 function buildPrompt(f: {
   biz: string; sector: string; services: string; hours: string
   faqs: string[]; redirectGoal: string; redirectLink: string
+  fileText?: string
 }): string {
   const faqList = f.faqs.filter(Boolean).map((q, i) => `${i + 1}. ${q}`).join('\n')
+
+  // Kullanıcı bir belge yüklediyse (ör. işe alım prosedürü, izin kullanım
+  // talimatı) SSS'ler yalnızca formdaki alanlara değil bu belgeye de dayanır.
+  const dosyaBolumu = f.fileText
+    ? `\nEk bilgi kaynağı (kullanıcının yüklediği belgeden çıkarıldı):\n"""\n${f.fileText}\n"""\nSSS cevaplarında bu belgedeki bilgileri de kullan; belgeyle çelişme.\n`
+    : ''
 
   return `Sen chatbot tasarımı uzmanısın. Müşteri iletişimi için hazır chatbot metinleri ve SSS yanıtları oluşturuyorsun.
 
@@ -66,7 +74,7 @@ Yönlendirme linki/numarası: ${f.redirectLink || 'belirtilmemiş'}
 
 Sıkça sorulan sorular:
 ${faqList || 'sektöre göre tipik SSS'}
-
+${dosyaBolumu}
 ${f.biz} için hazır chatbot mesajları ve SSS kartları oluştur.
 
 SADECE JSON döndür:
@@ -98,12 +106,53 @@ export function ChatbotSenaryoPage() {
   const [redirectLink, setRedirectLink] = useState('')
   const [result, setResult] = useState<ChatbotResult | null>(null)
 
+  // ── Ek bilgi belgesi (opsiyonel) ─────────────────────────────────────────
+  // Tamamen tarayıcıda işlenir; dosya asla backend'e/n8n'e gönderilmez,
+  // yalnızca çıkarılan metin prompt'a eklenir.
+  const [fileName, setFileName]     = useState<string | null>(null)
+  const [fileText, setFileText]     = useState<string | undefined>(undefined)
+  const [fileError, setFileError]   = useState<string | null>(null)
+  const [fileParsing, setFileParsing] = useState(false)
+  const [fileTruncated, setFileTruncated] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const handleFileSelect = async (file: File | undefined) => {
+    setFileError(null)
+    setFileTruncated(false)
+    if (!file) return
+
+    setFileParsing(true)
+    try {
+      // pdfjs-dist (~250KB) yalnızca kullanıcı gerçekten dosya seçtiğinde
+      // indirilsin diye burada dinamik import ediliyor — bkz. fileTextConstants.ts
+      const { extractFileText } = await import('@/lib/extractFileText')
+      const { metin, kirpildiMi } = await extractFileText(file)
+      setFileName(file.name)
+      setFileText(metin)
+      setFileTruncated(kirpildiMi)
+    } catch (error) {
+      setFileName(null)
+      setFileText(undefined)
+      setFileError(error instanceof DosyaHatasi ? error.message : 'Dosya işlenemedi.')
+    } finally {
+      setFileParsing(false)
+    }
+  }
+
+  const clearFile = () => {
+    setFileName(null)
+    setFileText(undefined)
+    setFileError(null)
+    setFileTruncated(false)
+    if (fileInputRef.current) fileInputRef.current.value = ''
+  }
+
   const updateFaq = (i: number, value: string) =>
     setFaqs((prev) => prev.map((f, idx) => idx === i ? value : f))
 
   const mutation = useMutation({
     mutationFn: async () => {
-      const prompt = buildPrompt({ biz, sector, services, hours, faqs, redirectGoal, redirectLink })
+      const prompt = buildPrompt({ biz, sector, services, hours, faqs, redirectGoal, redirectLink, fileText })
       const res = await api.post('/tools/chatbot-senaryo/run', { prompt })
       const content = res.data?.content?.[0]?.text ?? res.data
       return parseAiJson<ChatbotResult>(content)
@@ -117,7 +166,7 @@ export function ChatbotSenaryoPage() {
   // Bekleme sirasinda gecen sureyi gosterir (sabit mesaj donmus hissi veriyordu)
   const elapsedSec = useElapsedSeconds(mutation.isPending)
 
-  const canSubmit = biz.trim() && sector && services.trim() && faqs.filter(Boolean).length >= 3 && redirectGoal && !mutation.isPending
+  const canSubmit = biz.trim() && sector && services.trim() && faqs.filter(Boolean).length >= 3 && redirectGoal && !mutation.isPending && !fileParsing
 
   return (
     <ToolShell
@@ -187,6 +236,53 @@ export function ChatbotSenaryoPage() {
                       </div>
                     ))}
                   </div>
+                </div>
+
+                {/* ── Ek bilgi belgesi (opsiyonel) ── */}
+                <div>
+                  <p className="text-sm font-medium text-[#6B6963] mb-2">
+                    Ek bilgi belgesi <span className="font-normal text-[#9A9792]">(opsiyonel — .pdf veya .txt)</span>
+                  </p>
+                  <p className="text-xs text-[#9A9792] mb-2 leading-relaxed">
+                    İşe alım prosedürü, izin kullanım talimatı gibi bir belge yükleyin;
+                    SSS cevapları bu belgeye göre de zenginleştirilsin.
+                  </p>
+
+                  {!fileName ? (
+                    <label className="flex items-center gap-2 px-3 py-2.5 border border-dashed border-[#D3D1C7] rounded-lg bg-white text-sm text-[#6B6963] cursor-pointer hover:border-[#1D9E75] hover:text-[#085041] transition-colors">
+                      <span>📎</span>
+                      <span>{fileParsing ? 'Dosya işleniyor…' : 'Dosya seç (maks. 3 MB)'}</span>
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept={KABUL_EDILEN_TIPLER.join(',')}
+                        disabled={fileParsing}
+                        onChange={(e) => void handleFileSelect(e.target.files?.[0])}
+                        className="hidden"
+                      />
+                    </label>
+                  ) : (
+                    <div className="flex items-center gap-2 px-3 py-2.5 border border-[#9FE1CB] rounded-lg bg-[#F0FAF6] text-sm text-[#085041]">
+                      <span>✅</span>
+                      <span className="flex-1 truncate">{fileName}</span>
+                      <button
+                        type="button"
+                        onClick={clearFile}
+                        className="text-xs text-[#6B6963] hover:text-red-500 transition-colors shrink-0"
+                      >
+                        Kaldır
+                      </button>
+                    </div>
+                  )}
+
+                  {fileTruncated && (
+                    <p className="text-xs text-amber-600 mt-1.5">
+                      ⚠️ Belge uzun olduğu için bir kısmı kısaltıldı; en önemli bölümleri belgenin başında tutun.
+                    </p>
+                  )}
+                  {fileError && (
+                    <p className="text-xs text-red-500 mt-1.5">{fileError}</p>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

@@ -79,7 +79,7 @@ export function AdminIstatistiklerPage() {
     <div className="flex flex-col gap-5">
       {/* ── Header ── */}
       <div>
-        <h1 className="text-[20px] font-semibold text-[#1C1B19]">📊 İstatistikler</h1>
+        <h1 className="text-[16px] font-semibold text-[#1C1B19]">📊 İstatistikler</h1>
         <p className="text-[13px] text-[#6B6963] mt-0.5">Sistem geneli kullanım özeti</p>
       </div>
 
