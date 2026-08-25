@@ -43,6 +43,9 @@ const ETKISIZ_KELIMELER = new Set([
 const VARSAYILAN_FALLBACK =
   'Bunu tam anlayamadım. 🤔 Sorunuzu farklı bir şekilde yazabilir veya menüdeki başlıklardan birini seçebilirsiniz.'
 
+/** "Mesai dışı testi" butonunun gönderdiği örnek metin — gerçek saatten bağımsız tetikler */
+const MESAI_TEST_METNI = 'şu an açık mısınız?'
+
 // ─── Yardımcılar ──────────────────────────────────────────────────────────────
 
 /** Belirli bir mesaj tipini "içeren" ilk mesajı bulur (tip adları AI'dan geldiği için esnek eşleşme) */
@@ -79,14 +82,6 @@ function kokEslesir(a: string, b: string): boolean {
   return n >= 4 && a.slice(0, n) === b.slice(0, n)
 }
 
-/** Hafta içi 09:00–18:00 dışı mı? */
-function mesaiDisiMi(): boolean {
-  const simdi = new Date()
-  const gun   = simdi.getDay()      // 0 = Pazar, 6 = Cumartesi
-  const saat  = simdi.getHours()
-  return gun === 0 || gun === 6 || saat < 9 || saat >= 18
-}
-
 // ─── Bileşen ──────────────────────────────────────────────────────────────────
 
 export function MiniChatbotTest({ bizName, ozelMesajlar, sssKartlari }: Props) {
@@ -117,11 +112,20 @@ export function MiniChatbotTest({ bizName, ozelMesajlar, sssKartlari }: Props) {
   const ekle = (kimden: Mesaj['kimden'], metin: string) =>
     setMesajlar((prev) => [...prev, { id: prev.length, kimden, metin }])
 
-  /** Kullanıcı metnine göre bot yanıtını seçer */
+  /**
+   * Kullanıcı metnine göre bot yanıtını seçer.
+   *
+   * Not: Bu bir TEST/önizleme widget'ı — gerçek canlı bot değil. Eskiden
+   * gerçek saat (mesaiDisiMi()) her mesajı otomatik "mesai dışı"na yönlendiriyordu;
+   * bu yüzden akşam test edildiğinde ne yazılırsa yazılsın hep aynı sabit cevap
+   * geliyor, SSS eşleşmesi hiç görünmüyordu (23:00'te bildirilen hata buydu).
+   * Mesai dışı artık yalnızca kullanıcı açıkça sorarsa (MESAI_DISI_REGEX) veya
+   * "Mesai Dışını Test Et" butonuyla tetiklenir — gerçek saatten bağımsızdır.
+   */
   const botYaniti = (metin: string): string => {
     const kucuk = metin.toLocaleLowerCase('tr')
 
-    if (MESAI_DISI_REGEX.test(kucuk) || mesaiDisiMi()) {
+    if (MESAI_DISI_REGEX.test(kucuk)) {
       return mesaiDisi ?? 'Şu an mesai saatleri dışındayız. En kısa sürede size dönüş yapacağız. 🌙'
     }
 
@@ -156,7 +160,7 @@ export function MiniChatbotTest({ bizName, ozelMesajlar, sssKartlari }: Props) {
   const testEt = (tur: 'kapanis' | 'mesai' | 'fallback') => {
     const örnekler = {
       kapanis:  'teşekkürler',
-      mesai:    'şu an açık mısınız?',
+      mesai:    MESAI_TEST_METNI,
       fallback: 'qwerty asdf zxcv',
     }
     gonder(örnekler[tur])
