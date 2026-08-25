@@ -10,6 +10,7 @@ import { FormPersistButtons } from '@/components/ui/FormPersistButtons'
 import { ToolShell } from '@/components/ui/ToolShell'
 import { useElapsedSeconds } from '@/hooks/useElapsedSeconds'
 import { MiniChatbotTest } from '@/components/tools/MiniChatbotTest'
+import { SiteyeEkleKarti } from '@/components/tools/SiteyeEkleKarti'
 import { DosyaHatasi, KABUL_EDILEN_TIPLER } from '@/lib/fileTextConstants'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -93,6 +94,40 @@ SADECE JSON döndür:
 SSS'de sorulan soruların tamamını yanıtla. Türkçe, samimi ve net olsun.`
 }
 
+// ─── Belge kalıcılığı ─────────────────────────────────────────────────────────
+
+const BELGE_STORAGE_KEY = 'kkb-chatbot-belge'
+
+interface KayitliBelge {
+  ad: string
+  metin: string
+}
+
+/** Daha önce yüklenen belgeyi okur; bozuk/eksik kayıt sessizce yok sayılır. */
+function belgeyiOku(): KayitliBelge | null {
+  try {
+    const raw = localStorage.getItem(BELGE_STORAGE_KEY)
+    if (!raw) return null
+    const k = JSON.parse(raw) as Record<string, unknown>
+    return typeof k.ad === 'string' && typeof k.metin === 'string'
+      ? { ad: k.ad, metin: k.metin }
+      : null
+  } catch (error) {
+    console.error('Kayıtlı belge okunamadı:', error)
+    return null
+  }
+}
+
+function belgeyiYaz(belge: KayitliBelge | null): void {
+  try {
+    if (belge) localStorage.setItem(BELGE_STORAGE_KEY, JSON.stringify(belge))
+    else localStorage.removeItem(BELGE_STORAGE_KEY)
+  } catch (error) {
+    // Kota dolabilir (büyük belge) — özellik çalışmaya devam etmeli
+    console.error('Belge kaydedilemedi:', error)
+  }
+}
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function ChatbotSenaryoPage() {
@@ -105,12 +140,15 @@ export function ChatbotSenaryoPage() {
   const [redirectGoal, setRedirectGoal] = useState('')
   const [redirectLink, setRedirectLink] = useState('')
   const [result, setResult] = useState<ChatbotResult | null>(null)
+  const [resultId, setResultId] = useState<string | null>(null)
 
   // ── Ek bilgi belgesi (opsiyonel) ─────────────────────────────────────────
   // Tamamen tarayıcıda işlenir; dosya asla backend'e/n8n'e gönderilmez,
-  // yalnızca çıkarılan metin prompt'a eklenir.
-  const [fileName, setFileName]     = useState<string | null>(null)
-  const [fileText, setFileText]     = useState<string | undefined>(undefined)
+  // yalnızca çıkarılan metin prompt'a eklenir. Çıkarılan metin tarayıcıda
+  // saklanır ki kullanıcı her form doldurduğunda dosyayı yeniden seçmesin.
+  const kayitliBelge = useState(() => belgeyiOku())[0]
+  const [fileName, setFileName]     = useState<string | null>(kayitliBelge?.ad ?? null)
+  const [fileText, setFileText]     = useState<string | undefined>(kayitliBelge?.metin)
   const [fileError, setFileError]   = useState<string | null>(null)
   const [fileParsing, setFileParsing] = useState(false)
   const [fileTruncated, setFileTruncated] = useState(false)
@@ -130,6 +168,7 @@ export function ChatbotSenaryoPage() {
       setFileName(file.name)
       setFileText(metin)
       setFileTruncated(kirpildiMi)
+      belgeyiYaz({ ad: file.name, metin })   // sonraki ziyarette hatırlansın
     } catch (error) {
       setFileName(null)
       setFileText(undefined)
@@ -144,6 +183,7 @@ export function ChatbotSenaryoPage() {
     setFileText(undefined)
     setFileError(null)
     setFileTruncated(false)
+    belgeyiYaz(null)
     if (fileInputRef.current) fileInputRef.current.value = ''
   }
 
@@ -155,10 +195,13 @@ export function ChatbotSenaryoPage() {
       const prompt = buildPrompt({ biz, sector, services, hours, faqs, redirectGoal, redirectLink, fileText })
       const res = await api.post('/tools/chatbot-senaryo/run', { prompt })
       const content = res.data?.content?.[0]?.text ?? res.data
-      return parseAiJson<ChatbotResult>(content)
+      // Backend kaydettiği ToolResult Id'sini header ile döndürür; gömme kodu bunu kullanır
+      const resultId = (res.headers?.['x-result-id'] as string | undefined) ?? null
+      return { senaryo: parseAiJson<ChatbotResult>(content), resultId }
     },
-    onSuccess: (data) => {
-      setResult(data)
+    onSuccess: ({ senaryo, resultId }) => {
+      setResult(senaryo)
+      setResultId(resultId)
       void queryClient.invalidateQueries({ queryKey: ['tool-usage'] })
     },
   })
@@ -264,7 +307,12 @@ export function ChatbotSenaryoPage() {
                   ) : (
                     <div className="flex items-center gap-2 px-3 py-2.5 border border-[#9FE1CB] rounded-lg bg-[#F0FAF6] text-sm text-[#085041]">
                       <span>✅</span>
-                      <span className="flex-1 truncate">{fileName}</span>
+                      <span className="flex-1 truncate">
+                        {fileName}
+                        {kayitliBelge?.ad === fileName && (
+                          <span className="ml-2 text-[11px] text-[#1D9E75]">· kayıtlı</span>
+                        )}
+                      </span>
                       <button
                         type="button"
                         onClick={clearFile}
@@ -395,6 +443,9 @@ export function ChatbotSenaryoPage() {
                 ozelMesajlar={result.ozel_mesajlar ?? []}
                 sssKartlari={result.sss_kartlari ?? []}
               />
+
+              {/* Kendi sitesine gömme kodu */}
+              {resultId && <SiteyeEkleKarti resultId={resultId} bizName={biz} />}
 
               <button onClick={() => setResult(null)} className="text-sm text-gray-400 underline text-center no-print">
                 Yeni senaryo oluştur

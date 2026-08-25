@@ -161,7 +161,16 @@ public class ToolsController(
             await usage.RecordUsageAsync(userId, toolId, success: true);
 
             // Auto-save result for all successful runs (fire-and-forget for performance)
-            await SaveToolResultAsync(userId, toolId, payload, content, ct);
+            var resultId = await SaveToolResultAsync(userId, toolId, payload, content, ct);
+
+            // Kayıt Id'sini header ile döndür: yanıt gövdesi n8n'den geldiği gibi
+            // kalmalı (frontend parseAiJson bekliyor), araya alan eklemek kırardı.
+            // Chatbot "siteme ekle" gömme kodu bu Id'yi kullanır.
+            if (resultId is not null)
+            {
+                Response.Headers["X-Result-Id"] = resultId.Value.ToString();
+                Response.Headers["Access-Control-Expose-Headers"] = "X-Result-Id";
+            }
 
             // Async tools return 202 Accepted; frontend reads the body the same way
             if (n8n.IsAsync(toolId))
@@ -288,7 +297,8 @@ public class ToolsController(
 
     // ─── Helpers ──────────────────────────────────────────────────────────────
 
-    private async Task SaveToolResultAsync(
+    /// <returns>Kaydedilen ToolResult Id'si; kayıt başarısızsa null.</returns>
+    private async Task<Guid?> SaveToolResultAsync(
         Guid userId,
         string toolId,
         JsonElement payload,
@@ -306,19 +316,22 @@ public class ToolsController(
                 "";
             var summary = ExtractSummary(toolId, summaryText);
 
-            db.ToolResults.Add(new ToolResult
+            var kayit = new ToolResult
             {
                 UserId       = userId,
                 ToolId       = toolId,
                 InputSummary = summary,
                 OutputJson   = outputJson,
-            });
+            };
+            db.ToolResults.Add(kayit);
             await db.SaveChangesAsync(ct);
+            return kayit.Id;
         }
         catch (Exception ex)
         {
             // Saving history must not break the main request
             logger.LogWarning(ex, "Failed to save tool result for {ToolId}", toolId);
+            return null;
         }
     }
 
