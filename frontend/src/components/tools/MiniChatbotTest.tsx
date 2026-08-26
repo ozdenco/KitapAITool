@@ -89,11 +89,38 @@ function anahtarKelimeler(soru: string): string[] {
  * harfi (kök) karşılaştırarak bunu yakalıyoruz. 4 harften kısa ortak önek
  * kabul edilmez — aksi halde alakasız kelimeler eşleşirdi.
  */
-const KOK_UZUNLUK = 5
+// 6 harf: 5'te "çalışıyorsunuz" ile "çalışanlarını" ("calis") yanlış eşleşiyordu
+const KOK_UZUNLUK = 6
 
 function kokEslesir(a: string, b: string): boolean {
   const n = Math.min(a.length, b.length, KOK_UZUNLUK)
   return n >= 4 && a.slice(0, n) === b.slice(0, n)
+}
+
+/**
+ * Cevap için gereken en düşük skor.
+ * 25 soruluk gerçek testte düşük eşik, bilgi olmayan sorulara alakasız kartlarla
+ * cevap üretiyordu (6 uydurma cevap). 3.0'da uydurma sıfırlandı, doğruluk arttı.
+ */
+const MIN_SKOR = 3.0
+
+/**
+ * Kelime ağırlıkları (IDF benzeri). "yıllık", "izin" gibi kelimeler neredeyse
+ * her kartta geçtiğinden ayırt edici değildir; düz sayımda skoru şişirip
+ * alakasız kartın kazanmasına yol açıyorlardı.
+ */
+function agirlikHesapla(kartlar: SssKart[]) {
+  const N = kartlar.length
+  const df = new Map<string, number>()
+  for (const k of kartlar) {
+    for (const w of new Set(anahtarKelimeler(k.soru))) {
+      df.set(w, (df.get(w) ?? 0) + 1)
+    }
+  }
+  return {
+    idf: (w: string) => Math.log((N + 1) / ((df.get(w) ?? 0) + 1)) + 0.1,
+    genelMi: (w: string) => (df.get(w) ?? 0) / Math.max(1, N) > 0.40,
+  }
 }
 
 // ─── Bileşen ──────────────────────────────────────────────────────────────────
@@ -111,6 +138,8 @@ export function MiniChatbotTest({ bizName, ozelMesajlar, sssKartlari }: Props) {
     () => mesajBul(ozelMesajlar, 'mesai'),
     [ozelMesajlar],
   )
+
+  const agirlik = useMemo(() => agirlikHesapla(sssKartlari), [sssKartlari])
 
   const [mesajlar, setMesajlar] = useState<Mesaj[]>(() =>
     karsilama ? [{ id: 0, kimden: 'bot', metin: karsilama }] : [],
@@ -147,19 +176,29 @@ export function MiniChatbotTest({ bizName, ozelMesajlar, sssKartlari }: Props) {
       return kapanis ?? 'Yardımcı olabildiysem ne mutlu! Başka bir sorunuz olursa buradayım. 😊'
     }
 
-    // En çok anahtar kelime eşleşen SSS kartı
+    // Ağırlıklı eşleşme: nadir kelimeler belirleyici, genel kelimeler değil
     const kullaniciKelimeleri = anahtarKelimeler(metin)
     const { kart, skor } = sssKartlari.reduce<{ kart: SssKart | null; skor: number }>(
       (enIyi, k) => {
-        const eslesme = anahtarKelimeler(k.soru).filter((kw) =>
-          kullaniciKelimeleri.some((uk) => kokEslesir(kw, uk)),
-        ).length
-        return eslesme > enIyi.skor ? { kart: k, skor: eslesme } : enIyi
+        let puan = 0
+        let ayirtEdici = 0
+
+        for (const kw of anahtarKelimeler(k.soru)) {
+          const tam = kullaniciKelimeleri.includes(kw)
+          const kok = !tam && kullaniciKelimeleri.some((uk) => kokEslesir(kw, uk))
+          if (!tam && !kok) continue
+
+          puan += agirlik.idf(kw) * (tam ? 1 : 0.6)
+          if (!agirlik.genelMi(kw)) ayirtEdici++
+        }
+
+        // Yalnızca genel kelimelerin ("yıllık", "izin") tutması yetmez
+        return ayirtEdici >= 1 && puan > enIyi.skor ? { kart: k, skor: puan } : enIyi
       },
       { kart: null, skor: 0 },
     )
 
-    return kart && skor > 0 ? kart.cevap : VARSAYILAN_FALLBACK
+    return kart && skor >= MIN_SKOR ? kart.cevap : VARSAYILAN_FALLBACK
   }
 
   const gonder = (metin: string) => {

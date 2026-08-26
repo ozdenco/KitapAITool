@@ -61,7 +61,12 @@ function buildPrompt(f: {
   // Kullanıcı bir belge yüklediyse (ör. işe alım prosedürü, izin kullanım
   // talimatı) SSS'ler yalnızca formdaki alanlara değil bu belgeye de dayanır.
   const dosyaBolumu = f.fileText
-    ? `\nEk bilgi kaynağı (kullanıcının yüklediği belgeden çıkarıldı):\n"""\n${f.fileText}\n"""\nSSS cevaplarında bu belgedeki bilgileri de kullan; belgeyle çelişme.\n`
+    ? `\nEk bilgi kaynağı (kullanıcının yüklediği belgeden çıkarıldı):\n"""\n${f.fileText}\n"""\n` +
+      `Bu belgedeki HER konu başlığı için ayrı bir SSS kartı üret — belgede geçen ` +
+      `tüm kural, hak, süre, istisna ve prosedürleri kapsa. Belgeyle çelişme.\n` +
+      `Sorular ziyaretçinin gerçekte soracağı şekilde yazılmalı ve BİRBİRİNDEN ` +
+      `FARKLI anahtar kelimeler içermeli (ör. "reddedebilir", "bölünebilir", ` +
+      `"devreder", "paraya"). Aynı kelimelerle başlayan benzer sorular üretme.\n`
     : ''
 
   return `Sen chatbot tasarımı uzmanısın. Müşteri iletişimi için hazır chatbot metinleri ve SSS yanıtları oluşturuyorsun.
@@ -91,7 +96,10 @@ SADECE JSON döndür:
   "ipuclari": ["<chatbot kurulum ve kullanım için 3-4 pratik ipucu>"],
   "ctaText": "<${f.biz} için teşvik cümlesi>"
 }
-SSS'de sorulan soruların tamamını yanıtla. Türkçe, samimi ve net olsun.`
+SSS'de sorulan soruların tamamını yanıtla. Türkçe, samimi ve net olsun.
+${f.fileText
+  ? 'Belge yüklendiği için sss_kartlari ZENGİN olmalı: en az 20, mümkünse 30 kart üret. Kapsam ne kadar genişse chatbot o kadar çok soruyu yanıtlayabilir.'
+  : 'sss_kartlari en az 8 kart içersin.'}`
 }
 
 // ─── Belge kalıcılığı ─────────────────────────────────────────────────────────

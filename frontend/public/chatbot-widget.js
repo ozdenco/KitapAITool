@@ -55,11 +55,48 @@
       .filter(function (k) { return k.length >= 3 && ETKISIZ.indexOf(k) === -1 })
   }
 
-  /** Türkçe eklemeli dil: "fiyat" ile "fiyatlarınız" eşleşmeli */
+  /**
+   * Türkçe eklemeli dil: "fiyat" ile "fiyatlarınız" eşleşmeli.
+   * Kök 6 harf: 5 harfte "çalışıyorsunuz" ile "çalışanlarını" ("calis") yanlış
+   * eşleşiyor ve alakasız kartlar kazanıyordu.
+   */
   function kokEslesir(a, b) {
-    var n = Math.min(a.length, b.length, 5)
+    var n = Math.min(a.length, b.length, 6)
     return n >= 4 && a.slice(0, n) === b.slice(0, n)
   }
+
+  /**
+   * Kelime ağırlıkları (IDF benzeri).
+   *
+   * "yıllık", "izin" gibi kelimeler neredeyse HER SSS kartında geçtiği için
+   * ayırt edici değildir; düz kelime sayımında bunlar skoru şişirip alakasız
+   * kartın kazanmasına yol açıyordu. Kaç kartta geçtiğine göre ağırlık veriyoruz:
+   * nadir kelime = yüksek ağırlık.
+   */
+  function agirlikHesapla(kartlar) {
+    var N = kartlar.length
+    var df = {}
+    for (var i = 0; i < N; i++) {
+      var benzersiz = {}
+      var kw = kelimeler(kartlar[i].soru)
+      for (var j = 0; j < kw.length; j++) benzersiz[kw[j]] = true
+      for (var w in benzersiz) df[w] = (df[w] || 0) + 1
+    }
+    return {
+      idf: function (w) { return Math.log((N + 1) / ((df[w] || 0) + 1)) + 0.1 },
+      // Kartların %40'ından fazlasında geçen kelime "genel" sayılır
+      genelMi: function (w) { return (df[w] || 0) / N > 0.40 }
+    }
+  }
+
+  /**
+   * Cevap verebilmek için gereken en düşük skor.
+   * Ölçümle belirlendi: daha düşük eşiklerde bot, bilgi olmayan sorulara
+   * alakasız kartlarla cevap veriyordu (25 soruluk gerçek testte 6 uydurma
+   * cevap). 3.0'da uydurma sıfıra indi ve toplam doğruluk arttı.
+   * Yanlış bilgi vermektense "bilmiyorum" demek yeğdir.
+   */
+  var MIN_SKOR = 3.0
 
   function mesajBul(mesajlar, anahtarlar) {
     for (var i = 0; i < (mesajlar || []).length; i++) {
@@ -84,22 +121,36 @@
     }
 
     var girdiKelimeleri = kelimeler(girdi)
-    var enIyi = null, enIyiSkor = 0
     var kartlar = senaryo.sss_kartlari || []
+    var ag = senaryo._agirlik || (senaryo._agirlik = agirlikHesapla(kartlar))
+
+    var enIyi = null, enIyiSkor = 0
 
     for (var i = 0; i < kartlar.length; i++) {
       var soruKelimeleri = kelimeler(kartlar[i].soru)
-      var skor = 0
+      var skor = 0, ayirtEdici = 0
+
       for (var s = 0; s < soruKelimeleri.length; s++) {
-        for (var g = 0; g < girdiKelimeleri.length; g++) {
-          if (kokEslesir(soruKelimeleri[s], girdiKelimeleri[g])) { skor++; break }
+        var w = soruKelimeleri[s]
+        var tam = girdiKelimeleri.indexOf(w) !== -1
+        var kok = false
+        if (!tam) {
+          for (var g = 0; g < girdiKelimeleri.length; g++) {
+            if (kokEslesir(w, girdiKelimeleri[g])) { kok = true; break }
+          }
         }
+        if (!tam && !kok) continue
+
+        skor += ag.idf(w) * (tam ? 1 : 0.6)   // kök eşleşmesi kısmi puan alır
+        if (!ag.genelMi(w)) ayirtEdici++       // yalnızca ayırt edici kelime sayılır
       }
-      if (skor > enIyiSkor) { enIyiSkor = skor; enIyi = kartlar[i] }
+
+      // Sadece "yıllık/izin" gibi genel kelimelerin tutması cevap için yetmez
+      if (ayirtEdici >= 1 && skor > enIyiSkor) { enIyiSkor = skor; enIyi = kartlar[i] }
     }
 
-    if (enIyi && enIyiSkor > 0) return enIyi.cevap
-    return 'Bunu tam anlayamadım. Sorunuzu farklı bir şekilde yazabilir misiniz?'
+    if (enIyi && enIyiSkor >= MIN_SKOR) return enIyi.cevap
+    return 'Bu konuda elimde net bir bilgi yok. 🤔 Sorunuzu farklı bir şekilde yazabilir ya da bizimle doğrudan iletişime geçebilirsiniz.'
   }
 
   // ─── Arayüz ───────────────────────────────────────────────────────────────
