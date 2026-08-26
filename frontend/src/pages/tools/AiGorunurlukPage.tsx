@@ -31,7 +31,9 @@ const SEKTORLER = [
   'Temizlik / Hizmet', 'Diğer',
 ]
 
-const SOSYAL_KANALLAR = ['Instagram', 'Facebook', 'TikTok', 'YouTube', 'Twitter/X', 'Hiçbiri']
+/** "Diğer" seçilince kullanıcı kendi kanalını yazabilir (ör. WhatsApp, Telegram) */
+const DIGER_KANAL = 'Diğer'
+const SOSYAL_KANALLAR = ['Instagram', 'Facebook', 'TikTok', 'YouTube', 'Twitter/X', 'LinkedIn', DIGER_KANAL, 'Hiçbiri']
 const DIZINLER = ['Ticaret Odası', 'KOSGEB', 'Sahibinden / Hepsiburada', 'Sektör / iş dizini', 'Wikipedia / Vikipedi', 'Hiçbiri']
 
 // ─── Helper components ────────────────────────────────────────────────────────
@@ -98,6 +100,18 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 
 // ─── Prompt builder ────────────────────────────────────────────────────────────
 
+/**
+ * Sosyal kanal listesini prompt için metne çevirir.
+ * "Diğer" seçiliyse yerine kullanıcının yazdığı kanal adı konur — yapay zekaya
+ * "Diğer" demek bilgi taşımaz, "WhatsApp Business" taşır.
+ */
+function sosyalKanalMetni(kanallar: string[], digerAdi: string): string {
+  const temiz = digerAdi.trim()
+  return kanallar
+    .map((k) => (k === DIGER_KANAL ? (temiz || DIGER_KANAL) : k))
+    .join(', ')
+}
+
 function buildPrompt(f: Record<string, string | string[]>): string {
   return `Sen yapay zeka görünürlük uzmanısın. Aşağıdaki anket yanıtlarına göre bu işletmenin AI Görünürlük Skorunu hesapla.
 
@@ -119,7 +133,7 @@ GOOGLE & YORUM PLATFORMLARI:
 
 SOSYAL MEDYA & LİNKEDİN:
 - LinkedIn güncelleme sıklığı: ${f.q_linkedin}
-- Aktif sosyal medya kanalları: ${(f.q_social as string[]).join(', ') || 'Hiçbiri'}
+- Aktif sosyal medya kanalları: ${sosyalKanalMetni(f.q_social as string[], f.q_social_other as string) || 'Hiçbiri'}
 
 MEDYA & DİZİNLER:
 - Medyada yer aldı mı: ${f.q_media}
@@ -172,6 +186,9 @@ export function AiGorunurlukPage() {
   // Sosyal medya
   const [qLinkedin, setQLinkedin] = useState('')
   const [qSocial, setQSocial] = useState<string[]>([])
+  // "Diğer" işaretlendiğinde kullanıcının yazdığı kanal adı (ör. WhatsApp)
+  const [qSocialOther, setQSocialOther] = useState('')
+  const digerSecili = qSocial.includes(DIGER_KANAL)
 
   // Medya & dizin
   const [qMedia, setQMedia] = useState('')
@@ -191,7 +208,7 @@ export function AiGorunurlukPage() {
         biz, sector, city, web,
         q_services: qServices, q_refs: qRefs, q_contact: qContact,
         q_gbp: qGbp, q_reviews: qReviews, q_sikayet: qSikayet,
-        q_linkedin: qLinkedin, q_social: qSocial,
+        q_linkedin: qLinkedin, q_social: qSocial, q_social_other: qSocialOther,
         q_media: qMedia, q_dirs: qDirs, q_cert: qCert,
         q_keywords: qKeywords, q_lang: qLang, extra,
       })
@@ -209,7 +226,7 @@ export function AiGorunurlukPage() {
     biz, sector, city, web,
     q_services: qServices, q_refs: qRefs, q_contact: qContact,
     q_gbp: qGbp, q_reviews: qReviews, q_sikayet: qSikayet,
-    q_linkedin: qLinkedin, q_social: qSocial,
+    q_linkedin: qLinkedin, q_social: qSocial, q_social_other: qSocialOther,
     q_media: qMedia, q_dirs: qDirs, q_cert: qCert,
     q_keywords: qKeywords, q_lang: qLang, extra,
   })
@@ -334,6 +351,17 @@ export function AiGorunurlukPage() {
                 <div>
                   <p className="text-sm font-medium text-[#6B6963] mb-1">Aktif olduğunuz sosyal medya kanalları <span className="font-normal text-gray-400">(birden fazla seçilebilir)</span></p>
                   <CheckGroup values={qSocial} onChange={setQSocial} options={SOSYAL_KANALLAR} />
+
+                  {digerSecili && (
+                    <div className="mt-2">
+                      <Input
+                        label="Hangi kanal?"
+                        placeholder="Örn: WhatsApp Business, Telegram, Pinterest"
+                        value={qSocialOther}
+                        onChange={(e) => setQSocialOther(e.target.value)}
+                      />
+                    </div>
+                  )}
                 </div>
 
                 {/* ── Medya & Dizin ── */}
@@ -404,6 +432,7 @@ export function AiGorunurlukPage() {
                     if (typeof d.q_sikayet === 'string') setQSikayet(d.q_sikayet)
                     if (typeof d.q_linkedin === 'string') setQLinkedin(d.q_linkedin)
                     if (Array.isArray(d.q_social)) setQSocial(d.q_social as string[])
+                    if (typeof d.q_social_other === 'string') setQSocialOther(d.q_social_other)
                     if (typeof d.q_media === 'string') setQMedia(d.q_media)
                     if (Array.isArray(d.q_dirs)) setQDirs(d.q_dirs as string[])
                     if (typeof d.q_cert === 'string') setQCert(d.q_cert)

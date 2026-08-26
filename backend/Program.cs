@@ -88,10 +88,18 @@ builder.Services.AddHttpClient<N8nProxyService>(client =>
     client.Timeout = TimeSpan.FromSeconds(240);
 });
 builder.Services.AddScoped<TokenService>();
-builder.Services.AddScoped<EmailService>();
+// Singleton: durum tutmuyor (yalnızca config + SMTP). Kayıt akışında
+// arka plana alınabilmesi için istek kapsamına bağlı OLMAMASI gerekiyor.
+builder.Services.AddSingleton<EmailService>();
 builder.Services.AddScoped<UserService>();
 builder.Services.AddScoped<ToolUsageService>();
 builder.Services.AddScoped<SubscriptionService>();
+
+// Brevo pazarlama listesi — kayıt akışını bloklamaması için kısa timeout
+builder.Services.AddHttpClient<BrevoContactService>(client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(10);
+});
 
 // PayTR ödeme — ayrı HttpClient (token alma kısa, 30s yeterli)
 builder.Services.AddHttpClient("paytr", client =>

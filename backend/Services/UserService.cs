@@ -35,9 +35,14 @@ public class UserService(AppDbContext db, TokenService tokens, EmailService emai
         db.Users.Add(user);
         await db.SaveChangesAsync();
 
-        // E-posta doğrulama maili gönder (hata uygulama akışını durdurmasın)
-        try { await email.SendVerificationEmailAsync(user.Email, user.Name, verificationToken); }
-        catch { /* log already done in EmailService */ }
+        // E-posta doğrulama maili ARKA PLANDA gönderilir.
+        //
+        // NEDEN: Her mail için yeni SMTP bağlantısı açılıyor (TLS el sıkışması +
+        // kimlik doğrulama ≈ 3.5 sn). Bu süre kayıt yanıtını bekletiyordu;
+        // kullanıcı "Kaydet"e basıp ekranda bekliyordu (26 Ağu 2026'da bildirildi).
+        // EmailService singleton ve durumsuz olduğu için istek kapsamı kapansa da
+        // güvenle çalışır; hataları kendi içinde loglar, dışarı sızdırmaz.
+        _ = email.SendVerificationEmailAsync(user.Email, user.Name, verificationToken);
 
         return (user, tokens.GenerateAccessToken(user), refreshToken);
     }
@@ -75,7 +80,13 @@ public class UserService(AppDbContext db, TokenService tokens, EmailService emai
     }
 
     // ── Google OAuth ──────────────────────────────────────────────────────────
-    public async Task<(User user, string accessToken, string refreshToken)?> GoogleLoginAsync(
+    /// <param name="idToken">Google kimlik jetonu.</param>
+    /// <returns>
+    /// Kullanıcı, jetonlar ve <c>isNewUser</c>. Son alan, hoş geldin e-posta
+    /// serisinin yalnızca ilk kayıtta tetiklenmesi için gereklidir — Google ile
+    /// her girişte kişi yeniden eklenmemelidir.
+    /// </returns>
+    public async Task<(User user, string accessToken, string refreshToken, bool isNewUser)?> GoogleLoginAsync(
         string idToken)
     {
         var clientId = config["Google:ClientId"]
@@ -99,6 +110,8 @@ public class UserService(AppDbContext db, TokenService tokens, EmailService emai
         // Önce Google ID ile ara, sonra e-posta ile ara, yoksa oluştur
         var user = await db.Users.FirstOrDefaultAsync(u => u.GoogleId == googleId)
                 ?? await db.Users.FirstOrDefaultAsync(u => u.Email == gEmail);
+
+        var isNewUser = user is null;
 
         if (user is null)
         {
@@ -131,7 +144,7 @@ public class UserService(AppDbContext db, TokenService tokens, EmailService emai
 
         await db.SaveChangesAsync();
 
-        return (user, tokens.GenerateAccessToken(user), refreshToken);
+        return (user, tokens.GenerateAccessToken(user), refreshToken, isNewUser);
     }
 
     // ── E-posta doğrulama ─────────────────────────────────────────────────────

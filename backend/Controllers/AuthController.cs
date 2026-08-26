@@ -8,7 +8,10 @@ namespace KolayKobi.Api.Controllers;
 
 [ApiController]
 [Route("api/auth")]
-public class AuthController(UserService users) : ControllerBase
+public class AuthController(
+    UserService users,
+    IServiceScopeFactory scopeFactory,
+    ILogger<AuthController> logger) : ControllerBase
 {
     // Şifre: en az 8 karakter, en az 1 büyük harf, 1 küçük harf, 1 rakam
     private const string PasswordPattern =
@@ -51,6 +54,9 @@ public class AuthController(UserService users) : ControllerBase
             return Conflict(new { success = false, error = "Bu e-posta adresi zaten kayıtlı." });
 
         var (user, access, refresh) = result.Value;
+
+        BrevoyaArkaPlandaEkle(user.Email, user.Name);
+
         return Ok(new
         {
             success = true,
@@ -97,7 +103,11 @@ public class AuthController(UserService users) : ControllerBase
         if (result is null)
             return Unauthorized(new { success = false, error = "Google doğrulaması başarısız." });
 
-        var (user, access, refresh) = result.Value;
+        var (user, access, refresh, isNewUser) = result.Value;
+
+        // Yalnızca ilk kayıtta listeye ekle — her Google girişinde değil
+        if (isNewUser) BrevoyaArkaPlandaEkle(user.Email, user.Name);
+
         return Ok(new
         {
             success = true,
@@ -217,5 +227,33 @@ public class AuthController(UserService users) : ControllerBase
         var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
         await users.LogoutAsync(userId);
         return NoContent();
+    }
+
+    /// <summary>
+    /// Kullanıcıyı Brevo hoş geldin listesine ARKA PLANDA ekler.
+    ///
+    /// Kayıt yanıtı bu çağrıyı beklememelidir: Brevo API'si ~0.7 sn sürüyor ve
+    /// pazarlama otomasyonu, kullanıcının hesabının açılmasını geciktirmemeli.
+    /// Brevo tamamen erişilemez olsa bile kayıt sorunsuz tamamlanır.
+    ///
+    /// Kendi servis kapsamını açar — istek kapsamı yanıt döndükten sonra
+    /// kapandığı için dışarıdan alınan servis örneği kullanılamaz.
+    /// </summary>
+    private void BrevoyaArkaPlandaEkle(string email, string name)
+    {
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                using var scope = scopeFactory.CreateScope();
+                var brevo = scope.ServiceProvider.GetRequiredService<BrevoContactService>();
+                await brevo.AddToWelcomeListAsync(email, name);
+            }
+            catch (Exception ex)
+            {
+                // Arka plan görevi: istisna hiçbir yere sızmamalı
+                logger.LogError(ex, "Brevo arka plan ekleme başarısız: {Email}", email);
+            }
+        });
     }
 }
