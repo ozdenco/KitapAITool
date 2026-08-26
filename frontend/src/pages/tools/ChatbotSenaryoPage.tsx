@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '@/lib/api'
-import { parseAiJson } from '@/lib/parseAiJson'
+import { parseAiJson, extractAiContent } from '@/lib/parseAiJson'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
@@ -202,7 +202,7 @@ export function ChatbotSenaryoPage() {
     mutationFn: async () => {
       const prompt = buildPrompt({ biz, sector, services, hours, faqs, redirectGoal, redirectLink, fileText })
       const res = await api.post('/tools/chatbot-senaryo/run', { prompt })
-      const content = res.data?.content?.[0]?.text ?? res.data
+      const content = extractAiContent(res.data)
       // Backend kaydettiği ToolResult Id'sini header ile döndürür; gömme kodu bunu kullanır
       const resultId = (res.headers?.['x-result-id'] as string | undefined) ?? null
       return { senaryo: parseAiJson<ChatbotResult>(content), resultId }

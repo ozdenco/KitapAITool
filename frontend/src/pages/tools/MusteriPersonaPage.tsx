@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '@/lib/api'
-import { parseAiJson } from '@/lib/parseAiJson'
+import { parseAiJson, extractAiContent } from '@/lib/parseAiJson'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
@@ -139,7 +139,7 @@ export function MusteriPersonaPage() {
     mutationFn: async () => {
       const prompt = buildPrompt({ biz, sector, city, service, age, price, current, pains })
       const res = await api.post('/tools/musteri-persona/run', { prompt })
-      const content = res.data?.content?.[0]?.text ?? res.data
+      const content = extractAiContent(res.data)
       return parseAiJson<PersonaResponse>(content)
     },
     onSuccess: (data) => {

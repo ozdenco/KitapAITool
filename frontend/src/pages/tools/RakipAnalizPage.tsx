@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '@/lib/api'
-import { parseAiJson } from '@/lib/parseAiJson'
+import { parseAiJson, extractAiContent } from '@/lib/parseAiJson'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
@@ -149,7 +149,7 @@ export function RakipAnalizPage() {
         .map((r) => ({ name: r.ad, ...(r.web ? { web: r.web } : {}) }))
       const res = await api.post('/tools/rakip-analiz/run', { prompt, competitors })
       // n8n iki alan döndürür: content (MiniMax analizi) + geminiPlatforms (sosyal medya araştırması)
-      const content = res.data?.content?.[0]?.text ?? res.data
+      const content = extractAiContent(res.data)
       const parsed = parseAiJson<RakipResult>(content)
       const geminiPlatforms: GeminiPlatform[] = Array.isArray(res.data?.geminiPlatforms)
         ? (res.data.geminiPlatforms as GeminiPlatform[])

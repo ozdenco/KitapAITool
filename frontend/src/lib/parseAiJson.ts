@@ -7,6 +7,45 @@
  * 3. Kesilmiş JSON onarımı: kapanmamış { ve [ parantezleri kapatılır,
  *    sondaki fazla virgüller temizlenir (uzun içerikte LLM token limit'e takılır)
  */
+/**
+ * n8n yanıtından AI metnini çıkarır.
+ *
+ * Araçlar tek tip yanıt döndürmüyor — workflow'a göre iki farklı sarmalayıcı gelebilir:
+ *
+ *   1. Dönüştürülmüş  : { content: [{ type: 'text', text: '...' }] }
+ *   2. Ham MiniMax    : { choices: [{ message: { content: '...' } }] }
+ *
+ * AI Görünürlük Takipçisi ikinci biçimi döndürüyordu; sayfa yalnızca birinciyi
+ * bildiği için `content` undefined kalıyor, tüm yanıt nesnesi parseAiJson'a
+ * geçiyor ve ekran boşalıyordu (26 Ağu 2026'da canlıda görüldü).
+ *
+ * Bu yardımcı iki biçimi de tanır; düz string de kabul eder.
+ */
+export function extractAiContent(data: unknown): unknown {
+  if (typeof data === 'string') return data
+  if (data === null || typeof data !== 'object') return data
+
+  const kayit = data as Record<string, unknown>
+
+  // 1) Dönüştürülmüş biçim
+  const content = kayit.content
+  if (Array.isArray(content) && content.length > 0) {
+    const ilk = content[0] as Record<string, unknown> | undefined
+    if (typeof ilk?.text === 'string') return ilk.text
+  }
+
+  // 2) Ham MiniMax biçimi
+  const choices = kayit.choices
+  if (Array.isArray(choices) && choices.length > 0) {
+    const mesaj = (choices[0] as Record<string, unknown> | undefined)?.message
+    const metin = (mesaj as Record<string, unknown> | undefined)?.content
+    if (typeof metin === 'string') return metin
+  }
+
+  // Tanınmayan biçim: olduğu gibi geç, parseAiJson karar versin
+  return data
+}
+
 export function parseAiJson<T>(raw: unknown): T {
   if (typeof raw !== 'string') return raw as T
 
