@@ -67,27 +67,31 @@ public class ToolUsageService(AppDbContext db)
             .Select(g => new { ToolId = g.Key, Count = g.Count() })
             .ToDictionaryAsync(x => x.ToolId, x => x.Count);
 
-        // Aktif araç satın alımları — tool bazında aylık limit
+        // Aktif araç satın alımları — aynı araç için birden fazla alım TOPLANIR
         var toolPurchaseMap = await db.ToolPurchases
             .Where(p => p.UserId == userId
                      && (p.ExpiresAt == null || p.ExpiresAt > DateTime.UtcNow))
             .GroupBy(p => p.ToolId)
-            .Select(g => new { ToolId = g.Key, MonthlyLimit = (int?)g.Max(p => p.MonthlyLimit) })
-            .ToDictionaryAsync(x => x.ToolId, x => x.MonthlyLimit);
+            .Select(g => new
+            {
+                ToolId   = g.Key,
+                Sinirsiz = g.Any(p => p.MonthlyLimit == null),
+                Toplam   = g.Sum(p => p.MonthlyLimit ?? 0),
+            })
+            .ToDictionaryAsync(x => x.ToolId, x => new { x.Sinirsiz, x.Toplam });
 
         return AllToolIds.Select(toolId =>
         {
             usageCounts.TryGetValue(toolId, out var used);
+            toolPurchaseMap.TryGetValue(toolId, out var satinAlim);
 
-            // Araç satın alımı varsa onun limiti geçerli (null = sınırsız)
-            if (toolPurchaseMap.TryGetValue(toolId, out var purchaseLimit))
-            {
-                var effectivePurchaseLimit = ApplyToolSpecificLimit(toolId, purchaseLimit);
-                return new ToolUsageSummary(toolId, used, effectivePurchaseLimit);
-            }
+            // Plan limiti ile satın alımlar TOPLANIR (bkz. EfektifLimit)
+            var limit = EfektifLimit(
+                toolId,
+                planLimit,
+                satinAlim?.Sinirsiz ?? false,
+                satinAlim?.Toplam ?? 0);
 
-            // Yoksa plan limiti — araç bazlı kısıtı uygula
-            var limit = ApplyToolSpecificLimit(toolId, planLimit);
             return new ToolUsageSummary(toolId, used, limit);
         }).ToList();
     }
@@ -207,29 +211,27 @@ public class ToolUsageService(AppDbContext db)
         var used = await db.ToolUsageLogs
             .CountAsync(l => l.UserId == userId && l.ToolId == toolId && l.UsedAt >= monthStart);
 
-        // Aktif araç satın alımı var mı? → kendi monthly limitini uygula
-        var activePurchase = await db.ToolPurchases
+        // Aktif satın alımlar — aynı araç için birden fazla alım TOPLANIR
+        var aktifAlimlar = await db.ToolPurchases
             .Where(p => p.UserId == userId && p.ToolId == toolId
                      && (p.ExpiresAt == null || p.ExpiresAt > DateTime.UtcNow))
-            .OrderByDescending(p => p.MonthlyLimit)   // en yüksek limiti seç (null = sınırsız)
-            .FirstOrDefaultAsync();
+            .Select(p => p.MonthlyLimit)
+            .ToListAsync();
 
-        if (activePurchase is not null)
-        {
-            if (activePurchase.MonthlyLimit is null) return true;           // sınırsız satın alım
-            var purchaseEffective = ApplyToolSpecificLimit(toolId, activePurchase.MonthlyLimit);
-            return used < purchaseEffective;                                // aylık araç limiti (kısıtlı)
-        }
+        var satinAlimSinirsiz = aktifAlimlar.Any(l => l is null);
+        var satinAlimToplami  = aktifAlimlar.Sum(l => l ?? 0);
 
-        // Araç satın alımı yoksa — plan limitine bak.
-        // planLimit null SADECE gerçek sınırsızlıkta olur (yönetici veya Kurumsal plan);
+        // Plan limiti null SADECE gerçek sınırsızlıkta olur (yönetici veya Kurumsal);
         // aboneliği olmayan/süresi dolmuş kullanıcı ücretsiz plan limitine düşer.
         var planLimit = await GetPlanLimitAsync(userId);
-        if (planLimit is null) return true;                                 // yönetici / Kurumsal
 
-        var effectiveLimit = ApplyToolSpecificLimit(toolId, planLimit);
-        return used < effectiveLimit;
+        // Gösterilen limitle aynı hesap kullanılır — ikisi ayrışırsa kullanıcı
+        // "0/20" görüp 10'da engellenir.
+        var efektif = EfektifLimit(toolId, planLimit, satinAlimSinirsiz, satinAlimToplami);
+        if (efektif is null) return true;                                   // sınırsız
+        return used < efektif.Value;
     }
+
 
     public async Task RecordUsageAsync(Guid userId, string toolId, bool success = true)
     {
@@ -268,6 +270,32 @@ public class ToolUsageService(AppDbContext db)
     /// </summary>
     private async Task<int?> GetPlanLimitAsync(Guid userId)
         => (await GetPlanSnapshotAsync(userId)).Limit;
+
+    /// <summary>
+    /// Bir aracın efektif aylık limiti: <b>plan limiti + aktif satın alımların TOPLAMI</b>.
+    /// <c>null</c> = sınırsız.
+    ///
+    /// ÖNEMLİ: Eskiden satın alım varsa plan limiti tamamen yok sayılıyor, ayrıca
+    /// aynı araç için birden fazla satın alımda <c>Max</c> alınıyordu. Kullanıcı
+    /// önce tekil araç (10 kullanım, ₺9) sonra Standart paket (10 kullanım, ₺199)
+    /// satın aldığında toplam 20 yerine 10 görüyordu — iki ayrı ödemenin biri
+    /// karşılıksız kalıyordu (26 Ağu 2026'da bildirildi).
+    /// </summary>
+    /// <param name="planLimit">Plan limiti; null = sınırsız (yönetici/Kurumsal).</param>
+    /// <param name="satinAlimSinirsiz">Aktif satın alımlardan biri sınırsız mı?</param>
+    /// <param name="satinAlimToplami">Sınırlı satın alımların toplamı.</param>
+    private static int? EfektifLimit(
+        string toolId,
+        int? planLimit,
+        bool satinAlimSinirsiz,
+        int satinAlimToplami)
+    {
+        // Sınırsızlık baskındır: taraflardan biri sınırsızsa sonuç sınırsız
+        if (planLimit is null || satinAlimSinirsiz) return null;
+
+        // Araç bazlı kısıt (ör. trend-video = 1/ay) toplam üzerine uygulanır
+        return ApplyToolSpecificLimit(toolId, planLimit.Value + satinAlimToplami);
+    }
 
     /// <summary>
     /// Bu aracın aylık hakkı tükendi mi?

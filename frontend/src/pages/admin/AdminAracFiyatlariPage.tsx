@@ -30,7 +30,7 @@ const TOOL_ENGINE_MAP: Record<string, {
   'reklam-butce':       { engine: 'minimax', unitsPerRun: 2,  unitLabel: 'token/çalıştırma', note: '2 kanal seçiminde 2 token · kanal sayısıyla orantılı' },
   'musteri-geri-donus': { engine: 'minimax', unitsPerRun: 3,  unitLabel: 'token/çalıştırma', note: '3 token · n8n 27 sn (önceki ölçümler 4-5 token)' },
   'chatbot-senaryo':    { engine: 'minimax', unitsPerRun: 2,  unitLabel: 'token/çalıştırma', note: '5 SSS · 2 token · n8n 14 sn' },
-  'ai-gorunurluk':      { engine: 'minimax', unitsPerRun: 0,  unitLabel: 'token/çalıştırma', note: 'Henüz ölçülmedi' },
+  'ai-gorunurluk':      { engine: 'minimax', unitsPerRun: 3,  unitLabel: 'token/çalıştırma', note: '3 token' },
   'viral-video':        { engine: 'minimax', unitsPerRun: 0,  unitLabel: 'token/çalıştırma', note: 'Henüz ölçülmedi' },
 }
 
