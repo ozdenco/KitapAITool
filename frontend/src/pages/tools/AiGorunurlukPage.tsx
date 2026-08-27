@@ -27,7 +27,7 @@ const SEKTORLER = [
   'Lojistik / Taşımacılık', 'E-ticaret / Perakende', 'Restoran / Kafe / Yiyecek',
   'Güzellik / Kuaför / Estetik', 'Sağlık / Klinik / Eczane', 'İnşaat / Gayrimenkul',
   'Muhasebe / Finans / Danışmanlık', 'Eğitim / Kurs / Koçluk', 'Teknoloji / Yazılım',
-  'Turizm / Otel / Seyahat', 'Hukuk / Avukatlık', 'Üretim / İmalat',
+  'Turizm / Otel / Seyahat', 'Hukuk / Avukatlık', 'Üretim / İmalat', 'Giyim / Tekstil / Moda',
   'Temizlik / Hizmet', 'Diğer',
 ]
 

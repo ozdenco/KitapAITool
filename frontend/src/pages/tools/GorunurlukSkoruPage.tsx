@@ -40,6 +40,7 @@ const SEKTORLER = [
   'Güzellik / Estetik',
   'Lojistik / Taşımacılık',
   'Teknoloji / Yazılım',
+  'Giyim / Tekstil',
   'Diğer',
 ]
 

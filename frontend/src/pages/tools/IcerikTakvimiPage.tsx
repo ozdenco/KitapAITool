@@ -35,7 +35,7 @@ const SEKTORLER = [
   'Muhasebe / Finans', 'Sağlık / Klinik', 'Eğitim / Kurs',
   'İnşaat / Mühendislik', 'Hukuk / Danışmanlık', 'Perakende / Mağaza',
   'Yiyecek / İçecek', 'Güzellik / Estetik', 'Lojistik / Taşımacılık',
-  'Teknoloji / Yazılım', 'Diğer',
+  'Teknoloji / Yazılım', 'Giyim / Tekstil', 'Diğer',
 ]
 
 const PLATFORMLAR = ['Instagram', 'Facebook', 'LinkedIn', 'TikTok', 'Twitter/X', 'YouTube Shorts']

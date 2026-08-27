@@ -47,6 +47,7 @@ const SEKTORLER = [
   { value: 'Turizm / Otel / Seyahat',        label: 'Turizm / Otel / Seyahat' },
   { value: 'Hukuk / Avukatlık',              label: 'Hukuk / Avukatlık' },
   { value: 'Temizlik / Hizmet',              label: 'Temizlik / Hizmet' },
+  { value: 'Giyim / Tekstil / Moda',         label: 'Giyim / Tekstil / Moda' },
   { value: 'Diğer',                          label: 'Diğer' },
 ]
 
