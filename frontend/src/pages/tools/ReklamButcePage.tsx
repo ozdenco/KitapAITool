@@ -37,6 +37,21 @@ const SEKTORLER = [
 
 const HEDEFLER = ['Marka Bilinirliği', 'Lead Toplama', 'Satış Artırma']
 
+/** "Diğer" seçilince kullanıcı kendi kanalını yazabilir (ör. WhatsApp, Telegram) */
+const DIGER_KANAL = 'Diğer'
+
+/**
+ * Kanal listesini prompt için metne çevirir.
+ * "Diğer" seçiliyse yerine kullanıcının yazdığı ad konur — yapay zekaya
+ * "Diğer" demek bilgi taşımaz, "WhatsApp Business" taşır.
+ */
+function kanalMetni(kanallar: string[], digerAdi: string): string {
+  const temiz = digerAdi.trim()
+  return kanallar
+    .map((k) => (k === DIGER_KANAL ? (temiz || DIGER_KANAL) : k))
+    .join(', ')
+}
+
 const KANALLAR = [
   { value: 'Google Arama', label: 'Google Arama' },
   { value: 'Google Display', label: 'Google Display' },
@@ -45,13 +60,14 @@ const KANALLAR = [
   { value: 'LinkedIn', label: 'LinkedIn' },
   { value: 'TikTok', label: 'TikTok' },
   { value: 'YouTube', label: 'YouTube' },
+  { value: DIGER_KANAL, label: DIGER_KANAL },
 ]
 
 // ─── Prompt builder ────────────────────────────────────────────────────────────
 
 function buildPrompt(f: {
   biz: string; sector: string; budget: string
-  goal: string; audience: string; channels: string[]
+  goal: string; audience: string; channels: string[]; channelOther?: string
 }): string {
   return `Sen dijital reklam bütçesi uzmanısın. KOBİ'ler için reklam kanalı dağılımı ve tahmini performans hesaplıyorsun.
 
@@ -60,7 +76,7 @@ Sektör: ${f.sector}
 Aylık Bütçe: ${f.budget} TL
 Hedef: ${f.goal}
 Hedef Kitle: ${f.audience || 'belirtilmemiş'}
-Seçilen Kanallar: ${f.channels.join(', ')}
+Seçilen Kanallar: ${kanalMetni(f.channels, f.channelOther ?? '')}
 
 Bu bütçeyi ${f.goal} hedefine göre seçilen kanallar arasında dağıt.
 Her kanal için tahmini tıklama ve lead sayısı ver.
@@ -94,6 +110,9 @@ export function ReklamButcePage() {
   const [goal, setGoal] = useState('')
   const [audience, setAudience] = useState('')
   const [channels, setChannels] = useState<string[]>([])
+  // "Diğer" işaretlendiğinde kullanıcının yazdığı kanal adı
+  const [channelOther, setChannelOther] = useState('')
+  const digerSecili = channels.includes(DIGER_KANAL)
   const [result, setResult] = useState<ReklamResult | null>(null)
 
   const toggleChannel = (v: string) =>
@@ -101,7 +120,7 @@ export function ReklamButcePage() {
 
   const mutation = useMutation({
     mutationFn: async () => {
-      const prompt = buildPrompt({ biz, sector, budget, goal, audience, channels })
+      const prompt = buildPrompt({ biz, sector, budget, goal, audience, channels, channelOther })
       const res = await api.post('/tools/reklam-butce/run', { prompt })
       const content = extractAiContent(res.data)
       return parseAiJson<ReklamResult>(content)
@@ -185,6 +204,17 @@ export function ReklamButcePage() {
                       </label>
                     ))}
                   </div>
+
+                  {/* "Diğer" seçilince kullanıcı kendi kanalını yazar */}
+                  {digerSecili && (
+                    <input
+                      type="text"
+                      value={channelOther}
+                      onChange={(e) => setChannelOther(e.target.value)}
+                      placeholder="Hangi kanal? Örn: WhatsApp Business, Telegram"
+                      className="mt-2 w-full px-3 py-2 text-sm border border-[#D3D1C7] rounded-lg bg-white text-[#1C1B19] placeholder:text-[#9A9792] outline-none focus:border-[#1D9E75] focus:ring-2 focus:ring-[#1D9E75]/10"
+                    />
+                  )}
                 </div>
 
                 <Input
@@ -220,7 +250,7 @@ export function ReklamButcePage() {
 
                 <FormPersistButtons
                   filename="reklam-butce-formu.json"
-                  getData={() => ({ biz, sector, budget, goal, audience, channels })}
+                  getData={() => ({ biz, sector, budget, goal, audience, channels, channelOther })}
                   onLoad={(d) => {
                     if (typeof d.biz === 'string') setBiz(d.biz)
                     if (typeof d.sector === 'string') setSector(d.sector)
@@ -228,6 +258,7 @@ export function ReklamButcePage() {
                     if (typeof d.goal === 'string') setGoal(d.goal)
                     if (typeof d.audience === 'string') setAudience(d.audience)
                     if (Array.isArray(d.channels)) setChannels(d.channels as string[])
+                    if (typeof d.channelOther === 'string') setChannelOther(d.channelOther)
                   }}
                 />
                 {rateBar}

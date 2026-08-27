@@ -43,13 +43,29 @@ const SEKTORLER = [
   'Diğer',
 ]
 
+/** "Diğer" seçilince kullanıcı kendi platformunu yazabilir (ör. Telegram, TikTok) */
+const DIGER_PLATFORM = 'Diğer'
+
 const PLATFORMLAR = [
   { value: 'Google Business', label: 'Google Business' },
   { value: 'Instagram', label: 'Instagram' },
   { value: 'Facebook', label: 'Facebook' },
   { value: 'WhatsApp İş', label: 'WhatsApp İş' },
+  { value: DIGER_PLATFORM, label: DIGER_PLATFORM },
   { value: 'Hiçbiri', label: 'Hiçbiri' },
 ]
+
+/**
+ * Platform listesini prompt için metne çevirir.
+ * "Diğer" seçiliyse yerine kullanıcının yazdığı ad konur — yapay zekaya
+ * "Diğer" demek bilgi taşımaz, "Telegram" taşır.
+ */
+function platformMetni(platformlar: string[], digerAdi: string): string {
+  const temiz = digerAdi.trim()
+  return platformlar
+    .map((p) => (p === DIGER_PLATFORM ? (temiz || DIGER_PLATFORM) : p))
+    .join(', ')
+}
 
 const MUSTERI_HEDEFLERI = ['1–5', '5–20', '20–50', '50+']
 
@@ -61,6 +77,7 @@ function buildPrompt(fields: {
   city: string
   web: string
   platforms: string[]
+  platformOther?: string
   liExists: string
   liActive: string
   goal: string
@@ -79,7 +96,7 @@ function buildPrompt(fields: {
     '- Sektör: ' + fields.sector + '\n' +
     '- Şehir: ' + fields.city + '\n' +
     '- Web sitesi: ' + (fields.web || 'yok') + '\n' +
-    '- Mevcut platformlar: ' + (fields.platforms.length ? fields.platforms.join(', ') : 'hiçbiri') + '\n' +
+    '- Mevcut platformlar: ' + (fields.platforms.length ? platformMetni(fields.platforms, fields.platformOther ?? '') : 'hiçbiri') + '\n' +
     '- LinkedIn sayfası: ' + liInfo + '\n' +
     '- Aylık müşteri hedefi: ' + (fields.goal || 'belirtilmemiş') + '\n\n' +
     'GÖREV:\n' +
@@ -132,6 +149,9 @@ export function GorunurlukSkoruPage() {
   const [city, setCity] = useState('')
   const [web, setWeb] = useState('')
   const [platforms, setPlatforms] = useState<string[]>([])
+  // "Diğer" işaretlendiğinde kullanıcının yazdığı platform adı
+  const [platformOther, setPlatformOther] = useState('')
+  const digerSecili = platforms.includes(DIGER_PLATFORM)
   const [liExists, setLiExists] = useState('')
   const [liActive, setLiActive] = useState('')
   const [goal, setGoal] = useState('')
@@ -144,7 +164,7 @@ export function GorunurlukSkoruPage() {
 
   const mutation = useMutation({
     mutationFn: async () => {
-      const prompt = buildPrompt({ name, sector, city, web, platforms, liExists, liActive, goal })
+      const prompt = buildPrompt({ name, sector, city, web, platforms, platformOther, liExists, liActive, goal })
       const res = await api.post('/tools/gorunurluk-skoru/run', { prompt })
       const content = extractAiContent(res.data)
       return parseAiJson<ScoreResult>(content)
@@ -232,6 +252,19 @@ export function GorunurlukSkoruPage() {
                       )
                     })}
                   </div>
+
+                  {/* "Diğer" seçilince kullanıcı kendi platformunu yazar */}
+                  {digerSecili && (
+                    <div className="mt-2">
+                      <input
+                        type="text"
+                        value={platformOther}
+                        onChange={(e) => setPlatformOther(e.target.value)}
+                        placeholder="Hangi platform? Örn: Telegram, TikTok, X"
+                        className="w-full px-3 py-2 text-sm border border-[#D3D1C7] rounded-lg bg-white text-[#1C1B19] placeholder:text-[#9A9792] outline-none focus:border-[#1D9E75] focus:ring-2 focus:ring-[#1D9E75]/10"
+                      />
+                    </div>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -272,13 +305,14 @@ export function GorunurlukSkoruPage() {
 
                 <FormPersistButtons
                   filename="gorunurluk-skoru-formu.json"
-                  getData={() => ({ name, sector, city, web, platforms, liExists, liActive, goal })}
+                  getData={() => ({ name, sector, city, web, platforms, platformOther, liExists, liActive, goal })}
                   onLoad={(d) => {
                     if (typeof d.name === 'string') setName(d.name)
                     if (typeof d.sector === 'string') setSector(d.sector)
                     if (typeof d.city === 'string') setCity(d.city)
                     if (typeof d.web === 'string') setWeb(d.web)
                     if (Array.isArray(d.platforms)) setPlatforms(d.platforms as string[])
+                    if (typeof d.platformOther === 'string') setPlatformOther(d.platformOther)
                     if (typeof d.liExists === 'string') setLiExists(d.liExists)
                     if (typeof d.liActive === 'string') setLiActive(d.liActive)
                     if (typeof d.goal === 'string') setGoal(d.goal)

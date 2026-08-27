@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import api from '@/lib/api'
 import { TOOLS } from '@/lib/tools'
+import { parseAiJson, extractAiContent } from '@/lib/parseAiJson'
 import { ToolOutputRenderer } from '@/components/ui/ToolOutputRenderer'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -173,19 +174,23 @@ function ResultDetailPanel({ result: summary, onClose }: { result: ResultSummary
     if (Array.isArray(raw) && raw.length === 1) raw = raw[0]
     parsed = raw as Record<string, unknown>
 
-    if (parsed && typeof parsed === 'object' && 'content' in parsed) {
-      const content = (parsed as { content: unknown }).content
-      if (Array.isArray(content) && content[0] && typeof (content[0] as { text?: string }).text === 'string') {
-        try {
-          const inner = JSON.parse((content[0] as { text: string }).text) as Record<string, unknown>
-          // Preserve top-level fields that live alongside content (e.g. geminiPlatforms)
-          const extras: Record<string, unknown> = {}
-          for (const k of Object.keys(parsed)) {
-            if (k !== 'content') extras[k] = parsed[k]
-          }
-          parsed = { ...inner, ...extras }
-        } catch { /* keep raw parsed */ }
-      }
+    // Kaydedilen çıktı iki farklı sarmalayıcıyla gelebilir:
+    //   { content: [{ text: '...' }] }              → dönüştürülmüş
+    //   { choices: [{ message: { content: '...' }}]} → ham MiniMax
+    // Eskiden yalnızca ilki tanınıyordu; AI Görünürlük Takipçisi ikinci biçimde
+    // kaydedildiği için kayıt listede görünüyor ama içeriği boş açılıyordu
+    // (27 Ağu 2026'da bildirildi). parseAiJson ayrıca <think>/markdown temizler.
+    const icMetin = extractAiContent(parsed)
+    if (typeof icMetin === 'string') {
+      try {
+        const inner = parseAiJson<Record<string, unknown>>(icMetin)
+        // Sarmalayıcının yanındaki üst düzey alanları koru (ör. geminiPlatforms)
+        const extras: Record<string, unknown> = {}
+        for (const k of Object.keys(parsed)) {
+          if (k !== 'content' && k !== 'choices') extras[k] = parsed[k]
+        }
+        parsed = { ...inner, ...extras }
+      } catch { /* keep raw parsed */ }
     }
   } catch { /* outputJson might be raw text */ }
 
