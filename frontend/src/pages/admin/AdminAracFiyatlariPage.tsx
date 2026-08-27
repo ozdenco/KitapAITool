@@ -23,10 +23,10 @@ const TOOL_ENGINE_MAP: Record<string, {
 }> = {
   'icerik-takvimi':     { engine: 'minimax', unitsPerRun: 10, unitLabel: 'token/çalıştırma', note: '1 gün + 1 platform · 10-11 token gözlendi' },
   'trend-video':        { engine: 'apify',   unitsPerRun: 1,  unitLabel: 'run/çalıştırma' },
-  'rakip-analiz':       { engine: 'gemini',  unitsPerRun: 0,  unitLabel: 'token/çalıştırma', note: 'MiniMax + Gemini Flash — token henüz ölçülmedi' },
+  'rakip-analiz':       { engine: 'gemini',  unitsPerRun: 1,  unitLabel: 'token/çalıştırma', note: 'MiniMax 1 token + Gemini Flash (tahmini)' },
   'gorunurluk-skoru':   { engine: 'minimax', unitsPerRun: 3,  unitLabel: 'token/çalıştırma', note: '3 token · n8n 20 sn' },
   'musteri-persona':    { engine: 'minimax', unitsPerRun: 2,  unitLabel: 'token/çalıştırma', note: '2 token · n8n 41 sn' },
-  'whatsapp-satis':     { engine: 'minimax', unitsPerRun: 0,  unitLabel: 'token/çalıştırma', note: 'Henüz ölçülmedi' },
+  'whatsapp-satis':     { engine: 'minimax', unitsPerRun: 3,  unitLabel: 'token/çalıştırma', note: '3 token' },
   'reklam-butce':       { engine: 'minimax', unitsPerRun: 2,  unitLabel: 'token/çalıştırma', note: '2 kanal seçiminde 2 token · kanal sayısıyla orantılı' },
   'musteri-geri-donus': { engine: 'minimax', unitsPerRun: 3,  unitLabel: 'token/çalıştırma', note: '3 token · n8n 27 sn (önceki ölçümler 4-5 token)' },
   'chatbot-senaryo':    { engine: 'minimax', unitsPerRun: 2,  unitLabel: 'token/çalıştırma', note: '5 SSS · 2 token · n8n 14 sn' },
@@ -189,7 +189,9 @@ function MaliyetPaneli({ prices }: { prices?: ToolPrice[] }) {
     if (!m || m.unitsPerRun === 0) return 0
     if (m.engine === 'minimax') return minimaxCostPerToken * m.unitsPerRun
     if (m.engine === 'apify')   return apifyCostPerRun     * m.unitsPerRun
-    if (m.engine === 'gemini')  return form.geminiCostPerRunUsd
+    // Rakip Analiz iki motoru BİRLİKTE kullanır: önce Gemini ile web araması,
+    // sonra MiniMax ile yorumlama. Yalnızca Gemini maliyetini saymak eksik kalıyordu.
+    if (m.engine === 'gemini')  return form.geminiCostPerRunUsd + minimaxCostPerToken * m.unitsPerRun
     return 0
   }
 
