@@ -8,6 +8,10 @@ import { Select } from '@/components/ui/Select'
 import { FormPersistButtons } from '@/components/ui/FormPersistButtons'
 import { ToolShell } from '@/components/ui/ToolShell'
 import { useElapsedSeconds } from '@/hooks/useElapsedSeconds'
+import { useProfilOnDolgu } from '@/hooks/useIsletmeProfili'
+import { markaKurallari } from '@/lib/markaKurallari'
+import { SEKTORLER } from '@/lib/sektorler'
+import { AramaliSecici } from '@/components/ui/AramaliSecici'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -28,13 +32,6 @@ interface ReklamResult {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const SEKTORLER = [
-  'Muhasebe / Finans', 'Sağlık / Klinik', 'Eğitim / Kurs',
-  'İnşaat / Mühendislik', 'Hukuk / Danışmanlık', 'Perakende / Mağaza',
-  'Yiyecek / İçecek', 'Güzellik / Estetik', 'Lojistik / Taşımacılık',
-  'Teknoloji / Yazılım', 'Giyim / Tekstil', 'Diğer',
-]
-
 const HEDEFLER = ['Marka Bilinirliği', 'Lead Toplama', 'Satış Artırma']
 
 /** "Diğer" seçilince kullanıcı kendi kanalını yazabilir (ör. WhatsApp, Telegram) */
@@ -51,6 +48,13 @@ function kanalMetni(kanallar: string[], digerAdi: string): string {
     .map((k) => (k === DIGER_KANAL ? (temiz || DIGER_KANAL) : k))
     .join(', ')
 }
+
+/*
+ * EN AZ 3 KANAL (12 Eyl 2026, Özden'in tespiti): tek kanal seçilince ortada
+ * dağıtılacak bir şey kalmıyor — çıktı "bütçenin tamamı şu kanala" oluyor ve
+ * araç hiçbir karar üretmiyor. Dağılımın anlamlı olması için en az üç kanal.
+ */
+const EN_AZ_KANAL = 3
 
 const KANALLAR = [
   { value: 'Google Arama', label: 'Google Arama' },
@@ -97,7 +101,8 @@ SADECE JSON döndür:
   "uyarilar": ["<dikkat edilmesi gereken 2-3 önemli nokta>"],
   "ctaText": "<${f.biz} için motivasyon cümlesi>"
 }
-Yüzdeler toplamı 100 olsun. Türkçe olsun.`
+Yüzdeler toplamı 100 olsun. Türkçe olsun.
+${markaKurallari()}`
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -112,6 +117,14 @@ export function ReklamButcePage() {
   const [channels, setChannels] = useState<string[]>([])
   // "Diğer" işaretlendiğinde kullanıcının yazdığı kanal adı
   const [channelOther, setChannelOther] = useState('')
+
+  // İşletme profilinden ön dolgu — boş alanlar doldurulur, kullanıcının
+  // yazdığına dokunulmaz (bkz. useProfilOnDolgu).
+  useProfilOnDolgu({
+    businessName: [biz, setBiz],
+    sector: [sector, setSector],
+    targetAudience: [audience, setAudience],
+  })
   const digerSecili = channels.includes(DIGER_KANAL)
   const [result, setResult] = useState<ReklamResult | null>(null)
 
@@ -121,7 +134,7 @@ export function ReklamButcePage() {
   const mutation = useMutation({
     mutationFn: async () => {
       const prompt = buildPrompt({ biz, sector, budget, goal, audience, channels, channelOther })
-      const res = await api.post('/tools/reklam-butce/run', { prompt })
+      const res = await api.post('/tools/reklam-butce/run', { prompt, isletmeAdi: biz })
       const content = extractAiContent(res.data)
       return parseAiJson<ReklamResult>(content)
     },
@@ -134,7 +147,7 @@ export function ReklamButcePage() {
   // Bekleme sirasinda gecen sureyi gosterir (sabit mesaj donmus hissi veriyordu)
   const elapsedSec = useElapsedSeconds(mutation.isPending)
 
-  const canSubmit = biz.trim() && sector && budget && goal && channels.length > 0 && !mutation.isPending
+  const canSubmit = biz.trim() && sector && budget && goal && channels.length >= EN_AZ_KANAL && !mutation.isPending
 
   return (
     <ToolShell
@@ -160,11 +173,11 @@ export function ReklamButcePage() {
                 />
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <Select
+                  <AramaliSecici
                     label="Sektör *"
                     value={sector}
-                    onChange={(e) => setSector(e.target.value)}
-                    options={[{ value: '', label: 'Seçin...' }, ...SEKTORLER.map((s) => ({ value: s, label: s }))]}
+                    onChange={setSector}
+                    secenekler={SEKTORLER}
                   />
                   <div>
                     <label className="block text-sm font-medium text-[#6B6963] mb-1.5">
@@ -225,7 +238,7 @@ export function ReklamButcePage() {
                 />
 
                 <div>
-                  <p className="text-sm font-medium text-[#6B6963] mb-2">Tercih edilen kanallar (en az 1 seçin) *</p>
+                  <p className="text-sm font-medium text-[#6B6963] mb-2">Tercih edilen kanallar (en az {EN_AZ_KANAL} seçin) *</p>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                     {KANALLAR.map((k) => (
                       <label
@@ -246,6 +259,12 @@ export function ReklamButcePage() {
                       </label>
                     ))}
                   </div>
+                  {channels.length > 0 && channels.length < EN_AZ_KANAL && (
+                    <p className="mt-2 text-[12.5px] text-[#7A5E12]">
+                      {EN_AZ_KANAL - channels.length} kanal daha seçin — bütçeyi paylaştırabilmek için
+                      en az {EN_AZ_KANAL} kanal gerekiyor.
+                    </p>
+                  )}
                 </div>
 
                 <FormPersistButtons
