@@ -4,8 +4,14 @@ import api from '@/lib/api'
 import { useAuthStore } from '@/store/auth'
 import { ACTIVE_TOOLS } from '@/lib/tools'
 
-// Standart/Premium paketlere dahil araçlar. `purchasable: false` olanlar (şu an
-// yalnızca Trend Video — Apify maliyeti nedeniyle ayda 1'e sabit) hariç tutulur.
+/*
+ * Standart/Premium paketlere dahil araçlar — LİSTEDEN TÜRETİLİR, elle sayılmaz.
+ * Dışarıda kalanlar: `active:false` olanlar (müşteriye kapalı) ve
+ * `purchasable:false` olanlar (Trend Video — Apify maliyeti nedeniyle paket dışı).
+ * 12 Eyl 2026: Trend Video Bulucu müşteriye kapatıldı. Özellik listesindeki araç
+ * sayısı SABİT ("10 araç*") yazıldığı için böyle değişikliklerde yanlış kalıyordu;
+ * artık bu listenin uzunluğundan basılıyor ve kendiliğinden düzeliyor.
+ */
 const KAPSANAN_ARAC_ADLARI = ACTIVE_TOOLS
   .filter((t) => t.purchasable !== false)
   .map((t) => t.name)
@@ -34,20 +40,20 @@ interface Subscription {
 const PLAN_FEATURES: Record<string, string[]> = {
   free: [
     '3 araç kullanım hakkı / araç / ay',
-    '10 araç*',
+    `${KAPSANAN_ARAC_ADLARI.length} araç*`,
     'Temel rapor çıktısı',
     'E-posta desteği',
   ],
   standard: [
     '10 araç kullanım hakkı / araç / ay',
-    '10 araç*',
+    `${KAPSANAN_ARAC_ADLARI.length} araç*`,
     'PDF rapor indirme',
     'Yapay zeka destekli analiz',
     'Uygulama kullanım desteği',
   ],
   premium: [
     '25 araç kullanım hakkı / araç / ay',
-    '10 araç*',
+    `${KAPSANAN_ARAC_ADLARI.length} araç*`,
     'PDF rapor indirme',
     'Yapay zeka destekli analiz',
     'Öncelikli uygulama desteği',

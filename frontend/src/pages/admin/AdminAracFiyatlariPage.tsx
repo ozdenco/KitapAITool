@@ -14,6 +14,10 @@ interface ToolPrice {
 }
 
 // Her araç için hangi AI motorunu kaç birim kullandığı
+//
+// 28 Ağu 2026: marka kuralları (markaKurallari.ts) prompt'lara eklendiği için
+// 9 aracın tüketimi 1 token arttı — ölçümle doğrulandı (persona 2 → 3).
+// Viral Video ve Trend Video etkilenmedi; onların prompt'ları n8n'de.
 // Token sayıları: araç çalıştırıldıkça gerçek değerler bildirilecek, şimdilik 0 = bilinmiyor
 const TOOL_ENGINE_MAP: Record<string, {
   engine: 'minimax' | 'gemini' | 'apify'
@@ -21,17 +25,17 @@ const TOOL_ENGINE_MAP: Record<string, {
   unitLabel: string
   note?: string
 }> = {
-  'icerik-takvimi':     { engine: 'minimax', unitsPerRun: 10, unitLabel: 'token/çalıştırma', note: '1 gün + 1 platform · 10-11 token gözlendi' },
+  'icerik-takvimi':     { engine: 'minimax', unitsPerRun: 11, unitLabel: 'token/çalıştırma', note: '1 gün + 1 platform · 10-11 token gözlendi · +1 marka kuralları' },
   'trend-video':        { engine: 'apify',   unitsPerRun: 1,  unitLabel: 'run/çalıştırma' },
-  'rakip-analiz':       { engine: 'gemini',  unitsPerRun: 1,  unitLabel: 'token/çalıştırma', note: 'MiniMax 1 token + Gemini Flash (tahmini)' },
-  'gorunurluk-skoru':   { engine: 'minimax', unitsPerRun: 3,  unitLabel: 'token/çalıştırma', note: '3 token · n8n 20 sn' },
-  'musteri-persona':    { engine: 'minimax', unitsPerRun: 2,  unitLabel: 'token/çalıştırma', note: '2 token · n8n 41 sn' },
-  'whatsapp-satis':     { engine: 'minimax', unitsPerRun: 3,  unitLabel: 'token/çalıştırma', note: '3 token' },
-  'reklam-butce':       { engine: 'minimax', unitsPerRun: 2,  unitLabel: 'token/çalıştırma', note: '2 kanal seçiminde 2 token · kanal sayısıyla orantılı' },
-  'musteri-geri-donus': { engine: 'minimax', unitsPerRun: 3,  unitLabel: 'token/çalıştırma', note: '3 token · n8n 27 sn (önceki ölçümler 4-5 token)' },
-  'chatbot-senaryo':    { engine: 'minimax', unitsPerRun: 2,  unitLabel: 'token/çalıştırma', note: '5 SSS · 2 token · n8n 14 sn' },
-  'ai-gorunurluk':      { engine: 'minimax', unitsPerRun: 3,  unitLabel: 'token/çalıştırma', note: '3 token' },
-  'viral-video':        { engine: 'minimax', unitsPerRun: 0,  unitLabel: 'token/çalıştırma', note: 'Henüz ölçülmedi' },
+  'rakip-analiz':       { engine: 'gemini',  unitsPerRun: 2,  unitLabel: 'token/çalıştırma', note: 'MiniMax 1 token + Gemini Flash $0,032865/run (ölçüldü) · +1 marka kuralları' },
+  'gorunurluk-skoru':   { engine: 'minimax', unitsPerRun: 4,  unitLabel: 'token/çalıştırma', note: '3 token · n8n 20 sn · +1 marka kuralları' },
+  'musteri-persona':    { engine: 'minimax', unitsPerRun: 5,  unitLabel: 'token/çalıştırma', note: '7 Eyl 2026 canlı ölçüm: 5 token (marka kuralları dahil) · eski değer 3 idi' },
+  'whatsapp-satis':     { engine: 'minimax', unitsPerRun: 11, unitLabel: 'token/çalıştırma', note: '7 itirazda 10 token · itiraz başına ~1 token (temel 3) · en fazla 10 itiraz → ~13 token · +1 marka kuralları' },
+  'reklam-butce':       { engine: 'minimax', unitsPerRun: 3,  unitLabel: 'token/çalıştırma', note: '2 kanal seçiminde 2 token · kanal sayısıyla orantılı · +1 marka kuralları' },
+  'musteri-geri-donus': { engine: 'minimax', unitsPerRun: 4,  unitLabel: 'token/çalıştırma', note: '3 token · n8n 27 sn (önceki ölçümler 4-5 token) · +1 marka kuralları' },
+  'chatbot-senaryo':    { engine: 'minimax', unitsPerRun: 3,  unitLabel: 'token/çalıştırma', note: '5 SSS · 2 token · n8n 14 sn · +1 marka kuralları' },
+  'ai-gorunurluk':      { engine: 'minimax', unitsPerRun: 4,  unitLabel: 'token/çalıştırma', note: '3 token · n8n 19,2 sn · ekranda 23 sn · +1 marka kuralları' },
+  'viral-video':        { engine: 'minimax', unitsPerRun: 2,  unitLabel: 'token/çalıştırma', note: '2 token · ekranda 42 sn' },
 }
 
 const TOOL_ICONS: Record<string, string> = {
@@ -102,7 +106,7 @@ const VARSAYILAN_PARAMETRELER = {
   minimaxMonthlyUsd:  5,      // $5/ay sabit MiniMax maliyeti
   claudeUsd:          20,     // $20/ay Claude (geliştirici sabit)
   geminiEstRunsMonth: 100,    // Gemini Flash tahmini aylık run (Rakip Analiz)
-  geminiCostPerRunUsd:0.003,  // Gemini Flash $/run (tahmini)
+  geminiCostPerRunUsd:0.032865, // Gemini Flash $/run (27 Ağu 2026 ölçümü — tahmin 0.003 idi, ~11 kat düşük çıkmış)
   apifyBudgetUsd:     29,     // $29
   apifyRuns:          50,     // 50 run
   n8nUsd:             20,     // $20/ay
@@ -295,10 +299,14 @@ function MaliyetPaneli({ prices }: { prices?: ToolPrice[] }) {
         {/* Gemini */}
         <div className="bg-[#F7F6F2] rounded-xl p-4 flex flex-col gap-3">
           <p className="text-[12px] font-semibold text-[#1C1B19]">✨ Gemini Flash (Rakip Analiz)</p>
-          <NumInput label="Çalıştırma başı maliyet" value={draft.geminiCostPerRunUsd} onChange={setF('geminiCostPerRunUsd')} suffix="$/run" step={0.001} />
+          <NumInput label="Çalıştırma başı maliyet" value={draft.geminiCostPerRunUsd} onChange={setF('geminiCostPerRunUsd')} suffix="$/run" step={0.0001} />
           <NumInput label="Aylık tahmini run"        value={draft.geminiEstRunsMonth}  onChange={setF('geminiEstRunsMonth')}  suffix="run" step={10} />
-          <div className="text-[11px] text-amber-700 bg-amber-50 rounded-lg px-3 py-2">
-            ⚠️ Token miktarı henüz ölçülmedi. Rakip Analiz çalıştırıldığında bildiriyorsun.
+          {/* Ölçüm 27 Ağu 2026'da yapıldı; buradaki uyarı ölçümden sonra da
+              koşulsuz görünmeye devam ediyordu. Yerine gerçek bileşim yazıldı. */}
+          <div className="text-[11px] text-[#6B6963] bg-white border border-[#E2E0D8] rounded-lg px-3 py-2 leading-relaxed">
+            Rakip Analiz <strong>iki motoru birlikte</strong> kullanır: MiniMax{' '}
+            {TOOL_ENGINE_MAP['rakip-analiz']?.unitsPerRun ?? 0} token + yukarıdaki
+            Gemini maliyeti. Araç başı maliyet ikisinin toplamıdır.
           </div>
         </div>
 
@@ -493,6 +501,7 @@ function MaliyetPaneli({ prices }: { prices?: ToolPrice[] }) {
         {trendVideoDahilDegil && (
           <p className="text-[11px] text-[#9A9792] mt-2">
             Trend Video Bulucu (Apify) toplama dahil değildir — ayrı fiyatlandırılır, paket dışıdır.
+            12 Eyl 2026'dan beri müşteriye de kapalı, yalnızca yönetici hesabında görünüyor.
           </p>
         )}
       </div>

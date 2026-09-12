@@ -16,9 +16,18 @@ namespace KolayKobi.Api.Controllers;
 public class ToolsController(
     ToolUsageService usage,
     N8nProxyService n8n,
+    VideoCreditService kredi,
     AppDbContext db,
     ILogger<ToolsController> logger) : ControllerBase
 {
+    /// <summary>Video üretimi kaç kredi tüketir: sahne başına 1 (1 kredi = 8 sn klip).</summary>
+    private static int KrediMaliyeti(JsonElement payload) =>
+        payload.ValueKind == JsonValueKind.Object
+        && payload.TryGetProperty("sahneler", out var el)
+        && el.ValueKind == JsonValueKind.Array
+            ? el.GetArrayLength()
+            : 0;
+
     private Guid CurrentUserId =>
         Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
 
@@ -127,6 +136,21 @@ public class ToolsController(
         return Ok(new { success = true, data = result });
     }
 
+    /*
+     * MÜŞTERİYE KAPALI ARAÇLAR (12 Eyl 2026, canlıya çıkış öncesi).
+     *
+     * Arayüzde gizlemek erişimi engellemiyor: adresi/uç noktayı bilen herhangi
+     * bir oturum açmış kullanıcı doğrudan istek atabilirdi. Bu uçlar GERÇEK PARA
+     * yakıyor (Veo klip üretimi, Apify çalıştırması), o yüzden kilit sunucuda.
+     *
+     * 404 dönüyoruz, 403 değil: aracın varlığını sızdırmanın anlamı yok.
+     */
+    private static readonly HashSet<string> YoneticiAraclari =
+        new(StringComparer.OrdinalIgnoreCase)
+        { "trend-video", "video-olusturma", "video-uret" };
+
+    private bool KullaniciYonetici => User.FindFirst("is_admin")?.Value == "true";
+
     /// <summary>POST /api/tools/{toolId}/run — Proxy request to n8n and log usage.</summary>
     [HttpPost("{toolId}/run")]
     public async Task<IActionResult> RunTool(
@@ -136,6 +160,27 @@ public class ToolsController(
     {
         var userId = CurrentUserId;
 
+        if (YoneticiAraclari.Contains(toolId) && !KullaniciYonetici)
+            return NotFound(new { error = "Araç bulunamadı." });
+
+        /*
+         * ÜCRETSİZ SAHNE PLANI ADIMI KULLANIM SAYILMAZ.
+         *
+         * video-uret iki aşamalı: önce ücretsiz sahne planı üretilir, kullanıcı
+         * okuyup onaylarsa ikinci istek videoyu üretir. İki aşama da aynı uca
+         * geliyor; ayrımı n8n'deki "Onaylanmış plan mı?" düğümüyle aynı sinyal
+         * veriyor: gövdede `sahneler` dizisi VARSA üretim, YOKSA plan.
+         *
+         * Eskiden ikisi de kullanım olarak sayılıyordu: kullanıcı yalnızca
+         * sahne planına baktığı hâlde Kullanım Raporu'nda "Video Üretimi"
+         * kayıtları oluşuyordu (8 Eyl 2026'da bildirildi — hiç video
+         * üretilmeden 2 kayıt).
+         *
+         * Kötüye kullanım riski sınırlı: plan adımına ancak Video Oluşturma
+         * aracını çalıştırmış (ve o kullanım sayılmış) bir kullanıcı ulaşıyor.
+         */
+        var planAdimi = toolId == "video-uret" && !SahneleriIceriyorMu(payload);
+
         // E-posta doğrulama + rate limit kontrolü
         bool canUse;
         try { canUse = await usage.CanUseToolAsync(userId, toolId); }
@@ -143,25 +188,100 @@ public class ToolsController(
         {
             return StatusCode(403, new { error = "EMAIL_NOT_VERIFIED" });
         }
-        if (!canUse)
+        if (!canUse && !planAdimi)
             return StatusCode(429, new { error = "Aylık kullanım limitinize ulaştınız. Planı yükseltin." });
+
+        /*
+         * VİDEO KREDİSİ ÖN KONTROLÜ.
+         *
+         * 1 kredi = 1 sahne (8 sn klip, ham maliyet ~$0.40). Bakiye ÖNCE
+         * bakılıyor: krediyi n8n çağrısından sonra düşüyoruz ki başlamayan bir
+         * iş için kullanıcı ödemesin, ama yetersiz bakiyeyle Veo'yu hiç
+         * tetiklememek gerek — o çağrı gerçek para yakıyor.
+         *
+         * Hak edilmiş ücretsiz önizleme varsa burada deftere yazılıyor;
+         * kullanıcı hakkı olduğu hâlde "krediniz yok" görmesin.
+         */
+        var krediMaliyeti = toolId == "video-uret" && !planAdimi ? KrediMaliyeti(payload) : 0;
+        if (krediMaliyeti > 0)
+        {
+            await kredi.UcretsizHakkiVerAsync(userId, ct);
+            var bakiye = await kredi.BakiyeAsync(userId, ct);
+            if (!await kredi.SinirsizMiAsync(userId, ct) && bakiye < krediMaliyeti)
+            {
+                return StatusCode(402, new
+                {
+                    error = $"Bu video {krediMaliyeti} kredi gerektiriyor, bakiyeniz {bakiye}. "
+                          + "Kredi yükleyip tekrar deneyin.",
+                    kredi = new { bakiye, gereken = krediMaliyeti },
+                });
+            }
+        }
 
         try
         {
             var response = await n8n.ForwardAsync(toolId, payload, ct);
-            var content = await response.Content.ReadAsStringAsync(ct);
+            var content = MojibakeOnarici.Onar(await response.Content.ReadAsStringAsync(ct));
 
             if (!response.IsSuccessStatusCode)
             {
                 logger.LogWarning("n8n returned {Status} for tool {ToolId}", response.StatusCode, toolId);
-                await usage.RecordUsageAsync(userId, toolId, success: false);
+                if (!planAdimi)
+                    await usage.RecordUsageAsync(userId, toolId, success: false);
                 return StatusCode((int)response.StatusCode, new { error = "Araç şu an kullanılamıyor. Lütfen tekrar deneyin." });
             }
 
-            await usage.RecordUsageAsync(userId, toolId, success: true);
+            // Ücretsiz plan adımı sayılmaz (bkz. yukarıdaki planAdimi açıklaması)
+            if (!planAdimi)
+                await usage.RecordUsageAsync(userId, toolId, success: true);
 
-            // Auto-save result for all successful runs (fire-and-forget for performance)
-            var resultId = await SaveToolResultAsync(userId, toolId, payload, content, ct);
+            /*
+             * Kredi, iş n8n tarafından KABUL EDİLDİKTEN sonra düşülüyor.
+             * İş sonradan başarısız olursa AsyncJobWatcher iade ediyor —
+             * üretilmeyen video için kredi yakmak güveni bitirir.
+             */
+            if (krediMaliyeti > 0)
+            {
+                AsyncJobHelper.TryExtractJobId(content, out var krediIsId);
+                await kredi.HarcaAsync(userId, krediMaliyeti, krediIsId, ct);
+            }
+
+            /*
+             * SONUCU KAYDET — ama async araçlarda BURADA DEĞİL.
+             *
+             * Async araçlarda (icerik-takvimi, trend-video, video-uret) bu yanıt
+             * sonuç değil, yalnızca bir İŞ BİLETİ: {_ok, isId, ...}. Kullanıcı
+             * için hiçbir anlamı yok. Gerçek sonuç iş bitince PollStatus
+             * tarafından kaydediliyor.
+             *
+             * Bileti de kaydetmek Geçmiş Çıktılar'da her çalıştırma için İKİ
+             * kayıt üretiyordu; biri açıldığında neredeyse boş görünüyordu
+             * (8 Eyl 2026'da Video Üretimi'nde bildirildi, üç aracı da
+             * etkiliyordu).
+             *
+             * Bu yüzden async araçlarda TEK bir YER TUTUCU satır açıyoruz.
+             * Satırı, iş bitince ya kullanıcının tarayıcısı (PollStatus) ya da
+             * AsyncJobWatcher arka plan servisi gerçek çıktıyla GÜNCELLİYOR.
+             * Hiç satır açmamak da yanlıştı: kullanıcı sekmeyi kapatınca
+             * tarayıcı yoklaması duruyor ve ürettiği videoyu bir daha
+             * bulamıyordu.
+             */
+            Guid? resultId;
+            if (planAdimi)
+            {
+                // Sahne planı ara adım — Geçmiş Çıktılar'a kayıt açmaz.
+                resultId = null;
+            }
+            else if (n8n.IsAsync(toolId) && AsyncJobHelper.TryExtractJobId(content, out var yeniJobId))
+            {
+                // YER TUTUCU satır — iş bitince AYNI satır güncellenecek.
+                resultId = await SaveToolResultAsync(
+                    userId, toolId, payload, AsyncJobHelper.BekleyenCiktisi(yeniJobId), ct);
+            }
+            else
+            {
+                resultId = await SaveToolResultAsync(userId, toolId, payload, content, ct);
+            }
 
             // Kayıt Id'sini header ile döndür: yanıt gövdesi n8n'den geldiği gibi
             // kalmalı (frontend parseAiJson bekliyor), araya alan eklemek kırardı.
@@ -216,24 +336,50 @@ public class ToolsController(
         try
         {
             var response = await n8n.PollJobAsync(toolId, jobId, ct);
-            var content = await response.Content.ReadAsStringAsync(ct);
+            var content = MojibakeOnarici.Onar(await response.Content.ReadAsStringAsync(ct));
 
-            // Async tool tamamlandığında sonucu DB'ye kaydet (kullanıcı tekrar başlatmasın diye)
-            if (TryParseCompleted(content, out var parsed) && parsed is not null)
+            /*
+             * İş bitmişse sonucu kalıcılaştır.
+             *
+             * Çalıştırma anında açılan YER TUTUCU satırı bulup GÜNCELLİYORUZ —
+             * yeni satır eklemiyoruz. Eskiden ekleniyordu ve her çalıştırma
+             * Geçmiş Çıktılar'da biri boş görünen iki kayıt bırakıyordu.
+             *
+             * Yer tutucu bulunamazsa (yer tutucudan önceki eski çalıştırmalar)
+             * eski davranışa düşülür: yeni satır eklenir.
+             */
+            if (AsyncJobHelper.TamamlandiMi(content))
             {
-                var alreadySaved = await db.ToolResults
-                    .AnyAsync(r => r.UserId == CurrentUserId
-                                && r.ToolId == toolId
-                                && r.InputSummary != null && r.InputSummary.Contains(jobId), ct);
+                var gercekCikti = AsyncJobHelper.GercekCiktiyiAyikla(content) ?? content;
 
-                if (!alreadySaved)
+                var yerTutucu = await db.ToolResults
+                    .Where(r => r.UserId == CurrentUserId
+                             && r.ToolId == toolId
+                             && r.OutputJson.Contains("\"jobId\":\"" + jobId + "\""))
+                    .FirstOrDefaultAsync(ct);
+
+                if (yerTutucu is not null)
                 {
-                    // InputSummary'ye jobId gömülü tutuyoruz — dedup için
-                    var fakePayload = System.Text.Json.JsonSerializer.Deserialize<JsonElement>(
-                        $"{{\"job_id\":\"{jobId}\"}}");
-                    // n8n wrapper'ından ({status,result:{content:[{text}]}}) gerçek çıktıyı çıkar
-                    var actualOutput = ExtractAsyncOutput(content) ?? content;
-                    await SaveToolResultAsync(CurrentUserId, toolId, fakePayload, actualOutput, ct);
+                    // Arka plan servisi önce yazmış olabilir — o zaman dokunma
+                    if (AsyncJobHelper.BekliyorMu(yerTutucu.OutputJson))
+                    {
+                        yerTutucu.OutputJson = gercekCikti;
+                        await db.SaveChangesAsync(ct);
+                    }
+                }
+                else
+                {
+                    var zatenVar = await db.ToolResults
+                        .AnyAsync(r => r.UserId == CurrentUserId
+                                    && r.ToolId == toolId
+                                    && r.InputSummary != null && r.InputSummary.Contains(jobId), ct);
+
+                    if (!zatenVar)
+                    {
+                        var fakePayload = System.Text.Json.JsonSerializer.Deserialize<JsonElement>(
+                            $"{{\"job_id\":\"{jobId}\"}}");
+                        await SaveToolResultAsync(CurrentUserId, toolId, fakePayload, gercekCikti, ct);
+                    }
                 }
             }
 
@@ -246,54 +392,11 @@ public class ToolsController(
         }
     }
 
-    /// <summary>
-    /// n8n async poll yanıtından ({status, result:{content:[{text}]}}) gerçek araç çıktısını çıkarır.
-    /// Geçmiş Çıktılar'da doğru render olması için wrapper olmadan kaydedilmesi gerekir.
-    /// </summary>
-    private static string? ExtractAsyncOutput(string wrappedJson)
-    {
-        try
-        {
-            var doc = JsonDocument.Parse(wrappedJson);
-            var root = doc.RootElement;
-
-            // { "status": "completed", "result": { "content": [{"type":"text","text":"..."}] } }
-            if (!root.TryGetProperty("result", out var resultEl)) return null;
-
-            if (resultEl.TryGetProperty("content", out var contentArr))
-            {
-                var texts = new System.Text.StringBuilder();
-                foreach (var item in contentArr.EnumerateArray())
-                {
-                    if (item.TryGetProperty("text", out var textEl))
-                        texts.Append(textEl.GetString() ?? "");
-                }
-                var combined = texts.ToString().Trim();
-                if (!string.IsNullOrEmpty(combined)) return combined;
-            }
-
-            // content dizisi yoksa result'ı direkt dön
-            return resultEl.GetRawText();
-        }
-        catch { return null; }
-    }
-
-    private static bool TryParseCompleted(string json, out JsonElement? result)
-    {
-        result = null;
-        try
-        {
-            var doc = System.Text.Json.JsonDocument.Parse(json);
-            if (doc.RootElement.TryGetProperty("status", out var statusEl)
-                && statusEl.GetString() == "completed")
-            {
-                result = doc.RootElement;
-                return true;
-            }
-        }
-        catch { /* malformed JSON — ignore */ }
-        return false;
-    }
+    /*
+     * NOT: "tamamlandı mı?" ve "sarmalayıcıdan gerçek çıktıyı ayıkla" mantığı
+     * AsyncJobHelper'a taşındı — aynı mantığı arka plan servisi (AsyncJobWatcher)
+     * de kullanıyor ve iki kopyanın zamanla ayrışması kaçınılmazdı.
+     */
 
     // ─── Helpers ──────────────────────────────────────────────────────────────
 
@@ -307,14 +410,32 @@ public class ToolsController(
     {
         try
         {
-            // Extract input summary: prompt (legacy) → videoDesc → biz + sector → toolId fallback
-            var summaryText =
-                TryGetString(payload, "prompt")     ??
-                TryGetString(payload, "videoDesc")  ??
-                TryGetString(payload, "videoUrl")   ??
-                CombineFields(payload, "biz", "sector") ??
-                "";
-            var summary = ExtractSummary(toolId, summaryText);
+            // İşletme adı ARTIK AÇIKÇA gönderiliyor (isletmeAdi alanı).
+            //
+            // Eskiden yalnızca prompt metni gelip regex ile "İşletme adı: X"
+            // kalıbı aranıyordu; araçlar bu ifadeyi farklı yazdığı için çoğunda
+            // eşleşmiyor ve özet olarak prompt'un ilk 120 karakteri
+            // ("Sen bir pazarlama stratejisti…") kaydediliyordu. Yönetici
+            // raporlarında hangi işletme için çalıştırıldığı anlaşılmıyordu.
+            //
+            // Alan yoksa eski davranışa düşülür (geriye dönük uyumluluk).
+            var acikIsletmeAdi = TryGetString(payload, "isletmeAdi");
+
+            string summary;
+            if (!string.IsNullOrWhiteSpace(acikIsletmeAdi))
+            {
+                summary = acikIsletmeAdi[..Math.Min(acikIsletmeAdi.Length, 150)];
+            }
+            else
+            {
+                var summaryText =
+                    TryGetString(payload, "prompt")     ??
+                    TryGetString(payload, "videoDesc")  ??
+                    TryGetString(payload, "videoUrl")   ??
+                    CombineFields(payload, "biz", "sector") ??
+                    "";
+                summary = ExtractSummary(toolId, summaryText);
+            }
 
             var kayit = new ToolResult
             {
@@ -333,6 +454,18 @@ public class ToolsController(
             logger.LogWarning(ex, "Failed to save tool result for {ToolId}", toolId);
             return null;
         }
+    }
+
+    /// <summary>
+    /// Gövdede onaylanmış sahne listesi var mı? n8n'deki "Onaylanmış plan mı?"
+    /// düğümüyle AYNI sinyal: doluysa video üretimi, boşsa ücretsiz plan adımı.
+    /// </summary>
+    private static bool SahneleriIceriyorMu(JsonElement payload)
+    {
+        if (payload.ValueKind != JsonValueKind.Object) return false;
+        return payload.TryGetProperty("sahneler", out var el)
+            && el.ValueKind == JsonValueKind.Array
+            && el.GetArrayLength() > 0;
     }
 
     private static string? TryGetString(JsonElement el, string key) =>

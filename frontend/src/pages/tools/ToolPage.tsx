@@ -1,4 +1,6 @@
 import { useParams, Link } from 'react-router-dom'
+import { useAuthStore } from '@/store/auth'
+import { TOOLS } from '@/lib/tools'
 import { GorunurlukSkoruPage } from './GorunurlukSkoruPage'
 import { MusteriPersonaPage } from './MusteriPersonaPage'
 import { IcerikTakvimiPage } from './IcerikTakvimiPage'
@@ -10,6 +12,7 @@ import { ChatbotSenaryoPage } from './ChatbotSenaryoPage'
 import { AiGorunurlukPage } from './AiGorunurlukPage'
 import { ViralVideoPage } from './ViralVideoPage'
 import { TrendVideoPage } from './TrendVideoPage'
+import { VideoOlusturmaPage } from './VideoOlusturmaPage'
 
 const TOOL_PAGES: Record<string, React.ComponentType> = {
   'gorunurluk-skoru': GorunurlukSkoruPage,
@@ -23,15 +26,27 @@ const TOOL_PAGES: Record<string, React.ComponentType> = {
   'ai-gorunurluk': AiGorunurlukPage,
   'viral-video': ViralVideoPage,
   'trend-video': TrendVideoPage,
+  'video-olusturma': VideoOlusturmaPage,
 }
 
 export function ToolPage() {
   const { toolId } = useParams<{ toolId: string }>()
+  const yonetici = useAuthStore((s) => s.user?.isAdmin ?? false)
 
   if (!toolId) return <NotFound />
 
   const Page = TOOL_PAGES[toolId]
   if (!Page) return <NotFound />
+
+  /*
+   * ADRESİ BİLEN GİREMESİN (12 Eyl 2026). Araç kaydında active:false olan
+   * araçlar hiçbir listede görünmüyordu ama /arac/<id> adresi elle yazıldığında
+   * sayfa yine de açılıyordu — gizlemek erişimi engellemiyor. Sunucu tarafında
+   * da aynı kısıt var (ToolsController.YoneticiAraclari); bu yalnızca kullanıcıyı
+   * boş bir forma sokmamak için.
+   */
+  const arac = TOOLS.find((t) => t.id === toolId)
+  if (arac?.active === false && !yonetici) return <NotFound />
 
   return <Page />
 }
