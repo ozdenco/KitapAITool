@@ -505,14 +505,29 @@ function promptKur(ham) {
 const GIRIS =
   /\b(?:walks?|steps?|comes?|bursts?|rushes?|hurries|strolls?)\s+(?:in|into|through)\b|\benters?\b/i;
 
+/*
+ * ZİL YALNIZCA DIŞARIDAN GELENE (13 Eyl 2026, Özden'in kararı).
+ *
+ * Zilin işlevi "biri geldi, bir şey olacak" beklentisi kurmak. Çay getiren
+ * ofis görevlisi ya da yan masadan kalkan iş arkadaşı için bu yersiz kaçıyor —
+ * onlar zaten içeride, geldikleri bir yer yok. Müşteri, kurye, kargo gibi
+ * DIŞARIDAN gelenlerde anlamlı.
+ */
+const ICERIDEN = new RegExp(
+  '\\b(?:tea tray|tea glass|colleague|co-?worker|office (?:assistant|staff|worker|boy)'
+  + '|staff member|another employee|the (?:assistant|secretary|receptionist))\\b', 'i');
+const ICERIDEN_TR = /çaycı|ofis görevlisi|çalışma arkadaş|iş arkadaş|meslektaş|personel|sekreter|asistan/i;
+
 function efektBelirle(s) {
   const verilen = String(s?.efekt || '').trim();
   if (verilen && verilen !== 'zil') return verilen;
   // Zil yalnızca ODAYA giriş için: üst panelde (sokakta, videoda) yürüyen biri
   // kapıdan girmiyor. Model zil yazmış olsa bile odada giriş yoksa zil yok.
   const odadaGiris = String(s?.prompt || '').split(/[.;]/)
-    .some((c) => GIRIS.test(c) && !UST_PANEL.test(c));
-  return odadaGiris ? 'zil' : '';
+    .some((c) => GIRIS.test(c) && !UST_PANEL.test(c) && !ICERIDEN.test(c));
+  // Sahne açıklaması "çaycı/iş arkadaşı geldi" diyorsa da zil çalmaz.
+  const iceridenKisi = ICERIDEN_TR.test(String(s?.aciklama || ''));
+  return odadaGiris && !iceridenKisi ? 'zil' : '';
 }
 
 /*

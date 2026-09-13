@@ -42,11 +42,22 @@ const GIRIS =
 // Üst paneldeki (sokak/video) yürüyüş kapıdan giriş değil — 11 Eyl 2026 park senaryosu
 // Konum ('in/into the upper frame') sayılır; yön ('toward the top screen') sayılmaz
 const UST_PANEL = /(?<!\b(?:toward|towards|at|to|onto)\s+the\s+)\b(?:upper|top)\s+(?:half|third|section|panel|part|frame|screen)\b/i;
+/*
+ * ZİL YALNIZCA DIŞARIDAN GELENE (13 Eyl 2026) — Sahneleri Ayıkla ile aynı kural.
+ * Çay getiren görevli ya da yan masadan kalkan iş arkadaşı zil çaldırmaz;
+ * onaylanmış ESKİ planlarda kalmış böyle ziller burada da süzülüyor.
+ */
+const ICERIDEN = new RegExp(
+  '\\b(?:tea tray|tea glass|colleague|co-?worker|office (?:assistant|staff|worker|boy)'
+  + '|staff member|another employee|the (?:assistant|secretary|receptionist))\\b', 'i');
+const ICERIDEN_TR = /çaycı|ofis görevlisi|çalışma arkadaş|iş arkadaş|meslektaş|personel|sekreter|asistan/i;
+
 const efektSuz = (s) => {
   const e = String(s?.efekt || '').trim();
   const odadaGiris = String(s?.prompt || '').split(/[.;]/)
-    .some((c) => GIRIS.test(c) && !UST_PANEL.test(c));
-  return e === 'zil' && !odadaGiris ? '' : e;
+    .some((c) => GIRIS.test(c) && !UST_PANEL.test(c) && !ICERIDEN.test(c));
+  const iceridenKisi = ICERIDEN_TR.test(String(s?.aciklama || ''));
+  return e === 'zil' && (!odadaGiris || iceridenKisi) ? '' : e;
 };
 
 /*
