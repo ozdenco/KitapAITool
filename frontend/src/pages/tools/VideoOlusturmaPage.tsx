@@ -495,7 +495,13 @@ export function VideoOlusturmaPage() {
     mutationFn: async () => {
       const res = await api.post<ViralVideoResult>('/tools/video-olusturma/run', {
         isletmeAdi: bizName,
-        videoUrl,
+        /*
+         * KAMPANYA MODUNDA LİNK GÖNDERİLMEZ (13 Eyl 2026). Alan gizleniyordu ama
+         * state temizlenmiyordu; önceki denemeden kalan YouTube linki gövdeye
+         * girip çıktı raporunda "Kaynak video" diye görünüyordu. Akış doğru
+         * daldan gidiyordu, rapor yanıltıcıydı.
+         */
+        videoUrl: mod === 'video' ? videoUrl : undefined,
         mod,
         videoDesc,
         sector,
