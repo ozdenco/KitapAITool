@@ -60,7 +60,12 @@
         840,
         440
       ],
-      "notes": "KIMLIK: Header Auth -> x-goog-api-key. Video Olusturma workflow'undaki credential ile ayni."
+      "notes": "KIMLIK: Header Auth -> x-goog-api-key. Video Olusturma workflow'undaki credential ile ayni.",
+      "credentials": {
+        "httpHeaderAuth": {
+          "name": "Header Auth account 3"
+        }
+      }
     },
     {
       "parameters": {

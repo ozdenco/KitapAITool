@@ -136,6 +136,12 @@ export function VideoOlusturmaPage() {
   const [extra,     setExtra]     = useState('')
   /** İşletme profilindeki "Sunduğunuz hizmet / ürün" — ön dolu gelir. */
   const [hizmetler, setHizmetler] = useState('')
+  /*
+   * İKİ MOD (13 Eyl 2026): 'video' → örnek bir videodan format çıkarılır
+   * (eski davranış), 'kampanya' → video yok, senaryolar firmanın kampanya ve
+   * hizmet metninden yazılır. Seçimlik olması kafa karışıklığını önlüyor.
+   */
+  const [mod, setMod] = useState<'video' | 'kampanya'>('video')
 
   // Sonuç + akış bildirimi
   const [result,        setResult]        = useState<ViralVideoResult | null>(null)
@@ -490,6 +496,7 @@ export function VideoOlusturmaPage() {
       const res = await api.post<ViralVideoResult>('/tools/video-olusturma/run', {
         isletmeAdi: bizName,
         videoUrl,
+        mod,
         videoDesc,
         sector,
         biz:    bizName || undefined,
@@ -515,14 +522,16 @@ export function VideoOlusturmaPage() {
   // videoDesc ARTIK ZORUNLU DEĞİL — n8n'deki Video Scrape düğümü linki açıp
   // başlığı, hashtagleri, müziği ve istatistikleri kendisi çekiyor. Kullanıcı
   // isterse ekleme yapar; boş bırakırsa akış gerçek video verisiyle çalışır.
-  const canSubmit = videoUrl.trim() && sector && !mutation.isPending
+  const canSubmit = (mod === 'kampanya' || videoUrl.trim()) && sector && !mutation.isPending
 
   return (
     <ToolShell
       toolId="video-olusturma"
       title="Video Oluşturma"
       icon="🎥"
-      description="Bir video linki yapıştır. Yapay zeka videoyu çözümleyip işletmene özel senaryo üretir; sonrasında gerçek video üretimine bağlanacak."
+      description={mod === 'kampanya'
+        ? 'Kampanya ve ürünlerini anlat; yapay zeka bunlardan işletmene özel senaryolar yazsın, sonrasında gerçek video üretimine bağlanacak.'
+        : 'Beğendiğin bir videonun linkini yapıştır; yapay zeka kurgusunu çözümleyip işletmene özel senaryo üretsin, sonrasında gerçek video üretimine bağlanacak.'}
       hasResult={!!result}
       formHasInput={!!videoUrl.trim()}
       isPending={mutation.isPending}
@@ -541,15 +550,42 @@ export function VideoOlusturmaPage() {
                   </div>
                 )}
 
-                <Input
-                  label="Video Linki *"
-                  placeholder="YouTube, TikTok veya Instagram linki"
-                  value={videoUrl}
-                  onChange={(e) => setVideoUrl(e.target.value)}
-                  type="url"
-                />
+                {/* Nereden üretileceği seçimi — alanların zorunluluğu buna bağlı */}
+                <div>
+                  <p className="text-sm font-medium text-[#6B6963] mb-2">Senaryolar neye göre yazılsın? *</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {([
+                      { d: 'video' as const,    b: '🎬 Örnek videodan',      a: 'Beğendiğin bir videonun kurgusu uyarlanır' },
+                      { d: 'kampanya' as const, b: '📣 Kampanyalarımdan',    a: 'Video gerekmez; ürün ve kampanyalarından yazılır' },
+                    ]).map((o) => (
+                      <label
+                        key={o.d}
+                        className={`flex flex-col gap-0.5 px-3.5 py-2.5 border rounded-lg cursor-pointer select-none transition-colors ${
+                          mod === o.d
+                            ? 'border-[#1D9E75] bg-[#F0FAF6] text-[#085041]'
+                            : 'border-[#D3D1C7] bg-white text-[#1C1B19] hover:border-[#B4B2A9]'
+                        }`}
+                      >
+                        <input type="radio" name="uretim-modu" className="sr-only"
+                          checked={mod === o.d} onChange={() => setMod(o.d)} />
+                        <span className="text-[13px] font-medium">{o.b}</span>
+                        <span className="text-[11.5px] text-[#6B6963]">{o.a}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
 
+                {mod === 'video' && (
+                  <Input
+                    label="Video Linki *"
+                    placeholder="YouTube, TikTok veya Instagram linki"
+                    value={videoUrl}
+                    onChange={(e) => setVideoUrl(e.target.value)}
+                    type="url"
+                  />
+                )}
 
+                {mod === 'video' && (
                 <Textarea
                   label="Video Ne Hakkında? (isteğe bağlı — boş bırakırsanız videodan okunur)"
                   placeholder="Videonun konusunu kısaca açıkla. Örn: Bir penguen tuhaf şekilde yürüyor, üzerine komik müzik eklenmiş ve sonunda bir iş yerinde çalışıyormuş gibi sahne geliyor."
@@ -557,6 +593,7 @@ export function VideoOlusturmaPage() {
                   onChange={(e) => setVideoDesc(e.target.value)}
                   rows={3}
                 />
+                )}
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <Input

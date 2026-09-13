@@ -13,7 +13,16 @@
 const body = $('Webhook').first().json.body || $('Webhook').first().json;
 const videoUrl = String(body.videoUrl || body.video_url || '').trim();
 
-if (!videoUrl) {
+/*
+ * İKİ MOD (13 Eyl 2026):
+ *   video     → örnek bir videodan format çıkarılır (eski davranış)
+ *   kampanya  → video yok; senaryolar firmanın kampanya/hizmet metninden ve
+ *               saklı bir kurgudan yazılır
+ * Mod gövdede gelmiyorsa link varlığına bakılır — eski istekler bozulmasın.
+ */
+const mod = String(body.mod || '').trim() === 'kampanya' ? 'kampanya' : 'video';
+
+if (mod === 'video' && !videoUrl) {
   return [{ json: { hata: 'Video linki boş.' } }];
 }
 
@@ -45,6 +54,17 @@ const siteOkunamadi = Boolean(siteAdresi)
   && (siteMetni.length < 300 || ENGEL.test(siteMetni.slice(0, 600)));
 const hizmetBilgisiVar = Boolean(String(body.hizmetler || '').trim() || String(body.note || '').trim());
 
+/*
+ * Kampanya modunda video yok; senaryolar YALNIZCA hizmet/kampanya metninden
+ * çıkıyor. O metin de yoksa üretilecek bir şey kalmıyor — açıkça söylüyoruz.
+ */
+if (mod === 'kampanya' && !hizmetBilgisiVar && (siteOkunamadi || !siteMetni)) {
+  return [{ json: { hata:
+    'Kampanya modunda senaryo yazabilmek için ürün/kampanya bilgisi gerekiyor. '
+    + '"Bu video hangi hizmet veya ürününüz için?" ya da "Sunduğunuz hizmet / ürün" '
+    + 'alanını doldurun.' } }];
+}
+
 if (siteOkunamadi && !hizmetBilgisiVar) {
   const alanAdi = siteAdresi.replace(/^https?:\/\/(www\.)?/i, '').split('/')[0];
   return [{ json: { hata:
@@ -64,7 +84,7 @@ if (siteOkunamadi && !hizmetBilgisiVar) {
 const youtubeMu   = /(?:youtube\.com\/(?:watch|shorts|embed)|youtu\.be\/)/i.test(videoUrl);
 const instagramMi = /instagram\.com\/(?:reel|reels|p|tv)\//i.test(videoUrl);
 
-const platform = youtubeMu ? 'youtube' : instagramMi ? 'instagram' : 'tiktok';
+const platform = mod === 'kampanya' ? '' : (youtubeMu ? 'youtube' : instagramMi ? 'instagram' : 'tiktok');
 
 // siteOkunamadi prompt düğümlerine gidiyor: engelleme sayfasının metni firma bilgisi sanılmasın
-return [{ json: { ...body, videoUrl, platform, siteOkunamadi } }];
+return [{ json: { ...body, mod, videoUrl, platform, siteOkunamadi } }];
