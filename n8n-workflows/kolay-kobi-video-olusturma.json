@@ -136,6 +136,7 @@
       "notes": "shouldDownloadVideos:true -> mediaUrls dolu gelir. ~$0.005-0.01/cagri. | KIMLIK: Authentication=Generic Credential Type, Header Auth. Import sonrasi yalnizca credential'i listeden secin.",
       "credentials": {
         "httpHeaderAuth": {
+          "id": "oP8Zbo22ckU1SYEC",
           "name": "Header Auth account 2"
         }
       }
@@ -212,6 +213,7 @@
       "notes": "API anahtari: Header Auth credential -> x-goog-api-key. URL'ye ?key= YAZMAYIN (n8n calistirma gecmisine dusuyor). | KIMLIK: Authentication=Generic Credential Type, Header Auth. Import sonrasi yalnizca credential'i listeden secin.",
       "credentials": {
         "httpHeaderAuth": {
+          "id": "c1v9bcYtxKACN1qv",
           "name": "Header Auth account 3"
         }
       }
@@ -315,6 +317,7 @@
       "notes": "apify/instagram-scraper · directUrls ile tek reel · Free planda ~$2.70/1000 sonuc = ~$0.0027/reel. Cikti: videoUrl alani. | KIMLIK: Authentication=Generic Credential Type, Header Auth. Import sonrasi yalnizca credential'i listeden secin.",
       "credentials": {
         "httpHeaderAuth": {
+          "id": "oP8Zbo22ckU1SYEC",
           "name": "Header Auth account 2"
         }
       }
