@@ -1,0 +1,371 @@
+<!--
+  KolayKOBİ Uygulaması — WordPress bölümü (v2)
+  ─────────────────────────────────────────────────────────────
+  Sayfa: kolaykobi.com/kobi-asistanlari/
+  Yer:   Ücretsiz asistan kartlarının ALTINA. Önceki "kkb-app-section"
+         bloğunun TAMAMINI bununla değiştirin (kurumsal talep satırı dahil —
+         bu sürüme gömülü geldi, ayrıca eklemeyin).
+
+  v1'den farkı:
+   • Uygulamadaki müşteriye açık araçların TAMAMI listeleniyor (10 araç)
+   • Düz "çip" listesi yerine açıklamalı kartlar
+   • Araçlar 4 kategoriye ayrıldı — uygulamadaki gruplamayla birebir aynı
+   • Trend Video Bulucu 13 Eyl 2026'da ÇIKARILDI — araç geçici olarak
+     yalnızca yöneticiye açık. Geri açılırsa kartı ve rozetini geri ekleyin.
+
+  Renkler sayfanın mevcut paletiyle aynı: lacivert #1a3a8f, turuncu #f97316.
+-->
+
+<style>
+/* ── Sayfa hero'sundaki alt metni belirginleştir ───────────────
+   Elementor'daki metin bloğunu hedefler (16px/normal → 19px/yarı kalın).
+
+   ⚠️ BAĞIMLILIK: 629bbde0, o widget'ın Elementor kimliğidir. Hero metnini
+   SİLİP yeniden oluşturursanız kimlik değişir ve bu kural sessizce çalışmaz.
+   O durumda ya buradaki kimliği güncelleyin ya da Elementor'da
+   widget → Stil → Tipografi üzerinden ayarlayın.
+   İstemiyorsanız bu bloğu silin; gerisi etkilenmez.                        */
+.elementor-element-629bbde0 p {
+  font-size: 19px !important;
+  font-weight: 500 !important;
+  line-height: 1.6 !important;
+  /* 960px: metin geniş ekranda TEK SATIRA sığar (ölçüldü: 19px'te 926px).
+     Daha dar bir sınır cümleyi ortasından bölüyordu. */
+  /* 960px: metin geniş ekranda TEK SATIRA sığar (ölçüldü: 19px'te 926px). */
+  max-width: 960px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Kontrollü satır sonu.
+   Geniş ekranda gizli → tek satır. Dar ekranda görünür → kırılma tam
+   cümle sınırında olur, "Ücretsiz planla…" ikinci satıra bütün geçer.
+
+   Bunun çalışması için hero metnine bir <br class="kkb-hero-br"> eklenmeli;
+   nereye ekleneceği aşağıdaki HTML örneğinde yazıyor. Eklenmezse zarar yok,
+   metin yalnızca dar ekranda cümle ortasından bölünür.                      */
+.kkb-hero-br { display: none; }
+
+@media (max-width: 1000px) {
+  .elementor-element-629bbde0 p { font-size: 18px !important; }
+  .kkb-hero-br { display: inline; }
+}
+@media (max-width: 560px) {
+  .elementor-element-629bbde0 p { font-size: 17px !important; }
+}
+
+/* ── Bölüm kabuğu ─────────────────────────────────────────── */
+.kkb-app-v2 {
+  font-family: 'Montserrat', 'Inter', system-ui, -apple-system, sans-serif;
+  background: linear-gradient(180deg, #f8faff 0%, #eef3ff 100%);
+  border-top: 1px solid #e2e8f7;
+  padding: 44px 24px 72px;
+}
+
+.kkb-app-v2 * { box-sizing: border-box; }
+
+.kkb-v2-inner { max-width: 1080px; margin: 0 auto; }
+
+/* ── Başlık ───────────────────────────────────────────────── */
+.kkb-v2-head { text-align: center; margin-bottom: 36px; }
+
+.kkb-v2-badges {
+  display: flex; flex-wrap: wrap; justify-content: center;
+  gap: 8px; margin-bottom: 18px;
+}
+
+.kkb-v2-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: #eef2ff; color: #1a3a8f;
+  font-size: 12px; font-weight: 700;
+  letter-spacing: 0.06em; text-transform: uppercase;
+  padding: 7px 15px; border-radius: 100px;
+}
+
+/* Ücretsiz olduğu üstte de görünsün — alttaki not'a kadar
+   kaydırmayan ziyaretçi bu bilgiyi kaçırıyordu. */
+.kkb-v2-badge-free {
+  background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0;
+}
+
+.kkb-v2-head h2 {
+  font-size: clamp(26px, 3.6vw, 40px);
+  font-weight: 800; color: #0f1f5c; line-height: 1.2;
+  margin: 0 auto 14px; max-width: 680px;
+}
+.kkb-v2-head h2 span { color: #f97316; }
+
+.kkb-v2-head p {
+  font-size: 16px; color: #475569; line-height: 1.7;
+  max-width: 560px; margin: 0 auto;
+}
+
+/* ── Kategori başlığı ─────────────────────────────────────── */
+.kkb-v2-cat {
+  display: flex; align-items: center; gap: 10px;
+  margin: 32px 0 14px;
+}
+.kkb-v2-cat h3 {
+  font-size: 13px; font-weight: 700; color: #1a3a8f;
+  text-transform: uppercase; letter-spacing: 0.07em;
+  margin: 0; white-space: nowrap;
+}
+.kkb-v2-cat .line { flex: 1; height: 1px; background: #d9e2f7; }
+
+/* ── Kart ızgarası ────────────────────────────────────────── */
+.kkb-v2-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.kkb-v2-card {
+  display: flex; flex-direction: column;
+  position: relative;          /* .rozet'i sağ üste konumlandırmak için */
+  background: #fff;
+  border: 1px solid #e4eaf8;
+  border-radius: 16px;
+  padding: 22px 20px 18px;
+  box-shadow: 0 1px 3px rgba(15,31,92,.05);
+  transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+}
+.kkb-v2-card:hover {
+  transform: translateY(-3px);
+  border-color: #c7d6f5;
+  box-shadow: 0 10px 28px rgba(15,31,92,.10);
+}
+
+.kkb-v2-card .ikon { font-size: 26px; line-height: 1; margin-bottom: 12px; }
+
+.kkb-v2-card h4 {
+  font-size: 16px; font-weight: 700; color: #1a3a8f;
+  margin: 0 0 8px; line-height: 1.35;
+}
+
+.kkb-v2-card p {
+  font-size: 14px; color: #5b6b85; line-height: 1.6;
+  margin: 0 0 16px; flex: 1;
+}
+
+/*
+ * Rozet akıştan çıkarıldı: normal akışta ikon ile başlık arasına giriyor ve
+ * o kartın başlığını diğer iki karta göre ~30px aşağı itiyordu. Sağ üst
+ * köşede ikon satırıyla aynı hizada duruyor; başlıklar artık aynı çizgide.
+ */
+.kkb-v2-card .rozet {
+  position: absolute; top: 20px; right: 18px;
+  background: #fff7ed; color: #c2410c;
+  border: 1px solid #fed7aa;
+  font-size: 11px; font-weight: 600; white-space: nowrap;
+  padding: 3px 9px; border-radius: 100px;
+}
+
+.kkb-v2-ac {
+  display: inline-flex; align-items: center; gap: 7px;
+  align-self: flex-start;
+  border: 1.5px solid #fdba74;
+  color: #ea580c !important;
+  background: #fff;
+  font-size: 13.5px; font-weight: 700;
+  padding: 9px 18px; border-radius: 10px;
+  text-decoration: none !important;
+  transition: all .16s ease;
+}
+.kkb-v2-ac:hover {
+  background: #f97316; border-color: #f97316;
+  color: #fff !important;
+}
+
+/* ── Alt CTA ──────────────────────────────────────────────── */
+.kkb-v2-cta {
+  margin-top: 44px; padding-top: 36px;
+  border-top: 1px solid #dde5f7; text-align: center;
+}
+
+.kkb-v2-btns {
+  display: flex; flex-wrap: wrap; justify-content: center;
+  gap: 14px; margin-bottom: 22px;
+}
+
+.kkb-v2-primary {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: #f97316; color: #fff !important;
+  font-size: 16px; font-weight: 700;
+  padding: 15px 32px; border-radius: 12px;
+  text-decoration: none !important;
+  box-shadow: 0 4px 16px rgba(249,115,22,.35);
+  transition: all .18s ease;
+}
+.kkb-v2-primary:hover {
+  background: #ea6c0a; transform: translateY(-2px);
+  box-shadow: 0 6px 24px rgba(249,115,22,.42);
+}
+
+.kkb-v2-secondary {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: transparent; color: #1a3a8f !important;
+  font-size: 15px; font-weight: 600;
+  padding: 14px 28px; border-radius: 12px;
+  border: 2px solid #c7d2ee;
+  text-decoration: none !important;
+  transition: all .18s ease;
+}
+.kkb-v2-secondary:hover { border-color: #1a3a8f; background: #eef2ff; }
+
+.kkb-v2-kurumsal {
+  display: flex; flex-wrap: wrap; align-items: center;
+  justify-content: center; gap: 8px;
+  font-size: 15px; color: #4b5563; margin: 0 0 18px;
+}
+.kkb-v2-kurumsal a {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-weight: 700; color: #1a3a8f !important;
+  text-decoration: none !important;
+  border-bottom: 2px solid #c7d2ee; padding-bottom: 1px;
+  transition: .18s;
+}
+.kkb-v2-kurumsal a:hover { color: #f97316 !important; border-bottom-color: #f97316; }
+
+.kkb-v2-note { font-size: 13px; color: #94a3b8; margin: 0; }
+.kkb-v2-note strong { color: #1a3a8f; }
+
+/* ── Dar ekran ────────────────────────────────────────────── */
+@media (max-width: 560px) {
+  .kkb-app-v2 { padding: 48px 16px; }
+  .kkb-v2-grid { grid-template-columns: 1fr; }
+  .kkb-v2-btns { flex-direction: column; align-items: stretch; }
+  .kkb-v2-primary, .kkb-v2-secondary { justify-content: center; }
+  .kkb-v2-kurumsal { flex-direction: column; gap: 4px; }
+}
+</style>
+
+<section class="kkb-app-v2">
+  <div class="kkb-v2-inner">
+
+    <!-- Başlık -->
+    <div class="kkb-v2-head">
+      <div class="kkb-v2-badges">
+        <span class="kkb-v2-badge">✨ Yapay Zeka Destekli</span>
+        <span class="kkb-v2-badge kkb-v2-badge-free">🎁 Ücretsiz Başlayın</span>
+      </div>
+      <!--
+        Sayfanın mavi hero'su zaten başlık görevi görüyor; burada ikinci bir
+        <h2> olması iki başlık üst üste geldiği için tezat yaratıyordu.
+        Kaldırıldı — bu blok artık doğrudan içerikle başlıyor.
+      -->
+      <p>
+        Form doldurun, dakikalar içinde kullanıma hazır çıktı alın.
+        Prompt yazmayı bilmenize gerek yok — ne soracağımızı biz belirledik.
+      </p>
+    </div>
+
+    <!-- ── Analiz & Strateji ── -->
+    <div class="kkb-v2-cat"><h3>📈 Analiz &amp; Strateji</h3><span class="line"></span></div>
+    <div class="kkb-v2-grid">
+
+      <div class="kkb-v2-card">
+        <div class="ikon">📊</div>
+        <h4>İşletme Görünürlük Skoru</h4>
+        <p>Google ve sosyal medyada ne kadar görünür olduğunuzu 0-100 arası puanlayın.</p>
+        <a class="kkb-v2-ac" href="https://app.kolaykobi.com/arac/gorunurluk-skoru">Aracı Aç →</a>
+      </div>
+
+      <div class="kkb-v2-card">
+        <div class="ikon">👤</div>
+        <h4>Müşteri Persona Oluşturucu</h4>
+        <p>İdeal müşteri profilinizi ve iletişim stratejinizi yapay zeka ile oluşturun.</p>
+        <a class="kkb-v2-ac" href="https://app.kolaykobi.com/arac/musteri-persona">Aracı Aç →</a>
+      </div>
+
+      <div class="kkb-v2-card">
+        <div class="ikon">💰</div>
+        <h4>Reklam Bütçe Dağıtıcı</h4>
+        <p>Aylık reklam bütçenizi platformlara optimum şekilde dağıtın.</p>
+        <a class="kkb-v2-ac" href="https://app.kolaykobi.com/arac/reklam-butce">Aracı Aç →</a>
+      </div>
+
+      <div class="kkb-v2-card">
+        <div class="ikon">🔍</div>
+        <h4>Rakip Analiz Panosu</h4>
+        <p>Rakiplerinizin dijital varlığını analiz edin ve fırsatları keşfedin.</p>
+        <a class="kkb-v2-ac" href="https://app.kolaykobi.com/arac/rakip-analiz">Aracı Aç →</a>
+      </div>
+
+      <div class="kkb-v2-card">
+        <div class="ikon">✨</div>
+        <h4>AI Görünürlük Takipçisi</h4>
+        <p>ChatGPT, Gemini ve Copilot'ta işletmenizin ne kadar bilindiğini ölçün.</p>
+        <a class="kkb-v2-ac" href="https://app.kolaykobi.com/arac/ai-gorunurluk">Aracı Aç →</a>
+      </div>
+
+    </div>
+
+    <!-- ── İçerik / Medya ── -->
+    <div class="kkb-v2-cat"><h3>✍️ İçerik / Medya</h3><span class="line"></span></div>
+    <div class="kkb-v2-grid">
+
+      <div class="kkb-v2-card">
+        <div class="ikon">📅</div>
+        <h4>30 Günlük İçerik Takvimi</h4>
+        <p>Seçtiğiniz platformlar için 30 günlük hazır sosyal medya takvimi üretin.</p>
+        <a class="kkb-v2-ac" href="https://app.kolaykobi.com/arac/icerik-takvimi">Aracı Aç →</a>
+      </div>
+
+      <div class="kkb-v2-card">
+        <div class="ikon">🎬</div>
+        <h4>Viral Video Uyarlayıcı</h4>
+        <p>Viral videoları kendi işletmeniz için uyarlayın ve içerik fikri üretin.</p>
+        <a class="kkb-v2-ac" href="https://app.kolaykobi.com/arac/viral-video">Aracı Aç →</a>
+      </div>
+
+    </div>
+
+    <!-- ── Satış & CRM ── -->
+    <div class="kkb-v2-cat"><h3>🤝 Satış &amp; CRM</h3><span class="line"></span></div>
+    <div class="kkb-v2-grid">
+
+      <div class="kkb-v2-card">
+        <div class="ikon">💬</div>
+        <h4>WhatsApp Satış Script Üretici</h4>
+        <p>İlk temastan kapanışa 5 hazır mesaj; seçtiğiniz her itiraz için ayrı ikna metni.</p>
+        <a class="kkb-v2-ac" href="https://app.kolaykobi.com/arac/whatsapp-satis">Aracı Aç →</a>
+      </div>
+
+      <div class="kkb-v2-card">
+        <div class="ikon">🔄</div>
+        <h4>Müşteri Geri Dönüş Senaryosu</h4>
+        <p>Kayıp müşterilerinizi geri kazanmak için iletişim senaryoları oluşturun.</p>
+        <a class="kkb-v2-ac" href="https://app.kolaykobi.com/arac/musteri-geri-donus">Aracı Aç →</a>
+      </div>
+
+      <div class="kkb-v2-card">
+        <div class="ikon">🤖</div>
+        <h4>Chatbot Senaryo Hazırlayıcı</h4>
+        <p>Web siteniz veya WhatsApp için chatbot senaryosu üretin, hazır kodla sitenize ekleyin.</p>
+        <a class="kkb-v2-ac" href="https://app.kolaykobi.com/arac/chatbot-senaryo">Aracı Aç →</a>
+      </div>
+
+    </div>
+
+    <!-- ── Alt CTA ── -->
+    <div class="kkb-v2-cta">
+
+      <div class="kkb-v2-btns">
+        <a href="https://app.kolaykobi.com" class="kkb-v2-primary">🚀 Uygulamayı Aç</a>
+        <a href="https://app.kolaykobi.com/kayit" class="kkb-v2-secondary">Ücretsiz Hesap Oluştur</a>
+      </div>
+
+      <p class="kkb-v2-kurumsal">
+        <span>Çok kullanıcılı kullanım veya işletmenize özel bir çözüm mü arıyorsunuz?</span>
+        <a href="https://app.kolaykobi.com/kurumsal-talep">Kurumsal talep formu <span aria-hidden="true">→</span></a>
+      </p>
+
+      <p class="kkb-v2-note">
+        <strong>Ücretsiz plan</strong> ile hemen başlayın — kredi kartı gerekmez.
+        Her araç için aylık 3 kullanım.
+      </p>
+
+    </div>
+
+  </div>
+</section>
