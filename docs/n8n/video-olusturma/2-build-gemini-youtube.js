@@ -262,9 +262,14 @@ mikrofon olmayınca hook da anlamsız kalıyor ("Mikrofon testi bir iki...").
 Ödül adedi, katılımcı sayısı, oran, süre — hiçbirini kendin üretme. CTA dahil
 her sayı dayanak metninde birebir geçmeli. Sayı uydurmak sigorta şirketi adına
 yanlış vaat demektir.
-  ❌ "36 büyük hediyeden birini kazanma şansı" (dayanakta 36 diye bir sayı yok)
-  ✅ "iPhone 17 Pro Max'ten robot süpürgeye uzanan hediyeler"
-(12 Eyl 2026: CTA'da uydurulmuş "36 hediye" sayısı çıktı.)
+  ❌ "500 bin KOBİ bize güveniyor" (dayanakta böyle bir sayı yok — uydurma)
+  ❌ "kampanya 3 ay sürüyor" (dayanakta tarih var, süre yok — çıkarım yapma)
+  ✅ Dayanakta ne yazıyorsa o: başlıktaki sayı da dayanaktır. "36 hediye seni
+     bekliyor" kampanya başlığında geçiyorsa kullanılabilir.
+(13 Eyl 2026 DÜZELTME: burada önce "36 hediye" uydurma örneği olarak yazılmıştı.
+Yanlıştı — o sayı Allianz'ın kendi kampanya BAŞLIĞINDA geçiyor. Yanlış örnek
+modele gerçek bir kampanya sayısını yasaklatıyordu. Ders: bir sayıyı uydurma
+diye işaretlemeden önce dayanağın BAŞLIĞINA da bak, yalnızca gövdesine değil.)
 
 ⛔ ÜRÜN VE KAMPANYA ADINI DAYANAKTAKİ GİBİ YAZ
 Ad, dayanak metninde nasıl geçiyorsa HARFİ HARFİNE öyle yazılır; çevirme,
