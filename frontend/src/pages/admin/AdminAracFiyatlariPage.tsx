@@ -27,7 +27,7 @@ const TOOL_ENGINE_MAP: Record<string, {
 }> = {
   'icerik-takvimi':     { engine: 'minimax', unitsPerRun: 11, unitLabel: 'token/çalıştırma', note: '1 gün + 1 platform · 10-11 token gözlendi · +1 marka kuralları' },
   'trend-video':        { engine: 'apify',   unitsPerRun: 1,  unitLabel: 'run/çalıştırma' },
-  'rakip-analiz':       { engine: 'gemini',  unitsPerRun: 2,  unitLabel: 'token/çalıştırma', note: 'MiniMax 1 token + Gemini Flash $0,032865/run (ölçüldü) · +1 marka kuralları' },
+  'rakip-analiz':       { engine: 'gemini',  unitsPerRun: 2,  unitLabel: 'token/çalıştırma', note: 'MiniMax 2 token + Gemini Flash ~2,5 ₺/run (13 Eyl 2026 ölçümü) · +1 marka kuralları' },
   'gorunurluk-skoru':   { engine: 'minimax', unitsPerRun: 4,  unitLabel: 'token/çalıştırma', note: '3 token · n8n 20 sn · +1 marka kuralları' },
   'musteri-persona':    { engine: 'minimax', unitsPerRun: 5,  unitLabel: 'token/çalıştırma', note: '7 Eyl 2026 canlı ölçüm: 5 token (marka kuralları dahil) · eski değer 3 idi' },
   'whatsapp-satis':     { engine: 'minimax', unitsPerRun: 11, unitLabel: 'token/çalıştırma', note: '7 itirazda 10 token · itiraz başına ~1 token (temel 3) · en fazla 10 itiraz → ~13 token · +1 marka kuralları' },
@@ -106,7 +106,12 @@ const VARSAYILAN_PARAMETRELER = {
   minimaxMonthlyUsd:  5,      // $5/ay sabit MiniMax maliyeti
   claudeUsd:          20,     // $20/ay Claude (geliştirici sabit)
   geminiEstRunsMonth: 100,    // Gemini Flash tahmini aylık run (Rakip Analiz)
-  geminiCostPerRunUsd:0.032865, // Gemini Flash $/run (27 Ağu 2026 ölçümü — tahmin 0.003 idi, ~11 kat düşük çıkmış)
+  // 13 Eyl 2026 canlı ölçüm: Rakip Analiz turunda Gemini bakiyesi 17,39 ₺ düştü
+  // ve API 7 kez çalıştı → 2,48 ₺/run. 48 ₺/$ kurundan ≈ $0,0518 (önceki
+  // ölçüm $0,032865 idi, ~1,6 katına çıkmış).
+  // ⚠️ Bu değer localStorage'da saklanıyor: eski değeri kaydetmiş tarayıcılarda
+  // panelden elle güncellenmeli, yoksa hesap eski rakamla devam eder.
+  geminiCostPerRunUsd:0.0518,
   apifyBudgetUsd:     29,     // $29
   apifyRuns:          50,     // 50 run
   n8nUsd:             20,     // $20/ay
@@ -307,6 +312,10 @@ function MaliyetPaneli({ prices }: { prices?: ToolPrice[] }) {
             Rakip Analiz <strong>iki motoru birlikte</strong> kullanır: MiniMax{' '}
             {TOOL_ENGINE_MAP['rakip-analiz']?.unitsPerRun ?? 0} token + yukarıdaki
             Gemini maliyeti. Araç başı maliyet ikisinin toplamıdır.
+            <br />
+            <strong>Başarısız çalıştırma da para yakar:</strong> Gemini zincirde MiniMax'tan
+            ÖNCE çalışıyor; sonraki adım hata verse bile Gemini ücreti oluşur
+            (13 Eyl 2026: 7 çağrının 6'sı hatayla bitti, Gemini yine de faturalandı).
           </div>
         </div>
 
