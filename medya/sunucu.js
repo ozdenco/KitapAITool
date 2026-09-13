@@ -457,6 +457,19 @@ const TEPKI_PAYI = 1.5
 const SONRAKI_EYLEM = /\bthen\b|\bfinally\b|\bafterwards?\b/i
 
 /**
+ * Bu sahnede replikten sonra ne kadar boşluk kalmalı.
+ *
+ * 13 Eyl 2026: bu hesap 2841b5a'da (Veo kendi sesine geçiş) düşmüştü —
+ * sabit ve regex yerinde kaldı ama çağrı tanımsız `tepkiPayi`ye bakıyordu,
+ * dolayısıyla replikli HER sahne "tepkiPayi is not defined" ile patlıyordu.
+ * Ayrı fonksiyon: kural tek yerde ve doğrudan sınanabilir.
+ */
+function tepkiPayiSec(sahne, sonSahneMi) {
+  if (sonSahneMi) return TEPKI_PAYI
+  return SONRAKI_EYLEM.test(String(sahne?.prompt || '')) ? TEPKI_PAYI : SON_PAY
+}
+
+/**
  * Sesin sığacağı en kısa Veo klibini seçer. Veo yalnızca 4, 6 veya 8 saniye
  * kabul ediyor; ölü saniye hem para hem tempo kaybı.
  *
@@ -858,6 +871,7 @@ async function isiCalistir(isId, sahneler, hookMetni, ctaMetni) {
        * tahmin ediyoruz — ölçecek bir ses dosyası yok.
        */
       const sesSn = replikSuresiTahmin(sahne.replik)
+      const tepkiPayi = tepkiPayiSec(sahne, i === sahneler.length - 1)
       const klipSn = sahne.replik ? klipSuresiSec(gecikme + sesSn, tepkiPayi) : 8
       if (sahne.replik) {
         gunlukle(`[${isId}] sahne ${i + 1}: replik ~${sesSn.toFixed(1)} sn (tahmin) → ${klipSn} sn klip · ses Veo`)
