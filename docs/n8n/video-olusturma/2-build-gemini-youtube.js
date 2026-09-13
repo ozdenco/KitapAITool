@@ -185,6 +185,40 @@ Doğrusu: eleştiri işin yapılış biçimini hedeflesin.
   ✅ "Bu fiyata bu işi kimse yapmaz, boşuna uğraşıyorsunuz."
   ✅ "Randevu sistemi mi? Telefonla ara, olsun bitsin."
 
+⛔ ESPRİ NEYE GÜLDÜRÜR — ÜÇ TEST
+Raydan çıkaran cümle (doruk an) şu üç testi birden geçmeli. Geçmiyorsa espri
+değil, müşteri itirazıdır.
+
+1. NEYE GÜLÜYORUZ? Ortak bir yanılgıya ya da alışkanlığa gülünmeli; izleyici
+   "bunu ben de yapıyordum" demeli. Kişinin ÜRÜNÜ ANLAMAMASINA gülünemez.
+2. KİP VE DURUŞ. Cümle bir İTİRAF olmalı ("…sanıyorduk", "…yapıyordum") —
+   uzmana sorulan bir SORU değil. Soru soran taraf uzmanın altında kalır ve
+   aptal görünür.
+3. ŞÜPHE NEREYE DÜŞÜYOR? Eski yönteme düşmeli; ürün onu çözüyor. Kampanyanın
+   ya da ürünün KENDİ ŞARTLARINA şüphe düşüren cümle yasak — kendi reklamında
+   kendi ürününe soru işareti koymak olur.
+
+İki yöntem serbest:
+  a) Konu dışı, istemsiz çağrışım: kişi sayarken kendi hayatından alakasız bir
+     ayrıntıya dalar, tam bir ciddiyetle. (Kaynak formatlarda çocuğun araya
+     giren masum saçmalaması bu.)
+  b) Saf beklenti itirafı: "…sanıyorduk" — konuya ait olabilir, çünkü şüphe
+     eski yönteme düşer.
+
+  ❌ "Robot süpürge kaybolursa çekiliş hakkım yanar mı?"  (ürünün şartına şüphe + soru)
+  ❌ "Bu puan tam olarak nereden geliyor?"                 (ürünü anlamama)
+  ✅ "İndirim yazınca kendiliğinden satılır sanıyorduk."   (ortak yanılgı)
+  ✅ "Motordan ses gelince radyonun sesini açıyordum."     (alışkanlık itirafı)
+  ✅ "Kargoyu yola çıkarınca iş bitti sanıyorduk."         (ortak yanılgı)
+
+Bu kural ROLLERİ TERS ÇEVİR kuralının devamıdır: orası işletme sahibini
+koruyor, burası MÜŞTERİYİ koruyor. Video işletmenin hesabından yayınlanıp
+müşterilere gösteriliyor; aptal duruma düşen taraf müşteriyse izleyici kendini
+aptal tarafta görür.
+(13 Eyl 2026: Allianz kampanya senaryolarının üçünde de raydan çıkaran cümle
+kampanya şartı hakkında bir soruydu — espri tutmadı, üstelik reklam kendi
+şartlarına şüphe ekiyordu.)
+
 ⛔ DORUK ANDA DÜNYA KARŞILIK VERMELİ
 Absürt eylemi kişi TEK BAŞINA yapıp bitirmesin. Doruk anda mutlaka bir
 üçüncü taraf tepki versin: müşteri, çalışan, komşu esnaf, geçen biri,
