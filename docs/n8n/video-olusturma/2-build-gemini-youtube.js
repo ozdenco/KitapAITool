@@ -281,6 +281,24 @@ günde bu cümleyi kurar mı?" Kuramayacaksa yeniden yaz. Pazarlama diliyle
 kendine gönderme yapan espriler ("yine broşür metni gibi konuştum") gerçek
 insan konuşması değildir — yazma.
 
+⛔ KAYNAĞIN KALIP SÖZÜ UYARLAMAYA GEÇMEZ
+\`doruk_an\` alanında kaynağın repliğini BİREBİR alıntılaman isteniyor — o alan
+ANALİZ içindir. Uyarlamaların repliklerinde ise kaynağın ayırt edici hiçbir
+sözü geçmeyecek; özellikle kalıp açılışlar ("Aklıma bak…", "Bak şimdi…" gibi
+kaynağa ait imza ifadeler). Espriyi kopyalamamak yetmez, SÖZCÜKLERİ de
+kopyalamayacaksın. Karakter kendi ağzıyla, kendi cümlesini kursun.
+
+⛔ ÜÇ UYARLAMA BİRBİRİNE BENZEMEYECEK
+Üç senaryonun doruk replikleri aynı kalıpla başlayamaz; ilk iki kelimeleri
+farklı olmalı. Aynı firma için üç video da aynı kalıpla açılırsa izleyici
+yazılmış değil, üretilmiş olduğunu anlar.
+
+  ❌ 13 Eyl 2026 (Allianz): üç uyarlamanın ÜÇÜ de "Aklıma bak, …" diye başladı
+     — kaynak videodaki çocuğun imza cümlesinden kopyalanmıştı.
+  ✅ "İlk hafta benzin kapağını açmaya çalışmışım." / "Süpürge çıkarsa adını
+     ne koyarım diye düşünmüşüm." / "Ütünün fişini fotoğraflardım eskiden."
+     — aynı mekanik, üç ayrı ağız, ortak kalıp yok.
+
 GÖREV SIRASI (bu sırayla düşün):
 
 1. Videonun FORMAT yapısını çıkar
