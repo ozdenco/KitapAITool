@@ -236,6 +236,15 @@ gibi davranamaz. Yasak: "hayranlıkla not almak", "pürdikkat ders dinlemek",
 Doğru tepki: şaşkınlık, oyuna katılma, ciddiye alıp devam ettirme veya
 gerçekliğin absürt biçimde uyum sağlaması (kediler gibi).
 
+⚠️ ÜÇ UYARLAMADA AYNI TEPKİ OLMAZ. "Gülümseyip başını sallamak" tek başına
+tepki sayılmaz; üç uyarlamada birden kullanılırsa ortada tepki yok demektir.
+Üçünün tepkisi birbirinden FARKLI olsun ve en az birinde üçüncü taraf
+KONUŞSUN ya da somut bir şey YAPSIN: elindekini bırakması, oyuna katılması,
+kendi hikâyesini eklemesi gibi.
+(13 Eyl 2026: üç uyarlamada da tepki "gülümseyip başını salladı" oldu ve
+sahneler düzleşti. Bir önceki turda ofis çaycısının kendi süpürgesinin adını
+söylemesi partinin en iyi anıydı — aranan şey budur.)
+
 Her uyarlamada \`doruk_an_karsiligi\` alanına KİMİN TEPKİ VERDİĞİNİ yaz.
 
 ⛔ MİKROFON VE STÜDYO KURGUSU YOK
@@ -256,6 +265,13 @@ yanlış vaat demektir.
   ❌ "36 büyük hediyeden birini kazanma şansı" (dayanakta 36 diye bir sayı yok)
   ✅ "iPhone 17 Pro Max'ten robot süpürgeye uzanan hediyeler"
 (12 Eyl 2026: CTA'da uydurulmuş "36 hediye" sayısı çıktı.)
+
+⛔ ÜRÜN VE KAMPANYA ADINI DAYANAKTAKİ GİBİ YAZ
+Ad, dayanak metninde nasıl geçiyorsa HARFİ HARFİNE öyle yazılır; çevirme,
+kısaltma, İngilizceleştirme yok.
+  ❌ "Healthy Puan"   ✅ "Sağlıklı Puan"
+(13 Eyl 2026: üründen "Healthy Puan" diye söz edildi — müşteriye gidecek
+metinde marka adının bozulması kabul edilemez.)
 
 ⛔ DORUK AN SESE DAYANAMAZ — HAYVAN SESİ, EFEKT SESİ YOK
 Videoyu üreten model artık sahnenin kendi sesini de üretiyor — yani havlama
@@ -295,9 +311,19 @@ yazılmış değil, üretilmiş olduğunu anlar.
 
   ❌ 13 Eyl 2026 (Allianz): üç uyarlamanın ÜÇÜ de "Aklıma bak, …" diye başladı
      — kaynak videodaki çocuğun imza cümlesinden kopyalanmıştı.
-  ✅ "İlk hafta benzin kapağını açmaya çalışmışım." / "Süpürge çıkarsa adını
-     ne koyarım diye düşünmüşüm." / "Ütünün fişini fotoğraflardım eskiden."
-     — aynı mekanik, üç ayrı ağız, ortak kalıp yok.
+  ❌ 13 Eyl 2026 (ikinci deneme): bu bloğa örnek diye, AYNI firmanın kendi
+     kampanyaları için yazılmış üç cümle konmuştu; model üçünü de birebir geri
+     yazdı ve senaryolar yazılmak yerine kuraldan okundu.
+
+⚠️ BU KURALLARDAKİ ÖRNEK CÜMLELER BAŞKA İŞLETMELERDENDİR — KOPYALAMA
+Aşağıdaki örnekler kuaför, pastane, oto servis gibi ilgisiz işletmelerden
+gelir ve yalnızca MEKANİĞİ gösterir. Hiçbirini bu videoya taşıma; senin
+yazacağın cümleler yalnızca yukarıdaki SENARYO ile firmanın kendi
+hizmetlerinden çıkar.
+  ✅ kuaför:     "Aynaya bakmadan önce gözümü kapatırdım eskiden."
+  ✅ pastane:    "Fırın alarmını üç kez kurar, yine de kapağı açıp bakardım."
+  ✅ oto servis: "Motordan ses gelince radyonun sesini açıyordum."
+     — aynı mekanik (kendi alışkanlığını itiraf), üç ayrı ağız, ortak kalıp yok.
 
 GÖREV SIRASI (bu sırayla düşün):
 
