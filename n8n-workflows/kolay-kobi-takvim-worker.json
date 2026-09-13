@@ -54,10 +54,6 @@
         "headerParameters": {
           "parameters": [
             {
-              "name": "Authorization",
-              "value": "Bearer YOUR_MINIMAX_API_KEY"
-            },
-            {
               "name": "Content-Type",
               "value": "application/json"
             },
@@ -72,7 +68,9 @@
         "options": {
           "timeout": 300000
         },
-        "jsonBody": "={{ $json.apiBody }}"
+        "jsonBody": "={{ $json.apiBody }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth"
       },
       "id": "minimax-api-node",
       "name": "MiniMax API",
@@ -87,7 +85,13 @@
       "position": [
         900,
         280
-      ]
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "w22kOcJP8pzEVXhY",
+          "name": "Header Auth account 4"
+        }
+      }
     },
     {
       "parameters": {

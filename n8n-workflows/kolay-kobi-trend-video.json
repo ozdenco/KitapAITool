@@ -211,7 +211,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Sektöre göre hashtag seçimi — her sektör için 1-2 hashtag\n// Apify her hashtag'i ayrı tarıdığı için maliyet: 1 hashtag ~$0.10, 2 hashtag ~$0.20\nconst SEKTOR_HASHTAGLER = {\n  'Lojistik / Taşımacılık':           ['lojistik'],\n  'E-ticaret / Perakende':            ['eticaret'],\n  'Restoran / Kafe / Yiyecek':        ['turkishfood'],\n  'Güzellik / Kuaför / Estetik':      ['makyaj'],\n  'Sağlık / Klinik / Eczane':         ['saglik'],\n  'İnşaat / Gayrimenkul':             ['insaat'],\n  'Muhasebe / Finans / Danışmanlık':  ['girişimci'],\n  'Eğitim / Kurs / Koçluk':           ['kisiselgelisim'],\n  'Teknoloji / Yazılım':              ['teknoloji'],\n  'Turizm / Otel / Seyahat':          ['turizm'],\n  'Hukuk / Avukatlık':                ['hukuk'],\n  'Temizlik / Hizmet':                ['esnaf'],\n  'Diğer':                            ['esnaf'],\n  'ALL':                              ['keşfet'],\n};\n\nconst data = $input.first().json;\nconst sector = data.sector || 'ALL';\nconst hashtags = SEKTOR_HASHTAGLER[sector] || ['keşfet'];\nreturn [{ json: { ...data, hashtags } }];"
+        "jsCode": "// Sektöre göre TikTok hashtag seçimi.\n// MALİYET: Apify her hashtag'i ayrı tarar — 1 hashtag ~$0.10, 2 hashtag ~$0.20.\n// Bu yüzden sektör başına EN FAZLA 2 hashtag (aşağıda MAX_HASHTAGS ile de kesiliyor).\n//\n// ANAHTARLAR frontend/src/lib/sektorler.ts → SEKTORLER listesindeki etiketlerle\n// BİREBİR aynı olmalı (11 Eyl 2026 itibarıyla 33 sektör). Eşleşmeyen sektör\n// sessizce ['keşfet']'e düşer ve arama genel içerik döndürür — 27 Ağu 2026\n// sektör birleştirmesinden sonra eski anahtarlar yüzünden tam olarak bu oldu.\n// SEKTORLER'e YENİ SEKTÖR EKLENİRSE BURAYA DA EKLEYİN, sonra workflow'u\n// n8n'e yeniden import edip yayınlayın.\nconst MAX_HASHTAGS = 2;\nconst VARSAYILAN_HASHTAGLER = ['keşfet'];\n\nconst SEKTOR_HASHTAGLER = {\n  'Dijital Ürünler / Yazılım Satışı': ['girişimci', 'onlinekurs'],\n  'E-ticaret':                        ['eticaret'],\n  'Eğitim / Kurs':                    ['eğitim', 'kisiselgelisim'],\n  'Elektronik / Beyaz Eşya':          ['teknoloji', 'beyazeşya'],\n  'Emlak / Gayrimenkul':              ['emlak', 'gayrimenkul'],\n  'Evcil Hayvan / Veteriner':         ['kedi', 'veteriner'],\n  'Fotoğraf / Prodüksiyon':           ['fotoğrafçı', 'videoçekimi'],\n  'Giyim / Tekstil':                  ['moda', 'kombin'],\n  'Güzellik / Estetik':               ['güzellik', 'kuaför'],\n  'Hukuk / Danışmanlık':              ['hukuk', 'avukat'],\n  'İnşaat / Mühendislik':             ['inşaat', 'mühendis'],\n  'Kuyumculuk / Takı':                ['kuyumcu', 'takı'],\n  'Lojistik / Taşımacılık':           ['lojistik', 'nakliye'],\n  'Matbaa / Baskı':                   ['matbaa', 'baskı'],\n  'Mobilite / Enerji':                ['elektrikliaraç', 'enerji'],\n  'Mobilya / Ev Dekorasyonu':         ['dekorasyon', 'mobilya'],\n  'Muhasebe / Finans':                ['muhasebe', 'finans'],\n  'Organizasyon / Etkinlik':          ['düğün', 'organizasyon'],\n  'Otomotiv':                         ['otomotiv', 'araba'],\n  'Perakende / Mağaza':               ['esnaf', 'mağaza'],\n  'Reklam / Pazarlama':               ['dijitalpazarlama', 'sosyalmedya'],\n  'Sağlık / Klinik':                  ['sağlık', 'doktor'],\n  'Sigorta / Acente':                 ['sigorta', 'kasko'],\n  'Spor / Fitness':                   ['fitness', 'spor'],\n  'Tarım / Hayvancılık':              ['tarım', 'çiftlik'],\n  'Teknoloji / Yazılım':              ['teknoloji', 'yazılım'],\n  'Tekstil Üretimi / Konfeksiyon':    ['tekstil', 'konfeksiyon'],\n  'Televizyon / Medya':               ['medya', 'televizyon'],\n  'Temizlik / Hizmet':                ['temizlik'],\n  'Turizm / Otel':                    ['turizm', 'otel'],\n  'Üretim / İmalat':                  ['üretim', 'fabrika'],\n  'Yiyecek / İçecek':                 ['yemek', 'turkishfood'],\n  'Diğer':                            ['esnaf'],\n  'ALL':                              VARSAYILAN_HASHTAGLER,\n};\n\nconst data = $input.first().json;\nconst sector = typeof data.sector === 'string' && data.sector.trim() ? data.sector.trim() : 'ALL';\nconst hashtags = (SEKTOR_HASHTAGLER[sector] || VARSAYILAN_HASHTAGLER).slice(0, MAX_HASHTAGS);\nreturn [{ json: { ...data, hashtags } }];"
       },
       "id": "build-search-query-node",
       "name": "Build Search Query",
@@ -297,10 +297,6 @@
         "headerParameters": {
           "parameters": [
             {
-              "name": "Authorization",
-              "value": "Bearer BURAYA_GERCEK_MINIMAX_API_KEY_YAZ"
-            },
-            {
               "name": "Content-Type",
               "value": "application/json"
             }
@@ -311,6 +307,14 @@
         "jsonBody": "={{ $json.apiBodyStr }}",
         "options": {
           "timeout": 30000
+        },
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth"
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "w22kOcJP8pzEVXhY",
+          "name": "Header Auth account 4"
         }
       }
     },

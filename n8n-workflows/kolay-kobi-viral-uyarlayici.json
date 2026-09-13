@@ -62,10 +62,6 @@
         "headerParameters": {
           "parameters": [
             {
-              "name": "Authorization",
-              "value": "Bearer BURAYA_GERCEK_MINIMAX_API_KEY_YAZ"
-            },
-            {
               "name": "Content-Type",
               "value": "application/json"
             }
@@ -76,7 +72,9 @@
         "options": {
           "timeout": 120000
         },
-        "jsonBody": "={{ $json.apiBodyStr }}"
+        "jsonBody": "={{ $json.apiBodyStr }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth"
       },
       "id": "minimax-api-node",
       "name": "MiniMax API",
@@ -86,7 +84,13 @@
         900,
         300
       ],
-      "onError": "continueErrorOutput"
+      "onError": "continueErrorOutput",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "w22kOcJP8pzEVXhY",
+          "name": "Header Auth account 4"
+        }
+      }
     },
     {
       "parameters": {
