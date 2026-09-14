@@ -8,20 +8,19 @@
   Nereye: WordPress'te yeni bir sayfa (önerilen adres: /workshop) ve
           "Özel HTML" bloğuna bu kodun tamamı.
 
-  ÖNCE BREVO'DA ŞUNU YAPIN — iframe adresi oradan gelecek:
-    1. Contacts → Lists → yeni liste: "Workshop — 8 Ekim 2026"
-       (Rehber listesinden AYRI olsun; workshop hatırlatma e-postaları
-       yalnızca kayıt olanlara gitmeli.)
-    2. Forms → yeni form → alanlar: E-posta, Ad, İşletme adı
-    3. Settings → Confirmation: "Simple confirmation email" yeterli.
-       Rehberdeki gibi çift onay KURMAYIN — workshop kaydında araya bir
-       tıklama daha koymak kayıp demek; kişi zaten bilerek kaydoluyor.
-    4. Share → "Embed in a webpage" → iframe adresini kopyalayıp
-       aşağıdaki src="BREVO_FORM_ADRESI_BURAYA" yerine yapıştırın.
+  ⚠️ ELEMENTOR'DA HANGİ WIDGET: bu kodu "Metin Editörü" widget'ına
+  yapıştırmayın — WordPress otomatik olarak <p> etiketleri ekleyip
+  yapıyı bozuyor. **HTML widget'ı** kullanın (Elementor arama kutusuna
+  "HTML" yazın); orası kodu olduğu gibi bırakır.
 
-  İFRAME YÜKSEKLİĞİ: aşağıdaki 470/510 değerleri rehber formundan
-  alındı, yani TAHMİN. Formu yerleştirdikten sonra alt tarafta boşluk
-  ya da kayma varsa gerçek yüksekliği ölçüp iki sayıyı da güncelleyin.
+  BREVO BAĞLANTISI KURULDU (14 Eyl 2026): form adresi aşağıda yerinde.
+  Liste "Workshop — 8 Ekim 2026", tek onay maili ("Workshop Kayit Onayi
+  - 8 Ekim"), onay maili içinde Google Meet bağlantısı ve takvim butonu.
+
+  İFRAME YÜKSEKLİĞİ: 305px değeri Brevo'nun kendi gömme kodundan geldi,
+  yani ÖLÇÜLMÜŞ. Mobildeki 350px ise tahmin — dar ekranda metin daha çok
+  satıra bölündüğü için uzuyor. Formu yayına aldıktan sonra telefonda
+  altta boşluk ya da kayma görürseniz o sayıyı düzeltin.
 
   ⚠️ ONAYLAYIN — "Bu iki saatte ne yapacağız" listesi:
   Workshop'un gündemi hiçbir belgede yazılı değil. Aşağıdaki dört madde
@@ -148,7 +147,7 @@
   display:block;
   width:100%;
   border:0;
-  height:470px;   /* ölçün — yukarıdaki nota bakın */
+  height:305px;   /* Brevo'nun gömme kodundan — ölçülmüş değer */
 }
 
 .kkb-ws-kvkk{
@@ -175,7 +174,7 @@
     padding:0;
     border-radius:0;
   }
-  .kkb-ws-form iframe{ height:510px; }
+  .kkb-ws-form iframe{ height:350px; }   /* tahmin — telefonda kontrol edin */
 }
 </style>
 
@@ -220,8 +219,8 @@
     <div>
       <div class="kkb-ws-form">
         <iframe
-          width="540" height="470"
-          src="BREVO_FORM_ADRESI_BURAYA"
+          width="540" height="305"
+          src="https://1cf9b7a8.sibforms.com/v2/serve/MUIFAJg_UFxZfGGNIsmOmfcVTfGZCFWg5mm6sFQHWgZOQCacIg3G-Gs1tNGE72qCmwnWLxfSVUMrb28ElFrKoOEr2InD7JB85gwn96ZhNpEc5zBjwkcqSTIvXFAeE2JWKdhPDkcBni7Ab3MLCE12qT-kkdRpfP3_XtEQYyoR02BlmGAOFSc17PbzIJu76hyYxVZUU3ADvjyBdpH_3w=="
           frameborder="0" scrolling="auto" allowfullscreen
           title="8 Ekim workshop kayıt formu"
           style="display:block;margin-left:auto;margin-right:auto;max-width:100%;"></iframe>
