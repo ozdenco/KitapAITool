@@ -1,0 +1,217 @@
+<!--
+  KolayKOBİ — Rehber indirme bölümü (WordPress)
+  ─────────────────────────────────────────────────────────────
+  Nereye: Blog yazılarının ALTINA ve KOBİ Asistanları sayfasının altına.
+  Nasıl:  WordPress'te "Özel HTML" bloğu ekleyip bu kodun tamamını yapıştırın.
+
+  Sol sütun: rehberde ne olduğu (bizim metnimiz)
+  Sağ sütun: Brevo formu (iframe) — başlık, alan ve buton onun içinde
+
+  iframe yüksekliği formun GERÇEK ölçüsüne göre ayarlandı (470px masaüstü, 510px dar ekran) — bkz. CSS'teki not. Brevo formunun içeriğini
+  değiştirirseniz o iki sayıyı güncelleyin.
+-->
+
+<style>
+.kkb-rehber{
+  --lacivert:#1a3a8f;
+  --metin:#5b6b85;
+  --turuncu:#f97316;
+  --cizgi:#e4eaf8;
+  --zemin:#f5f8ff;
+
+  background:var(--zemin);
+  border:1px solid var(--cizgi);
+  border-radius:18px;
+  padding:26px 22px;
+  /* Üst boşluk YOK: Elementor widget'lar arasına kendi aralığını koyuyor,
+     ikisi toplanınca bölümler arasında büyük bir boşluk oluşuyordu. */
+  margin:0 0 40px;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+}
+
+.kkb-rehber-ic{
+  display:grid;
+  /*
+    KAPSAYICIYA göre kırılır, ekrana göre değil.
+
+    Blog yazılarında sağda sidebar var; ekran geniş olsa bile içerik kolonu
+    ~700px kalıyor. Medya sorgusu (ekran genişliği) bunu göremez, iki sütun
+    sıkışır ve reCAPTCHA (sabit 304px) iframe'e sığmaz.
+
+    auto-fit + minmax(380px) bunu çözer: kapsayıcı 794px'in altına düşerse
+    tek sütuna geçer. 380px alt sınırı captcha'nın gereksinimi (304px +
+    Brevo'nun iç boşlukları + kartımızın boşluğu) hesaplanarak seçildi.
+  */
+  /*
+    14 Eyl 2026 düzeltmesi: minmax(380px,1fr) idi. 380px bir ALT SINIR
+    olduğu için 375px telefonda kapsayıcı 331px'e düşse bile sütun 380px'e
+    zorlanıyor ve bölüm yatay taşıyordu. min(380px,100%) alt sınırı
+    kapsayıcıyla birlikte indiriyor; geniş ekranda davranış değişmiyor.
+  */
+  grid-template-columns:repeat(auto-fit, minmax(min(380px, 100%), 1fr));
+  gap:34px;
+  align-items:start;
+  max-width:980px;
+  margin:0 auto;
+}
+
+/* ── Sol sütun ─────────────────────────────────────────── */
+.kkb-rehber-rozet{
+  display:inline-flex; align-items:center; gap:7px;
+  background:#fff; border:1px solid #bfe3d3;
+  color:#0b6e52;
+  font-size:12px; font-weight:700;
+  letter-spacing:.08em; text-transform:uppercase;
+  padding:6px 13px; border-radius:100px;
+  margin-bottom:16px;
+}
+
+.kkb-rehber h3{
+  font-size:26px; line-height:1.25;
+  font-weight:800; color:var(--lacivert);
+  margin:0 0 12px;
+}
+
+.kkb-rehber-ozet{
+  font-size:15.5px; line-height:1.65;
+  color:var(--metin);
+  margin:0 0 20px;
+}
+
+.kkb-rehber-liste{
+  list-style:none; padding:0; margin:0 0 20px;
+  display:grid; gap:10px;
+}
+.kkb-rehber-liste li{
+  display:grid; grid-template-columns:auto 1fr; gap:10px;
+  font-size:14.5px; line-height:1.55; color:var(--metin);
+}
+.kkb-rehber-liste li::before{
+  content:"✓";
+  color:#1d9e75; font-weight:700; font-size:13px;
+  line-height:1.6;
+}
+.kkb-rehber-liste strong{ color:#243b5e; font-weight:600; }
+
+.kkb-rehber-meta{
+  display:flex; flex-wrap:wrap; gap:8px;
+  padding-top:16px; border-top:1px solid var(--cizgi);
+}
+.kkb-rehber-meta span{
+  background:#fff; border:1px solid var(--cizgi);
+  border-radius:100px; padding:5px 12px;
+  font-size:12.5px; color:var(--metin);
+}
+
+/* ── Sağ sütun: form ───────────────────────────────────── */
+.kkb-rehber-form{
+  background:#fff;
+  border:1px solid var(--cizgi);
+  border-radius:14px;
+  padding:4px;
+  box-shadow:0 4px 18px rgba(26,58,143,.07);
+  overflow:hidden;
+  /* Tek sütuna düştüğünde (dar blog kolonu) form 700px'e kadar gerilip
+     tuhaf görünmesin — 520'de durup ortalanır. İki sütunlu düzende sütun
+     zaten bundan dar olduğu için etkisi yok. */
+  max-width:520px;
+  margin-inline:auto;
+}
+.kkb-rehber-form iframe{
+  display:block;
+  width:100%;
+  border:0;
+  /*
+    Yükseklik ÖLÇÜLDÜ — Brevo formundan başlık/açıklama blokları silindikten
+    sonraki hâli (form yalnızca alan + KVKK + captcha + buton içeriyor):
+      467px genişlikte (masaüstü sütunu) → 456px
+      347px genişlikte (mobil)           → 491px
+    Dar ekranda metin daha çok satıra bölündüğü için uzuyor. Formun içeriğini
+    değiştirirseniz bu iki sayıyı yeniden ölçün.
+  */
+  height:470px;
+}
+
+.kkb-rehber-kvkk{
+  font-size:12px; line-height:1.55;
+  color:#8b98ad;
+  margin:12px 4px 2px;
+  text-align:center;
+}
+.kkb-rehber-kvkk a{ color:#6b7a91; text-decoration:underline; }
+
+/* ── Dar ekran ─────────────────────────────────────────── */
+@media (max-width:820px){
+  .kkb-rehber{ padding:20px 12px; border-radius:14px; }
+  .kkb-rehber-ic{ gap:20px; }
+  .kkb-rehber h3{ font-size:22px; }
+
+  /*
+    Mobilde beyaz kart KALKAR.
+    Sebep: bölüm → kart → Brevo'nun kendi kartı → alan grubu şeklinde dört
+    iç içe kutu oluşuyordu; her biri kenar boşluğu yiyordu. reCAPTCHA 304px
+    sabit genişlikte olduğu için 375px'lik ekranda taşıyordu. Kartı
+    kaldırınca iframe'e ~40px daha genişlik kalıyor ve captcha sığıyor.
+    Masaüstünde kart duruyor — orada yer bol ve çerçeve iyi görünüyor.
+  */
+  .kkb-rehber-form{
+    background:transparent;
+    border:0;
+    box-shadow:none;
+    padding:0;
+    border-radius:0;
+  }
+  .kkb-rehber-form iframe{ height:510px; }   /* dar ekranda form uzuyor */
+}
+</style>
+
+<section class="kkb-rehber">
+  <div class="kkb-rehber-ic">
+
+    <!-- ── Sol: rehberde ne var ── -->
+    <div>
+      <span class="kkb-rehber-rozet">🎁 Ücretsiz Rehber</span>
+
+      <h3>KOBİ'ler için Yapay Zeka Başlangıç Rehberi</h3>
+
+      <p class="kkb-rehber-ozet">
+        Yapay zekayı işletmenizde nereden kullanmaya başlayacağınızı
+        dört adımda anlatan uygulama rehberi. Baştan sona okumak için değil,
+        sırayla uygulamak için hazırlandı.
+      </p>
+
+      <ul class="kkb-rehber-liste">
+        <li><span><strong>Doğru işi seçin</strong> — neyi devretmeli, neyi devretmemeli</span></li>
+        <li><span><strong>Müşteri personanız</strong> — beş adımda çıkarma yöntemi</span></li>
+        <li><span><strong>İçerik takvimi</strong> — denge oranları ve konu havuzu</span></li>
+        <li><span><strong>İtiraz karşılama</strong> — işe yarayan üç adımlı kalıp</span></li>
+        <li><span><strong>Kontrol listesi</strong> — yazdırıp işaretleyebileceğiniz uygulama planı</span></li>
+      </ul>
+
+      <div class="kkb-rehber-meta">
+        <span>📄 8 sayfa</span>
+        <span>⏱️ 4 haftalık plan</span>
+        <span>💳 Kredi kartı gerekmez</span>
+      </div>
+    </div>
+
+    <!-- ── Sağ: Brevo formu ── -->
+    <div>
+      <div class="kkb-rehber-form">
+        <iframe
+          width="540" height="470"
+          src="https://1cf9b7a8.sibforms.com/v2/serve/MUIFAL94xRB86aONxz0BelMeD3KoTaGH9yi4blEsHdvR2bQXKd5MscxTIlNewZrWXT9Hhdp6sZSbjmfTtv5LGJYbWB_6lkCuFcswGgV0vkkNNdeu2_JJgthghCMpvy_wcssli6PWjNcT1nUdidEjFagUYDezbDYY0H0I3cfiQ-I_GNMaog3oH7OrB7sj84SEG-yHV_B60ol9Lk3vQg=="
+          frameborder="0" scrolling="auto" allowfullscreen
+          title="Rehber indirme formu"
+          style="display:block;margin-left:auto;margin-right:auto;max-width:100%;"></iframe>
+      </div>
+
+      <p class="kkb-rehber-kvkk">
+        E-postanızı yalnızca rehberi göndermek ve KOBİ ipuçları paylaşmak için kullanırız.
+        Dilediğiniz zaman çıkabilirsiniz —
+        <a href="https://kolaykobi.com/gizlilik" target="_blank" rel="noopener">Gizlilik Politikası</a>
+      </p>
+    </div>
+
+  </div>
+</section>
