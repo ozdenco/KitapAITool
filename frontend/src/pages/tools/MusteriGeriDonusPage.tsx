@@ -9,6 +9,10 @@ import { Textarea } from '@/components/ui/Textarea'
 import { FormPersistButtons } from '@/components/ui/FormPersistButtons'
 import { ToolShell } from '@/components/ui/ToolShell'
 import { useElapsedSeconds } from '@/hooks/useElapsedSeconds'
+import { useProfilOnDolgu } from '@/hooks/useIsletmeProfili'
+import { markaKurallari } from '@/lib/markaKurallari'
+import { SEKTORLER } from '@/lib/sektorler'
+import { AramaliSecici } from '@/components/ui/AramaliSecici'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -27,15 +31,14 @@ interface GeriDonusResult {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const SEKTORLER = [
-  'Muhasebe / Finans', 'Sağlık / Klinik', 'Eğitim / Kurs',
-  'İnşaat / Mühendislik', 'Hukuk / Danışmanlık', 'Perakende / Mağaza',
-  'Yiyecek / İçecek', 'Güzellik / Estetik', 'Lojistik / Taşımacılık',
-  'Teknoloji / Yazılım', 'Giyim / Tekstil', 'Diğer',
-]
-
+// Sıralama seyrekten sıka değil, tam tersi: tek seferlikten yıllığa doğru
+// satın alma ARALIĞI uzuyor. Günlük/haftalık bu yüzden aylığın önüne girdi
+// (14 Eyl 2026, tester isteği — günlük alışveriş yapılan işler eksikti:
+// fırın, kahveci, market, kuaför gibi).
 const SIKLIKLLAR = [
   { value: 'Tek seferlik', label: 'Tek seferlik' },
+  { value: 'Günlük', label: 'Günlük' },
+  { value: 'Haftalık', label: 'Haftalık' },
   { value: 'Aylık', label: 'Aylık' },
   { value: '3 ayda bir', label: '3 ayda bir' },
   { value: '6 ayda bir', label: '6 ayda bir' },
@@ -90,7 +93,8 @@ SADECE JSON döndür:
   ],
   "ctaText": "<${f.biz} için motivasyon cümlesi>"
 }
-5 adım olsun. Türkçe, samimi ve uygulanabilir olsun.`
+5 adım olsun. Türkçe, samimi ve uygulanabilir olsun.
+${markaKurallari()}`
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -104,6 +108,14 @@ export function MusteriGeriDonusPage() {
   const [channels, setChannels] = useState<string[]>([])
   const [currentMethod, setCurrentMethod] = useState('')
   const [note, setNote] = useState('')
+
+  // İşletme profilinden ön dolgu — boş alanlar doldurulur, kullanıcının
+  // yazdığına dokunulmaz (bkz. useProfilOnDolgu).
+  useProfilOnDolgu({
+    businessName: [biz, setBiz],
+    sector: [sector, setSector],
+    productService: [service, setService],
+  })
   const [result, setResult] = useState<GeriDonusResult | null>(null)
 
   const toggleChannel = (v: string) =>
@@ -112,7 +124,7 @@ export function MusteriGeriDonusPage() {
   const mutation = useMutation({
     mutationFn: async () => {
       const prompt = buildPrompt({ biz, sector, frequency, service, channels, currentMethod, note })
-      const res = await api.post('/tools/musteri-geri-donus/run', { prompt })
+      const res = await api.post('/tools/musteri-geri-donus/run', { prompt, isletmeAdi: biz })
       const content = extractAiContent(res.data)
       return parseAiJson<GeriDonusResult>(content)
     },
@@ -151,11 +163,11 @@ export function MusteriGeriDonusPage() {
                 />
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <Select
+                  <AramaliSecici
                     label="Sektör *"
                     value={sector}
-                    onChange={(e) => setSector(e.target.value)}
-                    options={[{ value: '', label: 'Seçin...' }, ...SEKTORLER.map((s) => ({ value: s, label: s }))]}
+                    onChange={setSector}
+                    secenekler={SEKTORLER}
                   />
                   <Select
                     label="Müşteri satın alma sıklığı *"
