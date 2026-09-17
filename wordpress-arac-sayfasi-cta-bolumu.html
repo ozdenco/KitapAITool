@@ -1,0 +1,173 @@
+<!--
+  KolayKOBİ — Araç sayfası altı: uygulamaya geçiş bloğu (WordPress)
+  ─────────────────────────────────────────────────────────────
+  Nereye: Kitaptaki QR'ların gittiği 10 araç sayfasının EN ALTINA,
+          aracın kendisinin ALTINA. Sayfa başına bir kez.
+
+    /isletme-gorunurluk-skoru/        /rakip-analiz-panosu/
+    /musteri-persona-olusturucu/      /chatbot-senaryo-hazirlayici/
+    /icerik-takvimi-uretici/          /viral-video-uyarlayici/
+    /whatsapp-satis-script-uretici/   /trend-video-bulucu/
+    /reklam-butce-dagitici/           /musteri-geri-donus-senaryosu/
+
+  ⚠️ HANGİ WIDGET: Elementor'da "Metin Editörü" widget'ına YAPIŞTIRMAYIN —
+  WordPress araya <p> etiketleri ekleyip yapıyı bozuyor. Arama kutusuna
+  "HTML" yazıp çıkan HTML widget'ını kullanın.
+
+  NEDEN BU BLOK VAR: Kitaptaki QR'lar bu sayfalara geliyor ve sayfalar
+  girişsiz, anında çalışıyor — kitabın "aracı ücretsiz kullanın" sözü
+  böyle tutuluyor. Bu blok o sözü bozmadan, isteyen okuyucuyu uygulamaya
+  davet ediyor. Şu an bu sayfalar hiçbir yere bağlanmıyor; her okutma
+  burada bitiyor.
+
+  BUTON NEREYE GİDİYOR: app.kolaykobi.com/kayit — doğrudan aracın kendisine
+  DEĞİL. Sebebi: uygulamadaki araç sayfaları giriş istiyor ve giriş ekranı
+  şu an nereye gitmek istendiğini hatırlamıyor; doğrudan araca link versek
+  kişi giriş yapıp panele düşerdi. AuthGuard düzeltmesi yapılırsa buton
+  hedefi ilgili araca çevrilebilir.
+
+  ?kaynak=kitap: isteğe bağlı. Analitikte kitaptan gelen trafiği ayırt
+  etmeye yarıyor, uygulama bu parametreyi yok sayıyor.
+
+  İSTERSENİZ KİŞİSELLEŞTİRİN: her sayfada <strong>Bu araç</strong> yerine
+  o sayfanın araç adını yazabilirsiniz ("Müşteri Persona Oluşturucu" gibi).
+  Şart değil, blok böyle de doğru çalışıyor.
+-->
+
+<style>
+.kkb-gecis{
+  --lacivert:#1a3a8f;
+  --metin:#5b6b85;
+  --turuncu:#f97316;
+  --cizgi:#e4eaf8;
+  --zemin:#f5f8ff;
+
+  background:var(--zemin);
+  border:1px solid var(--cizgi);
+  border-left:4px solid var(--turuncu);
+  border-radius:14px;
+  padding:24px 22px;
+  margin:36px 0 24px;
+  font-family:"Montserrat",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+}
+
+/*
+  Kapsayıcıya göre kırılıyor, ekrana göre değil: blog ve araç sayfalarında
+  içerik kolonu dar kalabiliyor, medya sorgusu bunu göremez.
+  min(360px,100%) şart — sadece minmax(360px,1fr) yazılırsa 360px bir ALT
+  SINIR olur ve dar telefonda kapsayıcı 330px'e düşse bile sütun 360px'e
+  zorlanıp blok yatay taşar.
+*/
+.kkb-gecis-ic{
+  display:grid;
+  grid-template-columns:repeat(auto-fit, minmax(min(360px, 100%), 1fr));
+  gap:22px;
+  align-items:center;
+  max-width:920px;
+  margin:0 auto;
+}
+
+.kkb-gecis-rozet{
+  display:inline-block;
+  background:#fff; border:1px solid var(--cizgi);
+  color:var(--lacivert);
+  font-size:11.5px; font-weight:700;
+  letter-spacing:.08em; text-transform:uppercase;
+  padding:5px 11px; border-radius:100px;
+  margin-bottom:12px;
+}
+
+.kkb-gecis h3{
+  font-size:20px; line-height:1.3;
+  font-weight:800; color:var(--lacivert);
+  margin:0 0 8px;
+  text-wrap:balance;
+}
+
+.kkb-gecis-ozet{
+  font-size:14.5px; line-height:1.6;
+  color:var(--metin);
+  margin:0 0 14px;
+}
+
+.kkb-gecis-liste{
+  list-style:none; padding:0; margin:0;
+  display:grid; gap:7px;
+}
+.kkb-gecis-liste li{
+  display:grid; grid-template-columns:auto 1fr; gap:9px;
+  font-size:14px; line-height:1.5; color:var(--metin);
+}
+.kkb-gecis-liste li::before{
+  content:"✓"; color:#1d9e75; font-weight:700; font-size:12.5px; line-height:1.6;
+}
+.kkb-gecis-liste strong{ color:#243b5e; font-weight:600; }
+
+/* ── Sağ sütun: eylem ─────────────────────────────────────── */
+.kkb-gecis-eylem{ text-align:center; }
+
+.kkb-gecis-buton{
+  display:inline-block;
+  background:var(--turuncu);
+  color:#fff !important;
+  font-size:15.5px; font-weight:700;
+  text-decoration:none !important;
+  padding:14px 28px;
+  border-radius:100px;
+  box-shadow:0 5px 16px rgba(249,115,22,.26);
+  transition:transform .15s ease, box-shadow .15s ease;
+}
+.kkb-gecis-buton:hover,
+.kkb-gecis-buton:focus{
+  transform:translateY(-2px);
+  box-shadow:0 8px 22px rgba(249,115,22,.34);
+}
+.kkb-gecis-buton:focus-visible{
+  outline:3px solid var(--lacivert); outline-offset:3px;
+}
+
+.kkb-gecis-altnot{
+  font-size:12.5px; color:#8b98ad;
+  margin:10px 0 0; line-height:1.5;
+}
+
+@media (max-width:820px){
+  .kkb-gecis{ padding:20px 14px; border-radius:12px; }
+  .kkb-gecis h3{ font-size:18px; }
+  .kkb-gecis-buton{ display:block; padding:14px 18px; }
+}
+</style>
+
+<section class="kkb-gecis">
+  <div class="kkb-gecis-ic">
+
+    <div>
+      <span class="kkb-gecis-rozet">Devamı var</span>
+
+      <h3>Bu araç, KolayKOBİ'deki 10 araçtan biri</h3>
+
+      <p class="kkb-gecis-ozet">
+        Bu sayfayı istediğiniz gibi kullanmaya devam edin. Uygulamaya
+        geçerseniz diğer dokuz araç da elinizin altında olur:
+      </p>
+
+      <ul class="kkb-gecis-liste">
+        <li><span><strong>On aracın tamamı</strong> — persona, içerik takvimi, WhatsApp scripti, reklam bütçesi, rakip analizi ve dahası</span></li>
+        <li><span><strong>Çıktılarınız kaydedilir</strong> — ürettiğiniz her şey hesabınızda durur, sonra geri dönüp bakabilirsiniz</span></li>
+        <li><span><strong>Kullanım geçmişiniz</strong> — hangi aracı ne zaman çalıştırdığınızı görürsünüz</span></li>
+      </ul>
+    </div>
+
+    <div class="kkb-gecis-eylem">
+      <a class="kkb-gecis-buton"
+         href="https://app.kolaykobi.com/kayit?kaynak=kitap">
+        Ücretsiz hesap oluştur
+      </a>
+      <p class="kkb-gecis-altnot">
+        Her araç için ayda 3 kullanım ücretsiz.<br>
+        Kredi kartı istemiyoruz.
+      </p>
+    </div>
+
+  </div>
+</section>
