@@ -47,7 +47,14 @@
   border-left:4px solid var(--turuncu);
   border-radius:14px;
   padding:24px 22px;
-  margin:36px 0 24px;
+  /*
+    ÜST BOŞLUK YOK (17 Eyl 2026): önce 36px üst boşluk vardı; Elementor
+    widget'lar arasına kendi aralığını zaten koyduğu için ikisi toplanıp
+    formla bu blok arasında kocaman bir boşluk bıraktı. Rehber formu
+    bölümünde de aynı tuzağa düşülmüştü, orada da üst boşluk sıfır.
+    Aralığı Elementor'un kendi widget boşluğu versin.
+  */
+  margin:0 0 24px;
   font-family:"Montserrat",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
 }
 
