@@ -120,23 +120,38 @@ public class RecurringRenewalService(
 
         var orderId   = $"AR-SUB-{user.Id.ToString("N")[..8]}-{DateTime.UtcNow:yyyyMMddHHmmss}";
         var success   = false;
-        var hasCard   = !string.IsNullOrEmpty(user.PayTrCardToken);
-        var isFreeRenew = user.IsAdmin || !hasCard;
+        var hasCard = !string.IsNullOrEmpty(user.PayTrCardToken);
 
-        if (!isFreeRenew && plan.PriceMonthly > 0)
+        /*
+         * KART YOKSA YENİLENMEZ (18 Eyl 2026).
+         * Eskiden "kart yok" da ücretsiz yenileme sayılıyordu; kartını
+         * kaydetmeyen müşteri ikinci aydan itibaren bedava kullanıyordu.
+         * Artık yalnızca admin bedava yenilenir. Kartı olmayan normal
+         * kullanıcı başarısızlık dalına düşer: abonelik İPTAL EDİLMEZ,
+         * sadece uzatılmaz — süresi dolar ve "yenilenemedi" maili gider.
+         */
+        if (user.IsAdmin)
         {
-            // Normal kullanıcı, kartı var → PayTR'den çek
+            success = true;
+            logger.LogInformation("[AutoRenew] Ücretsiz yenileme (admin hesabı): {Email} - {Plan}",
+                user.Email, plan.Name);
+        }
+        else if (!hasCard)
+        {
+            success = false;
+            logger.LogWarning("[AutoRenew] Kart tokeni yok, yenilenmiyor: {Email} - {Plan}",
+                user.Email, plan.Name);
+        }
+        else if (plan.PriceMonthly > 0)
+        {
             success = await paytr.RecurringChargeAsync(
-                user.PayTrCardToken, orderId, plan.PriceMonthly,
+                user.PayTrCardToken!, orderId, plan.PriceMonthly,
                 $"{plan.Name} Paketi — 1 Aylık", user, ct);
         }
         else
         {
-            // Admin veya kart kaydı olmayan → ücretsiz yenileme, mail gönder
+            // Ücretsiz/Kurumsal plan (0 TL) → tahsilat yok, uzatılır
             success = true;
-            var reason = user.IsAdmin ? "admin hesabı" : "kart token yok";
-            logger.LogInformation("[AutoRenew] Ücretsiz yenileme ({Reason}): {Email} - {Plan}",
-                reason, user.Email, plan.Name);
         }
 
         if (success)
@@ -231,25 +246,31 @@ public class RecurringRenewalService(
         var totalAmount  = toolAmounts.Values.Sum();
         var orderId      = $"AR-TOOL-{user.Id.ToString("N")[..8]}-{DateTime.UtcNow:yyyyMMddHHmmss}";
         var success      = false;
-        var isFreeRenew  = user.IsAdmin || !hasCard;
-
-        if (!isFreeRenew && totalAmount > 0)
+        // Kart yoksa yenilenmez — gerekçe için abonelik dalındaki nota bakın.
+        if (user.IsAdmin)
         {
-            // Normal kullanıcı, kartı var → PayTR'den çek
+            success = true;
+            logger.LogInformation("[AutoRenew] Ücretsiz yenileme (admin hesabı): {Email} - {Count} araç",
+                user.Email, userTools.Count);
+        }
+        else if (!hasCard)
+        {
+            success = false;
+            logger.LogWarning("[AutoRenew] Kart tokeni yok, yenilenmiyor: {Email} - {Count} araç",
+                user.Email, userTools.Count);
+        }
+        else if (totalAmount > 0)
+        {
             var desc = userTools.Count == 1
                 ? $"{ToolIdToName(userTools[0].ToolId)} araç aboneliği"
                 : $"Araç aboneliği yenileme ({userTools.Count} araç)";
 
             success = await paytr.RecurringChargeAsync(
-                user.PayTrCardToken, orderId, totalAmount, desc, user, ct);
+                user.PayTrCardToken!, orderId, totalAmount, desc, user, ct);
         }
         else
         {
-            // Admin veya kart kaydı olmayan → ücretsiz yenileme, mail gönder
             success = true;
-            var reason = user.IsAdmin ? "admin hesabı" : "kart token yok";
-            logger.LogInformation("[AutoRenew] Ücretsiz yenileme ({Reason}): {Email} - {Count} araç",
-                reason, user.Email, userTools.Count);
         }
 
         if (success)
@@ -362,6 +383,8 @@ public class RecurringRenewalService(
         "chatbot-senaryo"     => "Chatbot Senaryo Hazırlayıcı",
         "ai-gorunurluk"       => "AI Görünürlük Takipçisi",
         "viral-video"         => "Viral Video Uyarlayıcı",
+        "video-olusturma"     => "Video Oluşturma",
+        "video-uret"          => "Video Üretimi",
         "trend-video"         => "Trend Video Bulucu",
         _                     => toolId,
     };
