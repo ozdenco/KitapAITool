@@ -62,7 +62,23 @@ public class PayTrService
         // Hash: merchant_id + user_ip + merchant_oid + email + payment_amount
         //       + user_basket_b64 + no_installment + max_installment + currency
         //       + test_mode + merchant_salt
-        var noInstallment  = "0";
+        /*
+         * DÜŞÜK TUTARDA TAKSİT KAPALI (18 Eyl 2026).
+         * Bankaların taksitli işlem için kendi asgari tutarı var; altında kalan
+         * işlemi reddediyorlar. Canlı testte 1 TL / 3 taksit denendi ve banka
+         * "İşlem başarısız" dedi — entegrasyon sorunu değildi, tutar sorunuydu.
+         * Araçlar 19-49 TL olduğu için gerçek müşteri de taksit seçerse aynı
+         * hatayı alır ve siteyi bozuk sanar. Eşiğin altında taksidi hiç
+         * göstermiyoruz; 230 TL Standart ve 470 TL Premium'da açık kalıyor.
+         *
+         * Eşik tahmini: bankaya ve karta göre değişiyor, 100 TL güvenli bir alt
+         * sınır. Gerçek redlerde bu sayı yükseltilebilir.
+         *
+         * DİKKAT: noInstallment hem hash'e hem POST alanına giriyor; ikisi
+         * ayrışırsa PayTR token'ı reddeder. Tek değişken olarak tutuluyor.
+         */
+        const decimal TaksitAsgariTutar = 100m;
+        var noInstallment  = amount < TaksitAsgariTutar ? "1" : "0";
         var maxInstallment = "0";
         var currency       = "TL";
         var testMode       = _testMode ? "1" : "0";
