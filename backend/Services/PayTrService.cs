@@ -63,22 +63,25 @@ public class PayTrService
         //       + user_basket_b64 + no_installment + max_installment + currency
         //       + test_mode + merchant_salt
         /*
-         * DÜŞÜK TUTARDA TAKSİT KAPALI (18 Eyl 2026).
-         * Bankaların taksitli işlem için kendi asgari tutarı var; altında kalan
-         * işlemi reddediyorlar. Canlı testte 1 TL / 3 taksit denendi ve banka
-         * "İşlem başarısız" dedi — entegrasyon sorunu değildi, tutar sorunuydu.
-         * Araçlar 19-49 TL olduğu için gerçek müşteri de taksit seçerse aynı
-         * hatayı alır ve siteyi bozuk sanar. Eşiğin altında taksidi hiç
-         * göstermiyoruz; 230 TL Standart ve 470 TL Premium'da açık kalıyor.
+         * TAKSİT TAMAMEN KAPALI (18 Eyl 2026).
          *
-         * Eşik tahmini: bankaya ve karta göre değişiyor, 100 TL güvenli bir alt
-         * sınır. Gerçek redlerde bu sayı yükseltilebilir.
+         * Sebep sadece teknik değil, ürünün şekli: satılan şey AYLIK ABONELİK.
+         * Bir ayın ücretini üç aya bölmek müşteriye de bir şey kazandırmıyor,
+         * zaten her ay ödüyor. Karşılığında taksit komisyonu ve banka reddi
+         * riski geliyor.
+         *
+         * Teknik taraf da bunu destekliyordu: canlı testte 1 TL / 3 taksit
+         * denendi, banka "İşlem başarısız" dedi. Bankaların taksitli işlem için
+         * asgari tutarı var; araçlar 19-49 TL olduğu için gerçek müşteri de
+         * taksit seçse aynı hatayı alır ve siteyi bozuk sanardı.
+         *
+         * Geri açmak istenirse: "1" yerine "0" yeterli. Taksit sayısı/komisyon
+         * ayarları ayrıca PayTR panelinde (max_inst_non_bus) tanımlı.
          *
          * DİKKAT: noInstallment hem hash'e hem POST alanına giriyor; ikisi
          * ayrışırsa PayTR token'ı reddeder. Tek değişken olarak tutuluyor.
          */
-        const decimal TaksitAsgariTutar = 100m;
-        var noInstallment  = amount < TaksitAsgariTutar ? "1" : "0";
+        var noInstallment  = "1";
         var maxInstallment = "0";
         var currency       = "TL";
         var testMode       = _testMode ? "1" : "0";
