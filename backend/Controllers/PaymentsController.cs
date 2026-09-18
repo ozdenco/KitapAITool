@@ -371,10 +371,29 @@ public class PaymentsController(
             if (!string.IsNullOrWhiteSpace(form.Utoken) && payingUser is not null)
                 payingUser.PayTrCardToken = form.Utoken;
 
+            /*
+             * OTOMATİK YENİLEME YALNIZCA KART VARSA (18 Eyl 2026).
+             *
+             * PayTR kart saklamayı ancak müşteri ödeme sayfasında "kartımı
+             * sakla" derse yapıyor; demezse utoken gelmiyor. Eskiden AutoRenew
+             * her satın almada true açılıyordu ve kartı olmayan kullanıcı
+             * RecurringRenewalService içinde "ücretsiz yenileme" yoluna
+             * düşüyordu — yani ikinci aydan itibaren bedava kullanıyordu.
+             *
+             * Artık yenileme sözü yalnızca gerçekten tahsil edilebilecek
+             * kayıtlara veriliyor. Kartını kaydetmeyen müşterinin hakkı
+             * süresi dolunca biter, yeniden satın alır.
+             *
+             * Daha önce kart kaydetmiş dönen müşteriyi atlamamak için
+             * saklanmış token de kontrol ediliyor.
+             */
+            var kartVar = !string.IsNullOrWhiteSpace(form.Utoken)
+                       || !string.IsNullOrWhiteSpace(payingUser?.PayTrCardToken);
+
             if (order.PlanId.HasValue)
             {
                 // Abonelik paketi ödemesi
-                await subs.ActivateFromPaymentAsync(order.UserId, order.PlanId.Value, form.MerchantOid);
+                await subs.ActivateFromPaymentAsync(order.UserId, order.PlanId.Value, form.MerchantOid, kartVar);
             }
             else if (order.ToolId is not null)
             {
@@ -390,7 +409,7 @@ public class PaymentsController(
                     IyzicoPaymentId = form.MerchantOid,
                     PurchasedAt     = DateTime.UtcNow,
                     ExpiresAt       = DateTime.UtcNow.AddMonths(1).AddDays(-1),
-                    AutoRenew       = true,
+                    AutoRenew       = kartVar,
                 });
             }
             else if (order.ToolIds is not null)
@@ -433,7 +452,7 @@ public class PaymentsController(
                         IyzicoPaymentId = form.MerchantOid,
                         PurchasedAt     = now,
                         ExpiresAt       = now.AddMonths(1).AddDays(-1),
-                        AutoRenew       = true,
+                        AutoRenew       = kartVar,
                     });
                 }
             }

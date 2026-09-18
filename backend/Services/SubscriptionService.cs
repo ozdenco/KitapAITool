@@ -29,15 +29,15 @@ public class SubscriptionService(AppDbContext db)
             .FirstOrDefaultAsync(s => s.UserId == userId);
 
     // Ödeme başarılıysa PayTR callback'ten çağrılır
-    public async Task<Subscription> ActivateFromPaymentAsync(Guid userId, int planId, string? paymentId)
+    public async Task<Subscription> ActivateFromPaymentAsync(Guid userId, int planId, string? paymentId, bool autoRenew = true)
     {
-        var sub = await UpgradeAsync(userId, planId);
+        var sub = await UpgradeAsync(userId, planId, autoRenew);
         sub.IyzicoSubscriptionId = paymentId;
         await db.SaveChangesAsync();
         return sub;
     }
 
-    public async Task<Subscription> UpgradeAsync(Guid userId, int planId)
+    public async Task<Subscription> UpgradeAsync(Guid userId, int planId, bool autoRenew = true)
     {
         var plan = await db.Plans.FindAsync(planId)
             ?? throw new InvalidOperationException("Plan not found");
@@ -54,8 +54,9 @@ public class SubscriptionService(AppDbContext db)
             // Bitiş = başlangıç + 1 ay - 1 gün (15 Ağu → 14 Eyl)
             existing.ExpiresAt   = DateTime.UtcNow.AddMonths(1).AddDays(-1);
             existing.CancelledAt = null;
-            // Yeni satın alımda her zaman açık yap
-            existing.AutoRenew   = true;
+            // Yenileme sözü yalnızca tahsil edilebilecekse verilir:
+            // kart saklanmadıysa autoRenew=false gelir (bkz. PaymentsController).
+            existing.AutoRenew   = autoRenew;
             await db.SaveChangesAsync();
             existing.Plan = plan;
             return existing;
@@ -69,7 +70,7 @@ public class SubscriptionService(AppDbContext db)
             StartedAt  = DateTime.UtcNow,
             // Bitiş = başlangıç + 1 ay - 1 gün (15 Ağu → 14 Eyl)
             ExpiresAt  = DateTime.UtcNow.AddMonths(1).AddDays(-1),
-            AutoRenew  = true,
+            AutoRenew  = autoRenew,
         };
 
         db.Subscriptions.Add(newSub);
