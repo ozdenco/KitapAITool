@@ -234,6 +234,30 @@ public class ToolsController(
                 return StatusCode((int)response.StatusCode, new { error = "Araç şu an kullanılamıyor. Lütfen tekrar deneyin." });
             }
 
+            /*
+             * n8n'İN KOTA YANITI HTTP 200 İLE GELİR — BAŞARI SAYILMAMALI.
+             *
+             * AI Görünürlük, Viral Video, Video Oluşturma ve Video Üret akışları
+             * responseMode='lastNode' kullanıyor; 429 döndürebilmek için bütün
+             * başarı yollarına ayrıca "Respond to Webhook" düğümü eklemek
+             * gerekirdi. Bunun yerine kota düğümü gövdeye `_kotaDoldu` işaretini
+             * koyuyor, ayrımı burada yapıyoruz.
+             *
+             * Bu kontrol kayıttan ve kredi düşümünden ÖNCE olmak zorunda:
+             * RecordUsageAsync başarısız kaydı da aylık sayıma dahil ediyor ve
+             * kredi düşümü yalnızca HTTP durumuna bakıyordu. Aksi halde kullanıcı
+             * hiçbir şey almadan hem aylık hakkını hem kredisini kaybederdi —
+             * video araçlarında bu doğrudan para kaybı demek.
+             */
+            if (KotaYanitiMi(content))
+            {
+                logger.LogWarning("n8n günlük kota sınırı aşıldı: {ToolId}, kullanıcı {UserId}", toolId, userId);
+                return StatusCode(StatusCodes.Status429TooManyRequests, new
+                {
+                    error = "Bu araç için günlük kullanım sınırına ulaştınız. Yarın tekrar deneyebilirsiniz.",
+                });
+            }
+
             // Ücretsiz plan adımı sayılmaz (bkz. yukarıdaki planAdimi açıklaması)
             if (!planAdimi)
                 await usage.RecordUsageAsync(userId, toolId, success: true);
@@ -469,6 +493,35 @@ public class ToolsController(
         return payload.TryGetProperty("sahneler", out var el)
             && el.ValueKind == JsonValueKind.Array
             && el.GetArrayLength() > 0;
+    }
+
+    /// <summary>
+    /// n8n'den gelen gövde, günlük kota sınırının aşıldığını bildiren yanıt mı?
+    /// Kota düğümü `_kotaDoldu: true` işaretini koyuyor. n8n 'lastNode' modunda
+    /// yanıtı bazen tek nesne, bazen tek elemanlı dizi olarak döndürdüğü için
+    /// ikisi de kontrol ediliyor.
+    /// </summary>
+    private static bool KotaYanitiMi(string content)
+    {
+        if (string.IsNullOrWhiteSpace(content)) return false;
+
+        try
+        {
+            using var doc = JsonDocument.Parse(content);
+            var kok = doc.RootElement;
+
+            if (kok.ValueKind == JsonValueKind.Array)
+                kok = kok.GetArrayLength() > 0 ? kok[0] : default;
+
+            return kok.ValueKind == JsonValueKind.Object
+                && kok.TryGetProperty("_kotaDoldu", out var v)
+                && v.ValueKind == JsonValueKind.True;
+        }
+        catch (JsonException)
+        {
+            // Gövde JSON değilse kota yanıtı da değildir; normal akış devam etsin.
+            return false;
+        }
     }
 
     private static string? TryGetString(JsonElement el, string key) =>

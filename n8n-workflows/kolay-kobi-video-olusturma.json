@@ -19,6 +19,63 @@
     },
     {
       "parameters": {
+        "jsCode": "// Kota kontrolu (19 Eyl 2026). Bu akista daha once HIC limit yoktu: webhook\n// kimlik dogrulamasiz oldugu icin adresini bilen herkes sinirsiz cagirabiliyordu.\n// Kota kullanici bazli: backend gercek kimligi govdede 'kkbKimlik' olarak\n// yolluyor. WordPress'ten gelen giris yapmamis isteklerde bu alan olmaz, o\n// zaman IP'ye duseriz. IP tek basina guvenilir degil (mobil veride degisir,\n// ortak wifi'de birlesir), bu yuzden kimlik varsa o tercih edilir.\n//\n// ONEMLI: cikti girdinin AYNISI olmali, uzerine yalnizca bayrak eklenir.\n// Alan beyaz listesi yapilirsa asagidaki dugumler body'yi bulamaz -- ayni\n// hata 11 Eyl 2026'da 'Plan Yaniti'nda replik alanini dusurmustu.\nconst girdi = $input.first().json;\nconst kimlikGovde = girdi.body || girdi;\nconst ip = kimlikGovde.kkbKimlik || girdi.headers?.['x-forwarded-for']?.split(',')[0]?.trim() || girdi.headers?.['x-real-ip'] || 'unknown';\nconst today = new Date().toISOString().slice(0, 10);\nconst key = 'rl_videoolus_' + ip + '_' + today;\nconst staticData = $getWorkflowStaticData('global');\nif (!staticData.rateLimits) staticData.rateLimits = {};\n// 7 gunden eski sayaclari sil, yoksa static data sinirsiz buyur.\nconst silSiniri = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10);\nfor (const k of Object.keys(staticData.rateLimits)) {\n  const kTarih = k.slice(-10);\n  if (/^\\d{4}-\\d{2}-\\d{2}$/.test(kTarih) && kTarih < silSiniri) delete staticData.rateLimits[k];\n}\nconst current = staticData.rateLimits[key] || 0;\nif (current >= 50) {\n  return [{ json: { ...girdi, rateLimitExceeded: true } }];\n}\nstaticData.rateLimits[key] = current + 1;\nreturn [{ json: { ...girdi, rateLimitExceeded: false } }];"
+      },
+      "id": "rl-check-volus",
+      "name": "Rate Limit Check",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.rateLimitExceeded }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equal"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "rl-if-volus",
+      "name": "Kota Doldu?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        640,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "/**\n * KOTA YANITI -- gunluk sinir dolunca doner.\n *\n * Bu akis responseMode='lastNode' kullaniyor; HTTP 429 dondurmek icin butun\n * basari yollarina ayrica 'Respond to Webhook' dugumu eklemek gerekirdi.\n * Onun yerine akisin kendi hata kalibina uyuyoruz -- frontend zaten `error`\n * alanini kullaniciya gosteriyor.\n */\nreturn [{ json: {\n  // Backend bu isareti gorunce 429 dondurur; aylik hak ve kredi HARCANMAZ.\n  _kotaDoldu: true,\n  _parseError: true,\n  error: 'Günlük kullanım sınırına ulaştınız. Yarın tekrar deneyebilirsiniz.',\n} }];"
+      },
+      "id": "rl-quota-volus",
+      "name": "Kota Yanıtı",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        840,
+        140
+      ]
+    },
+    {
+      "parameters": {
         "method": "GET",
         "url": "={{ ($json.body?.bizUrl || $json.bizUrl || '').trim() }}",
         "options": {
@@ -35,7 +92,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        420,
+        1020,
         300
       ],
       "continueOnFail": true,
@@ -50,7 +107,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1740,
+        2340,
         300
       ]
     },
@@ -63,7 +120,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        600,
+        1200,
         300
       ]
     },
@@ -94,7 +151,7 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
       "position": [
-        760,
+        1360,
         300
       ]
     },
@@ -107,7 +164,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        940,
+        1540,
         180
       ]
     },
@@ -129,7 +186,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        1120,
+        1720,
         560
       ],
       "onError": "continueRegularOutput",
@@ -160,7 +217,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        1320,
+        1920,
         460
       ],
       "onError": "continueRegularOutput",
@@ -176,7 +233,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1500,
+        2100,
         460
       ]
     },
@@ -207,7 +264,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        1560,
+        2160,
         220
       ],
       "notes": "API anahtari: Header Auth credential -> x-goog-api-key. URL'ye ?key= YAZMAYIN (n8n calistirma gecmisine dusuyor). | KIMLIK: Authentication=Generic Credential Type, Header Auth. Import sonrasi yalnizca credential'i listeden secin.",
@@ -244,7 +301,7 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
       "position": [
-        1380,
+        1980,
         300
       ]
     },
@@ -257,7 +314,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1560,
+        2160,
         440
       ]
     },
@@ -288,7 +345,7 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
       "position": [
-        940,
+        1540,
         460
       ]
     },
@@ -310,7 +367,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        1120,
+        1720,
         380
       ],
       "onError": "continueRegularOutput",
@@ -350,7 +407,7 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
       "position": [
-        710,
+        1310,
         480
       ]
     },
@@ -379,7 +436,7 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
       "position": [
-        740,
+        1340,
         640
       ],
       "id": "vo-kampanya-mu",
@@ -392,7 +449,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1060,
+        1660,
         640
       ],
       "id": "vo-govde-kampanya",
@@ -404,7 +461,7 @@
       "main": [
         [
           {
-            "node": "Firma Scrape",
+            "node": "Rate Limit Check",
             "type": "main",
             "index": 0
           }
@@ -594,6 +651,35 @@
         [
           {
             "node": "Gövde hazır mı?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rate Limit Check": {
+      "main": [
+        [
+          {
+            "node": "Kota Doldu?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Kota Doldu?": {
+      "main": [
+        [
+          {
+            "node": "Kota Yanıtı",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Firma Scrape",
             "type": "main",
             "index": 0
           }
