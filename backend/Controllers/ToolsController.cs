@@ -220,7 +220,10 @@ public class ToolsController(
 
         try
         {
-            var response = await n8n.ForwardAsync(toolId, payload, ct);
+            // Kullanım kotası n8n'de IP başına tutuluyordu; uygulamadan gelen her istek
+            // aynı sunucu IP'siyle ulaştığı için bütün kullanıcılar tek kovayı
+            // paylaşıyordu. Kimliği gövdeyle taşıyoruz — ayrıntı N8nProxyService'te.
+            var response = await n8n.ForwardAsync(toolId, payload, $"u:{userId}", ct);
             var content = MojibakeOnarici.Onar(await response.Content.ReadAsStringAsync(ct));
 
             if (!response.IsSuccessStatusCode)

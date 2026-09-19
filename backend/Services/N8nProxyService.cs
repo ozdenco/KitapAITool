@@ -1,3 +1,6 @@
+using System.Text.Json;
+using System.Text.Json.Nodes;
+
 namespace KolayKobi.Api.Services;
 
 /// <summary>
@@ -23,23 +26,29 @@ public class N8nProxyService(HttpClient http, IConfiguration config, ILogger<N8n
         ["chatbot-senaryo"]   = "/webhook/kolay-kobi-chatbot",
         ["ai-gorunurluk"]     = "/webhook/kolay-kobi-ai-visibility",
         ["viral-video"]       = "/webhook/kolay-kobi-viral-uyarlayici",
-        ["trend-video"]       = "/webhook/kolay-kobi-trend-video"
+        ["trend-video"]       = "/webhook/kolay-kobi-trend-video",
+        // Viral Video'nun kopyası — Veo video üretimi burada geliştiriliyor.
+        ["video-olusturma"]   = "/webhook/kolay-kobi-video-olusturma",
+        // Seçilen uyarlamayı Veo ile gerçek videoya çevirir (2-5 dk, async)
+        ["video-uret"]        = "/webhook/kolay-kobi-video-uret"
     };
 
     // Async tools use job polling.
-    private static readonly HashSet<string> AsyncToolIds = ["icerik-takvimi", "trend-video"];
+    private static readonly HashSet<string> AsyncToolIds = ["icerik-takvimi", "trend-video", "video-uret"];
 
     // Araçların durum sorgulama webhook'ları ana path'den AYRI olabilir.
     // Her async araç için ayrı bir Status Webhook path + ?jobId= query param kullanılır.
     private static readonly Dictionary<string, string> StatusWebhookPaths = new()
     {
         ["trend-video"]    = "/webhook/kolay-kobi-trend-video-status",
-        ["icerik-takvimi"] = "/webhook/kolay-kobi-takvim-status"
+        ["icerik-takvimi"] = "/webhook/kolay-kobi-takvim-status",
+        ["video-uret"]     = "/webhook/kolay-kobi-video-uret-status"
     };
 
     public async Task<HttpResponseMessage> ForwardAsync(
         string toolId,
         object payload,
+        string? kimlik,
         CancellationToken cancellationToken = default)
     {
         if (!WebhookPaths.TryGetValue(toolId, out var path))
@@ -48,8 +57,45 @@ public class N8nProxyService(HttpClient http, IConfiguration config, ILogger<N8n
         var url = $"{_baseUrl}{path}";
         logger.LogInformation("Forwarding {ToolId} request to n8n: {Url}", toolId, url);
 
-        var response = await http.PostAsJsonAsync(url, payload, cancellationToken);
+        var response = await http.PostAsJsonAsync(url, KimlikEkle(payload, kimlik), cancellationToken);
         return response;
+    }
+
+    /// <summary>
+    /// n8n'deki "Rate Limit Check" düğümü günlük kotayı IP'ye göre ayırıyor. Uygulamadan
+    /// gelen bütün istekler n8n'e tek bir kimlikle (backend sunucusunun IP'si) ulaştığı
+    /// için her kullanıcı aynı kovayı paylaşıyordu — 30 kişilik bir workshop tek kovaya
+    /// sığmaz. IP zaten güvenilir bir ayraç da değil: mobil veride değişiyor, ortak
+    /// wifi'de birleşiyor.
+    ///
+    /// Çözüm, kovayı JWT'den gelen kullanıcı kimliğiyle ayırmak. Kimlik BAŞLIK yerine
+    /// GÖVDEYE konuyor; Traefik güvenilmeyen X-Forwarded-* başlıklarını siliyor, gövdeye
+    /// ise kimse dokunmuyor. n8n tarafı `body.kkbKimlik` yoksa eskisi gibi IP'ye düşer,
+    /// böylece WordPress'ten gelen girişsiz istekler olduğu gibi çalışmaya devam eder.
+    /// </summary>
+    private object KimlikEkle(object payload, string? kimlik)
+    {
+        if (string.IsNullOrWhiteSpace(kimlik))
+            return payload;
+
+        try
+        {
+            if (JsonSerializer.SerializeToNode(payload) is JsonObject govde)
+            {
+                govde["kkbKimlik"] = kimlik;
+                return govde;
+            }
+
+            logger.LogWarning("İstek gövdesi JSON nesnesi değil, kimlik eklenemedi.");
+            return payload;
+        }
+        catch (Exception ex)
+        {
+            // Kimlik eklenemezse istek yine de gitsin: n8n IP'ye düşer, kullanıcı en
+            // fazla ortak kovaya girer. İsteği tamamen düşürmek bundan çok daha kötü.
+            logger.LogWarning(ex, "İstek gövdesine kimlik eklenemedi.");
+            return payload;
+        }
     }
 
     public bool IsAsync(string toolId) => AsyncToolIds.Contains(toolId);
