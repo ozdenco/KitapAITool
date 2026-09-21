@@ -217,17 +217,6 @@ export function ReklamButcePage() {
                       </label>
                     ))}
                   </div>
-
-                  {/* "Diğer" seçilince kullanıcı kendi kanalını yazar */}
-                  {digerSecili && (
-                    <input
-                      type="text"
-                      value={channelOther}
-                      onChange={(e) => setChannelOther(e.target.value)}
-                      placeholder="Hangi kanal? Örn: WhatsApp Business, Telegram"
-                      className="mt-2 w-full px-3 py-2 text-sm border border-[#D3D1C7] rounded-lg bg-white text-[#1C1B19] placeholder:text-[#9A9792] outline-none focus:border-[#1D9E75] focus:ring-2 focus:ring-[#1D9E75]/10"
-                    />
-                  )}
                 </div>
 
                 <Input
@@ -259,6 +248,26 @@ export function ReklamButcePage() {
                       </label>
                     ))}
                   </div>
+                  {/*
+                    "Diğer" seçilince kullanıcı kendi kanalını yazar.
+
+                    Bu alan KANAL IZGARASININ HEMEN ALTINDA durmalı. Eskiden
+                    "Reklam hedefi" bloğunun içindeydi; kutucuk burada
+                    işaretleniyor, girdi ise formun ortasında, radyo
+                    düğmelerinin altında beliriyordu — neye ait olduğu
+                    anlaşılmıyordu (21 Eyl 2026'da bildirildi).
+                  */}
+                  {digerSecili && (
+                    <input
+                      type="text"
+                      value={channelOther}
+                      onChange={(e) => setChannelOther(e.target.value)}
+                      placeholder="Hangi kanal? Örn: WhatsApp Business, Telegram"
+                      aria-label="Diğer kanalın adı"
+                      className="mt-2 w-full px-3 py-2 text-sm border border-[#D3D1C7] rounded-lg bg-white text-[#1C1B19] placeholder:text-[#9A9792] outline-none focus:border-[#1D9E75] focus:ring-2 focus:ring-[#1D9E75]/10"
+                    />
+                  )}
+
                   {channels.length > 0 && channels.length < EN_AZ_KANAL && (
                     <p className="mt-2 text-[12.5px] text-[#7A5E12]">
                       {EN_AZ_KANAL - channels.length} kanal daha seçin — bütçeyi paylaştırabilmek için
