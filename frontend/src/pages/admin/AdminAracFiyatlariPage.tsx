@@ -29,7 +29,7 @@ const TOOL_ENGINE_MAP: Record<string, {
   'trend-video':        { engine: 'apify',   unitsPerRun: 1,  unitLabel: 'run/çalıştırma' },
   'rakip-analiz':       { engine: 'gemini',  unitsPerRun: 2,  unitLabel: 'token/çalıştırma', note: 'MiniMax 2 token + Gemini Flash ~2,5 ₺/run (13 Eyl 2026 ölçümü) · +1 marka kuralları' },
   'gorunurluk-skoru':   { engine: 'minimax', unitsPerRun: 4,  unitLabel: 'token/çalıştırma', note: '3 token · n8n 20 sn · +1 marka kuralları' },
-  'musteri-persona':    { engine: 'minimax', unitsPerRun: 5,  unitLabel: 'token/çalıştırma', note: '7 Eyl 2026 canlı ölçüm: 5 token (marka kuralları dahil) · eski değer 3 idi' },
+  'musteri-persona':    { engine: 'minimax', unitsPerRun: 6,  unitLabel: 'token/çalıştırma', note: '21 Eyl 2026 canlı ölçüm: 6 token (marka kuralları dahil) · 7 Eyl: 5 · daha önce: 3 — tüketim her ölçümde arttı' },
   'whatsapp-satis':     { engine: 'minimax', unitsPerRun: 11, unitLabel: 'token/çalıştırma', note: '7 itirazda 10 token · itiraz başına ~1 token (temel 3) · en fazla 10 itiraz → ~13 token · +1 marka kuralları' },
   'reklam-butce':       { engine: 'minimax', unitsPerRun: 3,  unitLabel: 'token/çalıştırma', note: '2 kanal seçiminde 2 token · kanal sayısıyla orantılı · +1 marka kuralları' },
   'musteri-geri-donus': { engine: 'minimax', unitsPerRun: 4,  unitLabel: 'token/çalıştırma', note: '3 token · n8n 27 sn (önceki ölçümler 4-5 token) · +1 marka kuralları' },
