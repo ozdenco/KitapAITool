@@ -32,7 +32,7 @@ const TOOL_ENGINE_MAP: Record<string, {
   'musteri-persona':    { engine: 'minimax', unitsPerRun: 6,  unitLabel: 'token/çalıştırma', note: '21 Eyl 2026 canlı ölçüm: 6 token (marka kuralları dahil) · 7 Eyl: 5 · daha önce: 3 — tüketim her ölçümde arttı' },
   'whatsapp-satis':     { engine: 'minimax', unitsPerRun: 11, unitLabel: 'token/çalıştırma', note: '7 itirazda 10 token · itiraz başına ~1 token (temel 3) · en fazla 10 itiraz → ~13 token · +1 marka kuralları' },
   'reklam-butce':       { engine: 'minimax', unitsPerRun: 3,  unitLabel: 'token/çalıştırma', note: '2 kanal seçiminde 2 token · kanal sayısıyla orantılı · +1 marka kuralları' },
-  'musteri-geri-donus': { engine: 'minimax', unitsPerRun: 4,  unitLabel: 'token/çalıştırma', note: '3 token · n8n 27 sn (önceki ölçümler 4-5 token) · +1 marka kuralları' },
+  'musteri-geri-donus': { engine: 'minimax', unitsPerRun: 5,  unitLabel: 'token/çalıştırma', note: '23 Eyl 2026 ölçümü: 5 token — kolaykobi.com sayfasından, marka kuralları YOK. Uygulama yolunda prompt markaKurallari() ekliyor, gerçek maliyet 6 olabilir. Önceki: 3 token + 1 marka kuralları = 4' },
   'chatbot-senaryo':    { engine: 'minimax', unitsPerRun: 3,  unitLabel: 'token/çalıştırma', note: '5 SSS · 2 token · n8n 14 sn · +1 marka kuralları' },
   'ai-gorunurluk':      { engine: 'minimax', unitsPerRun: 4,  unitLabel: 'token/çalıştırma', note: '3 token · n8n 19,2 sn · ekranda 23 sn · +1 marka kuralları' },
   'viral-video':        { engine: 'minimax', unitsPerRun: 2,  unitLabel: 'token/çalıştırma', note: '2 token · ekranda 42 sn' },
