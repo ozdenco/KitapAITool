@@ -172,21 +172,36 @@ input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3p
         <label>Sektör <span style="color:#A32D2D">*</span></label>
         <select id="sector">
           <option value="">Seçin…</option>
+          <option value="Muhasebe / Finans">Muhasebe / Finans</option>
+          <option value="Sağlık / Klinik">Sağlık / Klinik</option>
+          <option value="Eğitim / Kurs">Eğitim / Kurs</option>
+          <option value="İnşaat / Mühendislik">İnşaat / Mühendislik</option>
+          <option value="Hukuk / Danışmanlık">Hukuk / Danışmanlık</option>
+          <option value="Perakende / Mağaza">Perakende / Mağaza</option>
+          <option value="E-ticaret">E-ticaret</option>
+          <option value="Yiyecek / İçecek">Yiyecek / İçecek</option>
+          <option value="Güzellik / Estetik">Güzellik / Estetik</option>
           <option value="Lojistik / Taşımacılık">Lojistik / Taşımacılık</option>
-          <option value="E-ticaret / Perakende">E-ticaret / Perakende</option>
-          <option value="Restoran / Kafe / Yiyecek">Restoran / Kafe / Yiyecek</option>
-          <option value="Güzellik / Kuaför / Estetik">Güzellik / Kuaför / Estetik</option>
-          <option value="Sağlık / Klinik / Eczane">Sağlık / Klinik / Eczane</option>
-          <option value="İnşaat / Gayrimenkul">İnşaat / Gayrimenkul</option>
-          <option value="Muhasebe / Finans / Danışmanlık">Muhasebe / Finans / Danışmanlık</option>
-          <option value="Eğitim / Kurs / Koçluk">Eğitim / Kurs / Koçluk</option>
           <option value="Teknoloji / Yazılım">Teknoloji / Yazılım</option>
-          <option value="Turizm / Otel / Seyahat">Turizm / Otel / Seyahat</option>
-          <option value="Hukuk / Avukatlık">Hukuk / Avukatlık</option>
+          <option value="Giyim / Tekstil">Giyim / Tekstil</option>
+          <option value="Mobilya / Ev Dekorasyonu">Mobilya / Ev Dekorasyonu</option>
+          <option value="Turizm / Otel">Turizm / Otel</option>
+          <option value="Üretim / İmalat">Üretim / İmalat</option>
           <option value="Temizlik / Hizmet">Temizlik / Hizmet</option>
+          <option value="Elektronik / Beyaz Eşya">Elektronik / Beyaz Eşya</option>
+          <option value="Dijital Ürünler / Yazılım Satışı">Dijital Ürünler / Yazılım Satışı</option>
+          <option value="Otomotiv">Otomotiv</option>
+          <option value="Mobilite / Enerji">Mobilite / Enerji</option>
+          <option value="Reklam / Pazarlama">Reklam / Pazarlama</option>
+          <option value="Televizyon / Medya">Televizyon / Medya</option>
           <option value="Diğer">Diğer</option>
         </select>
       </div>
+    </div>
+
+    <div class="field">
+      <label>Firma Web Sitesi <span style="color:#9A9792">(isteğe bağlı — daha kişisel senaryo için)</span></label>
+      <input type="url" id="biz-url" placeholder="https://logvance.com.tr">
     </div>
 
     <div class="field">
@@ -254,7 +269,7 @@ input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3p
     <div class="adaptations-list" id="adaptations-list"></div>
 
     <div class="actions">
-      
+
       <button class="btn-secondary" onclick="window.print()"><i class="ti ti-printer"></i> Yazdır / PDF Al</button>
       <button class="btn-secondary" onclick="resetForm()"><i class="ti ti-refresh"></i> Yeniden Oluştur</button>
     </div>
@@ -265,7 +280,7 @@ input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3p
       <a href="https://kolaykobi.com/iletisim" class="cta-btn">Ücretsiz Görüşme Ayarla</a>
     </div>
 
-    
+
   </div>
 </div>
 
@@ -366,6 +381,7 @@ async function generate() {
   const videoDesc = document.getElementById('video-desc').value.trim();
   const sector = document.getElementById('sector').value;
   const biz = document.getElementById('biz-name').value.trim();
+  const bizUrl = document.getElementById('biz-url').value.trim();
   const extraCtx = document.getElementById('extra-ctx').value.trim();
   const tones = getTones();
 
@@ -377,57 +393,15 @@ async function generate() {
   if (rd.count >= MONTHLY_LIMIT) return showErr('Aylık kullanım limitinize ulaştınız. ' + nextMonthName() + ' ayında tekrar deneyin.');
 
   const bizText = biz || 'İşletmeniz';
-  const tonesText = tones.length ? tones.join(', ') : 'belirtilmedi';
 
-  const prompt = `Sen bir sosyal medya içerik stratejisti ve viral içerik analistisin.
-
-Bir kullanıcı aşağıdaki viral videoyu kendi işletmesi için uyarlamak istiyor.
-
-=== VİRAL VİDEO BİLGİSİ ===
-Link: ${videoUrl}
-Açıklama: ${videoDesc}${extraCtx ? '\nEk bağlam: ' + extraCtx : ''}
-
-=== İŞLETME BİLGİSİ ===
-İşletme adı: ${bizText}
-Sektör: ${sector}
-Ton tercihi: ${tonesText}
-
-=== GÖREVIN ===
-1. Önce videonun FORMAT/KONSEPTINI analiz et — ne tür bir yapı bu? (challenge, before/after, gün içi vlog, myth-busting, POV, storytime, reveal vb.) Bu formatın neden viral olduğunu kısaca açıkla.
-
-2. Bu formatı "${bizText}" isimli ${sector} sektöründeki işletme için 3 farklı şekilde uyarla. Her uyarlama:
-   - Orijinal formatın ruhunu korusun ama içerik tamamen ${sector} sektörüne özgü olsun
-   - Gerçekten çekilebilir, pratik bir video fikri olsun — hayali değil
-   - Hook (ilk 3 saniye): izleyiciyi durduracak açılış cümlesi/sahnesi
-   - Açıklama metni: video boyunca izleyiciye ne göstereceğini/söyleyeceğini
-   - Platform önerisi: TikTok / Instagram Reels / YouTube Shorts (hangisi daha uygun)
-   - Hashtag önerileri: 5-7 adet
-
-Yanıtı MUTLAKA şu JSON formatında ver:
-
-{
-  "formatAnalysis": "Videonun formatı ve neden viral olduğunun kısa açıklaması (2-4 cümle)",
-  "formatName": "Format adı (örn: 'Day-in-the-life vlog', 'Myth-busting', 'POV challenge')",
-  "adaptations": [
-    {
-      "rank": 1,
-      "title": "Uyarlama başlığı",
-      "hook": "İlk 3 saniyedeki açılış — izleyiciyi durduracak cümle veya sahne",
-      "description": "Videonun geri kalanında ne gösterileceği, nasıl çekileceği",
-      "platform": "TikTok",
-      "hashtags": ["#etiket1", "#etiket2", "#etiket3", "#etiket4", "#etiket5"],
-      "whyItWorks": "Bu uyarlamanın neden işe yarayacağını 1-2 cümlede açıkla"
-    }
-  ]
-}`;
-
+  // n8n Build Request node prompt'u kendisi oluşturuyor — sadece veri gönder
   setLoading(true);
 
   try {
     const res = await fetch(N8N_PROXY, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt, videoUrl, sector, biz: bizText, tones })
+      body: JSON.stringify({ videoUrl, videoDesc, sector, biz: bizText, bizUrl, tones, note: extraCtx })
     });
 
     if (!res.ok) {
@@ -435,26 +409,17 @@ Yanıtı MUTLAKA şu JSON formatında ver:
       throw new Error(err.error || 'Sunucu hatası (' + res.status + ')');
     }
 
-    const data = await res.json();
-    const content = data.choices?.[0]?.message?.content || '';
-
-    const thinkEnd = content.lastIndexOf('</think>');
-    let text = thinkEnd !== -1 ? content.slice(thinkEnd + 8) : content;
-    const js = text.indexOf('{');
-    const je = text.lastIndexOf('}');
-    if ([js !== -1, je !== -1].every(Boolean)) text = text.slice(js, je + 1);
-
-    let parsed;
-    try { parsed = JSON.parse(text); } catch {
-      const repaired = text.replace(/,\s*([\]}])/g, '$1').replace(/[--]/g, '');
-      try { parsed = JSON.parse(repaired); } catch { throw new Error('Yanıt ayrıştırılamadı. Lütfen tekrar deneyin.'); }
-    }
+    const parsed = await res.json();
+    if (!parsed || parsed.error) throw new Error(parsed.error || 'Geçersiz yanıt alındı.');
 
     rd.count++;
     saveRateData(rd);
     updateRateBar();
 
     renderResults(parsed, videoUrl, bizText, sector);
+    // Formu küçülterek göster (tamamen gizleme)
+    const fs = document.getElementById('form-section');
+    if (fs) { fs.style.display = ''; collapseForm(); }
   } catch (e) {
     showErr([e, e.message].every(Boolean) ? e.message : String(e));
     setLoading(false);
@@ -465,46 +430,54 @@ Yanıtı MUTLAKA şu JSON formatında ver:
   setLoading(false);
 }
 
+
 function renderResults(data, videoUrl, biz, sector) {
-  document.getElementById('results-title').textContent = 'Uyarlama Fikirleri';
+  document.getElementById('results-title').textContent = 'Format Analizi & Uyarlamalar';
   document.getElementById('results-sub').textContent = biz + ' — ' + sector;
   document.getElementById('source-url-display').textContent = videoUrl;
-  document.getElementById('format-analysis').textContent =
-    (data.formatName ? '📌 Format: ' + data.formatName + '\n' : '') + (data.formatAnalysis || '');
+
+  const formatParts = [];
+  if (data.format_adi) formatParts.push('📌 ' + data.format_adi);
+  if (data.format_tipi) formatParts.push('Tür: ' + data.format_tipi);
+  if (data.format_aciklamasi) formatParts.push(data.format_aciklamasi);
+  if (data.kurgu_yapisi) formatParts.push('🎬 Kurgu: ' + data.kurgu_yapisi);
+  if (data.ornek_hook) formatParts.push('🪝 Örnek Hook: ' + data.ornek_hook);
+  const metaLine = [data.sure, data.uretim_zorlugu ? 'Üretim: ' + data.uretim_zorlugu : '', data.marka_guvenligi ? 'Marka: ' + data.marka_guvenligi : ''].filter(Boolean).join(' · ');
+  if (metaLine) formatParts.push(metaLine);
+  document.getElementById('format-analysis').textContent = formatParts.join('\n');
 
   const list = document.getElementById('adaptations-list');
   list.innerHTML = '';
 
-  const adaptations = data.adaptations || [];
-  adaptations.forEach(a => {
-    const tags = (a.hashtags || []).map(t =>
-      '<span class="tag tag-platform">' + t + '</span>'
-    ).join('');
-
+  const uyarlamalar = data.sektore_ozgu_uyarlamalar || [];
+  uyarlamalar.forEach(function(a, idx) {
+    const senaryo = (a.senaryo_taslagi || '').replace(/\n/g, '<br>');
     const card = document.createElement('div');
     card.className = 'adapt-card';
-    card.innerHTML = `
-      <div class="adapt-header">
-        <div class="adapt-num">${a.rank || ''}</div>
-        <div class="adapt-title">${a.title || ''}</div>
-      </div>
-      <div class="adapt-body">
-        <div class="adapt-hook">
-          <strong>🎬 İlk 3 saniye (hook):</strong>
-          ${a.hook || ''}
-        </div>
-        <div class="balloon" style="margin-top:.75rem">${a.description || ''}</div>
-        ${a.whyItWorks ? '<div class="adapt-tip"><i class="ti ti-bulb"></i><span>' + a.whyItWorks + '</span></div>' : ''}
-        <div class="adapt-tags">
-          <span class="tag tag-format">${a.platform || ''}</span>
-          ${tags}
-        </div>
-      </div>`;
+    card.innerHTML =
+      '<div class="adapt-header">' +
+        '<div class="adapt-num">' + (idx + 1) + '</div>' +
+        '<div class="adapt-title">' + (a.sektor || '') + '</div>' +
+      '</div>' +
+      '<div class="adapt-body">' +
+        '<div class="adapt-hook"><strong>🪝 Hook:</strong> ' + (a.hook || '') + '</div>' +
+        '<div class="balloon" style="margin-top:.75rem">' + senaryo + '</div>' +
+        (a.cta ? '<div class="adapt-tip"><i class="ti ti-player-play"></i><span><strong>CTA:</strong> ' + a.cta + '</span></div>' : '') +
+      '</div>';
     list.appendChild(card);
   });
 
+  if (data.uygulama_ipuclari) {
+    const tip = document.createElement('div');
+    tip.className = 'adapt-card';
+    tip.style.cssText = 'background:#F0FAF6;border-color:#9FE1CB';
+    tip.innerHTML = '<div class="adapt-body"><div class="adapt-tip"><i class="ti ti-bulb"></i><span><strong>Uygulama İpuçları:</strong> ' + data.uygulama_ipuclari + '</span></div></div>';
+    list.appendChild(tip);
+  }
+
   document.getElementById('results').style.display = 'block';
 }
+
 
 function resetForm() {
   document.getElementById('results').style.display = 'none';
@@ -512,6 +485,7 @@ function resetForm() {
   document.getElementById('video-url').value = '';
   document.getElementById('video-desc').value = '';
   document.getElementById('extra-ctx').value = '';
+  document.getElementById('biz-url').value = '';
   document.querySelectorAll('input[name="tone"]').forEach(el => { el.checked = false; });
   expandForm();
 }
@@ -594,6 +568,46 @@ document.addEventListener('input',  function(e) { if (document.getElementById('f
 updateRateBar();
 restoreForm();
 
+// ── Trend Video Bulucu'dan gelen URL parametrelerini oku ──────────────────
+(function readUrlParams() {
+  const p = new URLSearchParams(location.search);
+  const url = p.get('url');
+  const desc = p.get('desc');
+  const sector = p.get('sector');
+  const biz = p.get('biz');
+  // URL params'tan gelen değerler localStorage'ı ezer — her zaman öncelikli
+  if (url) {
+    const el = document.getElementById('video-url');
+    if (el) el.value = url;
+  }
+  if (desc) {
+    const el = document.getElementById('video-desc');
+    if (el) el.value = desc;
+  }
+  if (sector) {
+    const el = document.getElementById('sector');
+    if (el) {
+      const opt = [...el.options].find(o => o.value === sector) ||
+                  [...el.options].find(o => o.value.startsWith(sector.split('/')[0].trim()));
+      if (opt) el.value = opt.value;
+    }
+  }
+  if (biz) {
+    const el = document.getElementById('biz-name');
+    if (el) el.value = biz;
+  }
+  const bizUrl = p.get('bizUrl');
+  if (bizUrl) { const el = document.getElementById('biz-url'); if (el) el.value = bizUrl; }
+  if (url || desc) {
+    // Trend Video Bulucu'dan gelindi — bilgi kutusu göster
+    const notice = document.createElement('div');
+    notice.style.cssText = 'background:#F0FAF6;border:0.5px solid #9FE1CB;border-radius:8px;padding:9px 13px;font-size:12.5px;color:#085041;margin-bottom:1rem;display:flex;align-items:center;gap:7px';
+    notice.innerHTML = '<i class="ti ti-trending-up" aria-hidden="true"></i> Trend Video Bulucu\'dan aktarıldı. Alanları kontrol edip uyarla butonuna basın.';
+    const formBody = document.getElementById('form-body');
+    if (formBody) formBody.insertBefore(notice, formBody.firstChild);
+  }
+})();
+
 function collapseForm() {
   const fc = document.getElementById('form-section');
   if (fc) fc.classList.add('is-collapsed');
@@ -604,5 +618,135 @@ function expandForm() {
 }
 
 </script>
+<style>
+.kkb-gecis{
+  --lacivert:#1a3a8f;
+  --metin:#5b6b85;
+  --turuncu:#f97316;
+  --cizgi:#e4eaf8;
+  --zemin:#f5f8ff;
+
+  background:var(--zemin);
+  border:1px solid var(--cizgi);
+  border-left:4px solid var(--turuncu);
+  border-radius:14px;
+  padding:24px 22px;
+
+  margin:0 0 24px;
+  font-family:"Montserrat",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+}
+
+.kkb-gecis-ic{
+  display:grid;
+  grid-template-columns:repeat(auto-fit, minmax(min(360px, 100%), 1fr));
+  gap:22px;
+  align-items:center;
+  max-width:920px;
+  margin:0 auto;
+}
+
+.kkb-gecis-rozet{
+  display:inline-block;
+  background:#fff; border:1px solid var(--cizgi);
+  color:var(--lacivert);
+  font-size:11.5px; font-weight:700;
+  letter-spacing:.08em; text-transform:uppercase;
+  padding:5px 11px; border-radius:100px;
+  margin-bottom:12px;
+}
+
+.kkb-gecis h3{
+  font-size:20px; line-height:1.3;
+  font-weight:800; color:var(--lacivert);
+  margin:0 0 8px;
+  text-wrap:balance;
+}
+
+.kkb-gecis-ozet{
+  font-size:14.5px; line-height:1.6;
+  color:var(--metin);
+  margin:0 0 14px;
+}
+
+.kkb-gecis-liste{
+  list-style:none; padding:0; margin:0;
+  display:grid; gap:7px;
+}
+.kkb-gecis-liste li{
+  display:grid; grid-template-columns:auto 1fr; gap:9px;
+  font-size:14px; line-height:1.5; color:var(--metin);
+}
+.kkb-gecis-liste li::before{
+  content:"✓"; color:#1d9e75; font-weight:700; font-size:12.5px; line-height:1.6;
+}
+.kkb-gecis-liste strong{ color:#243b5e; font-weight:600; }
+
+.kkb-gecis-eylem{ text-align:center; }
+
+.kkb-gecis-buton{
+  display:inline-block;
+  background:var(--turuncu);
+  color:#fff !important;
+  font-size:15.5px; font-weight:700;
+  text-decoration:none !important;
+  padding:14px 28px;
+  border-radius:100px;
+  box-shadow:0 5px 16px rgba(249,115,22,.26);
+  transition:transform .15s ease, box-shadow .15s ease;
+}
+.kkb-gecis-buton:hover,
+.kkb-gecis-buton:focus{
+  transform:translateY(-2px);
+  box-shadow:0 8px 22px rgba(249,115,22,.34);
+}
+.kkb-gecis-buton:focus-visible{
+  outline:3px solid var(--lacivert); outline-offset:3px;
+}
+
+.kkb-gecis-altnot{
+  font-size:12.5px; color:#8b98ad;
+  margin:10px 0 0; line-height:1.5;
+}
+
+@media (max-width:820px){
+  .kkb-gecis{ padding:20px 14px; border-radius:12px; }
+  .kkb-gecis h3{ font-size:18px; }
+  .kkb-gecis-buton{ display:block; padding:14px 18px; }
+}
+</style>
+
+<section class="kkb-gecis">
+  <div class="kkb-gecis-ic">
+
+    <div>
+      <span class="kkb-gecis-rozet">Devamı var</span>
+
+      <h3>Bu araç, KolayKOBİ'deki 10 araçtan biri</h3>
+
+      <p class="kkb-gecis-ozet">
+        Bu sayfayı istediğiniz gibi kullanmaya devam edin. Uygulamaya
+        geçerseniz diğer dokuz araç da elinizin altında olur:
+      </p>
+
+      <ul class="kkb-gecis-liste">
+        <li><span><strong>On aracın tamamı</strong> — persona, içerik takvimi, WhatsApp scripti, reklam bütçesi, rakip analizi ve dahası</span></li>
+        <li><span><strong>Çıktılarınız kaydedilir</strong> — ürettiğiniz her şey hesabınızda durur, sonra geri dönüp bakabilirsiniz</span></li>
+        <li><span><strong>Kullanım geçmişiniz</strong> — hangi aracı ne zaman çalıştırdığınızı görürsünüz</span></li>
+      </ul>
+    </div>
+
+    <div class="kkb-gecis-eylem">
+      <a class="kkb-gecis-buton"
+         href="https://app.kolaykobi.com/kayit?kaynak=kitap">
+        Ücretsiz hesap oluştur
+      </a>
+      <p class="kkb-gecis-altnot">
+        Her araç için ayda 3 kullanım ücretsiz.<br>
+        Kredi kartı istemiyoruz.
+      </p>
+    </div>
+
+  </div>
+</section>
 </body>
 </html>
