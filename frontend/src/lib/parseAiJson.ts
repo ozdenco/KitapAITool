@@ -66,7 +66,24 @@ export function parseAiJson<T>(raw: unknown): T {
   const hasBracket   = firstBracket !== -1
 
   if (!hasBrace && !hasBracket) {
-    throw new Error('Yapay zeka yanıtı işlenemedi. Lütfen tekrar deneyin.')
+    /*
+     * ÖZEL DURUM: yanıtın TAMAMI düşünce bloğu (23 Eyl 2026'da Chatbot
+     * Senaryosu'nda görüldü). MiniMax bir "reasoning" modeli; geniş bir belge
+     * yüklenip çok sayıda kart istendiğinde bütün token bütçesini düşünmeye
+     * harcayıp </think> kapandığında duruyor — JSON hiç üretilmiyor.
+     *
+     * Bu durumda `cleaned` boş kalıyor ve kullanıcı "yanıt işlenemedi" gibi
+     * hiçbir şey anlatmayan bir mesaj görüyordu. Girdiyi küçültmek gerektiğini
+     * söylemek, kullanıcının aynı isteği tekrar deneyip krediyi ikinci kez
+     * yakmasını önlüyor.
+     */
+    const tamamiDusunce = /<think>/i.test(raw) && cleaned.length === 0
+    throw new Error(
+      tamamiDusunce
+        ? 'Yapay zeka isteği tamamlayamadan sınırına ulaştı — istek fazla kapsamlıydı. ' +
+          'Daha küçük bir belge yükleyin ya da daha az içerik isteyin, sonra tekrar deneyin.'
+        : 'Yapay zeka yanıtı işlenemedi. Lütfen tekrar deneyin.',
+    )
   }
 
   const isObject = hasBrace && (!hasBracket || firstBrace < firstBracket)

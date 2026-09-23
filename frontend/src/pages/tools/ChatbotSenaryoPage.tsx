@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '@/lib/api'
+import { dinamikYukle } from '@/lib/dinamikYukle'
 import { parseAiJson, extractAiContent } from '@/lib/parseAiJson'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -12,6 +13,10 @@ import { useElapsedSeconds } from '@/hooks/useElapsedSeconds'
 import { MiniChatbotTest } from '@/components/tools/MiniChatbotTest'
 import { SiteyeEkleKarti } from '@/components/tools/SiteyeEkleKarti'
 import { DosyaHatasi, KABUL_EDILEN_TIPLER } from '@/lib/fileTextConstants'
+import { useProfilOnDolgu } from '@/hooks/useIsletmeProfili'
+import { markaKurallari } from '@/lib/markaKurallari'
+import { SEKTORLER } from '@/lib/sektorler'
+import { AramaliSecici } from '@/components/ui/AramaliSecici'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -33,13 +38,6 @@ interface ChatbotResult {
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
-
-const SEKTORLER = [
-  'Muhasebe / Finans', 'Sağlık / Klinik', 'Eğitim / Kurs',
-  'İnşaat / Mühendislik', 'Hukuk / Danışmanlık', 'Perakende / Mağaza',
-  'Yiyecek / İçecek', 'Güzellik / Estetik', 'Lojistik / Taşımacılık',
-  'Teknoloji / Yazılım', 'Giyim / Tekstil', 'Diğer',
-]
 
 const YONLENDIRME_HEDEFLERI = [
   { value: 'Randevu Al', label: 'Randevu Al' },
@@ -69,7 +67,9 @@ function buildPrompt(f: {
       `"devreder", "paraya"). Aynı kelimelerle başlayan benzer sorular üretme.\n`
     : ''
 
-  return `Sen chatbot tasarımı uzmanısın. Müşteri iletişimi için hazır chatbot metinleri ve SSS yanıtları oluşturuyorsun.
+  return `[ÖNEMLİ: Düşünce sürecini (think bloğunu) KISA tut — plan yapma, soruları önceden listeleme, sayım kontrolü yapma. Doğrudan JSON üretmeye başla. Belge geniş olsa bile analiz yazma; kartları yazarken düşün.]
+
+Sen chatbot tasarımı uzmanısın. Müşteri iletişimi için hazır chatbot metinleri ve SSS yanıtları oluşturuyorsun.
 
 İşletme: ${f.biz}
 Sektör: ${f.sector}
@@ -98,8 +98,20 @@ SADECE JSON döndür:
 }
 SSS'de sorulan soruların tamamını yanıtla. Türkçe, samimi ve net olsun.
 ${f.fileText
-  ? 'Belge yüklendiği için sss_kartlari ZENGİN olmalı: en az 20, mümkünse 30 kart üret. Kapsam ne kadar genişse chatbot o kadar çok soruyu yanıtlayabilir.'
-  : 'sss_kartlari en az 8 kart içersin.'}`
+  /*
+   * 23 Eyl 2026: burada "en az 20, mümkünse 30 kart" yazıyordu. 21 konulu bir
+   * mevzuat belgesi yüklendiğinde model bütün token bütçesini DÜŞÜNMEYE
+   * harcadı — 30 kartı önceden planladı, tek tek listeledi, anahtar kelime
+   * çakışmalarını kontrol etti, sayım yaptı — ve </think> kapandığında
+   * bütçe bitmişti. Yanıtın tamamı think bloğuydu, JSON hiç üretilmedi.
+   * Kullanıcı "Yapay zeka yanıtı işlenemedi" gördü, 15 kredi boşa gitti.
+   *
+   * Sayı hedefi yerine KAPSAM hedefi veriliyor: belgedeki her konu bir kart.
+   * Böylece model sayım/planlama yapmak zorunda kalmıyor.
+   */
+  ? 'sss_kartlari belgedeki her konu başlığını kapsasın; konu sayısı kaç ise o kadar kart üret. Sayı hedefi tutturmak için konu uydurma, sayım kontrolü de yapma.'
+  : 'sss_kartlari en az 8 kart içersin.'}
+${markaKurallari()}`
 }
 
 // ─── Belge kalıcılığı ─────────────────────────────────────────────────────────
@@ -160,6 +172,14 @@ export function ChatbotSenaryoPage() {
   const [fileError, setFileError]   = useState<string | null>(null)
   const [fileParsing, setFileParsing] = useState(false)
   const [fileTruncated, setFileTruncated] = useState(false)
+
+  // İşletme profilinden ön dolgu — boş alanlar doldurulur, kullanıcının
+  // yazdığına dokunulmaz (bkz. useProfilOnDolgu).
+  useProfilOnDolgu({
+    businessName: [biz, setBiz],
+    sector: [sector, setSector],
+    productService: [services, setServices],
+  })
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const handleFileSelect = async (file: File | undefined) => {
@@ -171,7 +191,7 @@ export function ChatbotSenaryoPage() {
     try {
       // pdfjs-dist (~250KB) yalnızca kullanıcı gerçekten dosya seçtiğinde
       // indirilsin diye burada dinamik import ediliyor — bkz. fileTextConstants.ts
-      const { extractFileText } = await import('@/lib/extractFileText')
+      const { extractFileText } = await dinamikYukle(() => import('@/lib/extractFileText'))
       const { metin, kirpildiMi } = await extractFileText(file)
       setFileName(file.name)
       setFileText(metin)
@@ -201,7 +221,7 @@ export function ChatbotSenaryoPage() {
   const mutation = useMutation({
     mutationFn: async () => {
       const prompt = buildPrompt({ biz, sector, services, hours, faqs, redirectGoal, redirectLink, fileText })
-      const res = await api.post('/tools/chatbot-senaryo/run', { prompt })
+      const res = await api.post('/tools/chatbot-senaryo/run', { prompt, isletmeAdi: biz })
       const content = extractAiContent(res.data)
       // Backend kaydettiği ToolResult Id'sini header ile döndürür; gömme kodu bunu kullanır
       const resultId = (res.headers?.['x-result-id'] as string | undefined) ?? null
@@ -242,11 +262,11 @@ export function ChatbotSenaryoPage() {
                     value={biz}
                     onChange={(e) => setBiz(e.target.value)}
                   />
-                  <Select
+                  <AramaliSecici
                     label="Sektör *"
                     value={sector}
-                    onChange={(e) => setSector(e.target.value)}
-                    options={[{ value: '', label: 'Seçin...' }, ...SEKTORLER.map((s) => ({ value: s, label: s }))]}
+                    onChange={setSector}
+                    secenekler={SEKTORLER}
                   />
                 </div>
 
