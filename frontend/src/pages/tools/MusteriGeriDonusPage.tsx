@@ -86,7 +86,7 @@ SADECE JSON döndür:
     {
       "adim": 1,
       "kanal": "<hangi kanal>",
-      "zamanlama": "<ne zaman, ör: Hizmetten 1 hafta sonra>",
+      "zamanlama": "<ne zaman — İLK SATIN ALMADAN itibaren geçen süreyle yaz (ör: 'Satın almadan 1 hafta sonra', '3. ay', '6. ay'). Birimi MUTLAKA yaz, kısaltma: '4. ay' evet, '4. civarı' hayır. Kullanıcının belirtmediği 'yenileme tarihi' / 'sözleşme bitişi' gibi bir kavram UYDURMA; elindeki tek bilgi satın alma sıklığı.>",
       "mesaj": "<tam mesaj metni, emoji kullanabilirsin>",
       "ipucu": "<bu adım için pratik ipucu>"
     }
