@@ -22,7 +22,10 @@ export const TOOLS: Tool[] = [
   {
     id: 'icerik-takvimi',
     name: '30 Günlük İçerik Takvimi',
-    description: 'Seçtiğiniz platformlar için 30 günlük hazır sosyal medya takvimi üretin.',
+    // Eski metin "platformlar için 30 günlük takvim" diyordu; iki yanlış birden:
+    // araç TEK platform alıyor ve takvim 30 gönderi değil, seçilen güne denk gelen
+    // 4-5 gönderi üretiyor (bkz. IcerikTakvimiPage buildPrompt). 23 Eyl 2026.
+    description: 'Seçtiğiniz platform ve paylaşım günü için bir aylık takvim üretin — haftada bir gönderi, metniyle birlikte.',
     icon: '📅',
     category: 'icerik',
     isAsync: true,

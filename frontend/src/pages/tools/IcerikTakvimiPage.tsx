@@ -7,6 +7,11 @@ import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
 import { FormPersistButtons } from '@/components/ui/FormPersistButtons'
 import { ToolShell } from '@/components/ui/ToolShell'
+import { useProfilOnDolgu } from '@/hooks/useIsletmeProfili'
+import { markaKurallari } from '@/lib/markaKurallari'
+import { MARKA_TONU_SECENEKLERI } from '@/lib/markaTonlari'
+import { SEKTORLER } from '@/lib/sektorler'
+import { AramaliSecici } from '@/components/ui/AramaliSecici'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -31,13 +36,6 @@ interface TakvimiResult {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const SEKTORLER = [
-  'Muhasebe / Finans', 'Sağlık / Klinik', 'Eğitim / Kurs',
-  'İnşaat / Mühendislik', 'Hukuk / Danışmanlık', 'Perakende / Mağaza',
-  'Yiyecek / İçecek', 'Güzellik / Estetik', 'Lojistik / Taşımacılık',
-  'Teknoloji / Yazılım', 'Giyim / Tekstil', 'Diğer',
-]
-
 const PLATFORMLAR = ['Instagram', 'Facebook', 'LinkedIn', 'TikTok', 'Twitter/X', 'YouTube Shorts']
 
 const GUNLER = [
@@ -50,13 +48,7 @@ const GUNLER = [
   { value: 'Pazar', label: 'Paz' },
 ]
 
-const TONLAR = [
-  { value: 'Profesyonel ve güvenilir', label: 'Profesyonel ve güvenilir' },
-  { value: 'Samimi ve yakın', label: 'Samimi ve yakın' },
-  { value: 'Eğitici ve bilgilendirici', label: 'Eğitici ve bilgilendirici' },
-  { value: 'Enerjik ve motive edici', label: 'Enerjik ve motive edici' },
-  { value: 'Mizahi ve eğlenceli', label: 'Mizahi ve eğlenceli' },
-]
+const TONLAR = MARKA_TONU_SECENEKLERI
 
 const PLATFORM_EMOJIS: Record<string, string> = {
   Instagram: '📸', Facebook: '👍', LinkedIn: '💼',
@@ -108,7 +100,8 @@ SADECE geçerli JSON döndür, başka hiçbir şey yazma:
   "ozet": "<30 günlük strateji özeti, 1 cümle>",
   "ipuclari": ["<ipucu 1>", "<ipucu 2>", "<ipucu 3>"],
   "ctaText": "<motivasyon cümlesi>"
-}`
+}
+${markaKurallari()}`
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -126,6 +119,15 @@ export function IcerikTakvimiPage() {
   const [startDate, setStartDate] = useState('')
   const [result, setResult] = useState<TakvimiResult | null>(null)
   const [elapsedSec, setElapsedSec] = useState(0)
+
+  // İşletme profilinden ön dolgu — boş alanlar doldurulur, kullanıcının
+  // yazdığına dokunulmaz (bkz. useProfilOnDolgu).
+  useProfilOnDolgu({
+    businessName: [bizName, setBizName],
+    sector: [sector, setSector],
+    targetAudience: [audience, setAudience],
+    brandTone:      [ton, setTon],
+  })
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   // Polling helper — job_id ile status endpoint'ini sorgular, tamamlandığında sonucu döner
@@ -171,7 +173,7 @@ export function IcerikTakvimiPage() {
       const prompt = buildPrompt({ bizName, sector, audience, platform, gunler, ton, lang, ozelGunler, startDate })
       const res = await api.post<{ job_id?: string; status?: string } & Record<string, unknown>>(
         '/tools/icerik-takvimi/run',
-        { prompt }
+        { prompt, isletmeAdi: bizName }
       )
       const data = res.data
 
@@ -216,7 +218,11 @@ export function IcerikTakvimiPage() {
       toolId="icerik-takvimi"
       title="30 Günlük İçerik Takvimi"
       icon="📅"
-      description="Sektörünüze, hedef kitlenize ve marka sesinize uygun 30 günlük sosyal medya takvimi oluşturalım. Her gün için konu, format önerisi ve hazır taslak metin üretiyoruz."
+      // "Her gün için ... üretiyoruz" yazıyordu, ama prompt 4-5 gönderi istiyor ve
+      // formda yalnızca TEK bir paylaşım günü seçilebiliyor. Kullanıcı 30 gönderi
+      // bekleyip 4-5 alınca aldatılmış hissediyor; marka kuralları da
+      // temellendirilemeyen vaatleri yasaklıyor. 23 Eyl 2026.
+      description="Sektörünüze, hedef kitlenize ve marka sesinize uygun bir aylık sosyal medya takvimi oluşturalım. Seçtiğiniz paylaşım gününe göre haftada bir gönderi — her biri için konu, format önerisi ve hazır taslak metin."
       hasResult={!!result}
       formHasInput={!!bizName.trim() || !!sector}
       isPending={mutation.isPending}
@@ -234,11 +240,11 @@ export function IcerikTakvimiPage() {
                     value={bizName}
                     onChange={(e) => setBizName(e.target.value)}
                   />
-                  <Select
+                  <AramaliSecici
                     label="Sektör"
                     value={sector}
-                    onChange={(e) => setSector(e.target.value)}
-                    options={[{ value: '', label: 'Seçin...' }, ...SEKTORLER.map((s) => ({ value: s, label: s }))]}
+                    onChange={setSector}
+                    secenekler={SEKTORLER}
                   />
                 </div>
 
