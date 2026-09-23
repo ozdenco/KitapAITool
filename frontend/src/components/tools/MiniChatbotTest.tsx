@@ -10,6 +10,17 @@ interface OzelMesaj {
 interface SssKart {
   soru: string
   cevap: string
+  /**
+   * AI'nın ürettiği arama kelimeleri (eşanlamlılar dahil). Varsa eşleştirmede
+   * soru metninden türetilenlere EKLENİR — bkz. kartKelimeleri().
+   *
+   * 23 Eyl 2026: eskiden yalnızca soru metninden kelime türetiliyordu ve bu,
+   * eşanlamlı sorularda kartı hiç bulamıyordu: "hastalık izni" ile "Raporlu
+   * olduğum günler…" kartı ortak kelime taşımıyor, "haftasonları" ile "Pazar
+   * ve resmi tatiller…" de öyle. Kitap sayfasındaki eski araçta bu liste
+   * AI'dan geliyordu ve sorun yoktu; SaaS prompt'unda alan kaybolmuştu.
+   */
+  anahtar_kelimeler?: string[]
 }
 
 interface Props {
@@ -40,19 +51,43 @@ function sadelestir(metin: string): string {
     .replace(/â/g, 'a').replace(/î/g, 'i').replace(/û/g, 'u')
 }
 
-// Kalıplar sadeleştirilmiş metne uygulanır → hem "teşekkür" hem "tesekkur" yakalanır
+/*
+ * Kalıplar sadeleştirilmiş metne uygulanır → hem "teşekkür" hem "tesekkur" yakalanır.
+ *
+ * Kelime sınırları (\b) şart: sınırsız hâlde "gece" kalıbı "geçen" → "gecen"
+ * içinde eşleşiyordu, dolayısıyla "Geçen yıldan izin devredebilir miyim?" gibi
+ * meşru sorular SSS eşleşmesine hiç ulaşmadan mesai dışı yanıtını alıyordu
+ * (23 Eyl 2026 testinde ölçüldü). Türkçe eklemeli olduğu için kalıpların
+ * sonunu serbest bırakıyoruz ("mesaide", "aksamlari"); yalnızca başka
+ * kelimelerin ÖNEKİ olan kalıplar ("gece" → geçen/geçerli/gecikme,
+ * "tamam" → tamamen/tamamlandı) sonundan da kapatılır.
+ */
 const KAPANIS_REGEX =
-  /tesekkur|tamam|anladim|gorusuruz|iyi ki|harika|super|mukemmel|iyi gunler|hosca kal|gule gule/
+  /\btesekkur|\btamam(dir)?\b|\banladim\b|\bgorusuruz|\biyi ki\b|\bharika|\bsuper\b|\bmukemmel|\biyi gunler\b|\bhosca kal|\bgule gule\b/
 
 const MESAI_DISI_REGEX =
-  /su an mevcut|musait misiniz|acik misiniz|mesai|hafta sonu|aksam|gece/
+  /\bsu an mevcut|\bmusait misiniz\b|\bacik misiniz\b|\bmesai|\bhafta sonu|\baksam(a|da|dan|i|lari|leyin)?\b|\bgece(de|den|leri|lerde|yi)?\b/
 
-/** Anahtar kelime çıkarımında elenecek (sadeleştirilmiş) soru/bağlaç kelimeleri */
+/**
+ * Anahtar kelime çıkarımında elenecek (sadeleştirilmiş) soru/bağlaç kelimeleri.
+ *
+ * Yalnızca soru eki değil, "-ebilir/-abilir" kalıbındaki yardımcı fiiller de
+ * elenir: ölçümde "kullanabilir" (+2.84) ve "miyim" (+1.74) tek başına 4.58
+ * puan yapıp eşiği geçiyor, yani kart yalnızca CÜMLE BİÇİMİ yüzünden
+ * kazanıyordu ("... kullanabilir miyim?" biçimindeki alakasız kart).
+ */
 const ETKISIZ_KELIMELER = new Set([
   'nedir', 'nasil', 'nerede', 'neden', 'hangi', 'kac', 'kadar', 'icin',
   'veya', 'ile', 'mi', 'mu', 'musunuz', 'misiniz',
   'var', 'yok', 'bir', 'siz', 'sizin', 'bizim', 'olan',
   'yapabilir', 'alabilir', 'sunuyor', 'calisiyor', 'ediyor',
+  // Soru ekleri
+  'miyim', 'miyiz', 'muyum', 'muyuz', 'midir', 'mudur',
+  // Yardımcı fiiller — ayırt edici değil, yalnızca cümle biçimini taşır
+  'kullanabilir', 'kullanabilirim', 'edebilir', 'edebilirim',
+  'olabilir', 'olabilirim', 'yapabilirim', 'alabilirim', 'verebilir',
+  'gerekiyor', 'gerekir', 'oluyor', 'olacak', 'istiyorum', 'isterim',
+  'lazim', 'bana', 'beni', 'benim', 'bunu', 'sonra', 'once', 'ama',
 ])
 
 const VARSAYILAN_FALLBACK =
@@ -71,16 +106,26 @@ function mesajBul(mesajlar: OzelMesaj[], ...anahtarlar: string[]): string | null
   return bulunan?.metin ?? null
 }
 
-/**
- * SSS sorusundan anahtar kelimeleri türetir.
- * Eski standalone araçta bu liste AI tarafından üretiliyordu; SaaS prompt'u
- * keyword döndürmediği için soru metninden çıkarıyoruz.
- */
-function anahtarKelimeler(soru: string): string[] {
-  return sadelestir(soru)
+/** Serbest metinden aranabilir kelimeleri süzer (noktalama at, ekleri ve soru eklerini ele) */
+function anahtarKelimeler(metin: string): string[] {
+  return sadelestir(metin)
     .replace(/[^a-z0-9\s]/g, ' ')
     .split(/\s+/)
     .filter((k) => k.length >= 3 && !ETKISIZ_KELIMELER.has(k))
+}
+
+/**
+ * Bir SSS kartının arama kelimeleri: AI'nın verdiği `anahtar_kelimeler` +
+ * soru metninden türetilenler.
+ *
+ * Soru metni tek başına yetmiyor çünkü kullanıcı kartın sözcüklerini değil
+ * kendi sözcüklerini yazıyor ("hastalık izni" ↔ "Raporlu olduğum günler…").
+ * AI listesi bu köprüyü kuruyor; eski kayıtlarda alan bulunmadığı için
+ * soru metninden türetim yedek olarak korunuyor.
+ */
+function kartKelimeleri(kart: SssKart): string[] {
+  const ai = (kart.anahtar_kelimeler ?? []).flatMap(anahtarKelimeler)
+  return [...new Set([...ai, ...anahtarKelimeler(kart.soru)])]
 }
 
 /**
@@ -113,7 +158,7 @@ function agirlikHesapla(kartlar: SssKart[]) {
   const N = kartlar.length
   const df = new Map<string, number>()
   for (const k of kartlar) {
-    for (const w of new Set(anahtarKelimeler(k.soru))) {
+    for (const w of kartKelimeleri(k)) {
       df.set(w, (df.get(w) ?? 0) + 1)
     }
   }
@@ -183,7 +228,7 @@ export function MiniChatbotTest({ bizName, ozelMesajlar, sssKartlari }: Props) {
         let puan = 0
         let ayirtEdici = 0
 
-        for (const kw of anahtarKelimeler(k.soru)) {
+        for (const kw of kartKelimeleri(k)) {
           const tam = kullaniciKelimeleri.includes(kw)
           const kok = !tam && kullaniciKelimeleri.some((uk) => kokEslesir(kw, uk))
           if (!tam && !kok) continue

@@ -28,6 +28,8 @@ interface OzelMesaj {
 interface SssKart {
   soru: string
   cevap: string
+  /** Mini test penceresindeki eşleştirme için AI'dan gelen arama kelimeleri (eski kayıtlarda yok) */
+  anahtar_kelimeler?: string[]
 }
 
 interface ChatbotResult {
@@ -91,12 +93,21 @@ SADECE JSON döndür:
     { "tip": "${f.redirectGoal} Yönlendirmesi", "metin": "<${f.redirectGoal} için yönlendirme mesajı>" }
   ],
   "sss_kartlari": [
-    { "soru": "<müşterinin sorduğu soru>", "cevap": "<bot cevabı, kısa ve net>" }
+    { "soru": "<müşterinin sorduğu soru>", "anahtar_kelimeler": ["<4-8 arama kelimesi>"], "cevap": "<bot cevabı, kısa ve net>" }
   ],
   "ipuclari": ["<chatbot kurulum ve kullanım için 3-4 pratik ipucu>"],
   "ctaText": "<${f.biz} için teşvik cümlesi>"
 }
 SSS'de sorulan soruların tamamını yanıtla. Türkçe, samimi ve net olsun.
+
+ANAHTAR KELİMELER (test sohbetinin doğru kartı bulması buna bağlı): her kart için
+kullanıcının o konuyu sorarken yazabileceği 4-8 kelime ver. EŞANLAMLILARI ve
+günlük dildeki karşılıklarını MUTLAKA ekle — kullanıcı sorusunu kartın
+başlığındaki kelimelerle yazmaz. Örnek: "Raporlu günler izin yerine geçer mi?"
+kartı için ["rapor", "hastalık", "istirahat", "sağlık raporu", "hasta"];
+"Pazar ve resmi tatiller" kartı için ["hafta sonu", "haftasonu", "pazar",
+"cumartesi", "resmi tatil", "bayram"]. Soru cümlesindeki kelimeleri aynen
+tekrarlamak yetmez.
 ${f.fileText
   /*
    * 23 Eyl 2026: burada "en az 20, mümkünse 30 kart" yazıyordu. 21 konulu bir
