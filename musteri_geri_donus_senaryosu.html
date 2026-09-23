@@ -531,7 +531,8 @@ Mevcut takip yöntemi: ${currentMethod || 'belirtilmemiş'}
 ${note ? `Özel talimatlar (MUTLAKA dikkate al): ${note}` : ''}
 
 ═══ YAZIM KURALLARI ═══
-1. GÜNLER: Satın alma sıklığına göre belirle — ${frequency} için mantıklı takip aralıkları seç. Şablona bağlı kalma, kendi hesapla. Örnek: aylık alışveriş → 1/3/7/21/45 gün; 6 aylık → 3/14/30/90/150 gün.
+0. SIKLIK NE DEMEK: "${frequency}", müşterinin ortalama olarak ne kadar sürede bir TEKRAR alışveriş yaptığıdır — abonelik, sözleşme süresi veya üyelik dönemi DEĞİLDİR. Ortada yenilenecek bir taahhüt yok. Bu yüzden "yenileme tarihi", "dönem sonu", "sözleşme bitişi", "yeni dönem onayı", "aboneliğiniz" gibi ifadeler YASAK — kullanıcı böyle bir bilgi vermedi. Son adımlar "yenilemeye şu kadar kaldı" değil, "tekrar ihtiyaç duyabileceğiniz zaman yaklaşıyor" mantığıyla yazılmalı. İSTİSNA: hizmet açıklamasında gerçekten abonelik/sözleşme geçiyorsa o dili kullanabilirsin.
+1. GÜNLER: Satın alma sıklığına göre belirle — ${frequency} için mantıklı takip aralıkları seç. Şablona bağlı kalma, kendi hesapla. Örnek: aylık alışveriş → 1/3/7/21/45 gün; 6 aylık → 3/14/30/90/150 gün. "day" alanına DAİMA ilk satın almadan itibaren geçen süreyi yaz ve birimi belirt ("90. gün" gibi); başka bir olaya göre konumlandırma.
 2. KİŞİSELLEŞTİRME (EN ÖNEMLİ KURAL): Her mesaj hizmet açıklamasındaki somut detayları içersin. "Merhaba! [İşletme adı] olarak sizi tercih ettiğiniz için teşekkür ederiz." gibi genel kalıplar YASAK. Mesaj, başka hiçbir işletmede kullanılamayacak kadar özgün olsun.
 3. SEKTÖR DILI: Hedef kitlenin kullandığı teknik/sektörel terminoloji ve değer önerileri mesajlarda geçsin.
 4. İçerik: Her adım farklı bir değer önerisi / eylem çağrısı içersin — tekrar etme.

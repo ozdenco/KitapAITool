@@ -80,13 +80,25 @@ ${f.biz} için 5 adımlı müşteri takip senaryosu oluştur.
 - ${f.channels.join(' ve ')} kanallarını kullan
 - Her adımda somut mesaj örneği ver
 
+SATIN ALMA SIKLIĞI NE DEMEK: "${f.frequency}", müşterinin ortalama olarak
+ne kadar sürede bir TEKRAR alışveriş yaptığıdır. Bu bir abonelik, sözleşme
+süresi veya üyelik dönemi DEĞİLDİR. Müşteri istediği zaman tekrar alır ya
+da almaz; ortada yenilenecek bir taahhüt yoktur.
+
+Bu yüzden: "yenileme tarihi", "dönem sonu", "sözleşme bitişi", "yeni dönem
+onayı", "aboneliğiniz" gibi ifadeleri KULLANMA — kullanıcı böyle bir bilgi
+vermedi, uydurmuş olursun. Son adımlar "yenilemeye şu kadar kaldı" değil,
+"tekrar ihtiyaç duyabileceğin zaman yaklaşıyor" mantığıyla yazılmalı.
+İSTİSNA: hizmet açıklamasında ("${f.service}") gerçekten abonelik/sözleşme
+geçiyorsa o dili kullanabilirsin.
+
 SADECE JSON döndür:
 {
   "adimlar": [
     {
       "adim": 1,
       "kanal": "<hangi kanal>",
-      "zamanlama": "<ne zaman — İLK SATIN ALMADAN itibaren geçen süreyle yaz (ör: 'Satın almadan 1 hafta sonra', '3. ay', '6. ay'). Birimi MUTLAKA yaz, kısaltma: '4. ay' evet, '4. civarı' hayır. Kullanıcının belirtmediği 'yenileme tarihi' / 'sözleşme bitişi' gibi bir kavram UYDURMA; elindeki tek bilgi satın alma sıklığı.>",
+      "zamanlama": "<ne zaman — her zaman İLK SATIN ALMADAN itibaren geçen süreyle yaz (ör: 'Satın almadan 3 gün sonra', '1. ay', '4. ay'). Birimi MUTLAKA yaz: '4. ay' evet, '4. civarı' hayır. Başka bir olaya (yenileme, dönem sonu vb.) göre konumlandırma.>",
       "mesaj": "<tam mesaj metni, emoji kullanabilirsin>",
       "ipucu": "<bu adım için pratik ipucu>"
     }
