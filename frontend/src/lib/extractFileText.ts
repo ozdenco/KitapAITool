@@ -7,11 +7,21 @@ import {
   type CikarilanMetin,
 } from '@/lib/fileTextConstants'
 
-// Vite: worker'ı ayrı bir chunk olarak paketler, çalışma zamanında URL'den yükler
-pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
-  'pdfjs-dist/build/pdf.worker.min.mjs',
-  import.meta.url,
-).toString()
+/*
+ * Vite worker'ı ayrı bir chunk olarak paketler, çalışma zamanında URL'den yükler.
+ *
+ * `?mime2` sorgusu ÖNBELLEK ZEHİRLENMESİNİ temizlemek için: 24 Eyl 2026'ya
+ * kadar nginx .mjs'i application/octet-stream olarak sunuyordu ve bu uzantı
+ * hiçbir cache kuralına düşmediği için tarayıcılar yanıtı SEZGİSEL olarak
+ * saklayabiliyordu. Sunucu düzeltildikten sonra bile, dosya adı (içerik özeti)
+ * değişmediğinden eski kullanıcı kendi önbelleğindeki yanlış MIME'lı yanıtı
+ * kullanmaya devam ediyor ve modül worker'ı yine başlamıyor. Sorgu dizesi
+ * değişince adres yeni sayılıyor; kimsenin sert yenileme yapması gerekmiyor.
+ *
+ * pdf.js sorguyu yok sayar; yalnızca indirme adresidir.
+ */
+pdfjsLib.GlobalWorkerOptions.workerSrc =
+  new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url).toString() + '?mime2'
 
 // ─── Doğrulama ────────────────────────────────────────────────────────────────
 
@@ -80,6 +90,37 @@ async function pdfMetniniCikar(file: File): Promise<string> {
   return sayfaMetinleri.join('\n')
 }
 
+/**
+ * pdf.js hatasını kullanıcının ne yapacağını bildiği bir cümleye çevirir.
+ *
+ * 24 Eyl 2026: burada tek bir catch-all vardı ("Dosya okunamadı. Dosyanın
+ * bozuk olmadığından emin olun.") ve dosya bozuk DEĞİLDİ. Gerçek sebep nginx'in
+ * .mjs'i application/octet-stream sunması, dolayısıyla modül worker'ının hiç
+ * başlamamasıydı — mesaj kullanıcıyı da beni de yanlış yere baktırdı. Parola
+ * korumalı PDF, geçersiz dosya ve worker arızası birbirinden tamamen farklı
+ * şeyler; aynı cümleyi göstermek teşhisi imkânsızlaştırıyor.
+ *
+ * Teknik ek parantez içinde bilerek bırakılıyor: kullanıcı bunu aynen
+ * iletebiliyor ve sorun tek turda çözülüyor.
+ */
+function pdfHatasiniAcikla(error: unknown): string {
+  const ad = (error as { name?: string } | null)?.name ?? ''
+  const mesaj = (error as { message?: string } | null)?.message ?? ''
+
+  if (ad === 'PasswordException') {
+    return 'Bu PDF parola korumalı. Parolayı kaldırıp tekrar yükleyin.'
+  }
+  if (ad === 'InvalidPDFException') {
+    return 'Dosya geçerli bir PDF değil ya da içeriği bozulmuş.'
+  }
+  if (/worker|dynamically imported|importScripts/i.test(mesaj)) {
+    return 'PDF okuyucu bileşeni yüklenemedi. Sayfayı sert yenileyip ' +
+      '(Ctrl+Shift+R / Cmd+Shift+R) tekrar deneyin.'
+  }
+  const ek = [ad, mesaj.slice(0, 100)].filter(Boolean).join(': ')
+  return `PDF okunamadı${ek ? ` (${ek})` : ''}. Sorun sürerse bu mesajı olduğu gibi iletin.`
+}
+
 // ─── Genel giriş noktası ────────────────────────────────────────────────────
 
 /**
@@ -100,7 +141,7 @@ export async function extractFileText(file: File): Promise<CikarilanMetin> {
       : await file.text()
   } catch (error) {
     console.error('Dosya metni çıkarılamadı:', error)
-    throw new DosyaHatasi('Dosya okunamadı. Dosyanın bozuk olmadığından emin olun.')
+    throw new DosyaHatasi(pdfHatasiniAcikla(error))
   }
 
   const temiz = metniTemizle(ham)
