@@ -1,4 +1,19 @@
-import * as pdfjsLib from 'pdfjs-dist'
+/*
+ * LEGACY derleme bilerek kullanılıyor ('pdfjs-dist' değil, 'pdfjs-dist/legacy').
+ *
+ * pdf.js 6'nın varsayılan derlemesi çok yeni tarayıcı varsayıyor. 24 Eyl
+ * 2026'da Safari'de PDF yükleme şu hatayla düşüyordu:
+ *   TypeError: undefined is not a function (near '...e of t...')
+ * yani pdf.js'in kendi kodundaki bir `for...of`, o WebKit sürümünde
+ * yinelenemeyen bir değer üzerinde patlıyor. Legacy derleme daha geniş bir
+ * tarayıcı tabanına göre derlenmiş olanı.
+ *
+ * Maliyeti kabul edilebilir: bu modül zaten DİNAMİK yükleniyor, yalnızca
+ * kullanıcı dosya seçtiğinde iniyor (bkz. fileTextConstants.ts). Hedef kitle
+ * KOBİ sahipleri — tarayıcı sürümleri üzerinde hiçbir denetimimiz yok, bu
+ * yüzden birkaç yüz KB fazlasına karşılık "çalışmıyor" riskini almıyoruz.
+ */
+import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.mjs'
 import {
   KABUL_EDILEN_TIPLER,
   MAKS_DOSYA_BOYUTU,
@@ -21,7 +36,7 @@ import {
  * pdf.js sorguyu yok sayar; yalnızca indirme adresidir.
  */
 pdfjsLib.GlobalWorkerOptions.workerSrc =
-  new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url).toString() + '?mime2'
+  new URL('pdfjs-dist/legacy/build/pdf.worker.min.mjs', import.meta.url).toString() + '?mime2'
 
 // ─── Doğrulama ────────────────────────────────────────────────────────────────
 
