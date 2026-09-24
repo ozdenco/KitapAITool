@@ -16,17 +16,33 @@
   'use strict'
 
   var script = document.currentScript
-  if (!script) return
 
-  var senaryoId = script.getAttribute('data-kolaykobi-id')
-  if (!senaryoId) {
+  /*
+   * İKİ ÇALIŞMA BİÇİMİ:
+   *
+   * 1. BAĞLI (varsayılan): <script src="…/chatbot-widget.js"
+   *    data-kolaykobi-id="…"> — senaryo her ziyarette KolayKOBİ'den çekilir.
+   *    Senaryoyu güncelleyince müşterinin sitesine kendiliğinden yansır.
+   *
+   * 2. KENDİ SUNUCUSUNDA (indirilebilir tek dosya): senaryo dosyanın içine
+   *    gömülüdür ve `window.__KKB_SENARYO__` olarak tanımlıdır; KolayKOBİ'ye
+   *    HİÇBİR istek gitmez. Müşteri dosyayı kendi sitesine koyar, biz
+   *    kapatsak bile çalışmaya devam eder. Bedeli: senaryo değişince yeni
+   *    dosyayı tekrar yüklemeleri gerekir.
+   */
+  var gomulu = window.__KKB_SENARYO__ || null
+
+  if (!script && !gomulu) return
+
+  var senaryoId = script ? script.getAttribute('data-kolaykobi-id') : null
+  if (!senaryoId && !gomulu) {
     console.error('[KolayKOBİ] data-kolaykobi-id eksik.')
     return
   }
 
-  // Widget'ın barındığı origin (script src'sinden türetilir)
-  var apiKok = new URL(script.src, location.href).origin
-  var RENK = script.getAttribute('data-renk') || '#1D9E75'
+  // Widget'ın barındığı origin (script src'sinden türetilir; gömülü biçimde gerekmez)
+  var apiKok = script ? new URL(script.src, location.href).origin : ''
+  var RENK = (script && script.getAttribute('data-renk')) || (gomulu && gomulu._renk) || '#1D9E75'
 
   // ─── Eşleştirme mantığı (KolayKOBİ önizlemesiyle aynı) ───────────────────
 
@@ -312,19 +328,28 @@
 
   // ─── Senaryoyu yükle ──────────────────────────────────────────────────────
 
+  function senaryoyuBaslat(senaryo) {
+    senaryo._bizName =
+      (script && script.getAttribute('data-baslik')) || senaryo._bizName || 'Destek'
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', function () { baslat(senaryo) })
+    } else {
+      baslat(senaryo)
+    }
+  }
+
+  // Gömülü senaryo varsa ağa hiç çıkma
+  if (gomulu) {
+    senaryoyuBaslat(gomulu)
+    return
+  }
+
   fetch(apiKok + '/api/public/chatbot/' + encodeURIComponent(senaryoId))
     .then(function (r) {
       if (!r.ok) throw new Error('Senaryo yüklenemedi (' + r.status + ')')
       return r.json()
     })
-    .then(function (senaryo) {
-      senaryo._bizName = script.getAttribute('data-baslik') || 'Destek'
-      if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', function () { baslat(senaryo) })
-      } else {
-        baslat(senaryo)
-      }
-    })
+    .then(senaryoyuBaslat)
     .catch(function (err) {
       console.error('[KolayKOBİ] Chatbot yüklenemedi:', err.message)
       /*
