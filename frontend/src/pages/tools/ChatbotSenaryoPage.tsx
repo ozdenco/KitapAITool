@@ -90,6 +90,7 @@ SADECE JSON döndür:
   "ozel_mesajlar": [
     { "tip": "Karşılama Mesajı", "metin": "<merhaba mesajı, emoji kullanabilirsin>" },
     { "tip": "Mesai Dışı Mesaj", "metin": "<şu an hizmet veremiyoruz mesajı>" },
+    { "tip": "Kapanış Mesajı", "metin": "<ziyaretçi teşekkür edip ayrılırken verilen kısa veda mesajı>" },
     { "tip": "${f.redirectGoal} Yönlendirmesi", "metin": "<${f.redirectGoal} için yönlendirme mesajı>" }
   ],
   "sss_kartlari": [
