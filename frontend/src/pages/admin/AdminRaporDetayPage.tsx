@@ -183,6 +183,8 @@ export function AdminRaporDetayPage() {
                     parsed={parsed}
                     olusturmaTarihi={data.createdAt}
                     isletmeAdi={data.inputSummary}
+                    sonucId={data.id}
+                    videoBaglantisi={false}
                   />
                 </HataSiniri>
               ) : (

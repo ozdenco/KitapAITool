@@ -133,17 +133,25 @@ export function CiktiGovdesi({
   olusturmaTarihi,
   sonucId,
   isletmeAdi,
+  videoBaglantisi = true,
 }: {
   toolId: string
   parsed: Record<string, unknown>
   olusturmaTarihi?: string
   /**
-   * Kaydın kimliği. Verildiğinde, senaryo içeren çıktılarda "bu senaryolardan
-   * video üret" bağlantısı gösterilir. Yönetici rapor sayfası BİLEREK
-   * göndermiyor: başkasının kaydından üretim yaptırmak, kullanımı yöneticinin
-   * hesabına yazardı.
+   * Kaydın kimliği. Chatbot gömme kodu ve "bu senaryolardan video üret"
+   * bağlantısı bunu kullanır.
    */
   sonucId?: string
+  /**
+   * "Bu senaryolardan video üret" bağlantısı gösterilsin mi?
+   *
+   * Yönetici rapor sayfası `false` geçer: başkasının kaydından üretim
+   * yaptırmak, kullanımı yöneticinin hesabına yazardı. Önce `sonucId`'nin
+   * kendisi gönderilmiyordu ama bu, hiçbir maliyeti olmayan chatbot gömme
+   * kodunu da düşürüyordu (24 Eyl 2026'da bildirildi) — iki mesele ayrıldı.
+   */
+  videoBaglantisi?: boolean
   /** Kaydın giriş özeti (işletme adı) — chatbot mini testi başlığında kullanılır. */
   isletmeAdi?: string
 }) {
@@ -217,7 +225,7 @@ export function CiktiGovdesi({
    * gerekiyordu; bu hem kullanım hakkı yakıyor hem model bambaşka üç senaryo
    * üretiyordu — beğenilen senaryo bir daha geri gelmiyordu.
    */
-  if (sonucId && Array.isArray(parsed.sektore_ozgu_uyarlamalar)) {
+  if (sonucId && videoBaglantisi && Array.isArray(parsed.sektore_ozgu_uyarlamalar)) {
     return (
       <div className="flex flex-col gap-4">
         <a
