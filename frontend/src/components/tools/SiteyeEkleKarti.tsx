@@ -61,6 +61,46 @@ export function SiteyeEkleKarti({ resultId, bizName }: Props) {
           </span>
         </div>
 
+        {/*
+          KURULUM NOTLARI — 24 Eyl 2026'da eklendi.
+
+          Kodu deneyen kişi HTML dosyasını masaüstüne kaydedip çift tıklayınca
+          hiçbir şey olmuyor ve "kod çalışmadı" sanıyor. İki ayrı sebep
+          birleşiyor: (1) file:// adresinde tarayıcı, sayfanın senaryoyu
+          sunucudan çekmesini engelliyor; (2) widget sayfayı DEĞİŞTİRMİYOR,
+          yalnızca sağ alt köşeye küçük bir baloncuk koyuyor — boş bir test
+          sayfasında bunu gözden kaçırmak çok kolay. Üçü de tek tek yaşandı,
+          bu yüzden kartın içinde yazıyor.
+        */}
+        <div className="bg-[#FFF9E8] border border-[#F0DFA8] rounded-xl px-3.5 py-3">
+          <p className="text-[11px] font-semibold text-[#7A5C10] mb-1.5">Denerken dikkat</p>
+          <ul className="flex flex-col gap-1.5 text-[11px] text-[#7A5C10] leading-relaxed">
+            <li className="flex gap-1.5">
+              <span aria-hidden="true">•</span>
+              <span>
+                Kod <strong>gerçek sitede</strong> denenmeli. HTML dosyasını bilgisayarınıza
+                kaydedip çift tıklayarak açtığınızda çalışmaz — tarayıcı o sayfanın
+                senaryoyu sunucudan çekmesine izin vermez.
+              </span>
+            </li>
+            <li className="flex gap-1.5">
+              <span aria-hidden="true">•</span>
+              <span>
+                Chatbot sayfanızın görünümünü değiştirmez; yalnızca{' '}
+                <strong>sağ alt köşede</strong> bir 💬 baloncuğu çıkar. “Hiçbir şey olmadı”
+                gibi görünüyorsa köşeye bakın.
+              </span>
+            </li>
+            <li className="flex gap-1.5">
+              <span aria-hidden="true">•</span>
+              <span>
+                WordPress’te tema ayarlarındaki <em>“body sonu / footer kodu”</em> alanına ya da
+                bir <em>Özel HTML</em> bloğuna yapıştırın.
+              </span>
+            </li>
+          </ul>
+        </div>
+
         <div className="bg-[#F0FAF6] border border-[#9FE1CB] rounded-xl px-3.5 py-3">
           <p className="text-[11px] text-[#085041] leading-relaxed">
             <strong>Ek ücret yok.</strong> Chatbot, ziyaretçi sorularını burada üretilen SSS

@@ -327,5 +327,18 @@
     })
     .catch(function (err) {
       console.error('[KolayKOBİ] Chatbot yüklenemedi:', err.message)
+      /*
+       * file:// en sık yapılan deneme hatası: kullanıcı kodu bir HTML dosyasına
+       * yapıştırıp çift tıklıyor, tarayıcı sayfanın sunucuya istek atmasını
+       * engelliyor ve widget sessizce kuruluyor. Genel hata mesajı bunu
+       * anlatmıyordu (24 Eyl 2026'da yaşandı).
+       */
+      if (location.protocol === 'file:') {
+        console.error(
+          '[KolayKOBİ] Sayfa dosya olarak açılmış (file://). Tarayıcı bu adreste ' +
+          'sunucu isteğine izin vermez. Kodu gerçek sitenizde ya da bir web ' +
+          'sunucusunda deneyin.'
+        )
+      }
     })
 })()
