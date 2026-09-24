@@ -1,19 +1,4 @@
-/*
- * LEGACY derleme bilerek kullanılıyor ('pdfjs-dist' değil, 'pdfjs-dist/legacy').
- *
- * pdf.js 6'nın varsayılan derlemesi çok yeni tarayıcı varsayıyor. 24 Eyl
- * 2026'da Safari'de PDF yükleme şu hatayla düşüyordu:
- *   TypeError: undefined is not a function (near '...e of t...')
- * yani pdf.js'in kendi kodundaki bir `for...of`, o WebKit sürümünde
- * yinelenemeyen bir değer üzerinde patlıyor. Legacy derleme daha geniş bir
- * tarayıcı tabanına göre derlenmiş olanı.
- *
- * Maliyeti kabul edilebilir: bu modül zaten DİNAMİK yükleniyor, yalnızca
- * kullanıcı dosya seçtiğinde iniyor (bkz. fileTextConstants.ts). Hedef kitle
- * KOBİ sahipleri — tarayıcı sürümleri üzerinde hiçbir denetimimiz yok, bu
- * yüzden birkaç yüz KB fazlasına karşılık "çalışmıyor" riskini almıyoruz.
- */
-import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.mjs'
+import * as pdfjsLib from 'pdfjs-dist'
 import {
   KABUL_EDILEN_TIPLER,
   MAKS_DOSYA_BOYUTU,
@@ -36,7 +21,7 @@ import {
  * pdf.js sorguyu yok sayar; yalnızca indirme adresidir.
  */
 pdfjsLib.GlobalWorkerOptions.workerSrc =
-  new URL('pdfjs-dist/legacy/build/pdf.worker.min.mjs', import.meta.url).toString() + '?mime2'
+  new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url).toString() + '?mime2'
 
 // ─── Doğrulama ────────────────────────────────────────────────────────────────
 
@@ -89,6 +74,42 @@ function kirp(metin: string): CikarilanMetin {
 
 // ─── PDF ──────────────────────────────────────────────────────────────────────
 
+/** streamTextContent'in verdiği parçanın ihtiyacımız olan kısmı (tip tanımı `ReadableStream` döndürüyor) */
+interface MetinParcasi {
+  items: Array<{ str?: string }>
+}
+
+/**
+ * Bir sayfanın metnini okur.
+ *
+ * `sayfa.getTextContent()` KULLANILMIYOR — pdf.js onu içeride
+ * `for await (const parca of akis)` ile yazıyor, yani ReadableStream üzerinde
+ * ASYNC YİNELEME yapıyor. WebKit bunu desteklemiyor: Safari'de
+ * `akis[Symbol.asyncIterator]` undefined kalıyor ve
+ * `TypeError: undefined is not a function (near '...t of e...')` fırlıyor.
+ *
+ * 24 Eyl 2026'da Safari 26.6.2'de ölçüldü: getDocument çalışıyor, hata tam
+ * olarak getTextContent'in içinde. pdf.js'in legacy derlemesi de aynı yerde
+ * düşüyor — yani derleme seçimiyle ilgisi yok, eksik olan tarayıcı özelliği.
+ * Akışı elle okumak async yinelemeyi tamamen devre dışı bırakıyor; aynı
+ * Safari'de 3 sayfa / 5956 karakter başarıyla okundu.
+ */
+async function sayfaMetniniOku(sayfa: pdfjsLib.PDFPageProxy): Promise<string> {
+  const okuyucu = sayfa.streamTextContent().getReader()
+  const parcalar: string[] = []
+  try {
+    for (;;) {
+      const { value, done } = await okuyucu.read()
+      if (done) break
+      const parca = value as MetinParcasi
+      parcalar.push(parca.items.map((item) => item.str ?? '').join(' '))
+    }
+  } finally {
+    okuyucu.releaseLock()
+  }
+  return parcalar.join(' ')
+}
+
 async function pdfMetniniCikar(file: File): Promise<string> {
   const buffer = await file.arrayBuffer()
   const pdf = await pdfjsLib.getDocument({ data: buffer }).promise
@@ -96,11 +117,7 @@ async function pdfMetniniCikar(file: File): Promise<string> {
   const sayfaMetinleri: string[] = []
   for (let sayfaNo = 1; sayfaNo <= pdf.numPages; sayfaNo++) {
     const sayfa = await pdf.getPage(sayfaNo)
-    const icerik = await sayfa.getTextContent()
-    const satir = icerik.items
-      .map((item) => ('str' in item ? item.str : ''))
-      .join(' ')
-    sayfaMetinleri.push(satir)
+    sayfaMetinleri.push(await sayfaMetniniOku(sayfa))
   }
   return sayfaMetinleri.join('\n')
 }
