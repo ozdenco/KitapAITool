@@ -138,10 +138,20 @@ export function CiktiGovdesi({
   parsed: Record<string, unknown>
   olusturmaTarihi?: string
   /**
-   * Kaydın kimliği. Verildiğinde, senaryo içeren çıktılarda "bu senaryolardan
-   * video üret" bağlantısı gösterilir. Yönetici rapor sayfası BİLEREK
-   * göndermiyor: başkasının kaydından üretim yaptırmak, kullanımı yöneticinin
-   * hesabına yazardı.
+   * Kaydın kimliği. Verildiğinde iki şey açılır: senaryo içeren çıktılarda
+   * "bu senaryolardan video üret" bağlantısı, chatbot çıktısında da "Sitenize
+   * Ekleyin" gömme kodu.
+   *
+   * YÖNETİCİ RAPOR SAYFASI BUNU GÖNDERMEZ — iki ayrı gerekçeyle:
+   * 1. Gizlilik (asıl gerekçe): gömme kodu müşterinin kendi sitesine koyduğu
+   *    şeydir, yöneticinin işi değil. Yönetici müşteri şirketin verilerine
+   *    gerekmedikçe erişmemeli.
+   * 2. Faturalandırma: başkasının kaydından video üretimi başlatmak, kullanımı
+   *    yöneticinin hesabına yazardı.
+   *
+   * 24 Eyl 2026'da bu alan yöneticide de açılmıştı (gömme kodu görünmüyor
+   * diye); Özden "şirket verilerini görmemem gerekiyor admin olarak, verilerin
+   * gizliliğine uyumlu" diyerek geri aldırdı. Tekrar açma.
    */
   sonucId?: string
   /** Kaydın giriş özeti (işletme adı) — chatbot mini testi başlığında kullanılır. */
