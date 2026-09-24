@@ -13,7 +13,7 @@ export function LegalLayout() {
             rel="noopener noreferrer"
             className="flex items-center"
           >
-            <Logo height={40} />
+            <Logo height={34} adiGoster />
           </a>
           <a
             href="/dashboard"
@@ -43,7 +43,7 @@ export function LegalLayout() {
             <a href="/kvkk" className="text-xs text-gray-400 hover:text-gray-600 transition-colors">
               KVKK
             </a>
-            <span className="text-xs text-gray-400">Dijital ajansınız artık bir yazılım</span>
+            <span className="text-xs text-gray-400">İşletmeniz için hazır iş çözümleri</span>
           </div>
         </div>
       </footer>

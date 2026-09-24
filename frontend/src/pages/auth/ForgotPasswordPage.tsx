@@ -34,8 +34,8 @@ export function ForgotPasswordPage() {
       <div className="w-full max-w-sm">
         {/* Logo */}
         <div className="text-center mb-8">
-          <Logo height={48} className="mx-auto" />
-          <p className="mt-3 text-sm text-gray-500">Dijital ajansınız artık bir yazılım</p>
+          <Logo height={44} adiGoster className="mx-auto" />
+          <p className="mt-3 text-sm text-gray-500">İşletmeniz için hazır iş çözümleri</p>
         </div>
 
         {/* Card */}

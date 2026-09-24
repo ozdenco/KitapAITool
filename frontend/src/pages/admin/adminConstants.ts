@@ -75,6 +75,17 @@ export function formatDate(iso: string | null): string {
   })
 }
 
+/**
+ * Saatsiz tarih — dar tablolarda kolon genişliğini yarıya indirir.
+ * Tam değer için hücreye title={formatDate(...)} koyun; saat orada kalır.
+ */
+export function formatDateShort(iso: string | null): string {
+  if (!iso) return '—'
+  return new Date(iso).toLocaleDateString('tr-TR', {
+    day: '2-digit', month: '2-digit', year: 'numeric',
+  })
+}
+
 export function timeAgo(iso: string | null): string {
   if (!iso) return '—'
   const ms  = Date.now() - new Date(iso).getTime()

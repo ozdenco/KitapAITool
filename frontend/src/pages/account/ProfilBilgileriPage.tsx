@@ -53,7 +53,9 @@ export function ProfilBilgileriPage() {
     },
     onSuccess: (updated) => {
       if (user) {
-        setUser({ ...user, name: updated.name })
+        // company de yazılmalı: araç formları işletme adını buradan ön-dolduruyor.
+        // Yalnızca name yazıldığı için profilden yapılan güncelleme formlara yansımıyordu.
+        setUser({ ...user, name: updated.name, company: updated.company })
       }
       queryClient.setQueryData<ProfileData>(['user-profile'], updated)
       setSaved(true)
@@ -106,11 +108,15 @@ export function ProfilBilgileriPage() {
             </div>
 
             <Input
-              label="Şirket"
+              label="İşletme Adı"
               value={company}
               onChange={(e) => setCompany(e.target.value)}
-              placeholder="Şirket veya işletme adı (isteğe bağlı)"
+              placeholder="Örn: Yıldız Muhasebe"
             />
+            <p className="-mt-2.5 text-[11px] text-[#9A9792] leading-relaxed">
+              Buraya yazdığınız ad, araç formlarındaki &ldquo;İşletme adı&rdquo; alanına
+              otomatik gelir — her araçta yeniden yazmanıza gerek kalmaz.
+            </p>
 
             <div className="flex items-center gap-3 pt-1">
               <button

@@ -9,6 +9,10 @@ import { Textarea } from '@/components/ui/Textarea'
 import { FormPersistButtons } from '@/components/ui/FormPersistButtons'
 import { ToolShell } from '@/components/ui/ToolShell'
 import { useElapsedSeconds } from '@/hooks/useElapsedSeconds'
+import { useProfilOnDolgu } from '@/hooks/useIsletmeProfili'
+import { markaKurallari } from '@/lib/markaKurallari'
+import { SEKTORLER } from '@/lib/sektorler'
+import { AramaliSecici } from '@/components/ui/AramaliSecici'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -31,21 +35,6 @@ interface PersonaResponse {
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
-
-const SEKTORLER = [
-  'Muhasebe / Finans',
-  'Sağlık / Klinik',
-  'Eğitim / Kurs',
-  'İnşaat / Mühendislik',
-  'Hukuk / Danışmanlık',
-  'Perakende / Mağaza',
-  'Yiyecek / İçecek',
-  'Güzellik / Estetik',
-  'Lojistik / Taşımacılık',
-  'Teknoloji / Yazılım',
-  'Giyim / Tekstil',
-  'Diğer',
-]
 
 const YAS_ARALIKLARI = ['18–30', '25–40', '30–50', '40–60', 'Tüm yaşlar']
 
@@ -113,7 +102,8 @@ SADECE JSON döndür, başka hiçbir şey yazma:
     }
   ],
   "ctaText": "<işletmeye özel 1 cümle>"
-}`
+}
+${markaKurallari()}`
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -131,6 +121,16 @@ export function MusteriPersonaPage() {
   const [result, setResult] = useState<PersonaResponse | null>(null)
   const [parseError, setParseError] = useState(false)
 
+  // İşletme profilinden ön dolgu — boş alanlar doldurulur, kullanıcının
+  // yazdığına dokunulmaz (bkz. useProfilOnDolgu).
+  useProfilOnDolgu({
+    businessName: [biz, setBiz],
+    sector: [sector, setSector],
+    city: [city, setCity],
+    productService: [service, setService],
+    priceSegment: [price, setPrice],
+  })
+
   const togglePain = (value: string) =>
     setPains((prev) =>
       prev.includes(value) ? prev.filter((p) => p !== value) : [...prev, value],
@@ -139,7 +139,7 @@ export function MusteriPersonaPage() {
   const mutation = useMutation({
     mutationFn: async () => {
       const prompt = buildPrompt({ biz, sector, city, service, age, price, current, pains })
-      const res = await api.post('/tools/musteri-persona/run', { prompt })
+      const res = await api.post('/tools/musteri-persona/run', { prompt, isletmeAdi: biz })
       const content = extractAiContent(res.data)
       return parseAiJson<PersonaResponse>(content)
     },
@@ -181,14 +181,11 @@ export function MusteriPersonaPage() {
                 />
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <Select
+                  <AramaliSecici
                     label="Sektör *"
                     value={sector}
-                    onChange={(e) => setSector(e.target.value)}
-                    options={[
-                      { value: '', label: 'Seçin...' },
-                      ...SEKTORLER.map((s) => ({ value: s, label: s })),
-                    ]}
+                    onChange={setSector}
+                    secenekler={SEKTORLER}
                   />
                   <Input
                     label="Şehir / Bölge"
@@ -385,12 +382,6 @@ export function MusteriPersonaPage() {
                 </div>
               )}
 
-              <button
-                onClick={() => setResult(null)}
-                className="text-sm text-gray-400 underline text-center no-print"
-              >
-                Yeni analiz yap
-              </button>
             </div>
           )}
         </>

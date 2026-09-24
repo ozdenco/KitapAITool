@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom'
+import { SIRKET } from '@/lib/sirketBilgileri'
 
 export function SatisSozlesmesiPage() {
   const navigate = useNavigate()
@@ -17,8 +18,13 @@ export function SatisSozlesmesiPage() {
               Bu Mesafeli Satış Sözleşmesi ("Sözleşme"), aşağıda belirtilen taraflar arasında akdedilmiştir:
             </p>
             <p className="mt-2">
-              <strong>Satıcı:</strong> KolayKOBİ (kolaykobi.com)<br />
-              E-posta: destek@kolaykobi.com
+              <strong>Satıcı:</strong> {SIRKET.ticaretUnvani}<br />
+              <strong>Adres:</strong> {SIRKET.adres}<br />
+              <strong>Vergi Dairesi / No:</strong> {SIRKET.vergiDairesi} — {SIRKET.vergiNo}<br />
+              <strong>MERSİS No:</strong> {SIRKET.mersisNo}<br />
+              <strong>E-posta:</strong> {SIRKET.destekEposta}<br />
+              <strong>Telefon:</strong> {SIRKET.telefon}<br />
+              <strong>Web:</strong> {SIRKET.alanAdi}
             </p>
             <p className="mt-2">
               <strong>Alıcı:</strong> KolayKOBİ platformuna kayıt olan ve satın alma işlemi gerçekleştiren kullanıcı

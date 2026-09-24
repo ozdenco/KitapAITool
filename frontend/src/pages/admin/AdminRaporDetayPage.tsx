@@ -1,8 +1,13 @@
+import { useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import api from '@/lib/api'
 import { TOOLS } from '@/lib/tools'
-import { ToolOutputRenderer } from '@/components/ui/ToolOutputRenderer'
+import { parseAiJson, extractAiContent } from '@/lib/parseAiJson'
+import { CiktiGovdesi } from '@/components/ui/CiktiGovdesi'
+import { PrintButton } from '@/components/ui/PrintButton'
+import { CiktiBasligi } from '@/components/ui/CiktiBasligi'
+import { HataSiniri } from '@/components/ui/HataSiniri'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -36,18 +41,21 @@ function parseOutput(outputJson: string): Record<string, unknown> | null {
     if (Array.isArray(raw) && raw.length === 1) raw = raw[0]
     let parsed = raw as Record<string, unknown>
 
-    if (parsed && 'content' in parsed) {
-      const content = (parsed as { content: unknown }).content
-      if (Array.isArray(content) && content[0] && typeof (content[0] as { text?: string }).text === 'string') {
-        try {
-          const inner = JSON.parse((content[0] as { text: string }).text) as Record<string, unknown>
-          const extras: Record<string, unknown> = {}
-          for (const k of Object.keys(parsed)) {
-            if (k !== 'content') extras[k] = (parsed as Record<string, unknown>)[k]
-          }
-          parsed = { ...inner, ...extras }
-        } catch { /* keep raw parsed */ }
-      }
+    // Kaydedilen çıktı iki sarmalayıcıyla gelebilir:
+    //   { content: [{ text }] }               → dönüştürülmüş
+    //   { choices: [{ message: { content }}]} → ham MiniMax (AI Görünürlük)
+    // Yalnızca ilki tanınınca rapor boş açılıyordu. Kullanıcı tarafındaki
+    // Geçmiş Çıktılar sayfası düzeltilmişti; admin rapor sayfası atlanmıştı.
+    const icMetin = extractAiContent(parsed)
+    if (typeof icMetin === 'string') {
+      try {
+        const inner = parseAiJson<Record<string, unknown>>(icMetin)
+        const extras: Record<string, unknown> = {}
+        for (const k of Object.keys(parsed)) {
+          if (k !== 'content' && k !== 'choices') extras[k] = (parsed as Record<string, unknown>)[k]
+        }
+        parsed = { ...inner, ...extras }
+      } catch { /* keep raw parsed */ }
     }
     return parsed
   } catch {
@@ -76,6 +84,9 @@ export function AdminRaporDetayPage() {
   const tool   = data ? (TOOL_META[data.toolId] ?? { name: data.toolId, icon: '🔧' }) : null
   const parsed = data ? parseOutput(data.outputJson) : null
 
+  // PDF doğrudan indirme hedefi
+  const ciktiRef = useRef<HTMLDivElement>(null)
+
   const handlePrint = () => {
     if (!data || !tool) return
     const prev = document.title
@@ -98,7 +109,8 @@ export function AdminRaporDetayPage() {
         onClick={() => navigate(-1)}
         className="flex items-center gap-2 text-[13px] text-[#6B6963] hover:text-[#1C1B19] mb-5 transition-colors no-print"
       >
-        ← Kullanım Raporuna Dön
+        {/* navigate(-1) kullanıyor; sabit bir hedef yazmak yanıltıcıydı */}
+        ← Geri
       </button>
 
       {/* ── Yükleniyor ── */}
@@ -127,6 +139,16 @@ export function AdminRaporDetayPage() {
                 <span className="text-[28px] leading-none">{tool.icon}</span>
                 <div>
                   <h1 className="text-[18px] font-semibold text-[#1C1B19]">{tool.name}</h1>
+
+                  {/* Hangi işletme için çalıştırıldığı — yönetici raporda
+                      yalnızca kullanıcı adını görüyordu, çıktının hangi
+                      firmaya ait olduğu ancak metnin içinden anlaşılıyordu. */}
+                  {data.inputSummary?.trim() && (
+                    <p className="text-[13px] font-medium text-[#085041] mt-0.5">
+                      🏢 {data.inputSummary}
+                    </p>
+                  )}
+
                   <p className="text-[12px] text-[#6B6963] mt-0.5">
                     <strong className="text-[#3A3935]">{data.name}</strong>
                     {' '}·{' '}
@@ -136,20 +158,33 @@ export function AdminRaporDetayPage() {
                 </div>
               </div>
 
-              <button
-                onClick={handlePrint}
-                className="shrink-0 flex items-center gap-1.5 text-[12px] px-3 py-2 rounded-xl border border-[#D3D1C7] bg-white text-[#6B6963] hover:bg-[#F7F6F2] transition-colors"
-              >
-                🖨️ Yazdır / PDF
-              </button>
+              <PrintButton
+                onPrint={handlePrint}
+                boyut="kompakt"
+                className="shrink-0"
+                pdfHedefi={() => ciktiRef.current}
+                pdfDosyaAdi={`${tool?.name ?? data.toolId}_${data.name}`}
+              />
             </div>
           </div>
 
           {/* Rapor içeriği */}
           <div className="bg-[#F7F6F2] rounded-2xl border border-[#E2E0D8] overflow-hidden">
-            <div className="p-5 gecmis-print-target">
+            <div ref={ciktiRef} className="p-5 gecmis-print-target">
+              <CiktiBasligi
+                aracAdi={tool?.name ?? data.toolId}
+                tarih={formatDateTime(data.createdAt)}
+                kisi={data.name}
+              />
               {parsed !== null ? (
-                <ToolOutputRenderer toolId={data.toolId} data={parsed} />
+                <HataSiniri baslik={data.toolId}>
+                  <CiktiGovdesi
+                    toolId={data.toolId}
+                    parsed={parsed}
+                    olusturmaTarihi={data.createdAt}
+                    isletmeAdi={data.inputSummary}
+                  />
+                </HataSiniri>
               ) : (
                 <pre className="text-[11px] text-[#3A3935] bg-white border border-[#E2E0D8] rounded-xl p-4 overflow-x-auto leading-relaxed whitespace-pre-wrap">
                   {data.outputJson}

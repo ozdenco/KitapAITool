@@ -1,11 +1,12 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import api from '@/lib/api'
 import type { ApiResponse } from '@/types'
 import { EditModal, ResetPasswordModal } from './AdminModals'
 import type { AdminUser } from './AdminModals'
-import { formatDate, timeAgo, TOOL_LABELS, PLAN_LABELS, PLAN_COLORS } from './adminConstants'
+import { formatDate, formatDateShort, timeAgo, TOOL_LABELS, PLAN_LABELS, PLAN_COLORS } from './adminConstants'
 
 // ─── Plan Change Modal ────────────────────────────────────────────────────────
 
@@ -137,7 +138,15 @@ function PaketDegistirModal({ user, onClose, onSaved }: PaketDegistirModalProps)
 
 // ─── Tool Badges ──────────────────────────────────────────────────────────────
 
-function ToolBadges({ toolIds }: { toolIds: string[] }) {
+/**
+ * Kullanıcının çalıştırdığı araçlar.
+ *
+ * Her rozet TIKLANABİLİR: Tüm Çıktılar sayfasını hem kullanıcı hem araç
+ * filtresiyle açar. Admin "bu kişi bu araçla ne üretmiş?" sorusunu iki
+ * filtreyi elle seçmeden yanıtlayabiliyor.
+ */
+function ToolBadges({ toolIds, userId }: { toolIds: string[]; userId: string }) {
+  const navigate = useNavigate()
   const [expanded, setExpanded] = useState(false)
   if (toolIds.length === 0) return <span className="text-gray-400 text-xs">—</span>
   const shown     = expanded ? toolIds : toolIds.slice(0, 2)
@@ -145,9 +154,16 @@ function ToolBadges({ toolIds }: { toolIds: string[] }) {
   return (
     <div className="flex flex-wrap gap-1">
       {shown.map((id) => (
-        <span key={id} className="px-1.5 py-0.5 rounded-full bg-[#1D9E75]/10 text-[#085041] text-[10px]">
+        <button
+          key={id}
+          type="button"
+          title={`${TOOL_LABELS[id] ?? id} çıktılarını gör`}
+          onClick={() => navigate(`/admin/tum-ciktilar?userId=${userId}&toolId=${id}`)}
+          className="px-1.5 py-0.5 rounded-full bg-[#1D9E75]/10 text-[#085041] text-[10px]
+                     hover:bg-[#1D9E75]/25 hover:underline transition-colors cursor-pointer"
+        >
           {TOOL_LABELS[id] ?? id}
-        </span>
+        </button>
       ))}
       {!expanded && remaining > 0 && (
         <button onClick={() => setExpanded(true)}
@@ -165,10 +181,10 @@ function ToolBadges({ toolIds }: { toolIds: string[] }) {
   )
 }
 
-// ─── User Action Sidebar ──────────────────────────────────────────────────────
+// ─── Satır içi işlem menüsü ───────────────────────────────────────────────────
 
-interface UserActionSidebarProps {
-  user: AdminUser | null
+interface IslemMenusuProps {
+  user: AdminUser
   isPending: boolean
   onEdit: () => void
   onResetPassword: () => void
@@ -180,64 +196,138 @@ interface UserActionSidebarProps {
   onPaketDegistir: () => void
 }
 
-function UserActionSidebar({ user, isPending, onEdit, onResetPassword, onToggleStatus, onDelete, onDetail, onCiktilar, onOdemeler, onPaketDegistir }: UserActionSidebarProps) {
+const MENU_GENISLIK = 186
+
+/**
+ * Kullanıcı satırındaki ⚙ düğmesi ve açtığı işlem menüsü.
+ *
+ * NEDEN SAĞDAKİ PANELİN YERİNE: Panel seçili kullanıcı olmasa bile 160px
+ * yer tutuyordu ve tablo sekiz kolonla sığmıyordu. Ayrıca "hangi kullanıcı
+ * seçili" belirsizliği vardı. Menü satıra bağlı olduğu için o soru kalkıyor.
+ *
+ * NEDEN PORTAL: Tablo `overflow-x-auto` bir kutunun içinde; menü normal
+ * akışta açılsaydı o kutu tarafından kırpılırdı. Gövdeye taşınıp butonun
+ * ekran koordinatına sabitleniyor.
+ */
+function IslemMenusu({
+  user, isPending,
+  onEdit, onResetPassword, onToggleStatus, onDelete,
+  onDetail, onCiktilar, onOdemeler, onPaketDegistir,
+}: IslemMenusuProps) {
+  const [acik, setAcik] = useState(false)
+  const butonRef = useRef<HTMLButtonElement>(null)
+  const menuRef  = useRef<HTMLDivElement>(null)
+  const [konum, setKonum] = useState<{ top: number; left: number }>({ top: 0, left: 0 })
+
+  /**
+   * Konum, menü AÇILMADAN ÖNCE hesaplanır. Açıldıktan sonra ölçseydik menü
+   * ilk karede (0,0) konumunda çizilip sonra yerine zıplardı.
+   */
+  const menuyuAc = () => {
+    const r = butonRef.current?.getBoundingClientRect()
+    if (!r) return
+    const solaTasar = r.right - MENU_GENISLIK < 8
+    setKonum({
+      top:  r.bottom + 6,
+      left: solaTasar ? 8 : r.right - MENU_GENISLIK,
+    })
+    setAcik(true)
+  }
+
+  // Dışarı tıklama, Escape, kaydırma ve yeniden boyutlandırma menüyü kapatır.
+  // Sayfa kayınca menü butondan ayrı düşeceği için kapatmak en doğrusu.
+  useEffect(() => {
+    if (!acik) return
+
+    const disaridaMi = (e: MouseEvent) => {
+      const h = e.target as Node
+      if (menuRef.current?.contains(h) || butonRef.current?.contains(h)) return
+      setAcik(false)
+    }
+    const escBasildi = (e: KeyboardEvent) => { if (e.key === 'Escape') setAcik(false) }
+    const kapat = () => setAcik(false)
+
+    document.addEventListener('mousedown', disaridaMi)
+    document.addEventListener('keydown', escBasildi)
+    window.addEventListener('scroll', kapat, true)
+    window.addEventListener('resize', kapat)
+    return () => {
+      document.removeEventListener('mousedown', disaridaMi)
+      document.removeEventListener('keydown', escBasildi)
+      window.removeEventListener('scroll', kapat, true)
+      window.removeEventListener('resize', kapat)
+    }
+  }, [acik])
+
+  const secenekler = [
+    { ikon: '✎',  etiket: 'Düzenle',          calistir: onEdit,          renk: 'text-[#3A3935] hover:bg-[#F0FAF6] hover:text-[#085041]' },
+    { ikon: '📊', etiket: 'Kullanım Geçmişi', calistir: onDetail,        renk: 'text-[#3A3935] hover:bg-[#F0FAF6] hover:text-[#085041]' },
+    { ikon: '📄', etiket: 'Geçmiş Çıktılar',  calistir: onCiktilar,      renk: 'text-[#3A3935] hover:bg-[#F0FAF6] hover:text-[#085041]' },
+    { ikon: '💳', etiket: 'Ödeme Geçmişi',    calistir: onOdemeler,      renk: 'text-[#3A3935] hover:bg-[#F0FAF6] hover:text-[#085041]' },
+    { ikon: '📦', etiket: 'Paket Değiştir',   calistir: onPaketDegistir, renk: 'text-[#1D9E75] hover:bg-[#E6F9F2]' },
+    { ikon: '🔑', etiket: 'Şifre Sıfırla',    calistir: onResetPassword, renk: 'text-amber-700 hover:bg-amber-50' },
+    {
+      ikon:     user.isActive ? '⏸' : '▶',
+      etiket:   user.isActive ? 'Pasife Al' : 'Aktif Et',
+      calistir: onToggleStatus,
+      renk:     user.isActive ? 'text-amber-700 hover:bg-amber-50' : 'text-green-700 hover:bg-green-50',
+      pasif:    isPending,
+      ayirici:  true,
+    },
+    { ikon: '🗑', etiket: 'Kullanıcıyı Sil', calistir: onDelete, renk: 'text-red-600 hover:bg-red-50' },
+  ]
+
   return (
-    <aside className="shrink-0 w-[160px] sticky top-4">
-      <div className="bg-white rounded-2xl border border-[#E2E0D8]">
-        <div className="px-4 pt-4 pb-3">
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-[#9A9792]">
-            👤 Kullanıcı İşlemleri
-          </p>
-        </div>
+    <>
+      <button
+        ref={butonRef}
+        type="button"
+        aria-haspopup="menu"
+        aria-expanded={acik}
+        aria-label={`${user.name} için işlemler`}
+        onClick={(e) => { e.stopPropagation(); acik ? setAcik(false) : menuyuAc() }}
+        className={`w-7 h-7 rounded-lg flex items-center justify-center text-[15px] leading-none
+                    transition-colors border ${
+          acik
+            ? 'bg-[#F0FAF6] border-[#9FE1CB] text-[#085041]'
+            : 'bg-white border-[#E2E0D8] text-[#6B6963] hover:bg-[#F7F6F2] hover:text-[#1C1B19]'
+        }`}
+      >
+        ⚙
+      </button>
 
-        {!user ? (
-          <p className="px-4 pb-4 text-[12px] text-[#9A9792]">Bir kullanıcıya tıklayın</p>
-        ) : (
-          <>
-            <div className="px-4 pb-3 border-b border-[#F2F1ED]">
-              <p className="text-[12px] font-medium text-[#1C1B19] truncate">{user.name}</p>
-              <p className="text-[11px] text-[#9A9792] truncate">{user.email}</p>
-              <div className="flex items-center gap-1 mt-1">
-                <span className={`w-1.5 h-1.5 rounded-full ${user.isActive ? 'bg-green-500' : 'bg-gray-300'}`} />
-                <span className="text-[10px] text-[#9A9792]">{user.isActive ? 'Aktif' : 'Pasif'}</span>
-                {user.isAdmin && <span className="ml-1 text-[10px] text-[#1D9E75] font-semibold">Admin</span>}
-              </div>
-            </div>
+      {acik && createPortal(
+        <div
+          ref={menuRef}
+          role="menu"
+          style={{ top: konum.top, left: konum.left, width: MENU_GENISLIK }}
+          className="fixed z-50 bg-white rounded-xl border border-[#E2E0D8] shadow-lg py-1.5"
+        >
+          <div className="px-3 pb-2 mb-1 border-b border-[#F2F1ED]">
+            <p className="text-[12px] font-medium text-[#1C1B19] truncate">{user.name}</p>
+            <p className="text-[11px] text-[#9A9792] truncate">{user.email}</p>
+          </div>
 
-            <nav className="flex flex-col gap-[2px] px-2 pb-3 pt-2">
-              {[
-                { icon: '✎',  label: 'Düzenle',           onClick: onEdit,          cls: 'text-[#3A3935] hover:bg-[#F0FAF6] hover:text-[#085041]' },
-                { icon: '📊', label: 'Kullanım Geçmişi',  onClick: onDetail,        cls: 'text-[#3A3935] hover:bg-[#F0FAF6] hover:text-[#085041]' },
-                { icon: '📄', label: 'Geçmiş Çıktılar',  onClick: onCiktilar,      cls: 'text-[#3A3935] hover:bg-[#F0FAF6] hover:text-[#085041]' },
-                { icon: '💳', label: 'Ödeme Geçmişi',    onClick: onOdemeler,      cls: 'text-[#3A3935] hover:bg-[#F0FAF6] hover:text-[#085041]' },
-                { icon: '📦', label: 'Paket Değiştir',    onClick: onPaketDegistir, cls: 'text-[#1D9E75] hover:bg-[#E6F9F2]' },
-                { icon: '🔑', label: 'Şifre Sıfırla',     onClick: onResetPassword, cls: 'text-amber-700 hover:bg-amber-50' },
-                {
-                  icon:    user.isActive ? '⏸' : '▶',
-                  label:   user.isActive ? 'Pasife Al' : 'Aktif Et',
-                  onClick: onToggleStatus,
-                  cls:     user.isActive
-                    ? 'text-amber-700 hover:bg-amber-50 disabled:opacity-50'
-                    : 'text-green-700 hover:bg-green-50 disabled:opacity-50',
-                  disabled: isPending,
-                },
-                { icon: '🗑', label: 'Kullanıcıyı Sil',  onClick: onDelete,        cls: 'text-red-600 hover:bg-red-50' },
-              ].map(({ icon, label, onClick, cls, disabled }) => (
-                <button
-                  key={label}
-                  onClick={onClick}
-                  disabled={disabled}
-                  className={`flex items-center gap-[9px] px-[11px] py-[8px] rounded-xl text-[12px] font-medium transition-colors select-none ${cls}`}
-                >
-                  <span className="text-[14px] leading-none">{icon}</span>
-                  <span>{label}</span>
-                </button>
-              ))}
-            </nav>
-          </>
-        )}
-      </div>
-    </aside>
+          {secenekler.map(({ ikon, etiket, calistir, renk, pasif, ayirici }) => (
+            <button
+              key={etiket}
+              role="menuitem"
+              type="button"
+              disabled={pasif}
+              onClick={(e) => { e.stopPropagation(); setAcik(false); calistir() }}
+              className={`w-full flex items-center gap-2.5 px-3 py-[7px] text-[12px] font-medium
+                          text-left transition-colors disabled:opacity-50 ${renk} ${
+                ayirici ? 'mt-1 border-t border-[#F2F1ED] pt-2' : ''
+              }`}
+            >
+              <span className="text-[13px] leading-none w-4 text-center">{ikon}</span>
+              <span>{etiket}</span>
+            </button>
+          ))}
+        </div>,
+        document.body,
+      )}
+    </>
   )
 }
 
@@ -247,7 +337,6 @@ export function AdminKullaniciListesiPage() {
   const queryClient = useQueryClient()
   const navigate    = useNavigate()
 
-  const [selectedUser,      setSelectedUser]      = useState<AdminUser | null>(null)
   const [editUser,          setEditUser]          = useState<AdminUser | null>(null)
   const [resetUser,         setResetUser]         = useState<AdminUser | null>(null)
   const [deleteConfirm,     setDeleteConfirm]     = useState<AdminUser | null>(null)
@@ -274,7 +363,6 @@ export function AdminKullaniciListesiPage() {
   const handleSaved = () => {
     void queryClient.invalidateQueries({ queryKey: ['admin-users'] })
     void queryClient.invalidateQueries({ queryKey: ['admin-stats'] })
-    setSelectedUser(null)
   }
 
   const toggleStatusMutation = useMutation({
@@ -311,7 +399,7 @@ export function AdminKullaniciListesiPage() {
       </div>
 
       {/* ── Table + Sidebar ── */}
-      <div className="flex items-start gap-4">
+      <div>
         <div className="flex-1 min-w-0">
           {isLoading && (
             <div className="flex items-center justify-center py-24">
@@ -329,8 +417,20 @@ export function AdminKullaniciListesiPage() {
                 <table className="w-full text-[12px]">
                   <thead>
                     <tr className="border-b border-[#E2E0D8] bg-[#F7F6F2]">
-                      {['Ad / E-posta', 'Şirket', 'Plan', 'Kayıt', 'Son Giriş', 'Araçlar', 'Toplam', 'Durum'].map((col) => (
-                        <th key={col} className="text-left px-3 py-2 text-[10px] font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">
+                      {['Ad / E-posta', 'Şirket', 'Plan', 'Kayıt', 'Son Giriş', 'Araçlar', 'Kullanım', 'Durum', 'Kullanıcı İşlemleri'].map((col) => (
+                        <th
+                          key={col}
+                          className={
+                            'px-2 py-2 text-[10px] font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap' +
+                            // İşlem kolonu en sağa SABİTLENİR: dokuz kolon dar
+                            // ekranlarda sığmıyor, tablo yatay kayıyor ve son
+                            // kolon görüş dışında kalıyordu. Sabitlenince
+                            // işlemlere her zaman ulaşılabiliyor.
+                            (col === 'Kullanıcı İşlemleri'
+                              ? ' text-center sticky right-0 z-10 bg-[#F7F6F2] border-l border-[#E2E0D8]'
+                              : ' text-left')
+                          }
+                        >
                           {col}
                         </th>
                       ))}
@@ -339,38 +439,50 @@ export function AdminKullaniciListesiPage() {
                   <tbody>
                     {filtered.length === 0 ? (
                       <tr>
-                        <td colSpan={8} className="text-center py-12 text-gray-400">
+                        <td colSpan={9} className="text-center py-12 text-gray-400">
                           {search ? 'Arama sonucu bulunamadı.' : 'Henüz kayıtlı kullanıcı yok.'}
                         </td>
                       </tr>
                     ) : filtered.map((user) => (
+                      // Satır artık tıklanabilir DEĞİL: işlemler ⚙ menüsünden
+                      // yapılıyor, "seçili kullanıcı" kavramına gerek kalmadı.
                       <tr
                         key={user.id}
-                        onClick={() => setSelectedUser((prev) => prev?.id === user.id ? null : user)}
-                        className={`border-b border-[#F1EFE8] cursor-pointer transition-colors ${
-                          selectedUser?.id === user.id
-                            ? 'bg-amber-50/60 hover:bg-amber-50'
-                            : `hover:bg-[#F7F6F2]/60 ${!user.isActive ? 'opacity-50' : ''}`
+                        className={`group border-b border-[#F1EFE8] transition-colors hover:bg-[#F7F6F2]/60 ${
+                          !user.isActive ? 'opacity-50' : ''
                         }`}
                       >
-                        <td className="px-3 py-2">
+                        <td className="px-2 py-2">
                           <div className="font-medium text-gray-900">{user.name}</div>
                           <div className="text-[11px] text-gray-400">{user.email}</div>
                         </td>
-                        <td className="px-3 py-2 text-gray-600">{user.company || <span className="text-gray-300">—</span>}</td>
-                        <td className="px-3 py-2">
+                        <td className="px-2 py-2 text-gray-600">{user.company || <span className="text-gray-300">—</span>}</td>
+                        <td className="px-2 py-2">
                           <span className={`px-2 py-0.5 rounded-full text-[11px] font-medium ${PLAN_COLORS[user.planType] ?? 'bg-gray-100 text-gray-600'}`}>
                             {PLAN_LABELS[user.planType] ?? user.planType}
                           </span>
                         </td>
-                        <td className="px-3 py-2 text-[11px] text-gray-500 whitespace-nowrap">{formatDate(user.createdAt)}</td>
-                        <td className="px-3 py-2 text-[11px] text-gray-500 whitespace-nowrap" title={formatDate(user.lastLoginAt)}>{timeAgo(user.lastLoginAt)}</td>
-                        <td className="px-3 py-2 max-w-[140px]"><ToolBadges toolIds={user.toolsUsed} /></td>
-                        <td className="px-3 py-2 text-center">
-                          <span className="font-semibold text-gray-700">{user.totalToolUses}</span>
-                          <div className="text-[10px] text-gray-400">kullanım</div>
+                        {/* Saat tooltip'te — kolon genişliği yarıya iniyor */}
+                        <td className="px-2 py-2 text-[11px] text-gray-500 whitespace-nowrap" title={formatDate(user.createdAt)}>{formatDateShort(user.createdAt)}</td>
+                        <td className="px-2 py-2 text-[11px] text-gray-500 whitespace-nowrap" title={formatDate(user.lastLoginAt)}>{timeAgo(user.lastLoginAt)}</td>
+                        <td className="px-2 py-2 max-w-[110px]"><ToolBadges toolIds={user.toolsUsed} userId={user.id} /></td>
+                        {/* "kullanım" alt etiketi başlığa taşındı — kolonu 30px daraltıyor.
+                            Rakam tıklanabilir: kullanıcının TÜM çıktılarına gider. */}
+                        <td className="px-2 py-2 text-center">
+                          {user.totalToolUses > 0 ? (
+                            <button
+                              type="button"
+                              title={`${user.name} kullanıcısının tüm çıktılarını gör`}
+                              onClick={() => navigate(`/admin/tum-ciktilar?userId=${user.id}`)}
+                              className="font-semibold text-[#085041] hover:underline cursor-pointer"
+                            >
+                              {user.totalToolUses}
+                            </button>
+                          ) : (
+                            <span className="font-semibold text-gray-400">0</span>
+                          )}
                         </td>
-                        <td className="px-3 py-2">
+                        <td className="px-2 py-2">
                           <div className="flex flex-col gap-1">
                             <span className={`inline-flex items-center gap-1 text-xs font-medium ${user.isActive ? 'text-green-600' : 'text-gray-400'}`}>
                               <span className={`w-1.5 h-1.5 rounded-full ${user.isActive ? 'bg-green-500' : 'bg-gray-300'}`} />
@@ -382,6 +494,28 @@ export function AdminKullaniciListesiPage() {
                             }
                           </div>
                         </td>
+
+                        {/*
+                          Sabitlenmiş hücrenin kendi ZEMİNİ olmak zorunda —
+                          saydam olsaydı altından kayan kolonlar görünürdü.
+                          Satırın hover durumunu group-hover ile taklit ediyor.
+                        */}
+                        <td className="px-2 py-2 text-center sticky right-0 z-10 border-l border-[#F1EFE8] bg-white group-hover:bg-[#F7F6F2]">
+                          <div className="flex justify-center">
+                            <IslemMenusu
+                              user={user}
+                              isPending={toggleStatusMutation.isPending}
+                              onEdit={() => setEditUser(user)}
+                              onResetPassword={() => setResetUser(user)}
+                              onToggleStatus={() => toggleStatusMutation.mutate(user.id)}
+                              onDelete={() => setDeleteConfirm(user)}
+                              onDetail={() => navigate(`/admin/kullanici/${user.id}/gecmis`)}
+                              onCiktilar={() => navigate(`/admin/tum-ciktilar?userId=${user.id}`)}
+                              onOdemeler={() => navigate(`/admin/kullanici/${user.id}/odemeler`)}
+                              onPaketDegistir={() => setPaketDegistirUser(user)}
+                            />
+                          </div>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -390,19 +524,6 @@ export function AdminKullaniciListesiPage() {
             </div>
           )}
         </div>
-
-        <UserActionSidebar
-          user={selectedUser}
-          isPending={toggleStatusMutation.isPending}
-          onEdit={() => { if (selectedUser) setEditUser(selectedUser) }}
-          onResetPassword={() => { if (selectedUser) setResetUser(selectedUser) }}
-          onToggleStatus={() => { if (selectedUser) toggleStatusMutation.mutate(selectedUser.id) }}
-          onDelete={() => { if (selectedUser) setDeleteConfirm(selectedUser) }}
-          onDetail={() => { if (selectedUser) navigate(`/admin/kullanici/${selectedUser.id}/gecmis`) }}
-          onCiktilar={() => { if (selectedUser) navigate(`/admin/tum-ciktilar?userId=${selectedUser.id}`) }}
-          onOdemeler={() => { if (selectedUser) navigate(`/admin/kullanici/${selectedUser.id}/odemeler`) }}
-          onPaketDegistir={() => { if (selectedUser) setPaketDegistirUser(selectedUser) }}
-        />
       </div>
 
       {/* ── Modals ── */}

@@ -9,6 +9,9 @@ import { Textarea } from '@/components/ui/Textarea'
 import { FormPersistButtons } from '@/components/ui/FormPersistButtons'
 import { ToolShell } from '@/components/ui/ToolShell'
 import { useElapsedSeconds } from '@/hooks/useElapsedSeconds'
+import { useProfilOnDolgu } from '@/hooks/useIsletmeProfili'
+import { SEKTORLER } from '@/lib/sektorler'
+import { AramaliSecici } from '@/components/ui/AramaliSecici'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -33,14 +36,6 @@ interface ViralVideoResult {
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
-
-const SEKTORLER = [
-  'Lojistik / Taşımacılık', 'E-ticaret / Perakende', 'Restoran / Kafe / Yiyecek',
-  'Güzellik / Kuaför / Estetik', 'Sağlık / Klinik / Eczane', 'İnşaat / Gayrimenkul',
-  'Muhasebe / Finans / Danışmanlık', 'Eğitim / Kurs / Koçluk', 'Teknoloji / Yazılım',
-  'Turizm / Otel / Seyahat', 'Hukuk / Avukatlık', 'Temizlik / Hizmet',
-  'Giyim / Tekstil / Moda', 'Diğer',
-]
 
 const TONLAR = [
   'Eğlenceli / Komik',
@@ -69,6 +64,14 @@ export function ViralVideoPage() {
   // Sonuç + akış bildirimi
   const [result,        setResult]        = useState<ViralVideoResult | null>(null)
   const [fromTrend,     setFromTrend]     = useState(false)
+
+  // İşletme profilinden ön dolgu — boş alanlar doldurulur, kullanıcının
+  // yazdığına dokunulmaz (bkz. useProfilOnDolgu).
+  useProfilOnDolgu({
+    businessName: [bizName, setBizName],
+    sector: [sector, setSector],
+    website: [bizUrl, setBizUrl],
+  })
 
   // URL parametrelerinden form doldur (Trend Video Bulucu entegrasyonu)
   useEffect(() => {
@@ -112,6 +115,7 @@ export function ViralVideoPage() {
   const mutation = useMutation<ViralVideoResult>({
     mutationFn: async () => {
       const res = await api.post<ViralVideoResult>('/tools/viral-video/run', {
+        isletmeAdi: bizName,
         videoUrl,
         videoDesc,
         sector,
@@ -180,14 +184,11 @@ export function ViralVideoPage() {
                     value={bizName}
                     onChange={(e) => setBizName(e.target.value)}
                   />
-                  <Select
+                  <AramaliSecici
                     label="Sektör *"
                     value={sector}
-                    onChange={(e) => setSector(e.target.value)}
-                    options={[
-                      { value: '', label: 'Seçin...' },
-                      ...SEKTORLER.map((s) => ({ value: s, label: s })),
-                    ]}
+                    onChange={setSector}
+                    secenekler={SEKTORLER}
                   />
                 </div>
 
@@ -375,12 +376,6 @@ export function ViralVideoPage() {
                 </a>
               </div>
 
-              <button
-                onClick={() => setResult(null)}
-                className="text-[13px] text-[#9A9792] underline text-center"
-              >
-                Yeni uyarlama üret
-              </button>
             </div>
           )}
         </>

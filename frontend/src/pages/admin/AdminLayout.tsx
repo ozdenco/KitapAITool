@@ -7,6 +7,7 @@ const ADMIN_NAV_ITEMS = [
   { to: '/admin/paket-islemleri',    label: 'Paket İşlemleri',    icon: '📦' },
   { to: '/admin/arac-fiyatlari',     label: 'Araç Fiyatları',     icon: '🏷️' },
   { to: '/admin/kullanim-raporu',    label: 'Kullanım Raporu',    icon: '📋' },
+  { to: '/admin/kullanim-gecmisi',   label: 'Kullanım Geçmişi',   icon: '📊' },
   { to: '/admin/tum-ciktilar',       label: 'Tüm Çıktılar',       icon: '📄' },
 ] as const
 

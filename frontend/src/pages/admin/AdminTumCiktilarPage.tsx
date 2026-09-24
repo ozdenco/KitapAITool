@@ -24,8 +24,17 @@ interface MetaUser {
 interface AllResultsResponse {
   success: boolean
   data: CiktiRow[]
-  meta: { users: MetaUser[] }
+  meta: {
+    users: MetaUser[]
+    tools: string[]
+    page: number
+    pageSize: number
+    total: number
+    totalPages: number
+  }
 }
+
+const SAYFA_BOYUTU = 25
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -85,9 +94,13 @@ export function AdminTumCiktilarPage() {
 
   const initUserId = searchParams.get('userId') ?? ''
   const initMonth  = searchParams.get('month')  ?? ''
+  const initTool   = searchParams.get('toolId') ?? ''
+  const initPage   = Math.max(parseInt(searchParams.get('sayfa') ?? '1') || 1, 1)
 
   const [selectedUserId, setSelectedUserId] = useState(initUserId)
   const [selectedMonth,  setSelectedMonth]  = useState(initMonth)
+  const [selectedTool,   setSelectedTool]   = useState(initTool)
+  const [sayfa,          setSayfa]          = useState(initPage)
 
   // Parse year/month from "YYYY-MM"
   const parsedYear  = selectedMonth ? parseInt(selectedMonth.split('-')[0]) : undefined
@@ -97,32 +110,54 @@ export function AdminTumCiktilarPage() {
   if (selectedUserId)  queryStr.set('userId', selectedUserId)
   if (parsedYear)      queryStr.set('year',   String(parsedYear))
   if (parsedMonth)     queryStr.set('month',  String(parsedMonth))
-  queryStr.set('limit', '200')
+  if (selectedTool)    queryStr.set('toolId', selectedTool)
+  queryStr.set('page',     String(sayfa))
+  queryStr.set('pageSize', String(SAYFA_BOYUTU))
 
   const { data, isLoading } = useQuery<AllResultsResponse>({
-    queryKey: ['admin-all-results', selectedUserId, selectedMonth],
+    queryKey: ['admin-all-results', selectedUserId, selectedMonth, selectedTool, sayfa],
+    placeholderData: (onceki) => onceki,   // sayfa değişiminde tablo boşalmasın
     queryFn: () =>
       api.get<AllResultsResponse>(`/admin/all-results?${queryStr.toString()}`)
          .then(r => r.data),
   })
 
-  const rows  = data?.data  ?? []
-  const users = data?.meta?.users ?? []
+  const rows       = data?.data  ?? []
+  const users      = data?.meta?.users ?? []
+  const araclar    = data?.meta?.tools ?? []
+  const toplam     = data?.meta?.total ?? 0
+  const toplamSayfa = data?.meta?.totalPages ?? 1
 
   const months = useMemo(() => monthOptions(), [])
 
+  /** Filtre değişince 1. sayfaya dönülür; aksi hâlde boş sayfada kalınabilir. */
+  const adresGuncelle = (degisiklik: (p: URLSearchParams) => void, sayfayiSifirla = true) => {
+    const p = new URLSearchParams(searchParams)
+    degisiklik(p)
+    if (sayfayiSifirla) { p.delete('sayfa'); setSayfa(1) }
+    setSearchParams(p, { replace: true })
+  }
+
   const handleUserChange = (uid: string) => {
     setSelectedUserId(uid)
-    const p = new URLSearchParams(searchParams)
-    if (uid) p.set('userId', uid); else p.delete('userId')
-    setSearchParams(p, { replace: true })
+    adresGuncelle(p => { if (uid) p.set('userId', uid); else p.delete('userId') })
   }
 
   const handleMonthChange = (m: string) => {
     setSelectedMonth(m)
-    const p = new URLSearchParams(searchParams)
-    if (m) p.set('month', m); else p.delete('month')
-    setSearchParams(p, { replace: true })
+    adresGuncelle(p => { if (m) p.set('month', m); else p.delete('month') })
+  }
+
+  const handleToolChange = (t: string) => {
+    setSelectedTool(t)
+    adresGuncelle(p => { if (t) p.set('toolId', t); else p.delete('toolId') })
+  }
+
+  const sayfayaGit = (yeni: number) => {
+    const hedef = Math.min(Math.max(yeni, 1), Math.max(toplamSayfa, 1))
+    setSayfa(hedef)
+    adresGuncelle(p => { if (hedef > 1) p.set('sayfa', String(hedef)); else p.delete('sayfa') }, false)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
   const selectedUserName = users.find(u => u.id === selectedUserId)?.name
@@ -165,9 +200,23 @@ export function AdminTumCiktilarPage() {
             ))}
           </select>
 
-          {(selectedUserId || selectedMonth) && (
+          {/* Araç filtresi */}
+          <select
+            value={selectedTool}
+            onChange={e => handleToolChange(e.target.value)}
+            className="px-3 py-1.5 border border-[#D3D1C7] rounded-lg text-[12px] text-[#1C1B19] bg-white focus:outline-none focus:border-[#1D9E75] min-w-[160px]"
+          >
+            <option value="">Tüm araçlar</option>
+            {araclar.map(t => (
+              <option key={t} value={t}>
+                {TOOL_ICONS[t] ?? '🔧'} {TOOL_LABELS[t] ?? t}
+              </option>
+            ))}
+          </select>
+
+          {(selectedUserId || selectedMonth || selectedTool) && (
             <button
-              onClick={() => { handleUserChange(''); handleMonthChange('') }}
+              onClick={() => { handleUserChange(''); handleMonthChange(''); handleToolChange('') }}
               className="text-[12px] text-[#9A9792] hover:text-red-500 transition-colors"
             >
               ✕ Filtreyi temizle
@@ -200,6 +249,7 @@ export function AdminTumCiktilarPage() {
             <table className="w-full text-[12px]">
               <thead>
                 <tr className="bg-[#F7F6F2] border-b border-[#E2E0D8]">
+                  <th className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-[#9A9792]">ID</th>
                   <th className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-[#9A9792]">Kullanıcı</th>
                   <th className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-[#9A9792]">Araç</th>
                   <th className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-[#9A9792]">Özet / Girdi</th>
@@ -213,6 +263,23 @@ export function AdminTumCiktilarPage() {
                     key={row.id}
                     className="border-b border-[#F1EFE8] hover:bg-[#F7F6F2]/60 transition-colors"
                   >
+                    {/*
+                      Veritabanı kimliği. GUID 36 karakter — tamamı kolonu
+                      şişirirdi. İlk 8 hane gösteriliyor; tıklayınca tam
+                      değer panoya kopyalanıyor, tooltip'te de duruyor.
+                    */}
+                    <td className="px-3 py-2.5">
+                      <button
+                        type="button"
+                        title={`${row.id}\n(tıklayınca kopyalanır)`}
+                        onClick={() => void navigator.clipboard?.writeText(row.id)}
+                        className="font-mono text-[10px] text-[#9A9792] hover:text-[#1C1B19]
+                                   bg-[#F7F6F2] hover:bg-[#EDEBE4] border border-[#E2E0D8]
+                                   rounded px-1.5 py-0.5 transition-colors cursor-pointer"
+                      >
+                        {row.id.slice(0, 8)}
+                      </button>
+                    </td>
                     <td className="px-3 py-2.5">
                       <div className="font-medium text-[#1C1B19]">{row.userName}</div>
                       <div className="text-[10px] text-[#9A9792]">{row.userEmail}</div>
@@ -245,6 +312,40 @@ export function AdminTumCiktilarPage() {
                 ))}
               </tbody>
             </table>
+          </div>
+        )}
+
+        {/* ── Sayfalama ── */}
+        {toplam > 0 && (
+          <div className="flex items-center justify-between gap-3 flex-wrap px-4 py-3 border-t border-[#E2E0D8]">
+            <span className="text-[12px] text-[#6B6963] tabular-nums">
+              Toplam <strong className="text-[#1C1B19]">{toplam}</strong> kayıt ·
+              {' '}{(sayfa - 1) * SAYFA_BOYUTU + 1}–{Math.min(sayfa * SAYFA_BOYUTU, toplam)} arası
+            </span>
+
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => sayfayaGit(sayfa - 1)}
+                disabled={sayfa <= 1}
+                className="px-3 py-1.5 rounded-lg border border-[#D3D1C7] text-[12px] text-[#3A3935] bg-white hover:border-[#B4B2A9] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                ← Önceki
+              </button>
+
+              <span className="px-2 text-[12px] text-[#6B6963] tabular-nums">
+                Sayfa <strong className="text-[#1C1B19]">{sayfa}</strong> / {Math.max(toplamSayfa, 1)}
+              </span>
+
+              <button
+                type="button"
+                onClick={() => sayfayaGit(sayfa + 1)}
+                disabled={sayfa >= toplamSayfa}
+                className="px-3 py-1.5 rounded-lg border border-[#D3D1C7] text-[12px] text-[#3A3935] bg-white hover:border-[#B4B2A9] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                Sonraki →
+              </button>
+            </div>
           </div>
         )}
       </div>

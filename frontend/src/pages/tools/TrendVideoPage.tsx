@@ -8,6 +8,8 @@ import { Select } from '@/components/ui/Select'
 import { Textarea } from '@/components/ui/Textarea'
 import { FormPersistButtons } from '@/components/ui/FormPersistButtons'
 import { ToolShell } from '@/components/ui/ToolShell'
+import { useProfilOnDolgu } from '@/hooks/useIsletmeProfili'
+import { SEKTOR_SECENEKLERI_TUMU } from '@/lib/sektorler'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -30,26 +32,6 @@ interface TikTokVideo {
 interface TrendResult { videos: TikTokVideo[] }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
-
-// ⚠️ Bu değerler ViralVideoPage.tsx'teki SEKTORLER ile BİREBİR aynı olmalı —
-// "Bu Formatı Uyarla →" butonunda URL param olarak geçiyor ve exact match bekleniyor.
-const SEKTORLER = [
-  { value: 'ALL',                            label: '✨ Tüm Sektörler (genel tarama)' },
-  { value: 'Lojistik / Taşımacılık',         label: 'Lojistik / Taşımacılık' },
-  { value: 'E-ticaret / Perakende',          label: 'E-ticaret / Perakende' },
-  { value: 'Restoran / Kafe / Yiyecek',      label: 'Restoran / Kafe / Yiyecek' },
-  { value: 'Güzellik / Kuaför / Estetik',    label: 'Güzellik / Kuaför / Estetik' },
-  { value: 'Sağlık / Klinik / Eczane',       label: 'Sağlık / Klinik / Eczane' },
-  { value: 'İnşaat / Gayrimenkul',           label: 'İnşaat / Gayrimenkul' },
-  { value: 'Muhasebe / Finans / Danışmanlık',label: 'Muhasebe / Finans / Danışmanlık' },
-  { value: 'Eğitim / Kurs / Koçluk',         label: 'Eğitim / Kurs / Koçluk' },
-  { value: 'Teknoloji / Yazılım',            label: 'Teknoloji / Yazılım' },
-  { value: 'Turizm / Otel / Seyahat',        label: 'Turizm / Otel / Seyahat' },
-  { value: 'Hukuk / Avukatlık',              label: 'Hukuk / Avukatlık' },
-  { value: 'Temizlik / Hizmet',              label: 'Temizlik / Hizmet' },
-  { value: 'Giyim / Tekstil / Moda',         label: 'Giyim / Tekstil / Moda' },
-  { value: 'Diğer',                          label: 'Diğer' },
-]
 
 // ⚠️ Bu değerler ViralVideoPage.tsx'teki TONLAR ile BİREBİR aynı olmalı —
 // "Bu Formatı Uyarla →" URL param olarak geçiyor.
@@ -207,6 +189,14 @@ export function TrendVideoPage() {
   const [isPending,  setIsPending]  = useState(false)
   const [loadingMsg, setLoadingMsg] = useState(LOADING_MESSAGES[0])
   const [elapsedSec, setElapsedSec] = useState(0)
+
+  // İşletme profilinden ön dolgu — boş alanlar doldurulur, kullanıcının
+  // yazdığına dokunulmaz (bkz. useProfilOnDolgu).
+  useProfilOnDolgu({
+    businessName: [bizName, setBizName],
+    sector: [sector, setSector],
+    targetAudience: [audience, setAudience],
+  })
   const [error,      setError]      = useState<string | null>(null)
   const [result,     setResult]     = useState<TrendResult | null>(null)
 
@@ -300,7 +290,7 @@ export function TrendVideoPage() {
     try {
       const res = await api.post<{ job_id: string }>(
         '/tools/trend-video/run',
-        { biz: bizName, sector, tones, audience, note }
+        { biz: bizName, isletmeAdi: bizName, sector, tones, audience, note }
       )
       startPolling(res.data.job_id)
     } catch (err: unknown) {
@@ -350,7 +340,7 @@ export function TrendVideoPage() {
                   label="Sektör *"
                   value={sector}
                   onChange={(e) => setSector(e.target.value)}
-                  options={[{ value: '', label: 'Seçin...' }, ...SEKTORLER]}
+                  options={[{ value: '', label: 'Seçin...' }, ...SEKTOR_SECENEKLERI_TUMU]}
                 />
 
                 <div>

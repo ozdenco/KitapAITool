@@ -9,6 +9,10 @@ import { Textarea } from '@/components/ui/Textarea'
 import { FormPersistButtons } from '@/components/ui/FormPersistButtons'
 import { ToolShell } from '@/components/ui/ToolShell'
 import { useElapsedSeconds } from '@/hooks/useElapsedSeconds'
+import { useProfilOnDolgu } from '@/hooks/useIsletmeProfili'
+import { markaKurallari } from '@/lib/markaKurallari'
+import { SEKTORLER } from '@/lib/sektorler'
+import { AramaliSecici } from '@/components/ui/AramaliSecici'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -44,13 +48,6 @@ interface RakipBlok {
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
-
-const SEKTORLER = [
-  'Muhasebe / Finans', 'Sağlık / Klinik', 'Eğitim / Kurs',
-  'İnşaat / Mühendislik', 'Hukuk / Danışmanlık', 'Perakende / Mağaza',
-  'Yiyecek / İçecek', 'Güzellik / Estetik', 'Lojistik / Taşımacılık',
-  'Teknoloji / Yazılım', 'Giyim / Tekstil', 'Diğer',
-]
 
 const PLATFORMLAR = [
   { value: 'Google Business', label: '🔍 Google Business' },
@@ -119,7 +116,8 @@ SADECE JSON döndür:
   "oneriler": ["<${f.biz} için 4-5 somut strateji önerisi>"],
   "ctaText": "<${f.biz} için motivasyon cümlesi>"
 }
-Türkçe, somut ve uygulanabilir öneriler sun.`
+Türkçe, somut ve uygulanabilir öneriler sun.
+${markaKurallari(true)}`
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -132,6 +130,16 @@ export function RakipAnalizPage() {
   const [platforms, setPlatforms] = useState<string[]>([])
   const [strengths, setStrengths] = useState('')
   const [myPrice, setMyPrice] = useState('')
+
+  // İşletme profilinden ön dolgu — boş alanlar doldurulur, kullanıcının
+  // yazdığına dokunulmaz (bkz. useProfilOnDolgu).
+  useProfilOnDolgu({
+    businessName: [biz, setBiz],
+    sector: [sector, setSector],
+    website: [web, setWeb],
+    strengths: [strengths, setStrengths],
+    priceSegment: [myPrice, setMyPrice],
+  })
   const [rakip1, setRakip1] = useState<RakipBlok>(emptyRakip())
   const [rakip2, setRakip2] = useState<RakipBlok>(emptyRakip())
   const [rakip3, setRakip3] = useState<RakipBlok>(emptyRakip())
@@ -147,7 +155,7 @@ export function RakipAnalizPage() {
       const competitors = [rakip1, rakip2, rakip3]
         .filter((r) => r.ad.trim())
         .map((r) => ({ name: r.ad, ...(r.web ? { web: r.web } : {}) }))
-      const res = await api.post('/tools/rakip-analiz/run', { prompt, competitors })
+      const res = await api.post('/tools/rakip-analiz/run', { prompt, competitors, isletmeAdi: biz })
       // n8n iki alan döndürür: content (MiniMax analizi) + geminiPlatforms (sosyal medya araştırması)
       const content = extractAiContent(res.data)
       const parsed = parseAiJson<RakipResult>(content)
@@ -195,11 +203,11 @@ export function RakipAnalizPage() {
                 />
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <Select
+                  <AramaliSecici
                     label="Sektör *"
                     value={sector}
-                    onChange={(e) => setSector(e.target.value)}
-                    options={[{ value: '', label: 'Seçin...' }, ...SEKTORLER.map((s) => ({ value: s, label: s }))]}
+                    onChange={setSector}
+                    secenekler={SEKTORLER}
                   />
                   <Input
                     label="Web sitesi (opsiyonel)"
@@ -529,9 +537,6 @@ export function RakipAnalizPage() {
                 </div>
               )}
 
-              <button onClick={() => setResult(null)} className="text-sm text-gray-400 underline text-center no-print">
-                Yeni analiz yap
-              </button>
             </div>
           )}
         </>

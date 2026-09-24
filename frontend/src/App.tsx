@@ -29,6 +29,7 @@ import { AdminKullaniciListesiPage } from '@/pages/admin/AdminKullaniciListesiPa
 import { AdminKullaniciIslemleriPage } from '@/pages/admin/AdminKullaniciIslemleriPage'
 import { AdminPaketIslemleriPage } from '@/pages/admin/AdminPaketIslemleriPage'
 import { AdminKullaniciGecmisiPage } from '@/pages/admin/AdminKullaniciGecmisiPage'
+import { AdminKullanimGecmisiPage } from '@/pages/admin/AdminKullanimGecmisiPage'
 import { AdminKullanimRaporuPage } from '@/pages/admin/AdminKullanimRaporuPage'
 import { AdminRaporDetayPage } from '@/pages/admin/AdminRaporDetayPage'
 import { AdminAracFiyatlariPage } from '@/pages/admin/AdminAracFiyatlariPage'
@@ -38,7 +39,17 @@ import { AdminKullaniciOdemeleriPage } from '@/pages/admin/AdminKullaniciOdemele
 import { SatisSozlesmesiPage } from '@/pages/legal/SatisSozlesmesiPage'
 import { IptalIadeKosullariPage } from '@/pages/legal/IptalIadeKosullariPage'
 import { KvkkPage } from '@/pages/legal/KvkkPage'
+import { GizlilikPage } from '@/pages/legal/GizlilikPage'
+import { AcikRizaPage } from '@/pages/legal/AcikRizaPage'
+import { VeriIslemePage } from '@/pages/legal/VeriIslemePage'
+import { HakkimizdaPage } from '@/pages/kurumsal/HakkimizdaPage'
+import { IletisimPage } from '@/pages/kurumsal/IletisimPage'
+import { SssPage } from '@/pages/kurumsal/SssPage'
+import { KurumsalTalepPage } from '@/pages/kurumsal/KurumsalTalepPage'
+import { BlogPage } from '@/pages/blog/BlogPage'
+import { BlogYaziPage } from '@/pages/blog/BlogYaziPage'
 import { TeslimatKosullariPage } from '@/pages/legal/TeslimatKosullariPage'
+import { IsletmeBilgilerimPage } from '@/pages/account/IsletmeBilgilerimPage'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -74,6 +85,15 @@ function AppRoutes() {
             <Route path="/iptal-iade-kosullari" element={<IptalIadeKosullariPage />} />
             <Route path="/kvkk" element={<KvkkPage />} />
             <Route path="/teslimat-kosullari" element={<TeslimatKosullariPage />} />
+            <Route path="/gizlilik" element={<GizlilikPage />} />
+            <Route path="/acik-riza" element={<AcikRizaPage />} />
+            <Route path="/veri-isleme" element={<VeriIslemePage />} />
+            <Route path="/hakkimizda" element={<HakkimizdaPage />} />
+            <Route path="/iletisim" element={<IletisimPage />} />
+            <Route path="/sss" element={<SssPage />} />
+            <Route path="/kurumsal-talep" element={<KurumsalTalepPage />} />
+            <Route path="/blog" element={<BlogPage />} />
+            <Route path="/blog/:slug" element={<BlogYaziPage />} />
           </Route>
 
           {/* Protected */}
@@ -92,6 +112,7 @@ function AppRoutes() {
               <Route path="abonelik"         element={<AbonelikPage />} />
               <Route path="araclarim"        element={<AraclarimPage />} />
               <Route path="profil"           element={<ProfilBilgileriPage />} />
+              <Route path="isletme-bilgilerim" element={<IsletmeBilgilerimPage />} />
               <Route path="sifre"            element={<SifreDegistirPage />} />
               <Route path="kullanim-gecmisi" element={<KullanimGecmisiPage />} />
               <Route path="gecmis-ciktilar"  element={<GecmisCiktilarPage />} />
@@ -119,6 +140,7 @@ function AppRoutes() {
               <Route path="paket-islemleri"     element={<AdminPaketIslemleriPage />} />
               <Route path="arac-fiyatlari"      element={<AdminAracFiyatlariPage />} />
               <Route path="kullanim-raporu"     element={<AdminKullanimRaporuPage />} />
+              <Route path="kullanim-gecmisi"    element={<AdminKullanimGecmisiPage />} />
               <Route path="tum-ciktilar"        element={<AdminTumCiktilarPage />} />
             </Route>
 

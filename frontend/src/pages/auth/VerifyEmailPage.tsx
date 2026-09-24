@@ -74,7 +74,7 @@ export function VerifyEmailPage() {
       <div className="w-full max-w-sm">
         {/* Logo */}
         <div className="text-center mb-8">
-          <Logo height={48} className="mx-auto" />
+          <Logo height={44} adiGoster className="mx-auto" />
         </div>
 
         <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 text-center">

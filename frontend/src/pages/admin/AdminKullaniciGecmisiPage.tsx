@@ -90,11 +90,16 @@ export function AdminKullaniciGecmisiPage() {
     <div className="w-full max-w-4xl mx-auto px-4 py-8">
 
       {/* ── Back + header ── */}
+      {/*
+        navigate(-1): Bu sayfaya Kullanıcı Listesi'nden de, Kullanım
+        Raporu'ndan da gelinebiliyor. Sabit '/admin' adresi her durumda
+        Yönetici Paneli'ne atıyordu — geldiği yere değil.
+      */}
       <button
-        onClick={() => navigate('/admin')}
+        onClick={() => navigate(-1)}
         className="flex items-center gap-2 text-[13px] text-[#6B6963] hover:text-[#1C1B19] mb-5 transition-colors"
       >
-        ← Kullanıcı Listesine Dön
+        ← Geri
       </button>
 
       <div className="mb-6">

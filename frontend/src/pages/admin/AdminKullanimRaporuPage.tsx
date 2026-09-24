@@ -248,7 +248,9 @@ export function AdminKullanimRaporuPage() {
                   ].map(({ label, align }) => (
                     <th
                       key={label}
-                      className={`px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-[#9A9792] text-${align} whitespace-nowrap`}
+                      className={`px-2 py-2 text-[10px] font-semibold uppercase tracking-wider text-[#9A9792] text-${align} whitespace-nowrap${
+                        label === 'Durum' ? ' sticky right-0 z-10 bg-[#F7F6F2] border-l border-[#E2E0D8]' : ''
+                      }`}
                     >
                       {label}
                     </th>
@@ -270,16 +272,16 @@ export function AdminKullanimRaporuPage() {
                   return (
                     <tr
                       key={e.id}
-                      className="border-b border-[#F2F1ED] last:border-0 hover:bg-[#FAFAF8] transition-colors"
+                      className="group border-b border-[#F2F1ED] last:border-0 hover:bg-[#FAFAF8] transition-colors"
                     >
                       {/* Kişi */}
-                      <td className="px-3 py-2 min-w-[120px]">
+                      <td className="px-2 py-2 min-w-[120px]">
                         <p className="font-medium text-[#1C1B19] leading-tight">{e.userName}</p>
                         <p className="text-[11px] text-[#9A9792] leading-tight">{e.userEmail}</p>
                       </td>
 
                       {/* Araç */}
-                      <td className="px-3 py-2 min-w-[130px]">
+                      <td className="px-2 py-2 min-w-[130px]">
                         <div className="flex items-center gap-1.5">
                           <span className="text-[14px] leading-none">{tool?.icon ?? '🔧'}</span>
                           <span className="text-[#3A3935] font-medium leading-tight">
@@ -289,12 +291,12 @@ export function AdminKullanimRaporuPage() {
                       </td>
 
                       {/* Tarih/Saat */}
-                      <td className="px-3 py-2 whitespace-nowrap text-[#6B6963] tabular-nums">
+                      <td className="px-2 py-2 whitespace-nowrap text-[#6B6963] tabular-nums">
                         {formatDateTime(e.usedAt)}
                       </td>
 
                       {/* Rapor */}
-                      <td className="px-3 py-2 max-w-[140px]">
+                      <td className="px-2 py-2 max-w-[140px]">
                         {e.toolResultId ? (
                           <button
                             onClick={() => navigate(`/admin/rapor/${e.toolResultId}`)}
@@ -308,7 +310,7 @@ export function AdminKullanimRaporuPage() {
                       </td>
 
                       {/* Paketi (o an) */}
-                      <td className="px-3 py-2 text-center">
+                      <td className="px-2 py-2 text-center">
                         <span className={`inline-block text-[10px] font-semibold px-2 py-0.5 rounded-full ${badge.cls}`}>
                           {badge.label}
                         </span>
@@ -316,7 +318,7 @@ export function AdminKullanimRaporuPage() {
                       </td>
 
                       {/* Limit/Araç (o an) */}
-                      <td className="px-3 py-2 text-right font-medium tabular-nums">
+                      <td className="px-2 py-2 text-right font-medium tabular-nums">
                         {limit == null ? (
                           <span className="text-[#1D9E75]">∞</span>
                         ) : (
@@ -325,7 +327,7 @@ export function AdminKullanimRaporuPage() {
                       </td>
 
                       {/* Önce → Sonra */}
-                      <td className="px-3 py-2 text-right">
+                      <td className="px-2 py-2 text-right">
                         <div className="flex items-center justify-end gap-1.5">
                           <span className="tabular-nums text-[#9A9792]">{before}</span>
                           <span className="text-[#C5C3BB] text-[10px]">→</span>
@@ -351,8 +353,11 @@ export function AdminKullanimRaporuPage() {
                         </div>
                       </td>
 
-                      {/* Durum */}
-                      <td className="px-3 py-2 text-center whitespace-nowrap">
+                      {/* Durum — sağa SABİT: sekiz kolon dar ekranda sığmıyor,
+                          tablo yatay kayınca son kolon görüş dışında kalıyordu.
+                          Sabit hücrenin kendi zemini olmak zorunda, yoksa
+                          altından kayan kolonlar görünür. */}
+                      <td className="px-2 py-2 text-center whitespace-nowrap sticky right-0 z-10 border-l border-[#F2F1ED] bg-white group-hover:bg-[#FAFAF8]">
                         {e.success ? (
                           <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[#F0FAF6] text-[#085041]">
                             ✓ Başarılı

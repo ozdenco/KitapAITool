@@ -1,13 +1,15 @@
 import { useEffect, useRef, useState } from 'react'
-import { Outlet, useNavigate } from 'react-router-dom'
+import { Link, Outlet, useNavigate } from 'react-router-dom'
 import { clsx } from 'clsx'
 import { useAuthStore } from '@/store/auth'
 import { useLogout } from '@/hooks/useAuth'
 import { Logo } from '@/components/ui/Logo'
 import { ACTIVE_TOOLS, TOOL_CATEGORIES } from '@/lib/tools'
+import { SiteFooter } from '@/components/SiteFooter'
 
 const ACCOUNT_ITEMS = [
   { to: '/hesabim/profil',          label: 'Profil Bilgileri',     icon: '👤' },
+  { to: '/hesabim/isletme-bilgilerim', label: 'İşletme Bilgilerim', icon: '🏢' },
   { to: '/hesabim/abonelik',        label: 'Paket Bilgilerim',     icon: '📦' },
   { to: '/hesabim/paket-sec',       label: 'Paket Yükselt',        icon: '⬆️' },
   { to: '/hesabim/araclarim',       label: 'Araç Satın Al',        icon: '🛒' },
@@ -25,6 +27,8 @@ const ADMIN_ITEMS = [
   { to: '/admin/paket-islemleri',     label: 'Paket İşlemleri',     icon: '📦' },
   { to: '/admin/arac-fiyatlari',      label: 'Araç Fiyatları',      icon: '🏷️' },
   { to: '/admin/kullanim-raporu',     label: 'Kullanım Raporu',     icon: '📋' },
+  { to: '/admin/kullanim-gecmisi',    label: 'Kullanım Geçmişi',    icon: '📊' },
+  { to: '/admin/tum-ciktilar',        label: 'Tüm Çıktılar',        icon: '📄' },
 ] as const
 
 // ─── Tools dropdown ───────────────────────────────────────────────────────────
@@ -271,15 +275,17 @@ export function Layout() {
       <header className="sticky top-0 z-50 bg-white border-b border-[#E2E0D8]">
         <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
 
-          {/* Logo */}
-          <a
-            href="https://kolaykobi.com"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center"
-          >
-            <Logo height={40} />
-          </a>
+          {/*
+            Logo → Dashboard.
+
+            Önceden tanıtım sitesine (kolaykobi.com) ve YENİ SEKMEDE gidiyordu.
+            Giriş yapmış kullanıcı logoya uygulamanın ana sayfasına dönmek için
+            tıklar; bu beklenti karşılanmayınca kullanıcı yanlışlıkla siteden
+            çıkıyordu (29 Ağu 2026 kullanıcı geri bildirimi).
+          */}
+          <Link to="/dashboard" className="flex items-center" aria-label="Panele dön">
+            <Logo height={34} adiGoster />
+          </Link>
 
           {/* Nav */}
           <nav className="hidden md:flex items-center gap-1">
@@ -319,36 +325,7 @@ export function Layout() {
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-[#E2E0D8] bg-white">
-        <div className="max-w-6xl mx-auto px-4 py-3 grid grid-cols-3 gap-6">
-
-          {/* Sol: Bize Ulaşın */}
-          <div className="flex flex-col gap-1">
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 mb-0.5">Bize Ulaşın</p>
-            <a href="mailto:merhaba@kolaykobi.com" className="text-[12px] text-gray-500 hover:text-[#1D9E75] transition-colors flex items-center gap-1.5">
-              <span>✉️</span> merhaba@kolaykobi.com
-            </a>
-            <a href="tel:+905322902089" className="text-[12px] text-gray-500 hover:text-[#1D9E75] transition-colors flex items-center gap-1.5">
-              <span>📱</span> 0532 290 20 89
-            </a>
-          </div>
-
-          {/* Orta: Destek */}
-          <div className="flex flex-col gap-1">
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 mb-0.5">Destek</p>
-            <a href="/satis-sozlesmesi" className="text-[12px] text-gray-500 hover:text-[#1D9E75] transition-colors">Satış Sözleşmesi</a>
-            <a href="/iptal-iade-kosullari" className="text-[12px] text-gray-500 hover:text-[#1D9E75] transition-colors">İptal &amp; İade Koşulları</a>
-            <a href="/kvkk" className="text-[12px] text-gray-500 hover:text-[#1D9E75] transition-colors">KVKK / Gizlilik</a>
-            <a href="/teslimat-kosullari" className="text-[12px] text-gray-500 hover:text-[#1D9E75] transition-colors">Teslimat Koşulları</a>
-          </div>
-
-          {/* Sağ: telif */}
-          <div className="flex items-end justify-end">
-            <span className="text-[11px] text-gray-400">© 2026 KolayKOBİ · kolaykobi.com</span>
-          </div>
-
-        </div>
-      </footer>
+      <SiteFooter />
     </div>
   )
 }

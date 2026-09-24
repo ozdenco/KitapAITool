@@ -44,9 +44,16 @@ export function HesabimPage() {
 
   const { data: usages } = useToolUsage()
 
-  const getUsage = (toolId: ToolId) => {
+  /*
+   * limit `null` = SINIRSIZ. `?? 3` yazılırsa sınırsız hesaplar limitli
+   * görünür — DashboardPage'de aynı hata karta "Limit doldu" dedirtip
+   * erişimi engelliyordu (6 Eyl 2026). Araç listede yoksa (undefined)
+   * ücretsiz plan varsayılanı 3, varsa backend ne dediyse o.
+   */
+  const getUsage = (toolId: ToolId): { used: number; limit: number | null } => {
     const u = usages?.find((u) => u.toolId === toolId)
-    return { used: u?.usedCount ?? 0, limit: u?.limit ?? 3 }
+    if (!u) return { used: 0, limit: 3 }
+    return { used: u.usedCount, limit: u.limit }
   }
 
   if (subLoading) {

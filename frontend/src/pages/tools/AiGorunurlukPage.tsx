@@ -9,6 +9,10 @@ import { Textarea } from '@/components/ui/Textarea'
 import { FormPersistButtons } from '@/components/ui/FormPersistButtons'
 import { ToolShell } from '@/components/ui/ToolShell'
 import { useElapsedSeconds } from '@/hooks/useElapsedSeconds'
+import { useProfilOnDolgu } from '@/hooks/useIsletmeProfili'
+import { markaKurallari } from '@/lib/markaKurallari'
+import { SEKTORLER } from '@/lib/sektorler'
+import { AramaliSecici } from '@/components/ui/AramaliSecici'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -22,14 +26,6 @@ interface AiGorunurlukResult {
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
-
-const SEKTORLER = [
-  'Lojistik / Taşımacılık', 'E-ticaret / Perakende', 'Restoran / Kafe / Yiyecek',
-  'Güzellik / Kuaför / Estetik', 'Sağlık / Klinik / Eczane', 'İnşaat / Gayrimenkul',
-  'Muhasebe / Finans / Danışmanlık', 'Eğitim / Kurs / Koçluk', 'Teknoloji / Yazılım',
-  'Turizm / Otel / Seyahat', 'Hukuk / Avukatlık', 'Üretim / İmalat', 'Giyim / Tekstil / Moda',
-  'Temizlik / Hizmet', 'Diğer',
-]
 
 /** "Diğer" seçilince kullanıcı kendi kanalını yazabilir (ör. WhatsApp, Telegram) */
 const DIGER_KANAL = 'Diğer'
@@ -159,7 +155,8 @@ SADECE JSON döndür:
   "oncelikli_adimlar": ["<4-5 somut aksiyon maddesi>"],
   "ctaText": "<işletme için motivasyon cümlesi>"
 }
-5-6 kategori olsun. Türkçe olsun.`
+5-6 kategori olsun. Türkçe olsun.
+${markaKurallari()}`
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -200,6 +197,15 @@ export function AiGorunurlukPage() {
   const [qLang, setQLang] = useState('')
   const [extra, setExtra] = useState('')
 
+  // İşletme profilinden ön dolgu — boş alanlar doldurulur, kullanıcının
+  // yazdığına dokunulmaz (bkz. useProfilOnDolgu).
+  useProfilOnDolgu({
+    businessName: [biz, setBiz],
+    sector: [sector, setSector],
+    city: [city, setCity],
+    website: [web, setWeb],
+  })
+
   const [result, setResult] = useState<AiGorunurlukResult | null>(null)
 
   const mutation = useMutation({
@@ -212,7 +218,7 @@ export function AiGorunurlukPage() {
         q_media: qMedia, q_dirs: qDirs, q_cert: qCert,
         q_keywords: qKeywords, q_lang: qLang, extra,
       })
-      const res = await api.post('/tools/ai-gorunurluk/run', { prompt })
+      const res = await api.post('/tools/ai-gorunurluk/run', { prompt, isletmeAdi: biz })
       const content = extractAiContent(res.data)
       return parseAiJson<AiGorunurlukResult>(content)
     },
@@ -270,11 +276,11 @@ export function AiGorunurlukPage() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <Input label="İşletme Adı *" placeholder="Örn: Logvance Lojistik" value={biz} onChange={(e) => setBiz(e.target.value)} />
-                  <Select
+                  <AramaliSecici
                     label="Sektör *"
                     value={sector}
-                    onChange={(e) => setSector(e.target.value)}
-                    options={[{ value: '', label: 'Seçin...' }, ...SEKTORLER.map((s) => ({ value: s, label: s }))]}
+                    onChange={setSector}
+                    secenekler={SEKTORLER}
                   />
                 </div>
 
@@ -522,9 +528,6 @@ export function AiGorunurlukPage() {
                 </div>
               )}
 
-              <button onClick={() => setResult(null)} className="text-sm text-gray-400 underline text-center no-print">
-                Yeni analiz yap
-              </button>
             </div>
           )}
         </>

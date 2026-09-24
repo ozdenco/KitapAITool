@@ -8,7 +8,12 @@ import { Select } from '@/components/ui/Select'
 import { Textarea } from '@/components/ui/Textarea'
 import { FormPersistButtons } from '@/components/ui/FormPersistButtons'
 import { ToolShell } from '@/components/ui/ToolShell'
+import { ItirazSecici } from '@/components/ui/ItirazSecici'
 import { useElapsedSeconds } from '@/hooks/useElapsedSeconds'
+import { useProfilOnDolgu } from '@/hooks/useIsletmeProfili'
+import { markaKurallari } from '@/lib/markaKurallari'
+import { SEKTORLER } from '@/lib/sektorler'
+import { AramaliSecici } from '@/components/ui/AramaliSecici'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -18,28 +23,20 @@ interface ScriptAdim {
   timing: string
 }
 
+/** Seçilen her itiraz için üretilen ikna metni. */
+interface ItirazYaniti {
+  itiraz: string
+  yanit: string
+  ipucu?: string
+}
+
 interface WhatsappResult {
   scripts: ScriptAdim[]
+  itirazYanitlari?: ItirazYaniti[]
   ctaText?: string
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
-
-const SEKTORLER = [
-  'Muhasebe / Finans', 'Sağlık / Klinik', 'Eğitim / Kurs',
-  'İnşaat / Mühendislik', 'Hukuk / Danışmanlık', 'Perakende / Mağaza',
-  'Yiyecek / İçecek', 'Güzellik / Estetik', 'Lojistik / Taşımacılık',
-  'Teknoloji / Yazılım', 'Giyim / Tekstil', 'Diğer',
-]
-
-const ITIRAZLAR = [
-  { value: 'Fiyatı pahalı', label: 'Fiyatı pahalı' },
-  { value: 'Düşüneyim / bekleyeyim', label: 'Düşüneyim' },
-  { value: 'Başka biriyle çalışıyorum', label: 'Başkası var' },
-  { value: 'Şu an ihtiyacım yok', label: 'İhtiyacım yok' },
-  { value: 'Riski bilmiyorum / güvenmiyorum', label: 'Güvenmiyorum' },
-  { value: 'Bütçem yok', label: 'Bütçem yok' },
-]
 
 const SCRIPT_LABELS = [
   { label: '1 · İlk Temas', tip: 'Potansiyel müşteri formu doldurunca veya sizi bulunca gönderin' },
@@ -55,6 +52,18 @@ function buildPrompt(f: {
   biz: string; sector: string; service: string
   price: string; target: string; itirazlar: string[]; advantage: string
 }): string {
+  // Seçilen itirazları JSON şablonuna tek tek yazıyoruz. Modele "her itiraz
+  // için bir yanıt üret" demek yetmiyordu; birkaçını birleştirip atlıyordu.
+  // Şablonu önceden doldurunca dizi uzunluğu ve itiraz metinleri sabitleniyor.
+  const secilen = f.itirazlar.length ? f.itirazlar : ['Fiyatı pahalı', 'Düşüneyim / bekleyeyim']
+  const itirazSayisi = secilen.length
+  const itirazSablonu = secilen
+    .map((it) => {
+      const guvenli = it.replace(/"/g, "'")
+      return `    { "itiraz": "${guvenli}", "yanit": "<'${guvenli}' itirazına karşı gönderilecek WhatsApp mesajı>", "ipucu": "<bu mesajı ne zaman/nasıl kullanmalı, tek cümle>" }`
+    })
+    .join(',\n')
+
   return `Sen WhatsApp satış uzmanısın. KOBİ'ler için etkili, doğal ve dönüşüm odaklı WhatsApp mesajları yazıyorsun.
 
 İşletme adı: ${f.biz}
@@ -72,6 +81,8 @@ Kurallar:
 4. Hedef müşteri (${f.target || 'KOBİ sahipleri'}) profiline uygun dil ve ton kullan.
 5. İtiraz kırma mesajında seçilen itirazlardan birini ("${f.itirazlar[0] || 'genel itiraz'}") içerik olarak karşıla.
 6. Özel avantajlar belirtilmişse ("${f.advantage || '—'}"), bunları teklif ve kapanış mesajlarında somut argüman olarak kullan.
+7. ÇOK ÖNEMLİ: Yukarıda listelenen itirazların HER BİRİ için ayrı bir ikna metni yaz. ${itirazSayisi} itiraz seçildi, bu yüzden "itirazYanitlari" dizisi TAM ${itirazSayisi} eleman içermeli — hiçbirini atlama, birleştirme veya kendin yeni itiraz uydurma. Her "itiraz" alanı, listedeki metnin AYNISI olmalı.
+8. Her ikna metni doğrudan müşteriye WhatsApp'tan gönderilebilecek şekilde yazılsın (2-4 cümle), itirazı kabul edip ardından somut bir argümanla çevirsin. Genel geçer laf değil, ${f.sector} sektörüne ve "${f.service}" hizmetine özgü olsun.
 
 SADECE JSON döndür:
 {
@@ -82,9 +93,13 @@ SADECE JSON döndür:
     { "label": "4 · Teklif",    "message": "<mesaj metni>", "timing": "<ne zaman>" },
     { "label": "5 · Kapanış",   "message": "<mesaj metni>", "timing": "<ne zaman>" }
   ],
+  "itirazYanitlari": [
+${itirazSablonu}
+  ],
   "ctaText": "<${f.biz} için motivasyon cümlesi>"
 }
-Türkçe olsun. Samimi ama profesyonel bir ton kullan.`
+Türkçe olsun. Samimi ama profesyonel bir ton kullan.
+${markaKurallari()}`
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -98,15 +113,23 @@ export function WhatsappSatisPage() {
   const [target, setTarget] = useState('')
   const [itirazlar, setItirazlar] = useState<string[]>([])
   const [advantage, setAdvantage] = useState('')
-  const [result, setResult] = useState<WhatsappResult | null>(null)
 
-  const toggleItiraz = (v: string) =>
-    setItirazlar((prev) => prev.includes(v) ? prev.filter((x) => x !== v) : [...prev, v])
+  // İşletme profilinden ön dolgu — boş alanlar doldurulur, kullanıcının
+  // yazdığına dokunulmaz (bkz. useProfilOnDolgu).
+  useProfilOnDolgu({
+    businessName: [biz, setBiz],
+    sector: [sector, setSector],
+    productService: [service, setService],
+    priceSegment: [price, setPrice],
+    targetAudience: [target, setTarget],
+    strengths: [advantage, setAdvantage],
+  })
+  const [result, setResult] = useState<WhatsappResult | null>(null)
 
   const mutation = useMutation({
     mutationFn: async () => {
       const prompt = buildPrompt({ biz, sector, service, price, target, itirazlar, advantage })
-      const res = await api.post('/tools/whatsapp-satis/run', { prompt })
+      const res = await api.post('/tools/whatsapp-satis/run', { prompt, isletmeAdi: biz })
       const content = extractAiContent(res.data)
       return parseAiJson<WhatsappResult>(content)
     },
@@ -144,11 +167,11 @@ export function WhatsappSatisPage() {
                     value={biz}
                     onChange={(e) => setBiz(e.target.value)}
                   />
-                  <Select
+                  <AramaliSecici
                     label="Sektör *"
                     value={sector}
-                    onChange={(e) => setSector(e.target.value)}
-                    options={[{ value: '', label: 'Seçin...' }, ...SEKTORLER.map((s) => ({ value: s, label: s }))]}
+                    onChange={setSector}
+                    secenekler={SEKTORLER}
                   />
                 </div>
 
@@ -175,29 +198,7 @@ export function WhatsappSatisPage() {
                   />
                 </div>
 
-                <div>
-                  <p className="text-sm font-medium text-[#6B6963] mb-3">En sık karşılaştığınız itirazlar</p>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                    {ITIRAZLAR.map((it) => (
-                      <label
-                        key={it.value}
-                        className={`flex items-center gap-2 px-[11px] py-[9px] border rounded-lg cursor-pointer text-[13px] select-none transition-colors ${
-                          itirazlar.includes(it.value)
-                            ? 'border-[#1D9E75] bg-[#F0FAF6] text-[#085041]'
-                            : 'border-[#D3D1C7] bg-white text-[#1C1B19] hover:border-[#B4B2A9]'
-                        }`}
-                      >
-                        <input
-                          type="checkbox"
-                          className="w-auto"
-                          checked={itirazlar.includes(it.value)}
-                          onChange={() => toggleItiraz(it.value)}
-                        />
-                        {it.label}
-                      </label>
-                    ))}
-                  </div>
-                </div>
+                <ItirazSecici secilenler={itirazlar} onChange={setItirazlar} />
 
                 <Input
                   label="Özel not / avantaj (opsiyonel)"
@@ -257,6 +258,35 @@ export function WhatsappSatisPage() {
                   </div>
                 )
               })}
+
+              {!!result.itirazYanitlari?.length && (
+                <div className="bg-white rounded-2xl border border-[#E2E0D8] shadow-sm overflow-hidden">
+                  <div className="px-5 py-3 border-b border-[#F1EFE8] bg-[#1D9E75]/5">
+                    <span className="text-xs font-semibold text-[#085041] bg-[#1D9E75]/15 px-2.5 py-1 rounded-full">
+                      🛡️ İtiraz Kırma Cevapları ({result.itirazYanitlari.length})
+                    </span>
+                  </div>
+                  <div className="p-5 flex flex-col gap-4">
+                    {result.itirazYanitlari.map((iy, i) => (
+                      <div key={i} className="border border-[#F1EFE8] rounded-xl overflow-hidden">
+                        <div className="px-4 py-2.5 bg-[#F7F6F2] border-b border-[#F1EFE8]">
+                          <p className="text-[13px] font-semibold text-[#1C1B19]">
+                            <span className="text-[#B33A3A]">“</span>{iy.itiraz}<span className="text-[#B33A3A]">”</span>
+                          </p>
+                        </div>
+                        <div className="px-4 py-3">
+                          <p className="text-sm text-gray-800 whitespace-pre-wrap leading-relaxed">{iy.yanit}</p>
+                        </div>
+                        {iy.ipucu && (
+                          <div className="px-4 py-2.5 border-t border-[#F1EFE8] bg-gray-50">
+                            <p className="text-xs text-gray-500">💡 {iy.ipucu}</p>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {result.ctaText && (
                 <div className="bg-[#1D9E75]/5 border border-[#1D9E75]/20 rounded-2xl p-5 text-center">

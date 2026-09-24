@@ -7,6 +7,8 @@ export interface User {
   isAdmin: boolean   // Admin kullanıcılar sınırsız kullanım hakkı alır (backend limit=null gönderir)
   planType: PlanType // Aktif abonelik planı
   createdAt?: string
+  /** Kayıt sırasında girilen işletme adı — araç formlarını ön-doldurmakta kullanılır. */
+  company?: string
 }
 
 export interface AuthTokens {
@@ -23,6 +25,10 @@ export interface RegisterRequest {
   email: string
   password: string
   name: string
+  /** İsteğe bağlı — kayıt formunda toplanır, boş bırakılabilir. */
+  company?: string
+  /** İsteğe bağlı — WhatsApp vb. iletişim için. */
+  phone?: string
 }
 
 // ─── Plans & Subscriptions ───────────────────────────────────────────────────
@@ -76,19 +82,26 @@ export type ToolId =
   | 'ai-gorunurluk'
   | 'viral-video'
   | 'trend-video'
+  | 'video-olusturma'
+  | 'video-uret'
 
 export interface Tool {
   id: ToolId
   name: string
   description: string
   icon: string
-  category: 'analiz' | 'icerik' | 'satis' | 'video'
+  category: 'analiz' | 'icerik' | 'satis'
   isAsync: boolean  // İçerik Takvimi ve Trend Video async çalışır
   n8nPath: string
   /** false ise araç satın alma listesinde gösterilmez (ör. yeniden yapılandırılan araçlar) */
   purchasable?: boolean
   /** false ise araç tüm UI'dan gizlenir — navigasyon, dashboard, kullanım tablosu, satın alma */
   active?: boolean
+  /**
+   * true ise araç `active: false` olmasına rağmen Dashboard'da YALNIZCA admin'e
+   * gösterilir. Geliştirilmekte olan araçları canlıda test etmek için.
+   */
+  adminOnly?: boolean
 }
 
 export interface ToolUsage {

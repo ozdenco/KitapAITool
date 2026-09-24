@@ -5,6 +5,8 @@ import { useLogin, useGoogleAuth } from '@/hooks/useAuth'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Logo } from '@/components/ui/Logo'
+import { CikisBaglantilari } from '@/components/auth/CikisBaglantilari'
+import { BOSTA_KALMA_SINIRI_DK } from '@/hooks/useIdleTimeout'
 
 const GOOGLE_ENABLED = !!(import.meta.env.VITE_GOOGLE_CLIENT_ID)
 
@@ -50,15 +52,17 @@ export function LoginPage() {
   const gError = googleError instanceof Error ? googleError.message : null
   const passwordWasReset = (location.state as Record<string, unknown> | null)?.passwordReset === true
   // api.ts, oturum geçersizleştiğinde buraya ?oturum=sonlandi ile yönlendirir
-  const oturumSonlandi = new URLSearchParams(location.search).get('oturum') === 'sonlandi'
+  const oturumParam    = new URLSearchParams(location.search).get('oturum')
+  const oturumSonlandi = oturumParam === 'sonlandi'
+  const bostaKaldi     = oturumParam === 'bosta'
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-[#1D9E75]/5 flex items-center justify-center p-4">
       <div className="w-full max-w-sm">
         {/* Logo */}
         <div className="text-center mb-8">
-          <Logo height={48} className="mx-auto" />
-          <p className="mt-3 text-sm text-gray-500">Dijital ajansınız artık bir yazılım</p>
+          <Logo height={44} adiGoster className="mx-auto" />
+          <p className="mt-3 text-sm text-gray-500">İşletmeniz için hazır iş çözümleri</p>
         </div>
 
         {/* Card */}
@@ -66,9 +70,11 @@ export function LoginPage() {
           <h2 className="text-lg font-semibold text-gray-900 mb-5">Giriş Yap</h2>
 
           {/* Oturum süresi doldu bilgisi */}
-          {oturumSonlandi && !passwordWasReset && (
+          {(oturumSonlandi || bostaKaldi) && !passwordWasReset && (
             <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
-              Oturumunuzun süresi doldu. Lütfen tekrar giriş yapın.
+              {bostaKaldi
+                ? `Güvenliğiniz için ${BOSTA_KALMA_SINIRI_DK} dakika işlem yapılmadığından oturumunuz kapatıldı. Lütfen tekrar giriş yapın.`
+                : 'Oturumunuzun süresi doldu. Lütfen tekrar giriş yapın.'}
             </div>
           )}
 
@@ -96,6 +102,18 @@ export function LoginPage() {
                   width="320"
                 />
               </div>
+              {/*
+                Google doğrulaması sürerken kullanıcı beklemede kalıyordu ve
+                form açık olduğu için "sayfa bozuldu" sanıp e-posta ile
+                girmeyi deniyordu. Beklerken form kilitlenir ve ne olduğu yazılır.
+              */}
+              {googlePending && (
+                <div className="mb-4 flex items-center justify-center gap-2 p-3 bg-[#F0FAF6] border border-[#9FE1CB] rounded-lg text-sm text-[#085041]">
+                  <span className="inline-block w-3.5 h-3.5 border-2 border-[#1D9E75] border-t-transparent rounded-full animate-spin" />
+                  Google ile giriş yapılıyor, lütfen bekleyin…
+                </div>
+              )}
+
               <div className="flex items-center gap-3 mb-4">
                 <div className="flex-1 h-px bg-gray-100" />
                 <span className="text-xs text-gray-400">veya e-posta ile</span>
@@ -104,7 +122,11 @@ export function LoginPage() {
             </>
           )}
 
-          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <form
+            onSubmit={handleSubmit}
+            aria-busy={googlePending}
+            className={`flex flex-col gap-4 transition-opacity ${googlePending ? 'opacity-50 pointer-events-none select-none' : ''}`}
+          >
             <Input
               id="email"
               type="email"
@@ -114,6 +136,7 @@ export function LoginPage() {
               onChange={(e) => setEmail(e.target.value)}
               required
               autoComplete="email"
+              disabled={googlePending}
             />
             <div className="flex flex-col gap-[6px]">
               <Input
@@ -125,6 +148,7 @@ export function LoginPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 autoComplete="current-password"
+                disabled={googlePending}
               />
               <div className="flex justify-end">
                 <Link
@@ -135,7 +159,7 @@ export function LoginPage() {
                 </Link>
               </div>
             </div>
-            <Button type="submit" loading={isPending} size="lg" className="mt-1 w-full">
+            <Button type="submit" loading={isPending} disabled={googlePending} size="lg" className="mt-1 w-full">
               Giriş Yap
             </Button>
           </form>
@@ -147,6 +171,8 @@ export function LoginPage() {
             </Link>
           </p>
         </div>
+
+        <CikisBaglantilari />
       </div>
     </div>
   )

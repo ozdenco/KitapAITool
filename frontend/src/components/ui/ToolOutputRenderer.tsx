@@ -1,3 +1,5 @@
+import { trEtiket } from '@/lib/trEtiket'
+import { MiniChatbotTest } from '@/components/tools/MiniChatbotTest'
 // ToolOutputRenderer — tool-specific rich renderers for Geçmiş Çıktılarım
 // Each renderer mirrors the result section of the corresponding tool page.
 
@@ -82,7 +84,11 @@ function ScoreRing({ score, colors, size = 24 }: { score: number; colors: Return
 // ─── Renderers ────────────────────────────────────────────────────────────────
 
 // gorunurluk-skoru
-interface ScoreItem { status: string; icon: string; name: string; desc: string; badge: string; weight?: number }
+// icon: ARTIK ÇİZİLMİYOR. Prompt modelden Tabler ikon adı istiyordu
+// ("ti-world" gibi) ama o ikon kütüphanesi projede yok; ad ham metin olarak
+// başlığın önüne basılıyordu. Alan prompt'tan kaldırıldı, eski kayıtlarda
+// hâlâ bulunduğu için tipte isteğe bağlı bırakıldı.
+interface ScoreItem { status: string; icon?: string; name: string; desc: string; badge: string; weight?: number }
 interface ScoreResult { score: number; level: string; summary: string; items: ScoreItem[]; ctaText?: string }
 
 function RenderGorunurlukSkoru({ data }: { data: Record<string, unknown> }) {
@@ -94,7 +100,7 @@ function RenderGorunurlukSkoru({ data }: { data: Record<string, unknown> }) {
       <div className="bg-white rounded-2xl border border-[#E2E0D8] shadow-sm p-6 flex items-center gap-6">
         <ScoreRing score={d.score} colors={colors} size={24} />
         <div>
-          <p className={`text-lg font-bold ${colors.text}`}>{d.level}</p>
+          <p className={`text-lg font-bold ${colors.text}`}>{trEtiket(d.level)}</p>
           <p className="text-sm text-gray-600 mt-1 leading-relaxed">{d.summary}</p>
         </div>
       </div>
@@ -110,8 +116,8 @@ function RenderGorunurlukSkoru({ data }: { data: Record<string, unknown> }) {
                   <div className={`mt-1.5 w-2 h-2 rounded-full shrink-0 ${sc.dot}`} />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap mb-0.5">
-                      <span className="text-sm font-medium text-gray-800">{item.icon} {item.name}</span>
-                      <span className={`text-[11px] px-2 py-0.5 rounded-full border font-medium ${sc.badge}`}>{item.badge}</span>
+                      <span className="text-sm font-medium text-gray-800">{item.name}</span>
+                      <span className={`text-[11px] px-2 py-0.5 rounded-full border font-medium ${sc.badge}`}>{trEtiket(item.badge)}</span>
                     </div>
                     <p className="text-xs text-gray-500 leading-relaxed">{item.desc}</p>
                   </div>
@@ -318,7 +324,8 @@ function RenderReklamButce({ data }: { data: Record<string, unknown> }) {
 
 // whatsapp-satis
 interface WaScript { label: string; message: string; timing?: string }
-interface WaResult { scripts: WaScript[]; ctaText?: string }
+interface WaItirazYaniti { itiraz: string; yanit: string; ipucu?: string }
+interface WaResult { scripts: WaScript[]; itirazYanitlari?: WaItirazYaniti[]; ctaText?: string }
 
 function RenderWhatsappSatis({ data }: { data: Record<string, unknown> }) {
   const d = data as unknown as WaResult
@@ -340,6 +347,36 @@ function RenderWhatsappSatis({ data }: { data: Record<string, unknown> }) {
           )}
         </div>
       ))}
+
+      {!!d.itirazYanitlari?.length && (
+        <div className="bg-white rounded-2xl border border-[#E2E0D8] shadow-sm overflow-hidden">
+          <div className="px-5 py-3 border-b border-[#F1EFE8] bg-[#1D9E75]/5">
+            <span className="text-xs font-semibold text-[#085041] bg-[#1D9E75]/15 px-2.5 py-1 rounded-full">
+              🛡️ İtiraz Kırma Cevapları ({d.itirazYanitlari.length})
+            </span>
+          </div>
+          <div className="p-5 flex flex-col gap-4">
+            {d.itirazYanitlari.map((iy, i) => (
+              <div key={i} className="border border-[#F1EFE8] rounded-xl overflow-hidden">
+                <div className="px-4 py-2.5 bg-[#F7F6F2] border-b border-[#F1EFE8]">
+                  <p className="text-[13px] font-semibold text-[#1C1B19]">
+                    <span className="text-[#B33A3A]">“</span>{iy.itiraz}<span className="text-[#B33A3A]">”</span>
+                  </p>
+                </div>
+                <div className="px-4 py-3">
+                  <p className="text-sm text-gray-800 whitespace-pre-wrap leading-relaxed">{iy.yanit}</p>
+                </div>
+                {iy.ipucu && (
+                  <div className="px-4 py-2.5 border-t border-[#F1EFE8] bg-gray-50">
+                    <p className="text-xs text-gray-500">💡 {iy.ipucu}</p>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <CtaBox text={d.ctaText} />
     </div>
   )
@@ -385,10 +422,10 @@ function RenderMusteriGeriDonus({ data }: { data: Record<string, unknown> }) {
 
 // chatbot-senaryo
 interface OzelMesaj { tip: string; metin: string }
-interface SssKart { soru: string; cevap: string }
+interface SssKart { soru: string; cevap: string; anahtar_kelimeler?: string[] }
 interface ChatbotResult { ozel_mesajlar?: OzelMesaj[]; sss_kartlari?: SssKart[]; ipuclari?: string[]; ctaText?: string }
 
-function RenderChatbotSenaryo({ data }: { data: Record<string, unknown> }) {
+function RenderChatbotSenaryo({ data, isletmeAdi }: { data: Record<string, unknown>; isletmeAdi?: string }) {
   const d = data as unknown as ChatbotResult
   return (
     <div className="flex flex-col gap-4">
@@ -433,6 +470,23 @@ function RenderChatbotSenaryo({ data }: { data: Record<string, unknown> }) {
             ))}
           </ul>
         </div>
+      )}
+      {/*
+       * Mini test penceresi KAYITLI çıktıda da gösterilir.
+       *
+       * 24 Eyl 2026: pencere yalnızca araç sayfasında vardı, yani sonuç
+       * sayfadaki bellekte yaşıyordu. Oturum düşünce (ya da sekme kapanınca)
+       * kullanıcı kartlarını görebiliyor ama botu bir daha deneyemiyordu;
+       * denemek için aracı yeniden çalıştırmak gerekiyordu — her deneme
+       * kullanım hakkı ve kredi yakıyor. Test yapay zekâ çağırmadığı için
+       * kayıttan çalıştırmanın maliyeti yok.
+       */}
+      {d.sss_kartlari && d.sss_kartlari.length > 0 && (
+        <MiniChatbotTest
+          bizName={isletmeAdi ?? ''}
+          ozelMesajlar={d.ozel_mesajlar ?? []}
+          sssKartlari={d.sss_kartlari}
+        />
       )}
       <CtaBox text={d.ctaText} />
     </div>
@@ -836,9 +890,14 @@ function RenderRakipAnaliz({ data }: { data: Record<string, unknown> }) {
 interface ToolOutputRendererProps {
   toolId: string
   data: Record<string, unknown>
+  /**
+   * Kaydın giriş özeti (işletme adı). Chatbot mini testi pencere başlığında
+   * kullanıyor; verilmezse "İşletmeniz Bot" yazıyor.
+   */
+  isletmeAdi?: string
 }
 
-export function ToolOutputRenderer({ toolId, data }: ToolOutputRendererProps) {
+export function ToolOutputRenderer({ toolId, data, isletmeAdi }: ToolOutputRendererProps) {
   switch (toolId) {
     case 'gorunurluk-skoru':   return <RenderGorunurlukSkoru   data={data} />
     case 'musteri-persona':    return <RenderMusteriPersona     data={data} />
@@ -846,9 +905,12 @@ export function ToolOutputRenderer({ toolId, data }: ToolOutputRendererProps) {
     case 'reklam-butce':       return <RenderReklamButce        data={data} />
     case 'whatsapp-satis':     return <RenderWhatsappSatis      data={data} />
     case 'musteri-geri-donus': return <RenderMusteriGeriDonus   data={data} />
-    case 'chatbot-senaryo':    return <RenderChatbotSenaryo     data={data} />
+    case 'chatbot-senaryo':    return <RenderChatbotSenaryo     data={data} isletmeAdi={isletmeAdi} />
     case 'ai-gorunurluk':      return <RenderAiGorunurluk       data={data} />
     case 'viral-video':        return <RenderViralVideo         data={data} />
+    // Video Oluşturma şimdilik aynı şemayı üretiyor (Viral Video kopyası).
+    // Veo çıktısı eklendiğinde kendi renderer'ına ayrılacak.
+    case 'video-olusturma':    return <RenderViralVideo         data={data} />
     case 'trend-video':        return <RenderTrendVideo         data={data} />
     case 'rakip-analiz':       return <RenderRakipAnaliz        data={data} />
     default:                   return null

@@ -28,7 +28,7 @@
 }
 
 body {
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-family: 'Montserrat', 'Inter', system-ui, -apple-system, sans-serif;
   background: var(--color-surface);
   color: var(--color-text);
   -webkit-font-smoothing: antialiased;
@@ -113,6 +113,9 @@ body {
     overflow: visible !important;
   }
 
+  /* Yalnızca çıktıda görünen başlık — ekranda gizli, baskıda açık */
+  .sadece-cikti { display: block !important; }
+
   /* ── Her iki modda ortak kurallar ────────────────────────────────────────── */
   header, footer, nav, aside { display: none !important; }
 
@@ -148,3 +151,16 @@ body {
     display: inline-flex !important;
   }
 }
+
+/* ─── Çıktıya özel başlık ──────────────────────────────────────────────────
+   Araç adı ve tarih, ekranda panelin ÜST çubuğunda duruyor; o çubuk
+   yazdırma hedefinin dışında kaldığı için baskıda ve PDF'te kayboluyordu.
+   Bu sınıf hedefin İÇİNE konan bir başlığı işaretler: ekranda gizli,
+   baskıda ve PDF çekimi sırasında görünür.
+
+   PDF için ayrı kural gerekiyor çünkü html2canvas ekrandaki hesaplanmış
+   stilleri okur — @media print orada devrede olmaz. pdfIndir() çekim
+   boyunca <body>'ye .pdf-cekiliyor sınıfını ekliyor.
+   ------------------------------------------------------------------------ */
+.sadece-cikti { display: none; }
+body.pdf-cekiliyor .sadece-cikti { display: block; }

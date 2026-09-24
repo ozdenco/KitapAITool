@@ -1,9 +1,12 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import api from '@/lib/api'
 import { TOOLS } from '@/lib/tools'
 import { parseAiJson, extractAiContent } from '@/lib/parseAiJson'
-import { ToolOutputRenderer } from '@/components/ui/ToolOutputRenderer'
+import { PrintButton } from '@/components/ui/PrintButton'
+import { CiktiBasligi } from '@/components/ui/CiktiBasligi'
+import { HataSiniri } from '@/components/ui/HataSiniri'
+import { CiktiGovdesi } from '@/components/ui/CiktiGovdesi'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -27,123 +30,9 @@ const TOOL_META: Record<string, { name: string; icon: string }> = Object.fromEnt
 function getToolMeta(toolId: string) {
   return TOOL_META[toolId] ?? { name: toolId, icon: '🔧' }
 }
+// Çıktı gövdesi ortak bileşene taşındı — yönetici Rapor Detayı sayfası da
+// aynısını kullanıyor (bkz. components/ui/CiktiGovdesi.tsx).
 
-// ─── JSON output renderer ─────────────────────────────────────────────────────
-
-function renderValue(value: unknown, depth = 0): React.ReactNode {
-  if (value === null || value === undefined) return <span className="text-[#9A9792]">—</span>
-
-  if (typeof value === 'number') {
-    return <span className="font-semibold text-[#1D9E75] text-[15px]">{value}</span>
-  }
-
-  if (typeof value === 'boolean') {
-    return (
-      <span className={`font-medium ${value ? 'text-[#1D9E75]' : 'text-[#E05252]'}`}>
-        {value ? 'Evet' : 'Hayır'}
-      </span>
-    )
-  }
-
-  if (typeof value === 'string') {
-    if (value.length > 200) {
-      return <p className="text-[13px] text-[#3A3935] leading-relaxed whitespace-pre-wrap">{value}</p>
-    }
-    return <span className="text-[13px] text-[#3A3935]">{value}</span>
-  }
-
-  if (Array.isArray(value)) {
-    if (value.length === 0) return <span className="text-[#9A9792] text-[12px]">Boş</span>
-    return (
-      <div className="flex flex-col gap-2 mt-1">
-        {value.map((item, i) => (
-          <div key={i} className="pl-3 border-l-2 border-[#E2E0D8]">
-            {typeof item === 'object' && item !== null ? (
-              <OutputObject obj={item as Record<string, unknown>} depth={depth + 1} />
-            ) : (
-              renderValue(item, depth + 1)
-            )}
-          </div>
-        ))}
-      </div>
-    )
-  }
-
-  if (typeof value === 'object') {
-    return <OutputObject obj={value as Record<string, unknown>} depth={depth + 1} />
-  }
-
-  return <span className="text-[13px] text-[#3A3935]">{String(value)}</span>
-}
-
-const KEY_LABELS: Record<string, string> = {
-  score: 'Skor', level: 'Seviye', summary: 'Özet', items: 'Değerlendirmeler',
-  ctaText: 'Öneri', name: 'Ad', desc: 'Açıklama', description: 'Açıklama',
-  badge: 'Etiket', status: 'Durum', icon: 'İkon', title: 'Başlık',
-  text: 'Metin', content: 'İçerik', platform: 'Platform', budget: 'Bütçe',
-  percentage: 'Yüzde', amount: 'Tutar', reason: 'Neden', action: 'Aksiyon',
-  priority: 'Öncelik', days: 'Günler', week: 'Hafta', posts: 'Gönderiler',
-  tip: 'İpucu', recommendation: 'Öneri', message: 'Mesaj', script: 'Senaryo',
-  subject: 'Konu', body: 'İçerik', category: 'Kategori', type: 'Tür',
-  value: 'Değer', url: 'Bağlantı', link: 'Bağlantı', date: 'Tarih',
-  time: 'Zaman', ad: 'Ad', guclu: 'Güçlü Yönler', zayif: 'Zayıf Yönler',
-  firsat: 'Fırsat', tehdit: 'Tehdit Seviyesi', rakipler: 'Rakipler',
-  genel_degerlendirme: 'Genel Değerlendirme', oneriler: 'Öneriler',
-}
-
-function labelFor(key: string): string {
-  return KEY_LABELS[key] ?? key.replace(/([A-Z])/g, ' $1').replace(/_/g, ' ').trim()
-}
-
-const PRIORITY_KEYS = ['score', 'level', 'summary', 'ctaText', 'title', 'name']
-
-function OutputObject({ obj, depth }: { obj: Record<string, unknown>; depth: number }) {
-  const keys = Object.keys(obj)
-  const prioritized = [
-    ...PRIORITY_KEYS.filter((k) => k in obj),
-    ...keys.filter((k) => !PRIORITY_KEYS.includes(k)),
-  ]
-
-  return (
-    <div className={`flex flex-col gap-${depth === 0 ? '4' : '2'}`}>
-      {prioritized.map((key) => {
-        const val = obj[key]
-        const isArray = Array.isArray(val)
-        const isObj = typeof val === 'object' && val !== null && !isArray
-        const isBigString = typeof val === 'string' && val.length > 80
-
-        return (
-          <div key={key} className={depth === 0 ? 'border-b border-[#F2F1ED] pb-4 last:border-0 last:pb-0' : ''}>
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-[#9A9792] mb-1">
-              {labelFor(key)}
-            </p>
-            {(isArray || isObj || isBigString) ? (
-              <div className="mt-1">{renderValue(val, depth)}</div>
-            ) : (
-              renderValue(val, depth)
-            )}
-          </div>
-        )
-      })}
-    </div>
-  )
-}
-
-// ─── Rich renderer with generic fallback ─────────────────────────────────────
-
-// Tool IDs that have a dedicated rich renderer in ToolOutputRenderer.
-const RICH_TOOL_IDS = new Set([
-  'gorunurluk-skoru', 'musteri-persona', 'icerik-takvimi', 'reklam-butce',
-  'whatsapp-satis', 'musteri-geri-donus', 'chatbot-senaryo', 'ai-gorunurluk',
-  'viral-video', 'trend-video', 'rakip-analiz',
-])
-
-function RichOrFallback({ toolId, parsed }: { toolId: string; parsed: Record<string, unknown> }) {
-  if (RICH_TOOL_IDS.has(toolId)) {
-    return <ToolOutputRenderer toolId={toolId} data={parsed} />
-  }
-  return <OutputObject obj={parsed} depth={0} />
-}
 
 // ─── Expanded result panel ────────────────────────────────────────────────────
 
@@ -154,6 +43,18 @@ function ResultDetailPanel({ result: summary, onClose }: { result: ResultSummary
   })
 
   const [showRaw, setShowRaw] = useState(false)
+
+  /*
+   * TÜM HOOK'LAR ERKEN ÇIKIŞLARDAN ÖNCE ÇAĞRILMALI.
+   *
+   * Bu ref aşağıda, `if (isLoading) return ...` satırlarının ALTINDA
+   * duruyordu. İlk render'da fonksiyon erken dönüyor (2 hook), veri
+   * gelince devam ediyor (3 hook) — React "Rendered more hooks than
+   * during the previous render" hatası verip tüm ağacı çökertiyordu.
+   * Kullanıcı her kayıt açışında bembeyaz sayfa görüyordu (7 Eyl 2026).
+   */
+  const ciktiRef = useRef<HTMLDivElement>(null)
+
   const meta = getToolMeta(summary.toolId)
 
   if (isLoading) {
@@ -222,12 +123,12 @@ function ResultDetailPanel({ result: summary, onClose }: { result: ResultSummary
           >
             {showRaw ? '📋 Biçimlendirilmiş' : '{ } JSON'}
           </button>
-          <button
-            onClick={handlePrint}
-            className="text-[11px] text-[#9A9792] hover:text-[#3A3935] transition-colors px-2 py-1.5 rounded-lg hover:bg-[#F7F6F2]"
-          >
-            🖨️ Yazdır
-          </button>
+          <PrintButton
+            onPrint={handlePrint}
+            boyut="kompakt"
+            pdfHedefi={() => ciktiRef.current}
+            pdfDosyaAdi={`${meta.name}_${formatDate(data.createdAt)}`}
+          />
           <button
             onClick={onClose}
             className="text-[11px] text-[#9A9792] hover:text-[#3A3935] transition-colors px-2 py-1.5 rounded-lg hover:bg-[#F7F6F2]"
@@ -238,13 +139,27 @@ function ResultDetailPanel({ result: summary, onClose }: { result: ResultSummary
       </div>
 
       {/* Detail content — .gecmis-print-target: targeted @media print */}
-      <div className="p-5 gecmis-print-target">
+      <div ref={ciktiRef} className="p-5 gecmis-print-target">
+        <CiktiBasligi aracAdi={meta.name} tarih={formatDate(data.createdAt)} />
         {showRaw ? (
           <pre className="text-[11px] text-[#3A3935] bg-white border border-[#E2E0D8] rounded-xl p-4 overflow-x-auto leading-relaxed max-h-[500px] overflow-y-auto">
-            {JSON.stringify(JSON.parse(data.outputJson), null, 2)}
+            {/*
+              KORUMASIZ JSON.parse'dı — geçersiz JSON kaydında sayfayı
+              komple çökertiyordu. Artık yukarıda güvenli çözümlenen
+              `parsed` kullanılıyor, o da başarısızsa ham metin basılıyor.
+            */}
+            {parsed !== null ? JSON.stringify(parsed, null, 2) : data.outputJson}
           </pre>
         ) : parsed !== null ? (
-          <RichOrFallback toolId={data.toolId} parsed={parsed} />
+          <HataSiniri baslik={data.toolId}>
+            <CiktiGovdesi
+              toolId={data.toolId}
+              parsed={parsed}
+              olusturmaTarihi={data.createdAt}
+              sonucId={data.id}
+              isletmeAdi={data.inputSummary}
+            />
+          </HataSiniri>
         ) : (
           <p className="text-[13px] text-[#3A3935] whitespace-pre-wrap leading-relaxed">
             {data.outputJson}

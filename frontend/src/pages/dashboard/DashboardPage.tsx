@@ -4,9 +4,10 @@ import { useQuery } from '@tanstack/react-query'
 import { useAuthStore } from '@/store/auth'
 import { useToolUsage } from '@/hooks/useToolUsage'
 import { ToolCard } from '@/components/ui/ToolCard'
-import { ACTIVE_TOOLS, TOOL_CATEGORIES } from '@/lib/tools'
+import { dashboardAraclari, TOOL_CATEGORIES } from '@/lib/tools'
 import api from '@/lib/api'
 import type { ToolId } from '@/types'
+import { IsletmeProfiliHatirlatmasi } from '@/components/dashboard/IsletmeProfiliHatirlatmasi'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -24,7 +25,6 @@ const CATEGORY_ICONS: Record<string, string> = {
   analiz: '📊',
   icerik: '✍️',
   satis:  '💬',
-  video:  '🎬',
 }
 
 // ─── Chevron icon ─────────────────────────────────────────────────────────────
@@ -60,9 +60,21 @@ export function DashboardPage() {
     enabled: !user?.isAdmin,
   })
 
-  const getUsage = (toolId: ToolId) => {
+  /*
+   * limit alanında `null` = SINIRSIZ (admin / Kurumsal) demek.
+   *
+   * DÜZELTİLEN HATA (6 Eyl 2026): eskiden `u?.limit ?? 3` yazıyordu. `??`
+   * null'ı "değer yok" sayıp 3'e çeviriyor, yani sınırsız hesapların limiti
+   * dashboard'da 3 görünüyordu. 3 kullanımı aşan araçta kart "Limit doldu"
+   * deyip ToolCard tıklamayı engelliyordu (Video Oluşturma 6/3).
+   *
+   * Artık iki durum ayrılıyor: araç listede YOKSA (undefined) ücretsiz plan
+   * varsayılanı 3, listede varsa backend ne dediyse o — null dahil.
+   */
+  const getUsage = (toolId: ToolId): { used: number; limit: number | null } => {
     const u = usages?.find((u) => u.toolId === toolId)
-    return { used: u?.usedCount ?? 0, limit: u?.limit ?? 3 }
+    if (!u) return { used: 0, limit: 3 }
+    return { used: u.usedCount, limit: u.limit }
   }
 
   const firstName = user?.name?.split(' ')[0] ?? 'kullanıcı'
@@ -79,6 +91,8 @@ export function DashboardPage() {
 
   return (
     <div className="w-full max-w-6xl px-4 py-5">
+
+      <IsletmeProfiliHatirlatmasi />
 
       {/* ── Header ── */}
       <div className="mb-5">
@@ -106,7 +120,8 @@ export function DashboardPage() {
       {/* ── Tools by category ── Araçlar static data; API yüklenmesini bekleme */}
       <div className="flex flex-col gap-4">
         {CATEGORIES.map((cat) => {
-          const catTools  = ACTIVE_TOOLS.filter((t) => t.category === cat)
+          // Admin, geliştirme aşamasındaki gizli araçları da görür (adminOnly)
+          const catTools  = dashboardAraclari(!!user?.isAdmin).filter((t) => t.category === cat)
           const isOpen    = expanded[cat] ?? true
           const catLabel  = TOOL_CATEGORIES[cat]
           const catIcon   = CATEGORY_ICONS[cat] ?? '📦'

@@ -3,6 +3,7 @@ import { useLogout } from '@/hooks/useAuth'
 
 const NAV_ITEMS = [
   { to: 'profil',          label: 'Profil Bilgileri',     icon: '👤' },
+  { to: 'isletme-bilgilerim', label: 'İşletme Bilgilerim', icon: '🏢' },
   { to: 'abonelik',        label: 'Paket Bilgilerim',     icon: '📦' },
   { to: 'paket-sec',       label: 'Paket Yükselt',        icon: '⬆️' },
   { to: 'araclarim',       label: 'Araç Satın Al',        icon: '🛒' },

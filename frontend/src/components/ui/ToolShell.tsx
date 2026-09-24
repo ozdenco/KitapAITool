@@ -2,6 +2,8 @@ import { type ReactNode, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useToolUsageById } from '@/hooks/useToolUsage'
 import { useBeforeUnload } from '@/hooks/useBeforeUnload'
+import { PrintButton } from '@/components/ui/PrintButton'
+import { CiktiBasligi } from '@/components/ui/CiktiBasligi'
 import { trackToolOpened, trackToolCompleted } from '@/lib/analytics'
 
 interface ToolShellProps {
@@ -29,6 +31,14 @@ export function ToolShell({
   const { usage, isLoading: usageLoading } = useToolUsageById(toolId)
   const [isFormOpen, setIsFormOpen] = useState(true)
   const resultTracked = useRef(false)
+
+  /** PDF çekim hedefi — form + sonuç bölgesi. */
+  const ciktiRef = useRef<HTMLDivElement>(null)
+
+  /** Çıktı başlığında ve dosya adında kullanılan tarih. */
+  const bugun = new Date().toLocaleDateString('tr-TR', {
+    day: 'numeric', month: 'long', year: 'numeric',
+  })
   const submitStartedAt = useRef<number | null>(null)
 
   // Araç açıldığında izle
@@ -206,24 +216,20 @@ export function ToolShell({
         </div>
       )}
 
-      {/* Children (form + results) */}
-      {children({ isFormOpen, header, rateBar })}
+      {/* Children (form + results) — ref: PDF çekim hedefi */}
+      <div ref={ciktiRef}>
+        <CiktiBasligi aracAdi={title} tarih={bugun} />
+        {children({ isFormOpen, header, rateBar })}
+      </div>
 
       {/* Print button */}
       {hasResult && (
         <div className="mt-6 flex justify-end no-print">
-          <button
-            type="button"
-            onClick={handlePrint}
-            className="inline-flex items-center gap-2 px-[14px] py-[8px] rounded-lg border border-[#D3D1C7]
-              text-[13px] font-medium text-[#6B6963] bg-white hover:bg-[#F7F6F2] transition-colors"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round"
-                d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2M6 14h12v8H6v-8z" />
-            </svg>
-            PDF / Yazdır
-          </button>
+          <PrintButton
+            onPrint={handlePrint}
+            pdfHedefi={() => ciktiRef.current}
+            pdfDosyaAdi={`${title}_${bugun}`}
+          />
         </div>
       )}
     </div>

@@ -42,7 +42,7 @@ export function ResetPasswordPage() {
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-[#1D9E75]/5 flex items-center justify-center p-4">
         <div className="w-full max-w-sm">
           <div className="text-center mb-8">
-            <Logo height={48} className="mx-auto" />
+            <Logo height={44} adiGoster className="mx-auto" />
           </div>
           <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 text-center">
             <p className="text-2xl mb-3">⚠️</p>
@@ -85,8 +85,8 @@ export function ResetPasswordPage() {
       <div className="w-full max-w-sm">
         {/* Logo */}
         <div className="text-center mb-8">
-          <Logo height={48} className="mx-auto" />
-          <p className="mt-3 text-sm text-gray-500">Dijital ajansınız artık bir yazılım</p>
+          <Logo height={44} adiGoster className="mx-auto" />
+          <p className="mt-3 text-sm text-gray-500">İşletmeniz için hazır iş çözümleri</p>
         </div>
 
         {/* Card */}

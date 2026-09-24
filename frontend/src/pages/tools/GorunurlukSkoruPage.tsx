@@ -8,12 +8,16 @@ import { Select } from '@/components/ui/Select'
 import { FormPersistButtons } from '@/components/ui/FormPersistButtons'
 import { ToolShell } from '@/components/ui/ToolShell'
 import { useElapsedSeconds } from '@/hooks/useElapsedSeconds'
+import { useProfilOnDolgu } from '@/hooks/useIsletmeProfili'
+import { markaKurallari } from '@/lib/markaKurallari'
+import { SEKTORLER } from '@/lib/sektorler'
+import { AramaliSecici } from '@/components/ui/AramaliSecici'
+import { trEtiket } from '@/lib/trEtiket'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface ScoreItem {
   status: 'red' | 'amber' | 'green'
-  icon: string
   name: string
   desc: string
   badge: string
@@ -28,21 +32,6 @@ interface ScoreResult {
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
-
-const SEKTORLER = [
-  'Muhasebe / Finans',
-  'Sağlık / Klinik',
-  'Eğitim / Kurs',
-  'İnşaat / Mühendislik',
-  'Hukuk / Danışmanlık',
-  'Perakende / Mağaza',
-  'Yiyecek / İçecek',
-  'Güzellik / Estetik',
-  'Lojistik / Taşımacılık',
-  'Teknoloji / Yazılım',
-  'Giyim / Tekstil',
-  'Diğer',
-]
 
 /** "Diğer" seçilince kullanıcı kendi platformunu yazabilir (ör. Telegram, TikTok) */
 const DIGER_PLATFORM = 'Diğer'
@@ -110,20 +99,20 @@ function buildPrompt(fields: {
     'SADECE JSON dondur:\n' +
     '{\n' +
     '  "score": [0-100 arasi tam sayi],\n' +
-    '  "level": "[Baslangic|Gelismekte|Orta|Iyi|Mukemmel]",\n' +
+    '  "level": "[Başlangıç|Gelişmekte|Orta|İyi|Mükemmel]",\n' +
     '  "summary": "[' + fields.name + ' icin 1-2 cumle ozet]",\n' +
     '  "items": [\n' +
     '    {\n' +
     '      "status": "[red|amber|green]",\n' +
-    '      "icon": "[tabler icon adi, ornek: ti-world]",\n' +
     '      "name": "[kisa baslik]",\n' +
     '      "desc": "[somut 1-2 cumle aciklama]",\n' +
-    '      "badge": "[Kritik|Iyilestir|Guclu]"\n' +
+    '      "badge": "[Kritik|İyileştir|Güçlü]"\n' +
     '    }\n' +
     '  ],\n' +
     '  "ctaText": "[' + fields.name + ' icin kisisel 1 cumle]"\n' +
     '}\n' +
-    '6-8 item olsun. Once red, sonra amber, sonra green. Tum metin alanlari Turkce olsun.'
+    '6-8 item olsun. Once red, sonra amber, sonra green. Tum metin alanlari Turkce olsun.' +
+    markaKurallari()
   )
 }
 
@@ -156,6 +145,15 @@ export function GorunurlukSkoruPage() {
   const [liExists, setLiExists] = useState('')
   const [liActive, setLiActive] = useState('')
   const [goal, setGoal] = useState('')
+
+  // İşletme profilinden ön dolgu — boş alanlar doldurulur, kullanıcının
+  // yazdığına dokunulmaz (bkz. useProfilOnDolgu).
+  useProfilOnDolgu({
+    businessName: [name, setName],
+    sector: [sector, setSector],
+    city: [city, setCity],
+    website: [web, setWeb],
+  })
   const [result, setResult] = useState<ScoreResult | null>(null)
 
   const togglePlatform = (value: string) =>
@@ -166,7 +164,7 @@ export function GorunurlukSkoruPage() {
   const mutation = useMutation({
     mutationFn: async () => {
       const prompt = buildPrompt({ name, sector, city, web, platforms, platformOther, liExists, liActive, goal })
-      const res = await api.post('/tools/gorunurluk-skoru/run', { prompt })
+      const res = await api.post('/tools/gorunurluk-skoru/run', { prompt, isletmeAdi: name })
       const content = extractAiContent(res.data)
       return parseAiJson<ScoreResult>(content)
     },
@@ -207,14 +205,11 @@ export function GorunurlukSkoruPage() {
                 />
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <Select
+                  <AramaliSecici
                     label="Sektör *"
                     value={sector}
-                    onChange={(e) => setSector(e.target.value)}
-                    options={[
-                      { value: '', label: 'Seçin...' },
-                      ...SEKTORLER.map((s) => ({ value: s, label: s })),
-                    ]}
+                    onChange={setSector}
+                    secenekler={SEKTORLER}
                   />
                   <Input
                     label="Şehir *"
@@ -365,7 +360,7 @@ export function GorunurlukSkoruPage() {
                   </div>
                 </div>
                 <div>
-                  <p className={`text-lg font-bold ${colors.text}`}>{result.level}</p>
+                  <p className={`text-lg font-bold ${colors.text}`}>{trEtiket(result.level)}</p>
                   <p className="text-sm text-gray-600 mt-1 leading-relaxed">{result.summary}</p>
                 </div>
               </div>
@@ -381,7 +376,7 @@ export function GorunurlukSkoruPage() {
                         <div className="flex items-center gap-2 mb-0.5">
                           <span className="text-sm font-semibold text-gray-900">{item.name}</span>
                           <span className={`text-xs px-2 py-0.5 rounded border ${cfg.badge}`}>
-                            {item.badge}
+                            {trEtiket(item.badge)}
                           </span>
                         </div>
                         <p className="text-sm text-gray-600">{item.desc}</p>
@@ -397,12 +392,6 @@ export function GorunurlukSkoruPage() {
                 </div>
               )}
 
-              <button
-                onClick={() => setResult(null)}
-                className="text-sm text-gray-400 underline text-center no-print"
-              >
-                Yeni analiz yap
-              </button>
             </div>
           )}
         </>
