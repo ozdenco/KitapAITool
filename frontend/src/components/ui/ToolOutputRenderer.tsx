@@ -1,5 +1,6 @@
 import { trEtiket } from '@/lib/trEtiket'
 import { MiniChatbotTest } from '@/components/tools/MiniChatbotTest'
+import { SiteyeEkleKarti } from '@/components/tools/SiteyeEkleKarti'
 // ToolOutputRenderer — tool-specific rich renderers for Geçmiş Çıktılarım
 // Each renderer mirrors the result section of the corresponding tool page.
 
@@ -425,7 +426,11 @@ interface OzelMesaj { tip: string; metin: string }
 interface SssKart { soru: string; cevap: string; anahtar_kelimeler?: string[] }
 interface ChatbotResult { ozel_mesajlar?: OzelMesaj[]; sss_kartlari?: SssKart[]; ipuclari?: string[]; ctaText?: string }
 
-function RenderChatbotSenaryo({ data, isletmeAdi }: { data: Record<string, unknown>; isletmeAdi?: string }) {
+function RenderChatbotSenaryo({ data, isletmeAdi, sonucId }: {
+  data: Record<string, unknown>
+  isletmeAdi?: string
+  sonucId?: string
+}) {
   const d = data as unknown as ChatbotResult
   return (
     <div className="flex flex-col gap-4">
@@ -488,6 +493,18 @@ function RenderChatbotSenaryo({ data, isletmeAdi }: { data: Record<string, unkno
           sssKartlari={d.sss_kartlari}
         />
       )}
+      {/*
+       * GÖMME KODU — araç sayfasında sonuç ekranında veriliyordu, yani
+       * sayfadan çıkan kullanıcı kodu bir daha bulamıyordu. Kod kaydın
+       * kimliğinden üretiliyor ve gömülü widget senaryoyu açık uçtan
+       * (/api/public/chatbot/{id}) okuyor; dolayısıyla kayıttan üretmek
+       * araç sayfasından üretmekle birebir aynı kodu veriyor.
+       *
+       * `sonucId` yalnızca kullanıcının kendi Geçmiş Çıktılar sayfasından
+       * geliyor; yönetici rapor sayfası göndermiyor, çünkü başkasının
+       * senaryosunun gömme kodunu yöneticiye vermek gerekmiyor.
+       */}
+      {sonucId && <SiteyeEkleKarti resultId={sonucId} bizName={isletmeAdi ?? ''} />}
       <CtaBox text={d.ctaText} />
     </div>
   )
@@ -895,9 +912,14 @@ interface ToolOutputRendererProps {
    * kullanıyor; verilmezse "İşletmeniz Bot" yazıyor.
    */
   isletmeAdi?: string
+  /**
+   * Kaydın kimliği. Chatbot çıktısında "Sitenize Ekleyin" gömme kodu bunu
+   * kullanır; verilmezse kart gösterilmez.
+   */
+  sonucId?: string
 }
 
-export function ToolOutputRenderer({ toolId, data, isletmeAdi }: ToolOutputRendererProps) {
+export function ToolOutputRenderer({ toolId, data, isletmeAdi, sonucId }: ToolOutputRendererProps) {
   switch (toolId) {
     case 'gorunurluk-skoru':   return <RenderGorunurlukSkoru   data={data} />
     case 'musteri-persona':    return <RenderMusteriPersona     data={data} />
@@ -905,7 +927,7 @@ export function ToolOutputRenderer({ toolId, data, isletmeAdi }: ToolOutputRende
     case 'reklam-butce':       return <RenderReklamButce        data={data} />
     case 'whatsapp-satis':     return <RenderWhatsappSatis      data={data} />
     case 'musteri-geri-donus': return <RenderMusteriGeriDonus   data={data} />
-    case 'chatbot-senaryo':    return <RenderChatbotSenaryo     data={data} isletmeAdi={isletmeAdi} />
+    case 'chatbot-senaryo':    return <RenderChatbotSenaryo     data={data} isletmeAdi={isletmeAdi} sonucId={sonucId} />
     case 'ai-gorunurluk':      return <RenderAiGorunurluk       data={data} />
     case 'viral-video':        return <RenderViralVideo         data={data} />
     // Video Oluşturma şimdilik aynı şemayı üretiyor (Viral Video kopyası).

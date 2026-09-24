@@ -238,7 +238,14 @@ export function CiktiGovdesi({
   }
 
   if (RICH_TOOL_IDS.has(toolId)) {
-    return <ToolOutputRenderer toolId={toolId} data={parsed} isletmeAdi={isletmeAdi} />
+    return (
+      <ToolOutputRenderer
+        toolId={toolId}
+        data={parsed}
+        isletmeAdi={isletmeAdi}
+        sonucId={sonucId}
+      />
+    )
   }
   return <OutputObject obj={parsed} depth={0} />
 }

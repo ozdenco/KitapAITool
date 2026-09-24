@@ -43,16 +43,62 @@
       .replace(/â/g, 'a').replace(/î/g, 'i').replace(/û/g, 'u')
   }
 
-  // Kalıplar sadeleştirilmiş metne uygulanır → hem "teşekkür" hem "tesekkur" yakalanır
-  var KAPANIS_RE = /tesekkur|tamam|anladim|gorusuruz|iyi ki|harika|super|mukemmel|iyi gunler|hosca kal|gule gule/
-  var MESAI_RE = /su an mevcut|musait misiniz|acik misiniz|mesai|hafta sonu|aksam|gece/
-  var ETKISIZ = ['nedir','nasil','nerede','neden','hangi','kac','kadar','icin','veya','ile','mi','mu','musunuz','misiniz','var','yok','bir','siz','sizin','bizim','olan','yapabilir','alabilir','sunuyor','calisiyor','ediyor']
+  /*
+   * Kalıplar sadeleştirilmiş metne uygulanır → hem "teşekkür" hem "tesekkur"
+   * yakalanır.
+   *
+   * Kelime sınırları (\b) şart: sınırsız hâlde "gece" kalıbı "geçen" → "gecen"
+   * içinde eşleşiyordu, dolayısıyla "Geçen yıldan izin devredebilir miyim?"
+   * gibi meşru sorular SSS eşleştirmesine hiç ulaşmadan mesai dışı yanıtını
+   * alıyordu (24 Eyl 2026'da ölçüldü). Türkçe eklemeli olduğu için kalıpların
+   * sonu serbest ("mesaide", "aksamlari"); yalnızca başka kelimelerin ÖNEKİ
+   * olanlar ("gece" → geçen/geçerli/gecikme, "tamam" → tamamen/tamamlandı)
+   * sonundan da kapatılır.
+   */
+  var KAPANIS_RE = /\btesekkur|\btamam(dir)?\b|\banladim\b|\bgorusuruz|\biyi ki\b|\bharika|\bsuper\b|\bmukemmel|\biyi gunler\b|\bhosca kal|\bgule gule\b/
+  var MESAI_RE = /\bsu an mevcut|\bmusait misiniz\b|\bacik misiniz\b|\bmesai|\bhafta sonu|\baksam(a|da|dan|i|lari|leyin)?\b|\bgece(de|den|leri|lerde|yi)?\b/
+
+  /*
+   * Etkisiz kelimeler. Soru ekleri ve "-ebilir/-abilir" yardımcı fiilleri de
+   * elenir: ölçümde "kullanabilir" (+2.84) ve "miyim" (+1.74) tek başına 4.58
+   * puan yapıp eşiği geçiyor, yani kart yalnızca CÜMLE BİÇİMİ yüzünden
+   * kazanıyordu ("... kullanabilir miyim?" biçimindeki alakasız kart).
+   */
+  var ETKISIZ = ['nedir','nasil','nerede','neden','hangi','kac','kadar','icin','veya','ile','mi','mu','musunuz','misiniz','var','yok','bir','siz','sizin','bizim','olan','yapabilir','alabilir','sunuyor','calisiyor','ediyor',
+    'miyim','miyiz','muyum','muyuz','midir','mudur',
+    'kullanabilir','kullanabilirim','edebilir','edebilirim','olabilir','olabilirim','yapabilirim','alabilirim','verebilir',
+    'gerekiyor','gerekir','oluyor','olacak','istiyorum','isterim','lazim','bana','beni','benim','bunu','sonra','once','ama']
 
   function kelimeler(metin) {
     return sadelestir(metin)
       .replace(/[^a-z0-9\s]/g, ' ')
       .split(/\s+/)
       .filter(function (k) { return k.length >= 3 && ETKISIZ.indexOf(k) === -1 })
+  }
+
+  /**
+   * Bir SSS kartının arama kelimeleri: AI'nın verdiği `anahtar_kelimeler` +
+   * soru metninden türetilenler.
+   *
+   * Soru metni tek başına yetmiyor çünkü ziyaretçi kartın sözcüklerini değil
+   * kendi sözcüklerini yazıyor ("hastalık izni" ↔ "Raporlu olduğum günler…").
+   * AI listesi bu köprüyü kuruyor; alanı taşımayan eski senaryolarda soru
+   * metninden türetim yedek olarak kalıyor.
+   */
+  function kartKelimeleri(kart) {
+    var cikti = [], gorulen = {}, i, j, parca
+    var ai = kart.anahtar_kelimeler || []
+    for (i = 0; i < ai.length; i++) {
+      parca = kelimeler(ai[i])
+      for (j = 0; j < parca.length; j++) {
+        if (!gorulen[parca[j]]) { gorulen[parca[j]] = true; cikti.push(parca[j]) }
+      }
+    }
+    parca = kelimeler(kart.soru)
+    for (j = 0; j < parca.length; j++) {
+      if (!gorulen[parca[j]]) { gorulen[parca[j]] = true; cikti.push(parca[j]) }
+    }
+    return cikti
   }
 
   /**
@@ -77,10 +123,8 @@
     var N = kartlar.length
     var df = {}
     for (var i = 0; i < N; i++) {
-      var benzersiz = {}
-      var kw = kelimeler(kartlar[i].soru)
-      for (var j = 0; j < kw.length; j++) benzersiz[kw[j]] = true
-      for (var w in benzersiz) df[w] = (df[w] || 0) + 1
+      var kw = kartKelimeleri(kartlar[i])
+      for (var j = 0; j < kw.length; j++) df[kw[j]] = (df[kw[j]] || 0) + 1
     }
     return {
       idf: function (w) { return Math.log((N + 1) / ((df[w] || 0) + 1)) + 0.1 },
@@ -127,7 +171,7 @@
     var enIyi = null, enIyiSkor = 0
 
     for (var i = 0; i < kartlar.length; i++) {
-      var soruKelimeleri = kelimeler(kartlar[i].soru)
+      var soruKelimeleri = kartKelimeleri(kartlar[i])
       var skor = 0, ayirtEdici = 0
 
       for (var s = 0; s < soruKelimeleri.length; s++) {

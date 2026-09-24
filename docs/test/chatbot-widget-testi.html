@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chatbot Gömme Kodu Test Tezgahı</title>
+<!--
+  KolayKOBİ — gömülebilir chatbot widget'ını gerçek koşullarda deneme sayfası.
+
+  NE YAPAR: app.kolaykobi.com/chatbot-widget.js dosyasını, bir senaryo
+  kimliğiyle, tıpkı müşterinin kendi sitesine yapıştırdığı gibi yükler.
+  Sağdaki gri bloklar sahte bir site gövdesi — widget baloncuğunun gerçek bir
+  sayfada nasıl durduğunu görmek için.
+
+  NEDEN DOSYA OLARAK: widget'ın eşleştirmesi uygulama içindeki "Mini Chatbot
+  Testi" penceresinden BAĞIMSIZ bir kod (frontend/public/chatbot-widget.js).
+  İkisi ayrı ayrı bozulabiliyor; ziyaretçinin gerçekte konuştuğu taraf burası.
+
+  KULLANIM: dosyayı çift tıklayıp tarayıcıda açın. Senaryo kimliğini
+  değiştirmek için üstteki alana yazıp "Yükle"ye basın (sayfa yenilenir).
+  Açık uç CORS'a izin verdiği için file:// üzerinden de çalışır.
+-->
+<style>
+  :root {
+    --kagit:      #F7F6F2;
+    --yuzey:      #FFFFFF;
+    --murekkep:   #1C1B19;
+    --sessiz:     #6B6963;
+    --cizgi:      #E2E0D8;
+    --yesil:      #1D9E75;
+    --koyu-yesil: #085041;
+    --uyari:      #7A5C10;
+    --uyari-zemin:#FFF9E8;
+    --uyari-cizgi:#F0DFA8;
+
+    --olcek-kucuk: 12px;
+    --olcek-govde: 13.5px;
+    --olcek-baslik: clamp(20px, 1rem + 1.4vw, 28px);
+
+    --yazi: ui-sans-serif, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+    --kod: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --kagit:      #14140F;
+      --yuzey:      #1E1E18;
+      --murekkep:   #F2F1EA;
+      --sessiz:     #9A9792;
+      --cizgi:      #33332B;
+      --yesil:      #34BE90;
+      --koyu-yesil: #8FE0C6;
+      --uyari:      #E8D08A;
+      --uyari-zemin:#2A2414;
+      --uyari-cizgi:#4A3F1C;
+    }
+  }
+  :root[data-theme="dark"] {
+    --kagit:      #14140F;
+    --yuzey:      #1E1E18;
+    --murekkep:   #F2F1EA;
+    --sessiz:     #9A9792;
+    --cizgi:      #33332B;
+    --yesil:      #34BE90;
+    --koyu-yesil: #8FE0C6;
+    --uyari:      #E8D08A;
+    --uyari-zemin:#2A2414;
+    --uyari-cizgi:#4A3F1C;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    padding: 24px 16px 96px;
+    background: var(--kagit);
+    color: var(--murekkep);
+    font: var(--olcek-govde)/1.6 var(--yazi);
+  }
+
+  .sarmal { max-width: 1180px; margin: 0 auto; display: flex; flex-direction: column; gap: 22px; }
+
+  header { display: flex; flex-direction: column; gap: 6px; }
+  h1 {
+    margin: 0;
+    font-size: var(--olcek-baslik);
+    font-weight: 650;
+    letter-spacing: -0.02em;
+    text-wrap: balance;
+  }
+  .alt-baslik { margin: 0; color: var(--sessiz); max-width: 62ch; }
+
+  .duzen { display: grid; grid-template-columns: minmax(0, 420px) minmax(0, 1fr); gap: 20px; align-items: start; }
+  @media (max-width: 880px) { .duzen { grid-template-columns: 1fr; } }
+
+  .kart {
+    background: var(--yuzey);
+    border: 1px solid var(--cizgi);
+    border-radius: 14px;
+    overflow: hidden;
+  }
+  .kart > h2 {
+    margin: 0;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--cizgi);
+    font-size: var(--olcek-kucuk);
+    font-weight: 650;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--sessiz);
+  }
+  .kart-govde { padding: 16px; display: flex; flex-direction: column; gap: 14px; }
+
+  label { display: block; font-size: var(--olcek-kucuk); font-weight: 600; color: var(--sessiz); margin-bottom: 5px; }
+
+  input[type="text"] {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid var(--cizgi);
+    border-radius: 9px;
+    background: var(--kagit);
+    color: var(--murekkep);
+    font: 12.5px/1.4 var(--kod);
+  }
+  input[type="text"]:focus-visible { outline: 2px solid var(--yesil); outline-offset: 1px; border-color: var(--yesil); }
+
+  .satir { display: flex; gap: 8px; align-items: flex-end; }
+  .satir > div { flex: 1; min-width: 0; }
+
+  button {
+    font: 600 var(--olcek-kucuk)/1 var(--yazi);
+    padding: 9px 14px;
+    border-radius: 9px;
+    border: 1px solid var(--cizgi);
+    background: var(--yuzey);
+    color: var(--murekkep);
+    cursor: pointer;
+    transition: border-color 140ms ease, color 140ms ease, background 140ms ease;
+  }
+  button:hover { border-color: var(--yesil); color: var(--koyu-yesil); }
+  button:active { transform: translateY(1px); }
+  button:focus-visible { outline: 2px solid var(--yesil); outline-offset: 2px; }
+  button.baskin { background: var(--yesil); border-color: var(--yesil); color: #fff; }
+  button.baskin:hover { filter: brightness(0.94); color: #fff; }
+
+  pre {
+    margin: 0;
+    padding: 11px 12px;
+    background: var(--kagit);
+    border: 1px solid var(--cizgi);
+    border-radius: 9px;
+    font: 11.5px/1.65 var(--kod);
+    white-space: pre;
+    overflow-x: auto;
+  }
+
+  .durum { display: flex; flex-direction: column; gap: 5px; font-size: var(--olcek-kucuk); }
+  .durum div { display: flex; gap: 8px; }
+  .durum dt, .durum b { color: var(--sessiz); font-weight: 600; min-width: 118px; }
+  .durum span { font-variant-numeric: tabular-nums; }
+  .iyi  { color: var(--yesil); font-weight: 650; }
+  .kotu { color: #D0483C; font-weight: 650; }
+
+  .uyari {
+    background: var(--uyari-zemin);
+    border: 1px solid var(--uyari-cizgi);
+    color: var(--uyari);
+    border-radius: 9px;
+    padding: 10px 12px;
+    font-size: var(--olcek-kucuk);
+    line-height: 1.6;
+  }
+
+  ol.sorular { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 6px; counter-reset: s; }
+  ol.sorular li { display: flex; gap: 9px; align-items: flex-start; }
+  ol.sorular li::before {
+    counter-increment: s;
+    content: counter(s);
+    flex: 0 0 auto;
+    width: 19px; height: 19px;
+    margin-top: 2px;
+    border-radius: 50%;
+    background: var(--kagit);
+    border: 1px solid var(--cizgi);
+    color: var(--sessiz);
+    font: 600 10px/17px var(--kod);
+    text-align: center;
+  }
+  ol.sorular button {
+    flex: 1;
+    text-align: left;
+    padding: 5px 8px;
+    font-weight: 500;
+    font-size: var(--olcek-kucuk);
+    line-height: 1.45;
+    border-color: transparent;
+    background: transparent;
+  }
+  ol.sorular button:hover { border-color: var(--cizgi); background: var(--kagit); }
+  ol.sorular .not { display: block; margin-top: 2px; color: var(--sessiz); font-size: 11px; font-weight: 400; }
+
+  /* Sahte site gövdesi — widget'ın üzerine bindiği yüzey */
+  .sahte { padding: 0; }
+  .sahte-govde { padding: 26px 24px 120px; display: flex; flex-direction: column; gap: 22px; }
+  .sahte-serit { height: 34px; border-bottom: 1px solid var(--cizgi); display: flex; align-items: center; gap: 7px; padding: 0 12px; }
+  .sahte-serit i { width: 9px; height: 9px; border-radius: 50%; background: var(--cizgi); display: block; }
+  .iskelet { background: var(--cizgi); border-radius: 6px; opacity: 0.55; }
+  .iskelet.h1 { height: 30px; width: 58%; }
+  .iskelet.p  { height: 11px; }
+  .iskelet.p.k { width: 82%; }
+  .iskelet.p.kk { width: 64%; }
+  .kutucuklar { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  @media (max-width: 620px) { .kutucuklar { grid-template-columns: 1fr; } }
+  .kutucuk { height: 82px; border: 1px solid var(--cizgi); border-radius: 10px; opacity: 0.7; }
+  .sahte-not {
+    align-self: flex-start;
+    font-size: 11.5px;
+    color: var(--sessiz);
+    border-left: 2px solid var(--yesil);
+    padding-left: 9px;
+  }
+</style>
+</head>
+<body>
+<div class="sarmal">
+
+  <header>
+    <h1>Chatbot Gömme Kodu Test Tezgahı</h1>
+    <p class="alt-baslik">
+      Bu sayfa, müşterinin kendi sitesine yapıştırdığı script etiketini birebir
+      aynı şekilde yükler. Sağdaki gri bloklar sahte bir site gövdesi; sağ altta
+      çıkan baloncuk gerçek widget.
+    </p>
+  </header>
+
+  <div class="duzen">
+
+    <div style="display:flex;flex-direction:column;gap:20px;min-width:0">
+
+      <section class="kart">
+        <h2>Senaryo</h2>
+        <div class="kart-govde">
+          <div class="satir">
+            <div>
+              <label for="idAlani">Senaryo kimliği (Geçmiş Çıktılar kaydının id&#39;si)</label>
+              <input id="idAlani" type="text" spellcheck="false" autocomplete="off">
+            </div>
+            <button class="baskin" id="yukleDugmesi" type="button">Yükle</button>
+          </div>
+
+          <dl class="durum" id="durumKutusu" style="margin:0">
+            <div><b>Açık uç</b><span id="dDurum">yükleniyor…</span></div>
+            <div><b>Pencere başlığı</b><span id="dBaslik">—</span></div>
+            <div><b>SSS kartı</b><span id="dKart">—</span></div>
+            <div><b>Anahtar kelime</b><span id="dKelime">—</span></div>
+            <div><b>Özel mesaj</b><span id="dMesaj">—</span></div>
+          </dl>
+
+          <div class="uyari" id="kelimeUyarisi" hidden></div>
+        </div>
+      </section>
+
+      <section class="kart">
+        <h2>Gömme kodu</h2>
+        <div class="kart-govde">
+          <pre id="kodKutusu"></pre>
+          <div style="display:flex;gap:8px">
+            <button id="kopyalaDugmesi" type="button">Kodu kopyala</button>
+            <button id="temaDugmesi" type="button">Koyu / açık</button>
+          </div>
+          <p style="margin:0;font-size:var(--olcek-kucuk);color:var(--sessiz)">
+            Bu sayfa widget&#39;ı önbelleğe takılmamak için sürüm damgasıyla yükler.
+            Müşteriye verilen kodda damga yoktur — yukarıdaki kutu müşteriye
+            verilecek hâli gösterir.
+          </p>
+        </div>
+      </section>
+
+      <section class="kart">
+        <h2>Deneme soruları</h2>
+        <div class="kart-govde">
+          <p style="margin:0;font-size:var(--olcek-kucuk);color:var(--sessiz)">
+            Tıklayınca pano&#39;ya kopyalanır; baloncuğu açıp yapıştırın.
+            İlk üçü 23–24 Eylül&#39;de yanlış cevap veren sorulardı.
+          </p>
+          <ol class="sorular" id="soruListesi"></ol>
+        </div>
+      </section>
+
+    </div>
+
+    <section class="kart sahte" aria-label="Sahte site gövdesi">
+      <div class="sahte-serit" aria-hidden="true"><i></i><i></i><i></i></div>
+      <div class="sahte-govde">
+        <div class="iskelet h1"></div>
+        <div style="display:flex;flex-direction:column;gap:9px">
+          <div class="iskelet p"></div>
+          <div class="iskelet p k"></div>
+          <div class="iskelet p kk"></div>
+        </div>
+        <div class="kutucuklar" aria-hidden="true">
+          <div class="kutucuk"></div><div class="kutucuk"></div><div class="kutucuk"></div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:9px">
+          <div class="iskelet p"></div>
+          <div class="iskelet p k"></div>
+        </div>
+        <p class="sahte-not">
+          Widget baloncuğu sağ altta ↘<br>
+          Görünmüyorsa üstteki “Açık uç” satırına ve tarayıcı konsoluna bakın.
+        </p>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict'
+
+  var VARSAYILAN_ID = 'f754d002-318c-4031-a5b2-9128f0bc5c0d'
+  var KOK = 'https://app.kolaykobi.com'
+
+  var parametreler = new URLSearchParams(location.search)
+  var senaryoId = (parametreler.get('id') || VARSAYILAN_ID).trim()
+
+  var idAlani = document.getElementById('idAlani')
+  idAlani.value = senaryoId
+
+  /*
+   * Müşteriye verilen kod: sürüm damgası YOK. Sayfanın kendi yüklemesi damgalı
+   * (aşağıda), çünkü widget dosyası nginx'te önbelleğe alınıyor ve dağıtımdan
+   * sonra eski sürümü test etmek en sinsi yanlış sonuç kaynağı.
+   */
+  var musteriKodu =
+    '<script src="' + KOK + '/chatbot-widget.js"\n' +
+    '        data-kolaykobi-id="' + senaryoId + '"\n' +
+    '        data-baslik="Destek"><\/script>'
+  document.getElementById('kodKutusu').textContent = musteriKodu
+
+  document.getElementById('kopyalaDugmesi').addEventListener('click', function () {
+    kopyala(musteriKodu, this, 'Kodu kopyala')
+  })
+
+  document.getElementById('yukleDugmesi').addEventListener('click', yeniIdYukle)
+  idAlani.addEventListener('keydown', function (e) { if (e.key === 'Enter') yeniIdYukle() })
+
+  function yeniIdYukle() {
+    var yeni = idAlani.value.trim()
+    if (!yeni) return
+    location.search = '?id=' + encodeURIComponent(yeni)
+  }
+
+  document.getElementById('temaDugmesi').addEventListener('click', function () {
+    var kok = document.documentElement
+    var suAn = kok.getAttribute('data-theme')
+    if (suAn) { kok.removeAttribute('data-theme'); return }
+    var koyuMu = matchMedia('(prefers-color-scheme: dark)').matches
+    kok.setAttribute('data-theme', koyuMu ? 'light' : 'dark')
+  })
+
+  // ─── Teşhis: senaryoyu widget'tan bağımsız olarak da çekip özetle ──────────
+
+  function yaz(id, metin, sinif) {
+    var el = document.getElementById(id)
+    el.textContent = metin
+    el.className = sinif || ''
+  }
+
+  fetch(KOK + '/api/public/chatbot/' + encodeURIComponent(senaryoId))
+    .then(function (r) {
+      if (!r.ok) throw new Error('HTTP ' + r.status)
+      return r.json()
+    })
+    .then(function (senaryo) {
+      yaz('dDurum', 'HTTP 200 — senaryo okundu', 'iyi')
+
+      var kartlar = senaryo.sss_kartlari || []
+      var mesajlar = senaryo.ozel_mesajlar || []
+      var kelimeli = kartlar.filter(function (k) {
+        return k.anahtar_kelimeler && k.anahtar_kelimeler.length > 0
+      }).length
+
+      // Açık uç yalnızca senaryoyu döndürür; başlık data-baslik'ten gelir.
+      yaz('dBaslik', 'Destek  (data-baslik)')
+      yaz('dKart', kartlar.length + ' kart')
+      yaz('dMesaj', mesajlar.length + ' mesaj' + (mesajlar.length
+        ? ' (' + mesajlar.map(function (m) { return m.tip }).join(', ') + ')' : ''))
+      yaz('dKelime', kelimeli + ' / ' + kartlar.length + ' kartta var',
+        kelimeli === kartlar.length && kartlar.length > 0 ? 'iyi' : 'kotu')
+
+      if (kartlar.length > 0 && kelimeli < kartlar.length) {
+        var u = document.getElementById('kelimeUyarisi')
+        u.hidden = false
+        u.innerHTML = '<strong>Bu senaryo 24 Eylül öncesinden.</strong> Kartlarda '
+          + '<code>anahtar_kelimeler</code> yok, bu yüzden eşleştirme yalnızca soru '
+          + 'metninden türetilen kelimelerle çalışır — eşanlamlı sorular '
+          + '(“hastalık izni” ↔ “raporlu günler”) bulunamaz. Yeni davranışı ölçmek '
+          + 'için Chatbot Senaryosu aracını yeniden çalıştırıp taze kaydın '
+          + 'kimliğini kullanın.'
+      }
+    })
+    .catch(function (hata) {
+      yaz('dDurum', String(hata.message || hata), 'kotu')
+    })
+
+  // ─── Deneme soruları ──────────────────────────────────────────────────────
+
+  var SORULAR = [
+    ['geçen seneden kullanmadığım 4 gün iznimi bu yıl kullanabilir miyim',
+     '“geçen” içindeki “gece” mesai dışı yanıtını tetikliyordu'],
+    ['hastalık izni normal izin süresinden düşer mi',
+     'kart “raporlu” diyor, kullanıcı “hastalık” — eşanlamlı köprü gerekiyor'],
+    ['haftasonları yıllık izinden düşer mi',
+     'kart “Pazar ve resmi tatiller” diyor'],
+    ['yıllık izin süreleri nasıl hesaplanıyor', null],
+    ['kıdemime göre kaç gün izin hakkım var', null],
+    ['deneme süresindeyken izin kullanabilir miyim', null],
+    ['izin günlerimi paraya çevirebilir miyim', null],
+    ['qwerty asdf zxcv', 'karşılığı yok → “anlayamadım” beklenir'],
+    ['teşekkürler', 'kapanış mesajı beklenir'],
+    ['şu an açık mısınız', 'mesai dışı mesajı beklenir']
+  ]
+
+  var liste = document.getElementById('soruListesi')
+  SORULAR.forEach(function (satir) {
+    var soru = satir[0], not = satir[1]
+    var li = document.createElement('li')
+    var dugme = document.createElement('button')
+    dugme.type = 'button'
+    dugme.appendChild(document.createTextNode(soru))
+    if (not) {
+      var s = document.createElement('span')
+      s.className = 'not'
+      s.textContent = not
+      dugme.appendChild(s)
+    }
+    dugme.addEventListener('click', function () { kopyala(soru, dugme, null) })
+    li.appendChild(dugme)
+    liste.appendChild(li)
+  })
+
+  function kopyala(metin, dugme, eskiEtiket) {
+    navigator.clipboard.writeText(metin).then(function () {
+      if (eskiEtiket) {
+        dugme.textContent = 'Kopyalandı ✓'
+        setTimeout(function () { dugme.textContent = eskiEtiket }, 1800)
+        return
+      }
+      dugme.style.borderColor = 'var(--yesil)'
+      setTimeout(function () { dugme.style.borderColor = '' }, 1200)
+    }).catch(function () {
+      /* file:// üzerinde pano kapalı olabilir — sessizce geç, metin zaten ekranda */
+    })
+  }
+
+  // ─── Widget'ı yükle (sayfanın sonunda, sahte gövde çizildikten sonra) ─────
+
+  var w = document.createElement('script')
+  w.src = KOK + '/chatbot-widget.js?v=' + Date.now()   // önbelleği atla
+  w.setAttribute('data-kolaykobi-id', senaryoId)
+  w.setAttribute('data-baslik', 'Destek')
+  document.body.appendChild(w)
+})()
+</script>
+</body>
+</html>
