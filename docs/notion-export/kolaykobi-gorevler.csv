@@ -4,14 +4,16 @@ Brevo e-posta hesabı teknik kurulumu,Özden Çolak,Teknik — Altyapı,Aşama 1
 kolaykobi.com/araclar sayfası yayına,Özden Çolak,Teknik — Altyapı,Aşama 1,25.08.2026,Tamamlandı,
 8 araç için QR kod üret,Özden Çolak,Teknik — Altyapı,Aşama 1,25.08.2026,Tamamlandı,
 Brevo hoş geldin e-posta serisi (otomasyon kurulumu),Özden Çolak,Teknik — E-posta,Aşama 1,01.09.2026,Bekliyor,5 aşamalı damla serisi
-Site e-posta form entegrasyonu ve testi,Özden Çolak,Teknik — Altyapı,Aşama 1,01.09.2026,Bekliyor,
+Site e-posta form entegrasyonu ve testi,Özden Çolak,Teknik — Altyapı,Aşama 1,01.09.2026,Tamamlandı,Brevo formu + cift onay + captcha + PDF rehber; liste #7. Test edildi 31.08.
 Zoom Starter hesabı aç ve yapılandır,Özden Çolak,Teknik — Workshop,Aşama 1,08.09.2026,Bekliyor,
 8 Ekim workshop online kayıt formu (teknik kurulum),Özden Çolak,Teknik — Workshop,Aşama 1,08.09.2026,Bekliyor,
 Zoom ses / ekran paylaşım testi,Özden Çolak,Teknik — Workshop,Aşama 1,22.09.2026,Bekliyor,
 1. Workshop teknik rihearsal (Zoom bağlantı / ses / ekran),Özden Çolak,Teknik — Workshop,Aşama 2,06.10.2026,Bekliyor,
 1. Workshop — katılımcı listesini e-posta sistemine aktar,Özden Çolak,Teknik — E-posta,Aşama 2,08.10.2026,Bekliyor,
 2. Workshop — katılımcı listesini e-posta sistemine aktar,Özden Çolak,Teknik — E-posta,Aşama 3,05.11.2026,Bekliyor,
-Ödeme sistemi araştır ve kur (İyzico / Shopier — Starter & Pro),Özden Çolak,Teknik — Ödeme,Aşama 3,10.11.2026,Bekliyor,Starter ₺149/ay · Pro ₺299/ay
+Kullanıcı arayüzü polish — admin & hesap sayfaları (spacing, font, layout),Özden Çolak,Teknik — UI,İP3,22.08.2026,Tamamlandı,
+Analytics kurulumu (Posthog veya GA4 — ürün analitik),Özden Çolak,Teknik — Altyapı,İP3,22.08.2026,Tamamlandı,Posthog EU — session replay + KVKK uyumlu + production deploy
+PayTR production modu aktif et — Starter & Pro plan ücretli satışını başlat,Özden Çolak,Teknik — Ödeme,Aşama 3,10.11.2026,Bekliyor,PayTR entegrasyonu zaten mevcut; test modu kaldırılacak
 Sosyal medya bioleri ve kapak görselleri güncelle,Sezgin Çolak,Pazarlama — Sosyal Medya,Aşama 1,20.08.2026,Tamamlandı,
 Bio linki güncelle,Sezgin Çolak,Pazarlama — Sosyal Medya,Aşama 1,25.08.2026,Tamamlandı,
 LinkedIn carousel (7 slayt) — kitap duyurusu,Sezgin Çolak,Pazarlama — Sosyal Medya,Aşama 1,27.08.2026,Bekliyor,
@@ -50,13 +52,13 @@ Meta'da ₺250 B versiyonu reklamı başlat,Sezgin Çolak,Pazarlama — Reklam,A
 Basın bülteni yaz,Sezgin Çolak,Pazarlama — Medya & PR,Aşama 2,13.10.2026,Bekliyor,
 Bülteni Girişim Haber + Webrazzi'ye gönder,Sezgin Çolak,Pazarlama — Medya & PR,Aşama 2,15.10.2026,Bekliyor,
 5 podcast'e konuşmacı teklifi at,Sezgin Çolak,Pazarlama — Medya & PR,Aşama 2,15.10.2026,Bekliyor,
-SEO Blog 1 yaz + yayınla: "KOBİler için 8 yapay zeka aracı",Sezgin Çolak,Pazarlama — SEO & Blog,Aşama 2,15.10.2026,Bekliyor,
+"SEO Blog 1 yaz + yayınla: ""KOBİler için 8 yapay zeka aracı""",Sezgin Çolak,Pazarlama — SEO & Blog,Aşama 2,15.10.2026,Bekliyor,
 3 Kasım 2. workshop duyurusu,Sezgin Çolak,Pazarlama — Workshop,Aşama 2,20.10.2026,Bekliyor,
 1. workshop geribildirimleriyle slaytları güncelle,Sezgin Çolak,Pazarlama — Workshop,Aşama 2,20.10.2026,Bekliyor,
 Logo/Mikro ortak webinar teklifi gönder,Sezgin Çolak,Pazarlama — Ortaklık,Aşama 2,20.10.2026,Bekliyor,
-SEO Blog 2 yaz + yayınla: "WhatsApp satış scripti nasıl yazılır?",Sezgin Çolak,Pazarlama — SEO & Blog,Aşama 2,22.10.2026,Bekliyor,
+"SEO Blog 2 yaz + yayınla: ""WhatsApp satış scripti nasıl yazılır?""",Sezgin Çolak,Pazarlama — SEO & Blog,Aşama 2,22.10.2026,Bekliyor,
 LinkedIn video serisi özet carousel paylaş,Sezgin Çolak,Pazarlama — Sosyal Medya,Aşama 2,22.10.2026,Bekliyor,
-Ekim aylık bülten hazırla + gönder,Sezgin Çolak,Pazarlama — E-posta,Aşama 2,27.10.2026,Bekliyor,"Konu: Bu ay KOBİlerin en çok sorduğu 3 soru"
+Ekim aylık bülten hazırla + gönder,Sezgin Çolak,Pazarlama — E-posta,Aşama 2,27.10.2026,Bekliyor,Konu: Bu ay KOBİlerin en çok sorduğu 3 soru
 3 Kasım workshop katılımcı listesi kontrolü,Sezgin Çolak,Pazarlama — Workshop,Aşama 2,29.10.2026,Bekliyor,
 Hatırlatma e-postası gönder (2. Workshop),Sezgin Çolak,Pazarlama — E-posta,Aşama 2,29.10.2026,Bekliyor,
 Ücretli plan sunumu için slayta bölüm ekle,Sezgin Çolak,Pazarlama — Workshop,Aşama 2,29.10.2026,Bekliyor,
@@ -65,3 +67,5 @@ Kasım planını KPI sonuçlarına göre düzenle,Sezgin Çolak,Pazarlama — Ra
 2. Workshop — canlı etkinlik (19:00–21:00),Sezgin Çolak,Pazarlama — Workshop,Aşama 3,05.11.2026,Bekliyor,Hedef: 50 katılımcı + ücretli plan tanıtımı
 Workshop geribildirimlerini topla ve analiz et,Sezgin Çolak,Pazarlama — Workshop,Aşama 3,10.11.2026,Bekliyor,
 Kasım–Aralık pazarlama planını güncelle,Sezgin Çolak,Pazarlama — Raporlama,Aşama 3,10.11.2026,Bekliyor,
+Tesekkur sayfasi (lead formu sonrasi),Özden Çolak,Teknik — Altyapı,Aşama 2,30.09.2026,Bekliyor,"Brevo varsayilan onay sayfasi Ingilizce. WordPress'te Turkce tesekkur sayfasi + ""spam klasorune bakin"" notu; Brevo Settings > Confirmation page alanlarina baglanacak."
+Workshop katilimci listesi uygulamada gorunsun,Özden Çolak,Teknik — Altyapı,Aşama 2,10.10.2026,Bekliyor,"Kayitlar su an YALNIZCA Brevo listesinde (""KolayKobi Workshop Kayit""); uygulamada hic izi yok, katilimci sayisi takip edilemiyor. Brevo API ile listeyi cekip yonetici panelinde goster. ON KOSUL: tum form duzenlemeleri bitsin (24 Eyl 2026 karari). Not: form cift onayli ise onaylamayan kayit listede gorunmez, sayim eksik cikar."
