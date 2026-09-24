@@ -51,6 +51,14 @@ const YONLENDIRME_HEDEFLERI = [
 
 // ─── Prompt builder ────────────────────────────────────────────────────────────
 
+/**
+ * Yönlendirme hedefini ("WhatsApp'a yönlendir") tek bir arama kelimesine
+ * indirger. Anahtar kelime listesine cümle değil terim girmeli.
+ */
+function sadeKelime(metin: string): string {
+  return metin.trim().split(/\s+/)[0]?.toLocaleLowerCase('tr') ?? 'iletişim'
+}
+
 function buildPrompt(f: {
   biz: string; sector: string; services: string; hours: string
   faqs: string[]; redirectGoal: string; redirectLink: string
@@ -100,6 +108,19 @@ SADECE JSON döndür:
   "ctaText": "<${f.biz} için teşvik cümlesi>"
 }
 SSS'de sorulan soruların tamamını yanıtla. Türkçe, samimi ve net olsun.
+
+TEMEL BİLGİ KARTLARI — sss_kartlari'nın EN BAŞINA şunları koy, cevaplarını
+yukarıdaki form bilgilerinden yaz:
+${f.hours.trim()
+  ? `1. Çalışma saatleri ve hangi günler açık olduğu → cevap: "${f.hours}"\n` +
+    `   anahtar kelimeler: ["çalışma saatleri", "kaçta açılıyor", "kaçta kapanıyor", "hangi günler", "cumartesi", "pazar", "açık mısınız"]\n`
+  : ''}${f.hours.trim() ? '2' : '1'}. Hangi hizmetleri sunduğu → cevap "${f.services}" bilgisinden
+   anahtar kelimeler: ["hizmet", "ne yapıyorsunuz", "neler sunuyorsunuz", "hizmetleriniz", "ürün"]
+${f.hours.trim() ? '3' : '2'}. ${f.redirectGoal} için nasıl ulaşılacağı → ${f.redirectLink || 'belirtilen iletişim kanalı'}
+   anahtar kelimeler: ["iletişim", "nasıl ulaşırım", "telefon", "randevu", "${sadeKelime(f.redirectGoal)}"]
+
+Bu kartlar ziyaretçinin en çok sorduğu şeyler; belge yüklenmiş olsa bile
+ATLANMAZ ve belge kartlarından ÖNCE gelir.
 
 ANAHTAR KELİMELER (test sohbetinin doğru kartı bulması buna bağlı): her kart için
 kullanıcının o konuyu sorarken yazabileceği 4-8 kelime ver. EŞANLAMLILARI ve

@@ -88,6 +88,12 @@ const ETKISIZ_KELIMELER = new Set([
   'olabilir', 'olabilirim', 'yapabilirim', 'alabilirim', 'verebilir',
   'gerekiyor', 'gerekir', 'oluyor', 'olacak', 'istiyorum', 'isterim',
   'lazim', 'bana', 'beni', 'benim', 'bunu', 'sonra', 'once', 'ama',
+  /*
+   * 'zaman': tek başına konu taşımayan ama AI listelerinde "ne zaman" olarak
+   * sık geçen bir kelime. Elenmezse alakasız her soruyu çekiyordu — ölçümde
+   * "siparişim ne zaman gelir" izin zamanaşımı kartını 4.0 puanla açıyordu.
+   */
+  'zaman',
 ])
 
 const VARSAYILAN_FALLBACK =
@@ -123,10 +129,26 @@ function anahtarKelimeler(metin: string): string[] {
  * AI listesi bu köprüyü kuruyor; eski kayıtlarda alan bulunmadığı için
  * soru metninden türetim yedek olarak korunuyor.
  */
-function kartKelimeleri(kart: SssKart): string[] {
-  const ai = (kart.anahtar_kelimeler ?? []).flatMap(anahtarKelimeler)
-  return [...new Set([...ai, ...anahtarKelimeler(kart.soru)])]
+function kartKelimeleri(kart: SssKart): { hepsi: string[]; aiden: Set<string> } {
+  const aiden = new Set((kart.anahtar_kelimeler ?? []).flatMap(anahtarKelimeler))
+  return { hepsi: [...new Set([...aiden, ...anahtarKelimeler(kart.soru)])], aiden }
 }
+
+/**
+ * AI'nın verdiği kelimelere uygulanan ağırlık çarpanı.
+ *
+ * `anahtar_kelimeler` modelin "kullanıcı bunu nasıl yazar" cevabı — kasıtlı
+ * bir ARAMA TERİMİ. Soru cümlesinde tesadüfen geçen bir kelimeden daha güçlü
+ * kanıt, dolayısıyla tek isabetli terim tek başına eşiği geçebilmeli.
+ *
+ * 24 Eyl 2026: "izin günlerimi paraya çevirebilir miyim" doğru kartı
+ * buluyordu ama 2.70 puanla 3.0 eşiğinin altında kalıp "bilmiyorum" diyordu —
+ * "paraya" yalnızca TEK kartta geçen, olabilecek en ayırt edici terim.
+ * Ölçüm (26 kartlık gerçek senaryo, 20 soru): çarpansız 15/20, 1.25 ile
+ * 18/20. Daha yükseği hiçbir soruyu düzeltmiyor, yalnızca yanlış cevapların
+ * puanını şişiriyor — o yüzden kazancın tamamını veren en küçük değer.
+ */
+const AI_AGIRLIK = 1.25
 
 /**
  * Türkçe eklemeli bir dil olduğu için tam kelime eşleşmesi yetersiz kalıyor:
@@ -158,7 +180,7 @@ function agirlikHesapla(kartlar: SssKart[]) {
   const N = kartlar.length
   const df = new Map<string, number>()
   for (const k of kartlar) {
-    for (const w of kartKelimeleri(k)) {
+    for (const w of kartKelimeleri(k).hepsi) {
       df.set(w, (df.get(w) ?? 0) + 1)
     }
   }
@@ -228,12 +250,13 @@ export function MiniChatbotTest({ bizName, ozelMesajlar, sssKartlari }: Props) {
         let puan = 0
         let ayirtEdici = 0
 
-        for (const kw of kartKelimeleri(k)) {
+        const { hepsi, aiden } = kartKelimeleri(k)
+        for (const kw of hepsi) {
           const tam = kullaniciKelimeleri.includes(kw)
           const kok = !tam && kullaniciKelimeleri.some((uk) => kokEslesir(kw, uk))
           if (!tam && !kok) continue
 
-          puan += agirlik.idf(kw) * (tam ? 1 : 0.6)
+          puan += agirlik.idf(kw) * (tam ? 1 : 0.6) * (aiden.has(kw) ? AI_AGIRLIK : 1)
           if (!agirlik.genelMi(kw)) ayirtEdici++
         }
 

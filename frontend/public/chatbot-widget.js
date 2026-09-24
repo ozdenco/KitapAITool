@@ -67,7 +67,11 @@
   var ETKISIZ = ['nedir','nasil','nerede','neden','hangi','kac','kadar','icin','veya','ile','mi','mu','musunuz','misiniz','var','yok','bir','siz','sizin','bizim','olan','yapabilir','alabilir','sunuyor','calisiyor','ediyor',
     'miyim','miyiz','muyum','muyuz','midir','mudur',
     'kullanabilir','kullanabilirim','edebilir','edebilirim','olabilir','olabilirim','yapabilirim','alabilirim','verebilir',
-    'gerekiyor','gerekir','oluyor','olacak','istiyorum','isterim','lazim','bana','beni','benim','bunu','sonra','once','ama']
+    'gerekiyor','gerekir','oluyor','olacak','istiyorum','isterim','lazim','bana','beni','benim','bunu','sonra','once','ama',
+    // 'zaman': AI listelerinde "ne zaman" olarak sık geçer ama tek başına konu
+    // taşımaz. Elenmezse alakasız soruları çekiyordu — "siparişim ne zaman
+    // gelir" izin zamanaşımı kartını 4.0 puanla açıyordu (24 Eyl 2026 ölçümü).
+    'zaman']
 
   function kelimeler(metin) {
     return sadelestir(metin)
@@ -86,20 +90,37 @@
    * metninden türetim yedek olarak kalıyor.
    */
   function kartKelimeleri(kart) {
-    var cikti = [], gorulen = {}, i, j, parca
+    var hepsi = [], gorulen = {}, aiden = {}, i, j, parca
     var ai = kart.anahtar_kelimeler || []
     for (i = 0; i < ai.length; i++) {
       parca = kelimeler(ai[i])
       for (j = 0; j < parca.length; j++) {
-        if (!gorulen[parca[j]]) { gorulen[parca[j]] = true; cikti.push(parca[j]) }
+        aiden[parca[j]] = true
+        if (!gorulen[parca[j]]) { gorulen[parca[j]] = true; hepsi.push(parca[j]) }
       }
     }
     parca = kelimeler(kart.soru)
     for (j = 0; j < parca.length; j++) {
-      if (!gorulen[parca[j]]) { gorulen[parca[j]] = true; cikti.push(parca[j]) }
+      if (!gorulen[parca[j]]) { gorulen[parca[j]] = true; hepsi.push(parca[j]) }
     }
-    return cikti
+    return { hepsi: hepsi, aiden: aiden }
   }
+
+  /**
+   * AI'nın verdiği kelimelere uygulanan ağırlık çarpanı.
+   *
+   * `anahtar_kelimeler` modelin "ziyaretçi bunu nasıl yazar" cevabı — kasıtlı
+   * bir ARAMA TERİMİ. Soru cümlesinde tesadüfen geçen bir kelimeden daha güçlü
+   * kanıt, dolayısıyla tek isabetli terim tek başına eşiği geçebilmeli.
+   *
+   * 24 Eyl 2026: "izin günlerimi paraya çevirebilir miyim" doğru kartı
+   * buluyordu ama 2.70 puanla 3.0 eşiğinin altında kalıp "bilmiyorum" diyordu;
+   * "paraya" yalnızca TEK kartta geçen, olabilecek en ayırt edici terimdi.
+   * Ölçüm (26 kartlık gerçek senaryo, 20 soru): çarpansız 15/20, 1.25 ile
+   * 18/20. Daha yükseği hiçbir soruyu düzeltmiyor, yalnızca yanlış cevapların
+   * puanını şişiriyor.
+   */
+  var AI_AGIRLIK = 1.25
 
   /**
    * Türkçe eklemeli dil: "fiyat" ile "fiyatlarınız" eşleşmeli.
@@ -123,7 +144,7 @@
     var N = kartlar.length
     var df = {}
     for (var i = 0; i < N; i++) {
-      var kw = kartKelimeleri(kartlar[i])
+      var kw = kartKelimeleri(kartlar[i]).hepsi
       for (var j = 0; j < kw.length; j++) df[kw[j]] = (df[kw[j]] || 0) + 1
     }
     return {
@@ -171,7 +192,8 @@
     var enIyi = null, enIyiSkor = 0
 
     for (var i = 0; i < kartlar.length; i++) {
-      var soruKelimeleri = kartKelimeleri(kartlar[i])
+      var kartKelime = kartKelimeleri(kartlar[i])
+      var soruKelimeleri = kartKelime.hepsi
       var skor = 0, ayirtEdici = 0
 
       for (var s = 0; s < soruKelimeleri.length; s++) {
@@ -185,7 +207,8 @@
         }
         if (!tam && !kok) continue
 
-        skor += ag.idf(w) * (tam ? 1 : 0.6)   // kök eşleşmesi kısmi puan alır
+        // kök eşleşmesi kısmi puan alır; AI'nın verdiği terim fazladan ağırlık
+        skor += ag.idf(w) * (tam ? 1 : 0.6) * (kartKelime.aiden[w] ? AI_AGIRLIK : 1)
         if (!ag.genelMi(w)) ayirtEdici++       // yalnızca ayırt edici kelime sayılır
       }
 
