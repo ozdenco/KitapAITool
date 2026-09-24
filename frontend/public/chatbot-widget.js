@@ -40,8 +40,21 @@
     return
   }
 
-  // Widget'ın barındığı origin (script src'sinden türetilir; gömülü biçimde gerekmez)
-  var apiKok = script ? new URL(script.src, location.href).origin : ''
+  /*
+   * API kökü yalnızca BAĞLI biçimde gerekir ve yalnızca orada hesaplanır.
+   *
+   * Gömülü (tek parça) biçimde script SATIR İÇİ olduğu için `script.src` boş
+   * string; `new URL('', location.href)` ise bazı bağlamlarda (ör. srcdoc
+   * çerçevesi, about:blank) "Invalid URL" fırlatıyor ve widget hiç
+   * başlamıyordu (24 Eyl 2026'da ölçüldü). Gömülü biçim ağa çıkmadığına göre
+   * bu değeri hesaplamanın da anlamı yok.
+   *
+   * Bağlı biçimde script satır içiyse (src yok) boş kök bırakılır; fetch o
+   * zaman göreli adresle sayfanın kendi kökenine gider — makul davranış.
+   */
+  var apiKok = (!gomulu && script && script.src)
+    ? new URL(script.src, location.href).origin
+    : ''
   var RENK = (script && script.getAttribute('data-renk')) || (gomulu && gomulu._renk) || '#1D9E75'
 
   // ─── Eşleştirme mantığı (KolayKOBİ önizlemesiyle aynı) ───────────────────

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { DOSYA_ADI, gommeDosyasiOlustur, tekParcaKod } from '@/lib/chatbotGommeDosyasi'
 
 interface Props {
   resultId: string
@@ -13,12 +14,11 @@ interface Props {
  * ziyaretçi sorularını anahtar kelime eşleştirmesiyle yanıtlar — ziyaretçi
  * mesajı başına yapay zeka çağrısı YAPILMAZ, dolayısıyla ek token maliyeti yoktur.
  */
-/** İndirilen dosyanın adı — müşteri bunu kendi sitesine yükleyecek. */
-const DOSYA_ADI = 'kolaykobi-chatbot.js'
-
 export function SiteyeEkleKarti({ resultId, bizName }: Props) {
   const [kopyalandi, setKopyalandi] = useState(false)
-  const [indirmeDurumu, setIndirmeDurumu] = useState<'hazir' | 'calisiyor' | 'hata'>('hazir')
+  const [indirmeDurumu, setIndirmeDurumu] = useState<
+    'hazir' | 'indiriliyor' | 'kopyalaniyor' | 'kopyalandi' | 'hata'
+  >('hazir')
 
   const baslik = bizName.trim() || 'Destek'
 
@@ -40,45 +40,25 @@ export function SiteyeEkleKarti({ resultId, bizName }: Props) {
   }
 
   /**
-   * Senaryoyu widget koduyla BİRLEŞTİRİP tek dosya olarak indirir.
+   * Gömülü sürümü üretip ya dosya olarak indirir ya da panoya kopyalar.
    *
-   * Amaç: müşteri KolayKOBİ'ye bağımlı kalmasın. İndirilen dosyada senaryo
-   * `window.__KKB_SENARYO__` olarak gömülüdür; widget bunu görünce ağa hiç
-   * çıkmaz (bkz. public/chatbot-widget.js başındaki "İKİ ÇALIŞMA BİÇİMİ").
-   *
-   * Bedeli açıkça söylenmeli: senaryo değişince dosyayı yeniden indirip
-   * yüklemeleri gerekir — kartın altındaki not bunu yazıyor.
+   * İki çıkış da aynı içerikten türüyor; ayrım yalnızca müşterinin altyapısı:
+   * WordPress `.js` yüklemesine izin vermediği için oradaki tek pratik yol
+   * "tek parça kod" — bkz. lib/chatbotGommeDosyasi.ts.
    */
-  const indir = async () => {
-    setIndirmeDurumu('calisiyor')
+  const gomuluUret = async (bicim: 'dosya' | 'pano') => {
+    setIndirmeDurumu(bicim === 'dosya' ? 'indiriliyor' : 'kopyalaniyor')
     try {
-      const [widgetYanit, senaryoYanit] = await Promise.all([
-        fetch('/chatbot-widget.js'),
-        fetch(`/api/public/chatbot/${encodeURIComponent(resultId)}`),
-      ])
-      if (!widgetYanit.ok) throw new Error(`Widget indirilemedi (${widgetYanit.status})`)
-      if (!senaryoYanit.ok) throw new Error(`Senaryo okunamadı (${senaryoYanit.status})`)
+      const icerik = await gommeDosyasiOlustur({ resultId, baslik })
 
-      const widgetKodu = await widgetYanit.text()
-      const senaryo = (await senaryoYanit.json()) as Record<string, unknown>
+      if (bicim === 'pano') {
+        await navigator.clipboard.writeText(tekParcaKod(icerik))
+        setIndirmeDurumu('kopyalandi')
+        setTimeout(() => setIndirmeDurumu('hazir'), 2500)
+        return
+      }
 
-      const tarih = new Date().toLocaleDateString('tr-TR')
-      const dosya =
-        `/*!\n` +
-        ` * KolayKOBİ Chatbot — ${baslik}\n` +
-        ` * Oluşturulma: ${tarih}\n` +
-        ` *\n` +
-        ` * Bu dosya kendi kendine yeter: senaryo içine gömülüdür, KolayKOBİ'ye\n` +
-        ` * hiçbir istek göndermez. Sitenizin kök dizinine koyup şu satırı\n` +
-        ` * </body> etiketinden hemen önce ekleyin:\n` +
-        ` *   ${kendiKodu}\n` +
-        ` *\n` +
-        ` * Senaryoyu değiştirirseniz bu dosyayı yeniden indirip değiştirin.\n` +
-        ` */\n` +
-        `window.__KKB_SENARYO__ = ${JSON.stringify({ ...senaryo, _bizName: baslik })};\n\n` +
-        widgetKodu
-
-      const url = URL.createObjectURL(new Blob([dosya], { type: 'text/javascript' }))
+      const url = URL.createObjectURL(new Blob([icerik], { type: 'text/javascript' }))
       const bag = document.createElement('a')
       bag.href = url
       bag.download = DOSYA_ADI
@@ -86,7 +66,7 @@ export function SiteyeEkleKarti({ resultId, bizName }: Props) {
       URL.revokeObjectURL(url)
       setIndirmeDurumu('hazir')
     } catch (error) {
-      console.error('Chatbot dosyası oluşturulamadı:', error)
+      console.error('Chatbot gömülü sürümü oluşturulamadı:', error)
       setIndirmeDurumu('hata')
     }
   }
@@ -183,36 +163,88 @@ export function SiteyeEkleKarti({ resultId, bizName }: Props) {
               Ya da kendi sunucunuzda barındırın
             </p>
             <p className="text-[11.5px] text-[#6B6963] leading-relaxed">
-              Senaryo dosyanın içine gömülür; chatbot <strong>KolayKOBİ&apos;ye hiçbir istek
-              göndermez</strong> ve biz olmasak da çalışır. Dosyayı sitenizin kök dizinine
-              yükleyip şu satırı ekleyin:
+              Senaryo kodun içine gömülür; chatbot <strong>KolayKOBİ&apos;ye hiçbir istek
+              göndermez</strong> ve biz olmasak da çalışır. Altyapınıza göre iki yol var:
             </p>
           </div>
 
-          <pre className="bg-[#F7F6F2] border border-[#E2E0D8] rounded-lg px-3 py-2 text-[11px] overflow-x-auto">
-            <code>{kendiKodu}</code>
-          </pre>
+          {/*
+            İKİ ÇIKIŞ BİÇİMİ — ikisi de aynı içerikten türüyor, ayrım
+            müşterinin altyapısında: WordPress Ortam Kitaplığı `.js`
+            yüklemesine varsayılan olarak izin vermiyor ("Sorry, this file
+            type is not permitted for security reasons"), dolayısıyla
+            WordPress kullanıcılarının pratikte tek yolu "tek parça kod".
+            Dosya seçeneği FTP/dosya yöneticisi olanlar için duruyor.
+          */}
+          <div className="flex flex-col gap-3">
+            <div className="rounded-xl border border-[#E2E0D8] p-3 flex flex-col gap-2">
+              <p className="text-[11.5px] font-semibold text-[#1C1B19]">
+                WordPress, Wix, Shopify kullanıyorsanız
+              </p>
+              <p className="text-[11px] text-[#6B6963] leading-relaxed">
+                Bu platformlar <code className="px-1 bg-[#F7F6F2] rounded">.js</code> dosyası
+                yüklemenize genelde izin vermez. Kodu tek parça alın ve temanızın
+                <em> footer / body sonu kodu</em> alanına yapıştırın — dosya yüklemeye gerek kalmaz.
+              </p>
+              <div className="flex items-center gap-2 flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => void gomuluUret('pano')}
+                  disabled={indirmeDurumu === 'kopyalaniyor'}
+                  className="px-4 py-2 rounded-lg text-[13px] font-semibold bg-[#1D9E75] text-white hover:bg-[#178a65] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {indirmeDurumu === 'kopyalaniyor'
+                    ? 'Hazırlanıyor…'
+                    : indirmeDurumu === 'kopyalandi'
+                      ? '✓ Kopyalandı'
+                      : '📋 Tek parça kodu kopyala'}
+                </button>
+                <span className="text-[11px] text-[#9A9792]">yaklaşık 26 KB</span>
+              </div>
+            </div>
 
-          <div className="flex items-center gap-2 flex-wrap">
-            <button
-              type="button"
-              onClick={() => void indir()}
-              disabled={indirmeDurumu === 'calisiyor'}
-              className="px-4 py-2 rounded-lg text-[13px] font-semibold border border-[#1D9E75] text-[#085041] hover:bg-[#F0FAF6] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {indirmeDurumu === 'calisiyor' ? 'Hazırlanıyor…' : `⬇ ${DOSYA_ADI} indir`}
-            </button>
+            <div className="rounded-xl border border-[#E2E0D8] p-3 flex flex-col gap-2">
+              <p className="text-[11.5px] font-semibold text-[#1C1B19]">
+                Sunucuya dosya yükleyebiliyorsanız
+              </p>
+              <p className="text-[11px] text-[#6B6963] leading-relaxed">
+                Dosyayı sitenizin kök dizinine yükleyip şu satırı ekleyin
+                (WordPress&apos;te FTP ya da hosting panelindeki dosya yöneticisiyle
+                <code className="px-1 bg-[#F7F6F2] rounded">/wp-content/uploads/</code> altına
+                koyup tam adresiyle çağırabilirsiniz):
+              </p>
+              <pre className="bg-[#F7F6F2] border border-[#E2E0D8] rounded-lg px-3 py-2 text-[11px] overflow-x-auto">
+                <code>{kendiKodu}</code>
+              </pre>
+              <button
+                type="button"
+                onClick={() => void gomuluUret('dosya')}
+                disabled={indirmeDurumu === 'indiriliyor'}
+                className="self-start px-4 py-2 rounded-lg text-[13px] font-semibold border border-[#1D9E75] text-[#085041] hover:bg-[#F0FAF6] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {indirmeDurumu === 'indiriliyor' ? 'Hazırlanıyor…' : `⬇ ${DOSYA_ADI} indir`}
+              </button>
+            </div>
+
             {indirmeDurumu === 'hata' && (
-              <span className="text-[11px] text-[#D0483C]">
-                Dosya oluşturulamadı. Sayfayı yenileyip tekrar deneyin.
-              </span>
+              <p className="text-[11px] text-[#D0483C]">
+                Oluşturulamadı. Sayfayı yenileyip tekrar deneyin.
+              </p>
             )}
           </div>
 
+          <div className="bg-[#FFF9E8] border border-[#F0DFA8] rounded-xl px-3.5 py-3">
+            <p className="text-[11px] text-[#7A5C10] leading-relaxed">
+              <strong>Bu iki yöntemden yalnızca BİRİNİ kullanın.</strong> Hem yukarıdaki bağlı
+              kodu hem de buradaki gömülü sürümü aynı sayfaya eklerseniz{' '}
+              <strong>iki chatbot birden</strong> açılır.
+            </p>
+          </div>
+
           <p className="text-[11px] text-[#9A9792] leading-relaxed">
-            <strong>Dikkat:</strong> bu dosya o anki senaryonun kopyasıdır. Senaryoyu
-            değiştirirseniz güncellemeler siteye kendiliğinden yansımaz — dosyayı yeniden
-            indirip değiştirmeniz gerekir. Yukarıdaki bağlı kodda ise güncellemeler
+            <strong>Dikkat:</strong> bu gömülü sürüm o anki senaryonun kopyasıdır. Senaryoyu
+            değiştirirseniz güncellemeler siteye kendiliğinden yansımaz — kodu/dosyayı
+            yeniden alıp değiştirmeniz gerekir. Yukarıdaki bağlı kodda ise güncellemeler
             kendiliğinden geçerli olur.
           </p>
         </div>
