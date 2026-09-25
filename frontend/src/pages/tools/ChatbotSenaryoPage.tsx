@@ -115,7 +115,7 @@ ${f.hours.trim()
   ? `1. Çalışma saatleri ve hangi günler açık olduğu → cevap: "${f.hours}"\n` +
     `   anahtar kelimeler: ["çalışma saatleri", "kaçta açılıyor", "kaçta kapanıyor", "hangi günler", "cumartesi", "pazar", "açık mısınız"]\n`
   : ''}${f.hours.trim() ? '2' : '1'}. Hangi hizmetleri sunduğu → cevap "${f.services}" bilgisinden
-   anahtar kelimeler: ["hizmet", "ne yapıyorsunuz", "neler sunuyorsunuz", "hizmetleriniz", "ürün"]
+   anahtar kelimeler: ["hizmetleriniz", "ürünleriniz", "ürünler", "ne satıyorsunuz", "ne yapıyorsunuz", "neler sunuyorsunuz", "hizmet"]
 ${f.hours.trim() ? '3' : '2'}. ${f.redirectGoal} için nasıl ulaşılacağı → ${f.redirectLink || 'belirtilen iletişim kanalı'}
    anahtar kelimeler: ["iletişim", "nasıl ulaşırım", "telefon", "randevu", "${sadeKelime(f.redirectGoal)}"]
 
@@ -130,6 +130,14 @@ kartı için ["rapor", "hastalık", "istirahat", "sağlık raporu", "hasta"];
 "Pazar ve resmi tatiller" kartı için ["hafta sonu", "haftasonu", "pazar",
 "cumartesi", "resmi tatil", "bayram"]. Soru cümlesindeki kelimeleri aynen
 tekrarlamak yetmez.
+
+ÇIPLAK KÖK DEĞİL, ZİYARETÇİNİN YAZDIĞI EKLİ BİÇİM: "ürün" yerine
+"ürünleriniz", "hizmet" yerine "hizmetleriniz", "fiyat" yerine
+"fiyatlarınız" gibi biçimleri de listeye koy; "ne satıyorsunuz",
+"neler yapıyorsunuz" gibi günlük kalıpları da ekle. Sebebi ölçüldü:
+çıplak kök birçok kartta birden geçtiği için ayırt edici olmuyor ve
+"ürünleriniz hakkında bilgi verir misiniz" gibi GENEL sorular cevapsız
+kalıyor; ekli biçim tek kartta geçtiği için soruyu doğru karta taşıyor.
 ${f.fileText
   /*
    * 23 Eyl 2026: burada "en az 20, mümkünse 30 kart" yazıyordu. 21 konulu bir
