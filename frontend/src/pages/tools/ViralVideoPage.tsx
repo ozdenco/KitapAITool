@@ -119,6 +119,12 @@ export function ViralVideoPage() {
         videoUrl,
         videoDesc,
         sector,
+          /* Geçmiş Çıktılar'da "bu çıktı hangi bilgilerle üretildi" kartı için. */
+        formBilgileri: {
+          'İşletme': bizName, 'Sektör': sector, 'Video linki': videoUrl,
+          'Video açıklaması': videoDesc, 'Web sitesi': bizUrl,
+          'Marka tonu': tones.join(', ') || 'seçilmedi', 'Ek not': extra,
+        },
         biz:    bizName || undefined,
         bizUrl: bizUrl  || undefined,
         tones,

@@ -171,7 +171,19 @@ export function RakipAnalizPage() {
       const competitors = [rakip1, rakip2, rakip3]
         .filter((r) => r.ad.trim())
         .map((r) => ({ name: r.ad, ...(r.web ? { web: r.web } : {}) }))
-      const res = await api.post('/tools/rakip-analiz/run', { prompt, competitors, isletmeAdi: biz })
+      const res = await api.post('/tools/rakip-analiz/run', {
+        prompt,
+        competitors,
+        isletmeAdi: biz,
+          /* Geçmiş Çıktılar'da "bu çıktı hangi bilgilerle üretildi" kartı için. */
+        formBilgileri: {
+          'İşletme': biz, 'Sektör': sector, 'Web sitesi': web,
+          'Aktif platformlar': platforms.join(', ') || 'seçilmedi',
+          'Diğer platform': digerPlatform,
+          'Güçlü yönler': strengths, 'Fiyat segmenti': myPrice,
+          'Rakipler': [rakip1, rakip2, rakip3].map((r) => r.ad).filter(Boolean).join(', '),
+        },
+      })
       // n8n iki alan döndürür: content (MiniMax analizi) + geminiPlatforms (sosyal medya araştırması)
       const content = extractAiContent(res.data)
       const parsed = parseAiJson<RakipResult>(content)

@@ -139,7 +139,16 @@ export function MusteriPersonaPage() {
   const mutation = useMutation({
     mutationFn: async () => {
       const prompt = buildPrompt({ biz, sector, city, service, age, price, current, pains })
-      const res = await api.post('/tools/musteri-persona/run', { prompt, isletmeAdi: biz })
+      const res = await api.post('/tools/musteri-persona/run', {
+        prompt,
+        isletmeAdi: biz,
+          /* Geçmiş Çıktılar'da "bu çıktı hangi bilgilerle üretildi" kartı için. */
+        formBilgileri: {
+          'İşletme': biz, 'Sektör': sector, 'Şehir': city, 'Hizmet / ürün': service,
+          'Yaş aralığı': age, 'Fiyat segmenti': price, 'Mevcut müşteriler': current,
+          'Bilinen sorunlar': pains,
+        },
+      })
       const content = extractAiContent(res.data)
       return parseAiJson<PersonaResponse>(content)
     },

@@ -266,7 +266,18 @@ export function ChatbotSenaryoPage() {
   const mutation = useMutation({
     mutationFn: async () => {
       const prompt = buildPrompt({ biz, sector, services, hours, faqs, redirectGoal, redirectLink, fileText })
-      const res = await api.post('/tools/chatbot-senaryo/run', { prompt, isletmeAdi: biz })
+      const res = await api.post('/tools/chatbot-senaryo/run', {
+        prompt,
+        isletmeAdi: biz,
+          /* Geçmiş Çıktılar'da "bu çıktı hangi bilgilerle üretildi" kartı için. */
+        formBilgileri: {
+          'İşletme': biz, 'Sektör': sector, 'Sunulan hizmetler': services,
+          'Mesai saatleri': hours || 'belirtilmedi',
+          'Yönlendirme hedefi': redirectGoal, 'Yönlendirme linki': redirectLink,
+          'SSS sayısı': String(faqs.filter(Boolean).length),
+          'Yüklenen belge': fileName ?? 'yok',
+        },
+      })
       const content = extractAiContent(res.data)
       // Backend kaydettiği ToolResult Id'sini header ile döndürür; gömme kodu bunu kullanır
       const resultId = (res.headers?.['x-result-id'] as string | undefined) ?? null

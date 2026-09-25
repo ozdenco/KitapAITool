@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '@/lib/api'
 import { TOOLS } from '@/lib/tools'
 import { parseAiJson, extractAiContent } from '@/lib/parseAiJson'
@@ -40,6 +40,22 @@ function getToolMeta(toolId: string) {
 // ─── Expanded result panel ────────────────────────────────────────────────────
 
 function ResultDetailPanel({ result: summary, onClose }: { result: ResultSummary; onClose: () => void }) {
+  const queryClient = useQueryClient()
+  /*
+   * İki aşamalı silme: ilk tık uyarıyı açar, ikinci tık siler. Tarayıcının
+   * confirm() kutusu yerine satır içi uyarı tercih edildi — kullanıcı neyi
+   * sildiğini ekranda görmeye devam ediyor ve uyarı Türkçe.
+   */
+  const [silmeOnayi, setSilmeOnayi] = useState(false)
+
+  const silme = useMutation({
+    mutationFn: () => api.delete(`/tools/results/${summary.id}`),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['tool-results'] })
+      onClose()
+    },
+  })
+
   const { data, isLoading, isError } = useQuery<ResultDetail>({
     queryKey: ['tool-result', summary.id],
     queryFn: () => api.get(`/tools/results/${summary.id}`).then((r) => r.data?.data ?? r.data),
@@ -133,6 +149,12 @@ function ResultDetailPanel({ result: summary, onClose }: { result: ResultSummary
             pdfDosyaAdi={`${meta.name}_${formatDate(data.createdAt)}`}
           />
           <button
+            onClick={() => setSilmeOnayi((v) => !v)}
+            className="text-[11px] text-[#9A9792] hover:text-red-600 transition-colors px-2 py-1.5 rounded-lg hover:bg-red-50"
+          >
+            🗑 Sil
+          </button>
+          <button
             onClick={onClose}
             className="text-[11px] text-[#9A9792] hover:text-[#3A3935] transition-colors px-2 py-1.5 rounded-lg hover:bg-[#F7F6F2]"
           >
@@ -140,6 +162,33 @@ function ResultDetailPanel({ result: summary, onClose }: { result: ResultSummary
           </button>
         </div>
       </div>
+
+      {silmeOnayi && (
+        <div className="px-5 py-3.5 bg-[#FFF5F5] border-b border-[#F3C9C9] no-print">
+          <p className="text-[12.5px] text-[#9B2C2C] leading-relaxed mb-2.5">
+            <strong>Bu çıktı kalıcı olarak silinecek.</strong> Silinen çıktıya bir daha
+            erişemezsiniz; geri alınamaz. Saklamak istiyorsanız önce PDF olarak indirin.
+          </p>
+          <div className="flex items-center gap-2 flex-wrap">
+            <button
+              onClick={() => silme.mutate()}
+              disabled={silme.isPending}
+              className="px-3.5 py-1.5 rounded-lg text-[12px] font-semibold bg-[#C53030] text-white hover:bg-[#9B2C2C] transition-colors disabled:opacity-50"
+            >
+              {silme.isPending ? 'Siliniyor…' : 'Evet, kalıcı olarak sil'}
+            </button>
+            <button
+              onClick={() => setSilmeOnayi(false)}
+              className="px-3.5 py-1.5 rounded-lg text-[12px] border border-[#D3D1C7] text-[#3A3935] hover:bg-white transition-colors"
+            >
+              Vazgeç
+            </button>
+            {silme.isError && (
+              <span className="text-[11px] text-[#C53030]">Silinemedi, tekrar deneyin.</span>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Detail content — .gecmis-print-target: targeted @media print */}
       <div ref={ciktiRef} className="p-5 gecmis-print-target">
@@ -286,6 +335,7 @@ export function GecmisCiktilarPage() {
 
   const { data: results, isLoading } = useQuery<ResultSummary[]>({
     queryKey: ['tool-results'],
+    // Sunucu varsayılanı artık tamamını döndürüyor (eskiden 50 ile sınırlıydı)
     queryFn: () => api.get('/tools/results').then((r) => r.data?.data ?? r.data ?? []),
   })
 

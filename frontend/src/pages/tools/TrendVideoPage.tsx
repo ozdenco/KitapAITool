@@ -290,7 +290,15 @@ export function TrendVideoPage() {
     try {
       const res = await api.post<{ job_id: string }>(
         '/tools/trend-video/run',
-        { biz: bizName, isletmeAdi: bizName, sector, tones, audience, note }
+        {
+          biz: bizName, isletmeAdi: bizName, sector, tones, audience, note,
+          /* Geçmiş Çıktılar'da "bu çıktı hangi bilgilerle üretildi" kartı için. */
+          formBilgileri: {
+            'İşletme': bizName, 'Sektör': sector,
+            'Marka tonu': tones.join(', ') || 'seçilmedi',
+            'Hedef kitle': audience, 'Ek not': note,
+          },
+        }
       )
       startPolling(res.data.job_id)
     } catch (err: unknown) {

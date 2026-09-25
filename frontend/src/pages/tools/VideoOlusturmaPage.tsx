@@ -495,6 +495,14 @@ export function VideoOlusturmaPage() {
     mutationFn: async () => {
       const res = await api.post<ViralVideoResult>('/tools/video-olusturma/run', {
         isletmeAdi: bizName,
+          /* Geçmiş Çıktılar'da "bu çıktı hangi bilgilerle üretildi" kartı için. */
+        formBilgileri: {
+          'İşletme': bizName, 'Sektör': sector, 'Video linki': videoUrl,
+          'Video açıklaması': videoDesc, 'Web sitesi': bizUrl,
+          'Sunulan hizmetler': hizmetler,
+          'Marka tonu': tones.join(', ') || 'seçilmedi', 'Ek not': extra,
+          'Mod': mod,
+        },
         /*
          * KAMPANYA MODUNDA LİNK GÖNDERİLMEZ (13 Eyl 2026). Alan gizleniyordu ama
          * state temizlenmiyordu; önceki denemeden kalan YouTube linki gövdeye

@@ -164,7 +164,16 @@ export function GorunurlukSkoruPage() {
   const mutation = useMutation({
     mutationFn: async () => {
       const prompt = buildPrompt({ name, sector, city, web, platforms, platformOther, liExists, liActive, goal })
-      const res = await api.post('/tools/gorunurluk-skoru/run', { prompt, isletmeAdi: name })
+      const res = await api.post('/tools/gorunurluk-skoru/run', {
+        prompt,
+        isletmeAdi: name,
+          /* Geçmiş Çıktılar'da "bu çıktı hangi bilgilerle üretildi" kartı için. */
+        formBilgileri: {
+          'İşletme': name, 'Sektör': sector, 'Şehir': city, 'Web sitesi': web,
+          'Aktif platformlar': platforms.join(', ') || 'seçilmedi',
+          'Diğer platform': platformOther, 'Hedef': goal,
+        },
+      })
       const content = extractAiContent(res.data)
       return parseAiJson<ScoreResult>(content)
     },

@@ -218,7 +218,15 @@ export function AiGorunurlukPage() {
         q_media: qMedia, q_dirs: qDirs, q_cert: qCert,
         q_keywords: qKeywords, q_lang: qLang, extra,
       })
-      const res = await api.post('/tools/ai-gorunurluk/run', { prompt, isletmeAdi: biz })
+      const res = await api.post('/tools/ai-gorunurluk/run', {
+        prompt,
+        isletmeAdi: biz,
+          /* Geçmiş Çıktılar'da "bu çıktı hangi bilgilerle üretildi" kartı için. */
+        formBilgileri: {
+          'İşletme': biz, 'Sektör': sector, 'Şehir': city, 'Web sitesi': web,
+          'Anahtar kelimeler': qKeywords, 'Ek not': extra,
+        },
+      })
       const content = extractAiContent(res.data)
       return parseAiJson<AiGorunurlukResult>(content)
     },

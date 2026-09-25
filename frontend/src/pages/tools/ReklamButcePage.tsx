@@ -134,7 +134,16 @@ export function ReklamButcePage() {
   const mutation = useMutation({
     mutationFn: async () => {
       const prompt = buildPrompt({ biz, sector, budget, goal, audience, channels, channelOther })
-      const res = await api.post('/tools/reklam-butce/run', { prompt, isletmeAdi: biz })
+      const res = await api.post('/tools/reklam-butce/run', {
+        prompt,
+        isletmeAdi: biz,
+          /* Geçmiş Çıktılar'da "bu çıktı hangi bilgilerle üretildi" kartı için. */
+        formBilgileri: {
+          'İşletme': biz, 'Sektör': sector, 'Aylık bütçe': budget, 'Hedef': goal,
+          'Hedef kitle': audience,
+          'Kanallar': channels.join(', ') || 'seçilmedi', 'Diğer kanal': channelOther,
+        },
+      })
       const content = extractAiContent(res.data)
       return parseAiJson<ReklamResult>(content)
     },

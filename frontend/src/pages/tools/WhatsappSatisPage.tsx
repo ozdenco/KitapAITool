@@ -129,7 +129,16 @@ export function WhatsappSatisPage() {
   const mutation = useMutation({
     mutationFn: async () => {
       const prompt = buildPrompt({ biz, sector, service, price, target, itirazlar, advantage })
-      const res = await api.post('/tools/whatsapp-satis/run', { prompt, isletmeAdi: biz })
+      const res = await api.post('/tools/whatsapp-satis/run', {
+        prompt,
+        isletmeAdi: biz,
+          /* Geçmiş Çıktılar'da "bu çıktı hangi bilgilerle üretildi" kartı için. */
+        formBilgileri: {
+          'İşletme': biz, 'Sektör': sector, 'Hizmet / ürün': service, 'Fiyat': price,
+          'Hedef kitle': target, 'Avantajınız': advantage,
+          'Seçilen itirazlar': itirazlar.filter(Boolean).join(' · ') || 'seçilmedi',
+        },
+      })
       const content = extractAiContent(res.data)
       return parseAiJson<WhatsappResult>(content)
     },

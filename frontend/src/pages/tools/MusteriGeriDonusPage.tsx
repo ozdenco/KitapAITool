@@ -136,7 +136,17 @@ export function MusteriGeriDonusPage() {
   const mutation = useMutation({
     mutationFn: async () => {
       const prompt = buildPrompt({ biz, sector, frequency, service, channels, currentMethod, note })
-      const res = await api.post('/tools/musteri-geri-donus/run', { prompt, isletmeAdi: biz })
+      const res = await api.post('/tools/musteri-geri-donus/run', {
+        prompt,
+        isletmeAdi: biz,
+          /* Geçmiş Çıktılar'da "bu çıktı hangi bilgilerle üretildi" kartı için. */
+        formBilgileri: {
+          'İşletme': biz, 'Sektör': sector, 'Satın alma sıklığı': frequency,
+          'Hizmet / ürün': service,
+          'İletişim kanalları': channels.join(', ') || 'seçilmedi',
+          'Mevcut yöntem': currentMethod, 'Ek not': note,
+        },
+      })
       const content = extractAiContent(res.data)
       return parseAiJson<GeriDonusResult>(content)
     },

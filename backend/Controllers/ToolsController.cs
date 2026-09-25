@@ -87,9 +87,19 @@ public class ToolsController(
 
     /// <summary>GET /api/tools/results — Kullanıcının kayıtlı çıktıları (son 50 kayıt).</summary>
     [HttpGet("results")]
-    public async Task<IActionResult> GetResults([FromQuery] int limit = 50)
+    public async Task<IActionResult> GetResults([FromQuery] int limit = VARSAYILAN_KAYIT_SINIRI)
     {
-        var clampedLimit = Math.Min(limit, 100);
+        /*
+         * Eskiden varsayılan 50, üst sınır 100'dü ve kullanıcı eski
+         * çıktılarına hiç ulaşamıyordu (25 Eyl 2026'da bildirildi).
+         * Artık tamamı dönüyor.
+         *
+         * Sınır tamamen kaldırılmadı: sorgunun sınırsız kalması, kaydı çok
+         * büyümüş bir hesapta yanıtı ve belleği patlatabilir. 2000, gerçekçi
+         * kullanımın çok üstünde bir tavan — kullanıcı başına günde birkaç
+         * çalıştırma varsayıldığında yıllarca yetiyor.
+         */
+        var clampedLimit = Math.Clamp(limit, 1, MAKS_KAYIT_SINIRI);
         var results = await db.ToolResults
             .Where(r => r.UserId == CurrentUserId)
             .OrderByDescending(r => r.CreatedAt)
@@ -119,6 +129,31 @@ public class ToolsController(
             return NotFound(new { error = "Henüz sonuç yok." });
 
         return Ok(new { success = true, data = result });
+    }
+
+    /// <summary>
+    /// DELETE /api/tools/results/{id} — Kullanıcı kendi çıktısını siler.
+    ///
+    /// Yalnızca KENDİ kaydını silebilir: sorgu UserId ile filtreleniyor, yani
+    /// başkasının id'si gönderilse bile kayıt bulunamaz ve 404 döner.
+    /// Silme geri alınamaz; uyarıyı arayüz gösteriyor.
+    /// </summary>
+    [HttpDelete("results/{id:guid}")]
+    public async Task<IActionResult> DeleteResult(Guid id, CancellationToken ct)
+    {
+        var kayit = await db.ToolResults
+            .FirstOrDefaultAsync(r => r.UserId == CurrentUserId && r.Id == id, ct);
+
+        if (kayit is null)
+            return NotFound(new { error = "Kayıt bulunamadı." });
+
+        db.ToolResults.Remove(kayit);
+        await db.SaveChangesAsync(ct);
+
+        logger.LogInformation("Kullanıcı {UserId} kendi çıktısını sildi: {ResultId} ({ToolId})",
+            CurrentUserId, id, kayit.ToolId);
+
+        return Ok(new { success = true });
     }
 
     /// <summary>GET /api/tools/results/{id} — Tek bir çıktının tam JSON içeriği.</summary>
@@ -428,6 +463,12 @@ public class ToolsController(
     // ─── Helpers ──────────────────────────────────────────────────────────────
 
     /// <returns>Kaydedilen ToolResult Id'si; kayıt başarısızsa null.</returns>
+    /// <summary>Geçmiş Çıktılar listesinde dönen varsayılan kayıt sayısı.</summary>
+    private const int VARSAYILAN_KAYIT_SINIRI = 2000;
+
+    /// <summary>Tek istekte dönebilecek en fazla kayıt — sınırsız sorguya karşı tavan.</summary>
+    private const int MAKS_KAYIT_SINIRI = 2000;
+
     private async Task<Guid?> SaveToolResultAsync(
         Guid userId,
         string toolId,
