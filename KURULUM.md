@@ -456,9 +456,9 @@ POSTGRES_DB=kolaykobi
 JWT_SECRET=...
 
 # PayTR
-PAYTR_MERCHANT_ID=736364
-PAYTR_MERCHANT_KEY=KMkwLwf7uZKRzSqJ
-PAYTR_MERCHANT_SALT=zP1dx5WfyqCWrLg2
+PAYTR_MERCHANT_ID=...     # PayTR panelinden
+PAYTR_MERCHANT_KEY=...    # PayTR panelinden — repoya YAZILMAZ
+PAYTR_MERCHANT_SALT=...   # PayTR panelinden — repoya YAZILMAZ
 PAYTR_TEST_MODE=true   # Production için false yap
 
 # Brevo SMTP
