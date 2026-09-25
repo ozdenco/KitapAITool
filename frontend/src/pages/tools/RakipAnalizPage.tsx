@@ -29,6 +29,7 @@ interface GeminiPlatform {
   instagram?: string | null
   facebook?: string | null
   linkedin?: string | null
+  youtube?: string | null
   google_business?: string | null
   whatsapp?: string | null
 }
@@ -54,8 +55,19 @@ const PLATFORMLAR = [
   { value: 'Instagram', label: '📸 Instagram' },
   { value: 'Facebook', label: '👍 Facebook' },
   { value: 'LinkedIn', label: '💼 LinkedIn' },
+  { value: 'YouTube', label: '▶️ YouTube' },
   { value: 'WhatsApp İş', label: '💬 WhatsApp İş' },
 ]
+
+/**
+ * "Diğer" listede olmayan platformu serbest metin olarak alır.
+ *
+ * İki işe yarıyor: (1) kullanıcı gerçekte kullandığı platformu yazabiliyor,
+ * analiz ona da bakıyor; (2) yazılanlar kayıtta durduğu için hangi yeni
+ * platformların talep edildiğini erkenden görüyoruz — listeye ne ekleyeceğimizi
+ * tahminle değil veriyle seçiyoruz (25 Eyl 2026 kararı).
+ */
+const DIGER_ANAHTARI = 'Diğer'
 
 const FIYAT_SEGMENTLERI = [
   { value: 'Ekonomik', label: 'Ekonomik' },
@@ -128,6 +140,7 @@ export function RakipAnalizPage() {
   const [sector, setSector] = useState('')
   const [web, setWeb] = useState('')
   const [platforms, setPlatforms] = useState<string[]>([])
+  const [digerPlatform, setDigerPlatform] = useState('')
   const [strengths, setStrengths] = useState('')
   const [myPrice, setMyPrice] = useState('')
 
@@ -150,7 +163,10 @@ export function RakipAnalizPage() {
 
   const mutation = useMutation({
     mutationFn: async () => {
-      const prompt = buildPrompt({ biz, sector, web, platforms, strengths, myPrice, rakip1, rakip2, rakip3 })
+      const tumPlatformlar = digerPlatform.trim()
+        ? [...platforms, digerPlatform.trim()]
+        : platforms
+      const prompt = buildPrompt({ biz, sector, web, platforms: tumPlatformlar, strengths, myPrice, rakip1, rakip2, rakip3 })
       // Rakip listesini ayrı dizi olarak gönder — n8n Gemini sosyal medya araştırması için gerekli
       const competitors = [rakip1, rakip2, rakip3]
         .filter((r) => r.ad.trim())
@@ -238,7 +254,39 @@ export function RakipAnalizPage() {
                         {p.label}
                       </label>
                     ))}
+
+                    <label
+                      className={`flex items-center gap-2 px-[11px] py-[9px] border-[0.5px] rounded-lg cursor-pointer text-[13px] select-none transition-colors ${
+                        platforms.includes(DIGER_ANAHTARI)
+                          ? 'border-[#1D9E75] bg-[#F0FAF6] text-[#085041]'
+                          : 'border-[#D3D1C7] bg-white text-[#1C1B19] hover:border-[#B4B2A9]'
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        className="w-auto"
+                        checked={platforms.includes(DIGER_ANAHTARI)}
+                        onChange={() => {
+                          // Kapatılınca yazılan metin de temizlenmeli, yoksa
+                          // görünmeyen bir değer prompt'a sızar.
+                          if (platforms.includes(DIGER_ANAHTARI)) setDigerPlatform('')
+                          togglePlatform(DIGER_ANAHTARI)
+                        }}
+                      />
+                      ➕ Diğer
+                    </label>
                   </div>
+
+                  {platforms.includes(DIGER_ANAHTARI) && (
+                    <div className="mt-2">
+                      <Input
+                        label="Hangi platform(lar)?"
+                        placeholder="Örn: TikTok, X, Pinterest, Sahibinden, Trendyol"
+                        value={digerPlatform}
+                        onChange={(e) => setDigerPlatform(e.target.value)}
+                      />
+                    </div>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -317,12 +365,13 @@ export function RakipAnalizPage() {
 
                 <FormPersistButtons
                   filename="rakip-analiz-formu.json"
-                  getData={() => ({ biz, sector, web, platforms, strengths, myPrice, rakip1, rakip2, rakip3 })}
+                  getData={() => ({ biz, sector, web, platforms, digerPlatform, strengths, myPrice, rakip1, rakip2, rakip3 })}
                   onLoad={(d) => {
                     if (typeof d.biz === 'string') setBiz(d.biz)
                     if (typeof d.sector === 'string') setSector(d.sector)
                     if (typeof d.web === 'string') setWeb(d.web)
                     if (Array.isArray(d.platforms)) setPlatforms(d.platforms as string[])
+                    if (typeof d.digerPlatform === 'string') setDigerPlatform(d.digerPlatform)
                     if (typeof d.strengths === 'string') setStrengths(d.strengths)
                     if (typeof d.myPrice === 'string') setMyPrice(d.myPrice)
                     if (d.rakip1 && typeof d.rakip1 === 'object') setRakip1(d.rakip1 as RakipBlok)
@@ -399,6 +448,7 @@ export function RakipAnalizPage() {
                   { key: 'instagram',       label: 'Instagram',       icon: '📸' },
                   { key: 'facebook',        label: 'Facebook',        icon: '👍' },
                   { key: 'linkedin',        label: 'LinkedIn',        icon: '💼' },
+                  { key: 'youtube',         label: 'YouTube',         icon: '▶️' },
                   { key: 'whatsapp',        label: 'WhatsApp İş',     icon: '💬' },
                 ]
 
@@ -409,6 +459,7 @@ export function RakipAnalizPage() {
                   if (key === 'instagram')       return platforms.includes('Instagram')
                   if (key === 'facebook')        return platforms.includes('Facebook')
                   if (key === 'linkedin')        return platforms.includes('LinkedIn')
+                  if (key === 'youtube')         return platforms.includes('YouTube')
                   if (key === 'whatsapp')        return platforms.includes('WhatsApp İş')
                   return false
                 }

@@ -254,7 +254,17 @@ td:first-child{font-weight:500;color:#6B6963;font-size:12px;width:88px}
         <label class="check-item"><input id="f-instagram" type="checkbox" value="Instagram"> <i class="ti ti-brand-instagram" aria-hidden="true"></i> Instagram</label>
         <label class="check-item"><input id="f-facebook" type="checkbox" value="Facebook"> <i class="ti ti-brand-facebook" aria-hidden="true"></i> Facebook</label>
         <label class="check-item"><input id="f-linkedin" type="checkbox" value="LinkedIn"> <i class="ti ti-brand-linkedin" aria-hidden="true"></i> LinkedIn</label>
+        <label class="check-item"><input id="f-youtube" type="checkbox" value="YouTube"> <i class="ti ti-brand-youtube" aria-hidden="true"></i> YouTube</label>
         <label class="check-item"><input id="f-whatsapp" type="checkbox" value="WhatsApp İş"> <i class="ti ti-brand-whatsapp" aria-hidden="true"></i> WhatsApp İş</label>
+        <label class="check-item"><input id="f-diger" type="checkbox" value="Diğer"> <i class="ti ti-plus" aria-hidden="true"></i> Diğer</label>
+      </div>
+      <!--
+        "Diğer": listede olmayan platformu serbest metin olarak alır. Hem analiz
+        ona da bakar hem de hangi yeni platformların talep edildiğini görürüz.
+      -->
+      <div class="field" id="diger-platform-alani" style="display:none;margin-top:10px">
+        <label for="f-diger-metin">Hangi platform(lar)?</label>
+        <input id="f-diger-metin" type="text" placeholder="Örn: TikTok, X, Pinterest, Sahibinden, Trendyol">
       </div>
     </div>
 
@@ -492,7 +502,7 @@ const loadingMsgs = [
   'Aksiyon önerileri hazırlanıyor...',
 ];
 
-const ALL_PLATFORMS = ['Google Business', 'Instagram', 'Facebook', 'LinkedIn', 'WhatsApp İş'];
+const ALL_PLATFORMS = ['Google Business', 'Instagram', 'Facebook', 'LinkedIn', 'YouTube', 'WhatsApp İş'];
 
 function escHtml(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
@@ -553,8 +563,24 @@ function updateRateBar() {
 }
 
 function getMyPlatforms() {
-  return [...document.querySelectorAll('#my-platforms input:checked')].map(el => el.value);
+  const secilenler = [...document.querySelectorAll('#my-platforms input:checked')].map(el => el.value);
+  const diger = (document.getElementById('f-diger-metin')?.value || '').trim();
+  // "Diğer" etiketi tek başına bilgi taşımıyor; yazılan metinle değiştiriyoruz
+  return diger
+    ? secilenler.filter(v => v !== 'Diğer').concat(diger)
+    : secilenler.filter(v => v !== 'Diğer');
 }
+
+// "Diğer" işaretlenince metin alanını aç, kaldırılınca kapat ve temizle
+document.getElementById('f-diger')?.addEventListener('change', function () {
+  const alan = document.getElementById('diger-platform-alani');
+  if (!alan) return;
+  alan.style.display = this.checked ? '' : 'none';
+  if (!this.checked) {
+    const girdi = document.getElementById('f-diger-metin');
+    if (girdi) girdi.value = '';
+  }
+});
 
 function getCompetitorData() {
   const comps = [];
@@ -669,6 +695,7 @@ function renderResults(result, myData, geminiPlatforms) {
       { key: 'instagram',       label: 'Instagram' },
       { key: 'facebook',        label: 'Facebook' },
       { key: 'linkedin',        label: 'LinkedIn' },
+      { key: 'youtube',         label: 'YouTube' },
       { key: 'whatsapp',        label: 'WhatsApp' },
     ];
     platformFields.forEach(({ key, label }) => {
