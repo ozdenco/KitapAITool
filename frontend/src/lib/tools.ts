@@ -21,7 +21,7 @@ export const TOOLS: Tool[] = [
   },
   {
     id: 'icerik-takvimi',
-    name: '30 Günlük İçerik Takvimi',
+    name: 'Sosyal Medya İçerik Takvimi',
     // Eski metin "platformlar için 30 günlük takvim" diyordu; iki yanlış birden:
     // araç TEK platform alıyor ve takvim 30 gönderi değil, seçilen güne denk gelen
     // 4-5 gönderi üretiyor (bkz. IcerikTakvimiPage buildPrompt). 23 Eyl 2026.
@@ -176,7 +176,7 @@ export function dashboardAraclari(isAdmin: boolean): Tool[] {
  * Dashboard ve sol menüdeki gruplama.
  *
  * 'video' kategorisi 29 Ağu 2026'da 'icerik' içine alındı: "İçerik Üretimi"
- * altında tek araç kalıyordu (30 Günlük İçerik Takvimi) ve tek kart bir satırın
+ * altında tek araç kalıyordu (Sosyal Medya İçerik Takvimi) ve tek kart bir satırın
  * solunda boşlukla duruyordu. Üç araç da aynı soruya hizmet ediyor —
  * "bu ay ne paylaşayım?" — ve Trend Video'nun "Bu Formatı Uyarla →" butonu
  * zaten doğrudan Viral Video'ya gidiyor.

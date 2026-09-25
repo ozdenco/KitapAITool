@@ -33,7 +33,7 @@ const STATUS_CONFIG = {
 const TOOL_NAME: Record<string, string> = {
   'gorunurluk-skoru':   '📊 İşletme Görünürlük Skoru',
   'musteri-persona':    '👤 Müşteri Persona Oluşturucu',
-  'icerik-takvimi':     '📅 30 Günlük İçerik Takvimi',
+  'icerik-takvimi':     '📅 Sosyal Medya İçerik Takvimi',
   'whatsapp-satis':     '💬 WhatsApp Satış Script Üretici',
   'reklam-butce':       '💰 Reklam Bütçe Dağıtıcı',
   'musteri-geri-donus': '🔄 Müşteri Geri Dönüş Senaryosu',

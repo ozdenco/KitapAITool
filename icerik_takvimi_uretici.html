@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>30 Günlük İçerik Takvimi — Kolay KOBİ</title>
+<title>Sosyal Medya İçerik Takvimi — Kolay KOBİ</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -152,7 +152,7 @@ input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3p
   <div class="form-card" id="form-section">
   <div class="form-collapsed-bar">
     <div>
-      <div class="form-collapsed-title">30 Günlük İçerik Takvimi</div>
+      <div class="form-collapsed-title">Sosyal Medya İçerik Takvimi</div>
       <div class="form-collapsed-sub">Formu düzenlemek için tıklayın</div>
     </div>
     <button class="form-expand-btn" onclick="expandForm()">
@@ -160,7 +160,7 @@ input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3p
     </button>
   </div>
   <div id="form-body">
-    <h1>30 Günlük İçerik Takvimi</h1>
+    <h1>Sosyal Medya İçerik Takvimi</h1>
     <p class="subtitle">Sektörünüze, hedef kitlenize ve marka sesinize uygun bir aylık sosyal medya takvimi oluşturalım. Seçtiğiniz paylaşım gününe göre haftada bir gönderi — her biri için konu, format önerisi ve hazır taslak metin.</p>
 
     <div class="row2">
@@ -300,7 +300,7 @@ input:focus,select:focus,textarea:focus{border-color:#1D9E75;box-shadow:0 0 0 3p
   <!-- RESULTS -->
   <div class="results" id="results-section">
     <div style="margin-bottom:1.25rem">
-      <h2 id="results-title">30 Günlük İçerik Takvimi</h2>
+      <h2 id="results-title">Sosyal Medya İçerik Takvimi</h2>
       <p id="results-sub" style="font-size:13px;color:#6B6963;margin-top:.25rem"></p>
     </div>
 
@@ -1329,7 +1329,7 @@ async function generate() {
 // allDays'e gün ekleme/tarih atama işini artık fetchAndMergeGroup yapıyor.
 function renderResultsShell(ctaText) {
   const startDate = getStartDate();
-  document.getElementById(`results-title`).textContent = `${formData.biz} — 30 Günlük İçerik Takvimi`;
+  document.getElementById(`results-title`).textContent = `${formData.biz} — Sosyal Medya İçerik Takvimi`;
   const fmt = d => `${d.getDate()} ${TR_MONTHS[d.getMonth()]} ${d.getFullYear()}`;
   const endDate = new Date(startDate);
   endDate.setDate(endDate.getDate() + 29);
@@ -1416,7 +1416,7 @@ async function printFullCalendar() {
   if (!ok) return;
   const fd = formData || {};
   const container = document.getElementById(`print-all-days`);
-  const title = escHtml(document.getElementById('results-title')?.textContent || '30 Günlük İçerik Takvimi');
+  const title = escHtml(document.getElementById('results-title')?.textContent || 'Sosyal Medya İçerik Takvimi');
   const cacheKey = `${title}|${allDays.length}|${allDays.map(d => d.day).join(`,`)}`;
   if ([printFullCalendar._cache, printFullCalendar._cache?.key === cacheKey].every(Boolean)) {
     container.innerHTML = printFullCalendar._cache.html;

@@ -96,7 +96,7 @@ export const yazi: BlogYazisi = {
       tur: 'aracCta',
       toolId: 'icerik-takvimi',
       metin:
-        'Bu adımların tamamını elle yapmak birkaç saat sürüyor. 30 Günlük İçerik Takvimi aracı sektörünüzü ve platformlarınızı sorup takvimi hazır, yazdırılabilir biçimde çıkarır.',
+        'Bu adımların tamamını elle yapmak birkaç saat sürüyor. Sosyal Medya İçerik Takvimi aracı sektörünüzü ve platformlarınızı sorup takvimi hazır, yazdırılabilir biçimde çıkarır.',
     },
   ],
 }

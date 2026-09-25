@@ -216,7 +216,7 @@ export function IcerikTakvimiPage() {
   return (
     <ToolShell
       toolId="icerik-takvimi"
-      title="30 Günlük İçerik Takvimi"
+      title="Sosyal Medya İçerik Takvimi"
       icon="📅"
       // "Her gün için ... üretiyoruz" yazıyordu, ama prompt 4-5 gönderi istiyor ve
       // formda yalnızca TEK bir paylaşım günü seçilebiliyor. Kullanıcı 30 gönderi
@@ -361,7 +361,7 @@ export function IcerikTakvimiPage() {
                 )}
 
 <Button onClick={() => mutation.mutate()} disabled={!canSubmit} loading={mutation.isPending} className="mt-1 w-full">
-                  📅 30 Günlük İçerik Takvimi Oluştur
+                  📅 Sosyal Medya İçerik Takvimi Oluştur
                 </Button>
                 {mutation.isPending && (
                   <p className="text-center text-sm text-gray-400 animate-pulse">
