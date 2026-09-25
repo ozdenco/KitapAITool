@@ -9,6 +9,7 @@ import { FormPersistButtons } from '@/components/ui/FormPersistButtons'
 import { ToolShell } from '@/components/ui/ToolShell'
 import { useProfilOnDolgu } from '@/hooks/useIsletmeProfili'
 import { markaKurallari } from '@/lib/markaKurallari'
+import { ozelGunTalimatlari } from '@/lib/ozelGunler'
 import { MARKA_TONU_SECENEKLERI } from '@/lib/markaTonlari'
 import { SEKTORLER } from '@/lib/sektorler'
 import { AramaliSecici } from '@/components/ui/AramaliSecici'
@@ -77,12 +78,23 @@ const HAFTA_GUNLERI = ['Pazar', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe',
 
 const GONDERI_SAYISI = 5
 
-function paylasimTarihleri(gunAdi: string, baslangic: string): string[] {
+function paylasimTarihleri(gunAdi: string, baslangic: string): { tarih: Date; etiket: string }[] {
   const hedefGun = HAFTA_GUNLERI.indexOf(gunAdi as (typeof HAFTA_GUNLERI)[number])
   if (hedefGun < 0) return []
 
-  // Geçersiz/boş tarihte bugüne düş — alan zorunlu değil
-  const secilen = baslangic ? new Date(baslangic) : new Date()
+  /*
+   * Tarih girişi "YYYY-MM-DD" biçiminde geliyor ve `new Date(metin)` bunu
+   * UTC gece yarısı sayıyor; özel gün tablosu ise `new Date(y, ay, gün)` ile
+   * YEREL gece yarısı üretiyor. İkisini karşılaştırınca UTC+3'te paylaşım
+   * günü özel günün 3 saat SONRASINA düşüyor ve "aynı gün" karşılaştırması
+   * ters dönüyordu — ölçümde Black Friday, 27 Kasım'da paylaşım olmasına
+   * rağmen 20 Kasım'a "öncesi hatırlatma" olarak atanmıştı. Bu yüzden ISO
+   * metni parça parça, yerel gece yarısı olarak kuruyoruz.
+   */
+  const parcalar = /^(\d{4})-(\d{2})-(\d{2})$/.exec(baslangic)
+  const secilen = parcalar
+    ? new Date(Number(parcalar[1]), Number(parcalar[2]) - 1, Number(parcalar[3]))
+    : new Date()
   const ilkGun = Number.isNaN(secilen.getTime()) ? new Date() : secilen
 
   const fark = (hedefGun - ilkGun.getDay() + 7) % 7
@@ -92,7 +104,7 @@ function paylasimTarihleri(gunAdi: string, baslangic: string): string[] {
     const t = new Date(ilkGun)
     t.setDate(ilkGun.getDate() + fark + i * 7)
     const ayinHaftasi = Math.ceil(t.getDate() / 7)
-    return `${ayinHaftasi}. Hafta (${bicim.format(t)})`
+    return { tarih: t, etiket: `${ayinHaftasi}. Hafta (${bicim.format(t)})` }
   })
 }
 
@@ -101,7 +113,9 @@ function buildPrompt(f: {
   platform: string; gunler: string; ton: string
   lang: string; ozelGunler: string; startDate: string
 }): string {
-  const tarihler = paylasimTarihleri(f.gunler, f.startDate)
+  const gonderiler = paylasimTarihleri(f.gunler, f.startDate)
+  const tarihler = gonderiler.map((g) => g.etiket)
+  const ozelGunSatirlari = ozelGunTalimatlari(gonderiler.map((g) => g.tarih))
 
   return `Sen sosyal medya içerik stratejisti ve metin yazarısın.
 
@@ -121,6 +135,10 @@ TARİHLER HESAPLANDI — aşağıdaki listeyi AYNEN kullan, kendin tarih üretme
 Baştaki numara AYIN KAÇINCI HAFTASI olduğunu gösterir; kampanyaları buna
 göre yerleştir (ör. "ayın ilk haftası" = 1. Hafta etiketli gönderi):
 ${tarihler.map((t) => `- ${t}`).join('\n')}
+${ozelGunSatirlari.length
+  ? `\nBU DÖNEME DENK GELEN ÖZEL GÜNLER — ilgili gönderide mutlaka işle:\n${ozelGunSatirlari.join('\n')}\n`
+  : ''}Ramazan/Kurban Bayramı gibi hicri takvime göre kayan günler yukarıda
+listelenmez; bu döneme denk geldiğini biliyorsan sen ekle.
 
 KRİTİK KISITLAMALAR:
 - "icerik" alanı her gönderi için en fazla 120 kelime olsun
