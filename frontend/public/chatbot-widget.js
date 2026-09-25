@@ -100,7 +100,12 @@
     // 'zaman': AI listelerinde "ne zaman" olarak sık geçer ama tek başına konu
     // taşımaz. Elenmezse alakasız soruları çekiyordu — "siparişim ne zaman
     // gelir" izin zamanaşımı kartını 4.0 puanla açıyordu (24 Eyl 2026 ölçümü).
-    'zaman']
+    'zaman',
+    // 25 Eyl 2026: konu tasimayan soru/baglac kelimeleri. Elenmeyince kart
+    // YALNIZCA bunlarla kazanabiliyordu: "referanslariniz neler" -> "neler"
+    // tek basina 3.47 puan, "daha once kimlerle calistiniz" -> "daha" 3.47.
+    // Ikisi de alakasiz kartlara gidiyordu.
+    'neler','nelerdir','daha','cok','biraz','acaba','peki','hakkinda','konusunda']
 
   function kelimeler(metin) {
     return sadelestir(metin)

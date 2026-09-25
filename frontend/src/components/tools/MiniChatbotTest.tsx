@@ -94,6 +94,16 @@ const ETKISIZ_KELIMELER = new Set([
    * "siparişim ne zaman gelir" izin zamanaşımı kartını 4.0 puanla açıyordu.
    */
   'zaman',
+  /*
+   * 25 Eyl 2026: konu taşımayan soru/bağlaç kelimeleri. Bunlar elenmeyince
+   * kart YALNIZCA bu kelimelerle kazanabiliyordu:
+   *   "referanslarınız neler"        → "neler" tek başına 3.47 puan
+   *   "daha önce kimlerle çalıştınız" → "daha"  tek başına 3.47 puan
+   * İkisi de alakasız kartlara gidiyordu. Elendikten sonra ikisi de doğru
+   * şekilde "bilmiyorum" diyor — kaynakta o bilgi gerçekten yok.
+   */
+  'neler', 'nelerdir', 'daha', 'cok', 'biraz', 'acaba', 'peki',
+  'hakkinda', 'konusunda',
 ])
 
 const VARSAYILAN_FALLBACK =
