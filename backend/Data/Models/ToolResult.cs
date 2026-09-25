@@ -12,6 +12,20 @@ public class ToolResult
     /// <summary>Full JSON string returned by n8n.</summary>
     public string OutputJson { get; set; } = string.Empty;
 
+    /// <summary>
+    /// Kullanıcının forma girdiği bilgiler (JSON).
+    ///
+    /// Neden saklanıyor: Geçmiş Çıktılar'da yalnızca SONUÇ görünüyordu;
+    /// kullanıcı bir takvime bakıp "bu hangi tarih için, hangi gün seçilmişti,
+    /// özel gün olarak ne yazmıştım?" sorusuna cevap bulamıyordu (25 Eyl 2026).
+    /// Aracı yeniden çalıştırmadan aynı girdiyi tekrar kurmak da mümkün
+    /// olmuyordu.
+    ///
+    /// Boş bırakılabilir: eski kayıtlarda ve bu alanı göndermeyen araçlarda
+    /// null kalır.
+    /// </summary>
+    public string? FormBilgileri { get; set; }
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     // Navigation

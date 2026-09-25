@@ -112,7 +112,7 @@ public class ToolsController(
         var result = await db.ToolResults
             .Where(r => r.UserId == CurrentUserId && r.ToolId == toolId)
             .OrderByDescending(r => r.CreatedAt)
-            .Select(r => new { r.Id, r.ToolId, r.InputSummary, r.OutputJson, r.CreatedAt })
+            .Select(r => new { r.Id, r.ToolId, r.InputSummary, r.OutputJson, r.FormBilgileri, r.CreatedAt })
             .FirstOrDefaultAsync();
 
         if (result is null)
@@ -127,7 +127,7 @@ public class ToolsController(
     {
         var result = await db.ToolResults
             .Where(r => r.UserId == CurrentUserId && r.Id == id)
-            .Select(r => new { r.Id, r.ToolId, r.InputSummary, r.OutputJson, r.CreatedAt })
+            .Select(r => new { r.Id, r.ToolId, r.InputSummary, r.OutputJson, r.FormBilgileri, r.CreatedAt })
             .FirstOrDefaultAsync();
 
         if (result is null)
@@ -464,12 +464,20 @@ public class ToolsController(
                 summary = ExtractSummary(toolId, summaryText);
             }
 
+            // Form bilgileri ham JSON olarak saklanır; yorumlamayı arayüz yapar.
+            var formBilgileri = payload.ValueKind == JsonValueKind.Object
+                                && payload.TryGetProperty("formBilgileri", out var fb)
+                                && fb.ValueKind == JsonValueKind.Object
+                ? fb.GetRawText()
+                : null;
+
             var kayit = new ToolResult
             {
-                UserId       = userId,
-                ToolId       = toolId,
-                InputSummary = summary,
-                OutputJson   = outputJson,
+                UserId        = userId,
+                ToolId        = toolId,
+                InputSummary  = summary,
+                OutputJson    = outputJson,
+                FormBilgileri = formBilgileri,
             };
             db.ToolResults.Add(kayit);
             await db.SaveChangesAsync(ct);

@@ -236,7 +236,24 @@ export function IcerikTakvimiPage() {
       const prompt = buildPrompt({ bizName, sector, audience, platform, gunler, ton, lang, ozelGunler, startDate })
       const res = await api.post<{ job_id?: string; status?: string } & Record<string, unknown>>(
         '/tools/icerik-takvimi/run',
-        { prompt, isletmeAdi: bizName }
+        {
+          prompt,
+          isletmeAdi: bizName,
+          /*
+           * Form girdileri kayda geçsin — Geçmiş Çıktılar'da yalnızca SONUÇ
+           * görünüyordu; kullanıcı eski bir takvime bakıp "bu hangi tarih
+           * için, hangi gün seçilmişti, özel gün olarak ne yazmıştım?"
+           * sorusuna cevap bulamıyordu (25 Eyl 2026).
+           */
+          formBilgileri: {
+            'Başlangıç tarihi': startDate || 'belirtilmedi (bugünden başladı)',
+            'Paylaşım günü': gunler,
+            'Platform': platform,
+            'Marka tonu': ton || 'belirtilmedi',
+            'İçerik dili': lang,
+            'Özel günler / kampanyalar': ozelGunler || 'yazılmadı',
+          },
+        }
       )
       const data = res.data
 

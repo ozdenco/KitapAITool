@@ -7,6 +7,7 @@ import { PrintButton } from '@/components/ui/PrintButton'
 import { CiktiBasligi } from '@/components/ui/CiktiBasligi'
 import { HataSiniri } from '@/components/ui/HataSiniri'
 import { CiktiGovdesi } from '@/components/ui/CiktiGovdesi'
+import { FormBilgileriKarti } from '@/components/ui/FormBilgileriKarti'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -19,6 +20,8 @@ interface ResultSummary {
 
 interface ResultDetail extends ResultSummary {
   outputJson: string
+  /** Çıktının üretildiği form girdileri (JSON) — eski kayıtlarda yok. */
+  formBilgileri?: string | null
 }
 
 // ─── Tool meta lookup ─────────────────────────────────────────────────────────
@@ -152,6 +155,7 @@ function ResultDetailPanel({ result: summary, onClose }: { result: ResultSummary
           </pre>
         ) : parsed !== null ? (
           <HataSiniri baslik={data.toolId}>
+            <FormBilgileriKarti ham={data.formBilgileri} />
             <CiktiGovdesi
               toolId={data.toolId}
               parsed={parsed}
