@@ -25,7 +25,7 @@ const TOOL_ENGINE_MAP: Record<string, {
   unitLabel: string
   note?: string
 }> = {
-  'icerik-takvimi':     { engine: 'minimax', unitsPerRun: 11, unitLabel: 'token/çalıştırma', note: '1 gün + 1 platform · 10-11 token gözlendi · +1 marka kuralları' },
+  'icerik-takvimi':     { engine: 'minimax', unitsPerRun: 15, unitLabel: 'token/çalıştırma', note: '25 Eyl 2026 canlı ölçüm: 15 token (1 gün + 1 platform) · önceki değer 11 idi — resmi/özel gün talimatları prompta eklenince düşünme bloğu uzadı' },
   'trend-video':        { engine: 'apify',   unitsPerRun: 1,  unitLabel: 'run/çalıştırma' },
   'rakip-analiz':       { engine: 'gemini',  unitsPerRun: 2,  unitLabel: 'token/çalıştırma', note: 'MiniMax 2 token + Gemini Flash ~2,5 ₺/run (13 Eyl 2026 ölçümü) · +1 marka kuralları' },
   'gorunurluk-skoru':   { engine: 'minimax', unitsPerRun: 4,  unitLabel: 'token/çalıştırma', note: '3 token · n8n 20 sn · +1 marka kuralları' },

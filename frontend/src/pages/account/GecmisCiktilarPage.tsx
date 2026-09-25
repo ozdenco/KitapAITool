@@ -2,7 +2,7 @@ import { useMemo, useRef, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '@/lib/api'
 import { TOOLS } from '@/lib/tools'
-import { parseAiJson, extractAiContent } from '@/lib/parseAiJson'
+import { ciktiyiAyristir } from '@/lib/ciktiAyristir'
 import { PrintButton } from '@/components/ui/PrintButton'
 import { CiktiBasligi } from '@/components/ui/CiktiBasligi'
 import { HataSiniri } from '@/components/ui/HataSiniri'
@@ -88,31 +88,7 @@ function ResultDetailPanel({ result: summary, onClose }: { result: ResultSummary
     )
   }
 
-  let parsed: Record<string, unknown> | null = null
-  try {
-    let raw = JSON.parse(data.outputJson) as Record<string, unknown> | Record<string, unknown>[]
-    if (Array.isArray(raw) && raw.length === 1) raw = raw[0]
-    parsed = raw as Record<string, unknown>
-
-    // Kaydedilen çıktı iki farklı sarmalayıcıyla gelebilir:
-    //   { content: [{ text: '...' }] }              → dönüştürülmüş
-    //   { choices: [{ message: { content: '...' }}]} → ham MiniMax
-    // Eskiden yalnızca ilki tanınıyordu; AI Görünürlük Takipçisi ikinci biçimde
-    // kaydedildiği için kayıt listede görünüyor ama içeriği boş açılıyordu
-    // (27 Ağu 2026'da bildirildi). parseAiJson ayrıca <think>/markdown temizler.
-    const icMetin = extractAiContent(parsed)
-    if (typeof icMetin === 'string') {
-      try {
-        const inner = parseAiJson<Record<string, unknown>>(icMetin)
-        // Sarmalayıcının yanındaki üst düzey alanları koru (ör. geminiPlatforms)
-        const extras: Record<string, unknown> = {}
-        for (const k of Object.keys(parsed)) {
-          if (k !== 'content' && k !== 'choices') extras[k] = parsed[k]
-        }
-        parsed = { ...inner, ...extras }
-      } catch { /* keep raw parsed */ }
-    }
-  } catch { /* outputJson might be raw text */ }
+  const { parsed, kesilmis } = ciktiyiAyristir(data.outputJson)
 
   const handlePrint = () => {
     const prev = document.title
@@ -208,6 +184,7 @@ function ResultDetailPanel({ result: summary, onClose }: { result: ResultSummary
             <CiktiGovdesi
               toolId={data.toolId}
               parsed={parsed}
+              kesilmis={kesilmis}
               olusturmaTarihi={data.createdAt}
               sonucId={data.id}
               isletmeAdi={data.inputSummary}

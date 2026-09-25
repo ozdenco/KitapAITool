@@ -127,15 +127,34 @@ const RICH_TOOL_IDS = new Set([
   'viral-video', 'trend-video', 'rakip-analiz',
 ])
 
-export function CiktiGovdesi({
-  toolId,
-  parsed,
-  olusturmaTarihi,
-  sonucId,
-  isletmeAdi,
-}: {
+/**
+ * KESİK ÇIKTI ŞERİDİ — onarılmış ama eksik bir sonucun üstünde görünür.
+ *
+ * Onarım olmadan sayfa ham JSON dökümü gösteriyordu; onarım sessiz olursa da
+ * kullanıcı eksik takvimi tam sanıyor. İkisi de yanlış, bu yüzden içeriği
+ * gösterip eksikliği açıkça söylüyoruz.
+ */
+function KesikUyarisi() {
+  return (
+    <div className="bg-[#FFF9E8] border border-[#F0DFA8] rounded-xl p-4 mb-4">
+      <p className="text-[13px] font-semibold text-[#7A5C10] mb-1">
+        Bu çıktı yarıda kesilmiş
+      </p>
+      <p className="text-[12.5px] text-[#7A5C10] leading-relaxed">
+        Yapay zeka yanıtı tamamlanmadan sınırına ulaşmış. Aşağıda tamamlanan
+        bölümler görünüyor; son kayıt eksik kalmış olabilir. Eksiksiz bir sonuç
+        için aracı daha dar bir kapsamla (daha az gün ya da daha kısa girdi)
+        yeniden çalıştırın.
+      </p>
+    </div>
+  )
+}
+
+interface CiktiGovdesiProps {
   toolId: string
   parsed: Record<string, unknown>
+  /** Çıktı yarıda kesilip onarıldıysa true — üstte uyarı şeridi gösterilir. */
+  kesilmis?: boolean
   olusturmaTarihi?: string
   /**
    * Kaydın kimliği. Verildiğinde iki şey açılır: senaryo içeren çıktılarda
@@ -156,7 +175,25 @@ export function CiktiGovdesi({
   sonucId?: string
   /** Kaydın giriş özeti (işletme adı) — chatbot mini testi başlığında kullanılır. */
   isletmeAdi?: string
-}) {
+}
+
+export function CiktiGovdesi({ kesilmis, ...rest }: CiktiGovdesiProps) {
+  if (!kesilmis) return <GovdeIcerigi {...rest} />
+  return (
+    <>
+      <KesikUyarisi />
+      <GovdeIcerigi {...rest} />
+    </>
+  )
+}
+
+function GovdeIcerigi({
+  toolId,
+  parsed,
+  olusturmaTarihi,
+  sonucId,
+  isletmeAdi,
+}: Omit<CiktiGovdesiProps, 'kesilmis'>) {
   /*
    * VİDEO — araç kimliğine değil, verinin ŞEKLİNE bakıyoruz. `videoUrl` içeren
    * her çıktı oynatılabilir; yeni bir video aracı eklendiğinde burayı

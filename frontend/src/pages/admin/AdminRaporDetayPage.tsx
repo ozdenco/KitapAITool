@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import api from '@/lib/api'
 import { TOOLS } from '@/lib/tools'
-import { parseAiJson, extractAiContent } from '@/lib/parseAiJson'
+import { ciktiyiAyristir } from '@/lib/ciktiAyristir'
 import { CiktiGovdesi } from '@/components/ui/CiktiGovdesi'
 import { PrintButton } from '@/components/ui/PrintButton'
 import { CiktiBasligi } from '@/components/ui/CiktiBasligi'
@@ -35,34 +35,6 @@ function formatDateTime(iso: string): string {
   )
 }
 
-function parseOutput(outputJson: string): Record<string, unknown> | null {
-  try {
-    let raw = JSON.parse(outputJson) as Record<string, unknown> | Record<string, unknown>[]
-    if (Array.isArray(raw) && raw.length === 1) raw = raw[0]
-    let parsed = raw as Record<string, unknown>
-
-    // Kaydedilen çıktı iki sarmalayıcıyla gelebilir:
-    //   { content: [{ text }] }               → dönüştürülmüş
-    //   { choices: [{ message: { content }}]} → ham MiniMax (AI Görünürlük)
-    // Yalnızca ilki tanınınca rapor boş açılıyordu. Kullanıcı tarafındaki
-    // Geçmiş Çıktılar sayfası düzeltilmişti; admin rapor sayfası atlanmıştı.
-    const icMetin = extractAiContent(parsed)
-    if (typeof icMetin === 'string') {
-      try {
-        const inner = parseAiJson<Record<string, unknown>>(icMetin)
-        const extras: Record<string, unknown> = {}
-        for (const k of Object.keys(parsed)) {
-          if (k !== 'content' && k !== 'choices') extras[k] = (parsed as Record<string, unknown>)[k]
-        }
-        parsed = { ...inner, ...extras }
-      } catch { /* keep raw parsed */ }
-    }
-    return parsed
-  } catch {
-    return null
-  }
-}
-
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function AdminRaporDetayPage() {
@@ -81,8 +53,10 @@ export function AdminRaporDetayPage() {
     enabled: !!resultId,
   })
 
-  const tool   = data ? (TOOL_META[data.toolId] ?? { name: data.toolId, icon: '🔧' }) : null
-  const parsed = data ? parseOutput(data.outputJson) : null
+  const tool = data ? (TOOL_META[data.toolId] ?? { name: data.toolId, icon: '🔧' }) : null
+  const { parsed, kesilmis } = data
+    ? ciktiyiAyristir(data.outputJson)
+    : { parsed: null, kesilmis: false }
 
   // PDF doğrudan indirme hedefi
   const ciktiRef = useRef<HTMLDivElement>(null)
@@ -181,6 +155,7 @@ export function AdminRaporDetayPage() {
                   <CiktiGovdesi
                     toolId={data.toolId}
                     parsed={parsed}
+                    kesilmis={kesilmis}
                     olusturmaTarihi={data.createdAt}
                     isletmeAdi={data.inputSummary}
                   />

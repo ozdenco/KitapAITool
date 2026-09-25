@@ -46,8 +46,28 @@ export function extractAiContent(data: unknown): unknown {
   return data
 }
 
+/**
+ * Ayrıştırma sonucu — verinin yanında, onu okunur hâle getirmek için KESİLMİŞ
+ * JSON onarımı gerekip gerekmediğini de söyler.
+ *
+ * NEDEN AYRI BİLGİ: onarım sessizce yapılırsa kullanıcı eksik bir takvimi tam
+ * sanıyor. 25 Eyl 2026'da bir Sosyal Medya İçerik Takvimi çıktısı model
+ * bütçesine takılıp yarıda kesildi; n8n son `}` karakterine kadar olan kısmı
+ * kaydetti (kapanmamış `]` ve `}` ile), sayfa da ham JSON dökümü gösterdi.
+ * Onarım bu dökümü engelliyor ama eksikliği gizlememeli.
+ */
+export interface AyristirmaSonucu<T> {
+  veri: T
+  /** true ise çıktı yarıda kesilmişti; gösterilen içerik eksik olabilir. */
+  kesilmis: boolean
+}
+
 export function parseAiJson<T>(raw: unknown): T {
-  if (typeof raw !== 'string') return raw as T
+  return parseAiJsonAyrintili<T>(raw).veri
+}
+
+export function parseAiJsonAyrintili<T>(raw: unknown): AyristirmaSonucu<T> {
+  if (typeof raw !== 'string') return { veri: raw as T, kesilmis: false }
 
   // ─── 1. Temizle ───────────────────────────────────────────────────────────
 
@@ -99,12 +119,12 @@ export function parseAiJson<T>(raw: unknown): T {
 
   // ─── 2. Doğrudan parse (en hızlı yol) ────────────────────────────────────
 
-  try { return JSON.parse(trimmed) as T } catch { /* devam */ }
+  try { return { veri: JSON.parse(trimmed) as T, kesilmis: false } } catch { /* devam */ }
 
   // ─── 3. Kontrol karakteri + eksik virgül onarımı ─────────────────────────
 
   const repairedTrimmed = repairJson(trimmed)
-  try { return JSON.parse(repairedTrimmed) as T } catch { /* devam */ }
+  try { return { veri: JSON.parse(repairedTrimmed) as T, kesilmis: false } } catch { /* devam */ }
 
   // ─── 4. Kesilmiş JSON onarımı (token limit'e takılan çıktılar) ───────────
   //    fromStart üzerinde çalış — trimmed versiyonda item5'in parçası kaybolmuş olabilir
@@ -112,7 +132,7 @@ export function parseAiJson<T>(raw: unknown): T {
   const repairedFull = repairJson(fromStart)
   try {
     const patched = removeTrailingCommas(repairTruncated(repairedFull))
-    return JSON.parse(patched) as T
+    return { veri: JSON.parse(patched) as T, kesilmis: true }
   } catch {
     throw new Error('Yapay zeka yanıtı işlenemedi. Lütfen tekrar deneyin.')
   }
