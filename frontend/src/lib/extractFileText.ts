@@ -75,8 +75,72 @@ function kirp(metin: string): CikarilanMetin {
 // ─── PDF ──────────────────────────────────────────────────────────────────────
 
 /** streamTextContent'in verdiği parçanın ihtiyacımız olan kısmı (tip tanımı `ReadableStream` döndürüyor) */
+interface MetinOgesi {
+  str?: string
+  /** [a, b, c, d, x, y] — 4. eleman yazı boyu, 5./6. konum */
+  transform?: number[]
+  width?: number
+  /** pdf.js bu öğeden sonra satır bittiğini işaretler */
+  hasEOL?: boolean
+}
+
 interface MetinParcasi {
-  items: Array<{ str?: string }>
+  items: MetinOgesi[]
+}
+
+/**
+ * pdf.js metni konumlu PARÇALAR hâlinde verir; parçalar arasına ne konacağına
+ * biz karar veririz.
+ *
+ * Eskiden hepsi koşulsuz BOŞLUKLA birleştiriliyordu ve bu Türkçe kelimeleri
+ * bölüyordu: gömülü fontlarda "ğ", "ş", "İ" gibi harfler çoğu zaman ayrı bir
+ * parça olarak geliyor, sonuç "do ğ al", "konu ş ma", "Kolay KOB İ" oluyordu.
+ * 25 Eyl 2026'da ölçüldü: eşinin 12 sayfalık belgesinde 423, "Yıllık İzin"
+ * PDF'inde 108 bozuk kelime. Modele bozuk metin gidiyor, üstelik fazladan
+ * boşluklar token yakıyordu.
+ *
+ * Yeni kural konuma bakar:
+ *  - satır değiştiyse (y farkı yazı boyunun yarısından fazla) → satır sonu
+ *  - aynı satırda gözle görülür boşluk varsa → tek boşluk
+ *  - aksi hâlde → parçaları BİTİŞİK yaz (harf kelimenin devamıdır)
+ *
+ * Yan kazanç: satır yapısı geri geliyor (12 satır → 381), böylece
+ * metniTemizle'nin tekrarlayan üstbilgi/altbilgi ayıklaması da çalışır hâle
+ * geliyor — daha önce her sayfa tek satır olduğu için hiç iş görmüyordu.
+ */
+const SATIR_ESIGI = 0.5   // yazı boyunun katı: bundan büyük y farkı = yeni satır
+const BOSLUK_ESIGI = 0.25 // yazı boyunun katı: bundan büyük x boşluğu = boşluk
+
+function ogeleriBirlestir(ogeler: MetinOgesi[], durum: BirlestirmeDurumu): string {
+  let cikti = ''
+  for (const oge of ogeler) {
+    if (typeof oge.str !== 'string') continue
+    const x = oge.transform?.[4] ?? 0
+    const y = oge.transform?.[5] ?? 0
+    const boy = Math.abs(oge.transform?.[3] ?? 0) || durum.sonBoy
+
+    if (durum.sonSagX !== null) {
+      if (Math.abs(y - durum.sonY) > boy * SATIR_ESIGI) cikti += '\n'
+      else if (x - durum.sonSagX > boy * BOSLUK_ESIGI) cikti += ' '
+    }
+
+    cikti += oge.str
+    durum.sonSagX = x + (oge.width ?? 0)
+    durum.sonY = y
+    durum.sonBoy = boy
+
+    if (oge.hasEOL) {
+      cikti += '\n'
+      durum.sonSagX = null
+    }
+  }
+  return cikti
+}
+
+interface BirlestirmeDurumu {
+  sonSagX: number | null
+  sonY: number
+  sonBoy: number
 }
 
 /**
@@ -97,17 +161,19 @@ interface MetinParcasi {
 async function sayfaMetniniOku(sayfa: pdfjsLib.PDFPageProxy): Promise<string> {
   const okuyucu = sayfa.streamTextContent().getReader()
   const parcalar: string[] = []
+  // Durum parçalar arasında taşınmalı: bir parçanın son öğesiyle bir sonraki
+  // parçanın ilk öğesi aynı satırda olabilir.
+  const durum: BirlestirmeDurumu = { sonSagX: null, sonY: 0, sonBoy: 10 }
   try {
     for (;;) {
       const { value, done } = await okuyucu.read()
       if (done) break
-      const parca = value as MetinParcasi
-      parcalar.push(parca.items.map((item) => item.str ?? '').join(' '))
+      parcalar.push(ogeleriBirlestir((value as MetinParcasi).items, durum))
     }
   } finally {
     okuyucu.releaseLock()
   }
-  return parcalar.join(' ')
+  return parcalar.join('')
 }
 
 async function pdfMetniniCikar(file: File): Promise<string> {
