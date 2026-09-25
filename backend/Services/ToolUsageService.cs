@@ -36,7 +36,9 @@ public class ToolUsageService(AppDbContext db)
         "chatbot-senaryo",
         "ai-gorunurluk",
         "viral-video",
-        "trend-video"
+        "trend-video",
+        "video-olusturma",
+        "video-uret"
     ];
 
     /// <summary>
@@ -46,6 +48,9 @@ public class ToolUsageService(AppDbContext db)
     private static readonly Dictionary<string, int> ToolSpecificLimits = new()
     {
         { "trend-video", 1 },   // Apify maliyeti (~$0.40/çalıştırma) → admin dışı: ayda maks 1
+        // Veo maliyeti klip başına $0.40; 3 sahnelik video $1.20. Kredi cüzdanı
+        // kurulana kadar plan limiti değil, sabit ve düşük bir tavan uygulanıyor.
+        { "video-uret",  1 },
     };
 
     /// <summary>

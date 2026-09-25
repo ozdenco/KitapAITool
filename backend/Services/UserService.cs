@@ -9,7 +9,8 @@ public class UserService(AppDbContext db, TokenService tokens, EmailService emai
 {
     // ── Kayıt ─────────────────────────────────────────────────────────────────
     public async Task<(User user, string accessToken, string refreshToken)?> RegisterAsync(
-        string name, string emailAddr, string password)
+        string name, string emailAddr, string password,
+        string? company = null, string? phone = null)
     {
         if (await db.Users.AnyAsync(u => u.Email == emailAddr.ToLower()))
             return null;
@@ -21,6 +22,8 @@ public class UserService(AppDbContext db, TokenService tokens, EmailService emai
             Name  = name,
             Email = emailAddr.ToLower(),
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(password),
+            Company = string.IsNullOrWhiteSpace(company) ? null : company.Trim(),
+            Phone   = string.IsNullOrWhiteSpace(phone)   ? null : phone.Trim(),
             EmailVerified = false,
             EmailVerificationToken  = verificationToken,
             EmailVerificationExpiry = DateTime.UtcNow.AddHours(24)
@@ -148,13 +151,20 @@ public class UserService(AppDbContext db, TokenService tokens, EmailService emai
     }
 
     // ── E-posta doğrulama ─────────────────────────────────────────────────────
-    public async Task<bool> VerifyEmailAsync(string token)
+    /// <summary>
+    /// Doğrulama jetonunu işler. Başarılıysa doğrulanan kullanıcıyı, jeton
+    /// geçersiz/süresi dolmuşsa null döndürür.
+    ///
+    /// Kullanıcıyı döndürmesinin sebebi: pazarlama listesine ekleme artık
+    /// kayıtta değil, DOĞRULAMADAN SONRA yapılıyor (bkz. AuthController).
+    /// </summary>
+    public async Task<User?> VerifyEmailAsync(string token)
     {
         var user = await db.Users.FirstOrDefaultAsync(u =>
             u.EmailVerificationToken == token &&
             u.EmailVerificationExpiry > DateTime.UtcNow);
 
-        if (user is null) return false;
+        if (user is null) return null;
 
         user.EmailVerified            = true;
         user.EmailVerificationToken   = null;
@@ -162,7 +172,7 @@ public class UserService(AppDbContext db, TokenService tokens, EmailService emai
         user.UpdatedAt                = DateTime.UtcNow;
 
         await db.SaveChangesAsync();
-        return true;
+        return user;
     }
 
     // ── Doğrulama maili yeniden gönder ───────────────────────────────────────

@@ -324,6 +324,72 @@ public class AdminController(AppDbContext db, EmailService email, RecurringRenew
         });
     }
 
+    // ── GET /api/admin/usage-history ──────────────────────────────────────────
+    /// <summary>
+    /// TÜM kullanıcıların aylık kullanım özeti.
+    ///
+    /// Kullanıcı bazlı sürümün (users/{id}/usage-history) platform geneli
+    /// karşılığı. Fark: burada "kalan hak" diye bir şey yok — her kullanıcının
+    /// kendi limiti var, bunları toplamak anlamlı bir "kalan" vermiyor. Onun
+    /// yerine o ay KAÇ KULLANICININ araç çalıştırdığı ve kullanıcı başına
+    /// ortalama veriliyor; platform büyümesini bunlar gösteriyor.
+    /// </summary>
+    [HttpGet("usage-history")]
+    public async Task<IActionResult> GetAllUsersUsageHistory([FromQuery] int months = 6)
+    {
+        months = Math.Clamp(months, 1, 12);
+
+        var now       = DateTime.UtcNow;
+        var ayBasi    = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+        var startDate = ayBasi.AddMonths(-(months - 1));
+
+        // Tek sorguda ay bazında toplam çalıştırma + tekil kullanıcı sayısı
+        var aylik = await db.ToolUsageLogs
+            .Where(l => l.UsedAt >= startDate)
+            .GroupBy(l => new { l.UsedAt.Year, l.UsedAt.Month })
+            .Select(g => new
+            {
+                g.Key.Year,
+                g.Key.Month,
+                Toplam        = g.Count(),
+                AktifKullanici = g.Select(l => l.UserId).Distinct().Count(),
+            })
+            .ToDictionaryAsync(x => (x.Year, x.Month), x => x);
+
+        // En çok kullanılan araç — ay bazında
+        var enCokArac = await db.ToolUsageLogs
+            .Where(l => l.UsedAt >= startDate)
+            .GroupBy(l => new { l.UsedAt.Year, l.UsedAt.Month, l.ToolId })
+            .Select(g => new { g.Key.Year, g.Key.Month, g.Key.ToolId, Adet = g.Count() })
+            .ToListAsync();
+
+        var history = Enumerable.Range(0, months).Select(i =>
+        {
+            var ay = ayBasi.AddMonths(-(months - 1 - i));
+            aylik.TryGetValue((ay.Year, ay.Month), out var v);
+
+            var toplam         = v?.Toplam ?? 0;
+            var aktifKullanici = v?.AktifKullanici ?? 0;
+
+            var zirve = enCokArac
+                .Where(x => x.Year == ay.Year && x.Month == ay.Month)
+                .OrderByDescending(x => x.Adet)
+                .FirstOrDefault();
+
+            return new
+            {
+                monthYear      = ay.ToString("yyyy-MM"),
+                totalUsed      = toplam,
+                activeUsers    = aktifKullanici,
+                avgPerUser     = aktifKullanici > 0 ? Math.Round((double)toplam / aktifKullanici, 1) : 0,
+                topToolId      = zirve?.ToolId,
+                topToolCount   = zirve?.Adet ?? 0,
+            };
+        }).ToList();
+
+        return Ok(new { success = true, data = new { history } });
+    }
+
     // ── GET /api/admin/usage-log ──────────────────────────────────────────────
     // Detaylı kullanım logu: kişi + araç filtresi, paket + limit + rapor özeti dahil
     [HttpGet("usage-log")]
@@ -643,18 +709,24 @@ public class AdminController(AppDbContext db, EmailService email, RecurringRenew
     // Tüm kullanıcıların kayıtlı çıktıları; userId ve ay/yıl filtresi opsiyonel.
     [HttpGet("all-results")]
     public async Task<IActionResult> GetAllResults(
-        [FromQuery] Guid?   userId = null,
-        [FromQuery] int?    year   = null,
-        [FromQuery] int?    month  = null,
-        [FromQuery] int     limit  = 200)
+        [FromQuery] Guid?   userId   = null,
+        [FromQuery] string? toolId   = null,
+        [FromQuery] int?    year     = null,
+        [FromQuery] int?    month    = null,
+        [FromQuery] int     page     = 1,
+        [FromQuery] int     pageSize = 25)
     {
-        limit = Math.Clamp(limit, 1, 500);
+        page     = Math.Max(page, 1);
+        pageSize = Math.Clamp(pageSize, 1, 200);
 
         IQueryable<ToolResult> query = db.ToolResults
             .Include(r => r.User);
 
         if (userId.HasValue)
             query = query.Where(r => r.UserId == userId.Value);
+
+        if (!string.IsNullOrWhiteSpace(toolId))
+            query = query.Where(r => r.ToolId == toolId);
 
         if (year.HasValue && month.HasValue)
         {
@@ -669,9 +741,13 @@ public class AdminController(AppDbContext db, EmailService email, RecurringRenew
             query    = query.Where(r => r.CreatedAt >= from && r.CreatedAt < to);
         }
 
+        // Toplam sayı sayfalama göstergesi için — filtreler uygulandıktan sonra
+        var toplam = await query.CountAsync();
+
         var results = await query
             .OrderByDescending(r => r.CreatedAt)
-            .Take(limit)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
             .Select(r => new
             {
                 r.Id,
@@ -693,7 +769,27 @@ public class AdminController(AppDbContext db, EmailService email, RecurringRenew
             .Take(200)
             .ToListAsync();
 
-        return Ok(new { success = true, data = results, meta = new { users } });
+        // Araç filtresi için, gerçekten çıktısı bulunan araçlar
+        var tools = await db.ToolResults
+            .Select(r => r.ToolId)
+            .Distinct()
+            .OrderBy(t => t)
+            .ToListAsync();
+
+        return Ok(new
+        {
+            success = true,
+            data    = results,
+            meta    = new
+            {
+                users,
+                tools,
+                page,
+                pageSize,
+                total      = toplam,
+                totalPages = (int)Math.Ceiling(toplam / (double)pageSize),
+            }
+        });
     }
 
     // ── GET /api/admin/users/{id}/payments ────────────────────────────────────

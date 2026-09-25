@@ -13,9 +13,38 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<ToolResult> ToolResults => Set<ToolResult>();
     public DbSet<PaymentOrder> PaymentOrders => Set<PaymentOrder>();
     public DbSet<ToolPrice> ToolPrices => Set<ToolPrice>();
+    public DbSet<BusinessProfile> BusinessProfiles => Set<BusinessProfile>();
+    public DbSet<VideoCreditTransaction> VideoCreditTransactions => Set<VideoCreditTransaction>();
 
     protected override void OnModelCreating(ModelBuilder m)
     {
+        /*
+         * Video kredisi defteri. Bakiye Delta toplamıyla bulunuyor, bu yüzden
+         * (UserId, CreatedAt) indeksi hem bakiye hesabına hem "son hareketler"
+         * listesine hizmet ediyor.
+         *
+         * Kullanıcı silinince hareketleri de silinir — kredi kişiye bağlı.
+         */
+        m.Entity<VideoCreditTransaction>(e =>
+        {
+            e.HasIndex(t => new { t.UserId, t.CreatedAt });
+            e.HasIndex(t => new { t.UserId, t.Reason });
+            e.HasOne(t => t.User)
+             .WithMany()
+             .HasForeignKey(t => t.UserId)
+             .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // İşletme profili — kullanıcı başına en fazla bir kayıt.
+        // Kullanıcı silinince profili de silinir.
+        m.Entity<BusinessProfile>(e =>
+        {
+            e.HasIndex(p => p.UserId).IsUnique();
+            e.HasOne(p => p.User)
+             .WithOne()
+             .HasForeignKey<BusinessProfile>(p => p.UserId)
+             .OnDelete(DeleteBehavior.Cascade);
+        });
         base.OnModelCreating(m);
 
         // ── Users ──────────────────────────────────────────────────────────────
@@ -93,7 +122,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.HasData(
                 new ToolPrice { Id = 1,  ToolId = "gorunurluk-skoru",  ToolName = "İşletme Görünürlük Skoru",    PriceMonthly = 9,  IsActive = true },
                 new ToolPrice { Id = 2,  ToolId = "musteri-persona",    ToolName = "Müşteri Persona Oluşturucu",  PriceMonthly = 9,  IsActive = true },
-                new ToolPrice { Id = 3,  ToolId = "icerik-takvimi",     ToolName = "30 Günlük İçerik Takvimi",   PriceMonthly = 29, IsActive = true },
+                new ToolPrice { Id = 3,  ToolId = "icerik-takvimi",     ToolName = "Sosyal Medya İçerik Takvimi",   PriceMonthly = 29, IsActive = true },
                 new ToolPrice { Id = 4,  ToolId = "whatsapp-satis",     ToolName = "WhatsApp Satış Script Üretici", PriceMonthly = 9, IsActive = true },
                 new ToolPrice { Id = 5,  ToolId = "reklam-butce",       ToolName = "Reklam Bütçe Dağıtıcı",      PriceMonthly = 9,  IsActive = true },
                 new ToolPrice { Id = 6,  ToolId = "musteri-geri-donus", ToolName = "Müşteri Geri Dönüş Senaryosu", PriceMonthly = 9, IsActive = true },

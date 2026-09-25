@@ -46,6 +46,10 @@ services:
       Smtp__FromEmail: ${SMTP__FROMEMAIL:-}
       Smtp__FromName: ${SMTP__FROMNAME:-KolayKOBİ}
       AppUrl: ${APP_URL:-https://app.kolaykobi.com}
+      # Brevo pazarlama listesi (hoş geldin e-posta serisi)
+      # NOT: SMTP anahtarından FARKLI bir anahtardır (Brevo → SMTP & API → API Keys)
+      Brevo__ApiKey: ${BREVO__APIKEY:-}
+      Brevo__WelcomeListId: ${BREVO__WELCOMELISTID:-}
       # PayTR ödeme
       PayTr__MerchantId: ${PAYTR_MERCHANT_ID:-}
       PayTr__MerchantKey: ${PAYTR_MERCHANT_KEY:-}
@@ -68,6 +72,39 @@ services:
     expose:
       - "80"
 
+  # Veo kliplerini birleştirir ve son kareyi çıkarır.
+  #
+  # NEDEN: Veo dikey videoda `extend` desteklemiyor (API doğrudan
+  # "Aspect ratio of the input video must be 16:9" diyor). Çok sahneli video
+  # ancak ayrı klipler üretip birleştirilerek elde ediliyor — ve bu montaj
+  # kullanıcıya bırakılamaz.
+  #
+  # Dışarıya AÇILMIYOR: Traefik etiketi ve yayınlanmış port yok. n8n aynı
+  # ağdan (n8n_default) `http://kkb-medya:8080` ile erişiyor; son videoyu
+  # kullanıcıya nginx `/medya/` altından veriyor.
+  medya:
+    build:
+      context: ./medya
+      dockerfile: Dockerfile
+    container_name: kkb-medya
+    restart: unless-stopped
+    environment:
+      # Veo dosyaları indirilirken gerekiyor. Anahtar istek gövdesinde
+      # taşınmasın diye servisin kendi ortamından okunuyor.
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      # 30 gün. Kullanıcı videoyu üretip sekmeyi kapatırsa Geçmiş Çıktılar'dan
+      # geri dönebilmeli. Süre uzadığı için depoya ayrıca bayt tavanı konuldu;
+      # tavan aşılırsa süresi dolmamış en eski dosyalar da silinir.
+      SAKLAMA_SAATI: ${MEDYA_SAKLAMA_SAATI:-720}
+      MAKS_DEPO_BAYT: ${MEDYA_MAKS_DEPO_BAYT:-5368709120}
+    volumes:
+      - medya_cikti:/veri/cikti
+    expose:
+      - "8080"
+    networks:
+      - default
+      - traefik_net
+
   nginx:
     image: nginx:alpine
     container_name: kkb-nginx
@@ -75,6 +112,7 @@ services:
     depends_on:
       - backend
       - frontend
+      - medya
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
     ports:
@@ -94,6 +132,9 @@ services:
 
 volumes:
   postgres_data:
+  # Birleştirilmiş videolar. Servis 48 saat sonra kendi temizliyor;
+  # birim kalıcı olduğu için container yeniden oluşturulunca dosyalar kaybolmuyor.
+  medya_cikti:
 
 networks:
   traefik_net:

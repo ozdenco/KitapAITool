@@ -22,7 +22,10 @@ public class AuthController(
     public record RegisterRequest(
         [Required, MaxLength(128)] string Name,
         [Required, EmailAddress] string Email,
-        [Required, MinLength(8), RegularExpression(PasswordPattern, ErrorMessage = PasswordPatternError)] string Password);
+        [Required, MinLength(8), RegularExpression(PasswordPattern, ErrorMessage = PasswordPatternError)] string Password,
+        // Şirket ve telefon isteğe bağlıdır; boş bırakan kullanıcı kaydolabilir.
+        [MaxLength(160)] string? Company = null,
+        [MaxLength(30)] string? Phone = null);
 
     public record LoginRequest(
         [Required, EmailAddress] string Email,
@@ -49,13 +52,16 @@ public class AuthController(
     [HttpPost("register")]
     public async Task<IActionResult> Register([FromBody] RegisterRequest req)
     {
-        var result = await users.RegisterAsync(req.Name, req.Email, req.Password);
+        var result = await users.RegisterAsync(req.Name, req.Email, req.Password, req.Company, req.Phone);
         if (result is null)
             return Conflict(new { success = false, error = "Bu e-posta adresi zaten kayıtlı." });
 
         var (user, access, refresh) = result.Value;
 
-        BrevoyaArkaPlandaEkle(user.Email, user.Name);
+        // Brevo'ya ekleme burada DEĞİL, e-posta doğrulandıktan sonra yapılır
+        // (bkz. VerifyEmail). Doğrulanmamış adrese pazarlama serisi göndermek
+        // hem sıcak karşılamayı bozuyor hem de yanlış yazılmış adresler listeye
+        // girip teslim edilebilirliği düşürüyordu (29 Ağu 2026).
 
         return Ok(new
         {
@@ -126,9 +132,12 @@ public class AuthController(
         if (string.IsNullOrWhiteSpace(token))
             return BadRequest(new { success = false, error = "Geçersiz doğrulama bağlantısı." });
 
-        var ok = await users.VerifyEmailAsync(token);
-        if (!ok)
+        var user = await users.VerifyEmailAsync(token);
+        if (user is null)
             return BadRequest(new { success = false, error = "Bağlantı geçersiz veya süresi dolmuş." });
+
+        // Hoş geldin serisi ancak adres doğrulandıktan sonra başlar.
+        BrevoyaArkaPlandaEkle(user.Email, user.Name);
 
         return Ok(new { success = true });
     }

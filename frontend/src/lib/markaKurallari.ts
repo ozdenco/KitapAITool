@@ -19,6 +19,7 @@
 const ORTAK = `
 YAZIM KURALLARI:
 - Abartılı vaat KULLANMA: "garanti", "kesin sonuç", "bir gecede", "sihirli", "%100". Gerçekçi ve koşullu yaz.
+- VAR OLMAYAN ŞEY UYDURMA: girdide geçmeyen blog yazısı, etkinlik, ürün, ödül, rapor, müşteri adı ya da rakam üretme. Böyle bir şeye atıf gerekiyorsa köşeli parantezle yer tutucu bırak (ör. "[blog yazısının adı]").
 - Sade Türkçe, jargonsuz, "siz" dili; somut ve uygulanabilir ol.`
 
 const RAKIP_KURALI = `

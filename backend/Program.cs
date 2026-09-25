@@ -9,6 +9,10 @@ using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 
+
+// GBK kod sayfasını kullanılabilir kıl (yapay zeka yanıtlarındaki
+// kodlama bozulmasını onarmak için) — bkz. Services/MojibakeOnarici.cs
+KolayKobi.Api.Services.MojibakeOnarici.Hazirla();
 // ──────────────────────────────────────────────────────────────────────────────
 // Services
 // ──────────────────────────────────────────────────────────────────────────────
@@ -107,10 +111,16 @@ builder.Services.AddHttpClient("paytr", client =>
     client.Timeout = TimeSpan.FromSeconds(30);
 });
 builder.Services.AddScoped<PayTrService>();
+// Video kredisi cüzdanı — araç kullanım hakkından ayrı birim (1 kredi = 1 sahne).
+builder.Services.AddScoped<VideoCreditService>();
 
 // Günlük otomatik yenileme servisi (03:00 UTC)
 builder.Services.AddSingleton<RecurringRenewalService>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<RecurringRenewalService>());
+
+// Async araç işlerini sunucu tarafında takip eder: kullanıcı sekmeyi kapatsa
+// da sonuç Geçmiş Çıktılar'a yazılır (30 sn'de bir tarar).
+builder.Services.AddHostedService<AsyncJobWatcher>();
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Pipeline

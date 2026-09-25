@@ -23,6 +23,13 @@ public class User
     // ── Profil ────────────────────────────────────────────────────────────────
     public string? Company { get; set; }
 
+    /// <summary>
+    /// İsteğe bağlı iletişim telefonu. Kayıt sırasında toplanır; WhatsApp vb.
+    /// kanallardan iletişim için kullanılır. Zorunlu DEĞİLDİR — boş bırakan
+    /// kullanıcı kaydını tamamlayabilir.
+    /// </summary>
+    public string? Phone { get; set; }
+
     // ── Admin & Son Giriş ─────────────────────────────────────────────────────
     public bool IsAdmin { get; set; } = false;
     public bool IsActive { get; set; } = true;

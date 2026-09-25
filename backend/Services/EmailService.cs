@@ -20,13 +20,14 @@ public class EmailService(IConfiguration config, ILogger<EmailService> logger)
         string User, string Password,
         string FromEmail, string FromName);
 
-    // Uygulamadaki Logo.tsx ile aynı URL
-    private const string LogoUrl =
-        "https://kolaykobi.com/wp-content/uploads/2025/07/3.png";
+    // Uygulamanın public/ klasöründen servis edilen logo.
+    // E-postalarda göreli yol çalışmaz; mutlak URL kurulur.
+    private string LogoUrl =>
+        $"{config["AppUrl"] ?? "https://app.kolaykobi.com"}/gpai-logo512.png";
 
-    private static string LogoHtml => $"""
-        <img src="{LogoUrl}" alt="KolayKOBİ"
-             style="height:48px;width:auto;display:block;margin:0 auto;" />
+    private string LogoHtml => $"""
+        <img src="{LogoUrl}" alt="KolayKOBİ" width="56" height="56"
+             style="height:56px;width:56px;display:block;margin:0 auto;" />
         """;
 
     // ── E-posta doğrulama ─────────────────────────────────────────────────────
@@ -34,6 +35,8 @@ public class EmailService(IConfiguration config, ILogger<EmailService> logger)
     {
         var appUrl = config["AppUrl"] ?? "https://app.kolaykobi.com";
         var verifyUrl = $"{appUrl}/e-posta-dogrula?token={Uri.EscapeDataString(token)}";
+        // Frontend'deki ISLETME_PROFILI_YOLU sabitiyle aynı olmalı.
+        var profilUrl = $"{appUrl}/hesabim/profil";
 
         var html = $"""
             <!DOCTYPE html>
@@ -56,7 +59,24 @@ public class EmailService(IConfiguration config, ILogger<EmailService> logger)
                         e-posta adresinizi doğrulamanız gerekmektedir.
                       </p>
                     </td></tr>
-                    <tr><td align="center" style="padding:24px 0;">
+                    <tr><td style="padding:4px 0 18px;">
+                      <!-- İşletme profili açıklaması doğrulama butonunun ÜSTÜNDE durur:
+                           kullanıcılar butona basıp e-postayı kapattığı için altta kalan
+                           metin okunmuyordu. Eylem bağlantısı altta bırakıldı ki birincil
+                           çağrı (doğrulama) rakipsiz kalsın. -->
+                      <div style="background:#f4fbf8;border:1px solid #9fe1cb;border-left:3px solid #1D9E75;border-radius:10px;padding:14px 16px;">
+                        <p style="margin:0 0 6px;font-size:14px;font-weight:700;color:#085041;">
+                          🏢 Bir sonraki adım: işletme bilgileriniz
+                        </p>
+                        <p style="margin:0;font-size:13px;color:#475569;line-height:1.65;">
+                          Doğruladıktan sonra işletme adınızı, sektörünüzü ve hedef kitlenizi
+                          bir kez kaydedin; araçları çalıştırırken bu alanlar kendiliğinden
+                          dolar. Her araçta aynı bilgileri yeniden yazmanıza gerek kalmaz.
+                          <br><span style="color:#94a3b8;">İsteğe bağlıdır, sonradan da doldurabilirsiniz.</span>
+                        </p>
+                      </div>
+                    </td></tr>
+                    <tr><td align="center" style="padding:0 0 24px;">
                       <a href="{verifyUrl}"
                          style="display:inline-block;background:#1D9E75;color:#fff;font-weight:700;
                                 font-size:16px;padding:14px 32px;border-radius:10px;
@@ -70,6 +90,20 @@ public class EmailService(IConfiguration config, ILogger<EmailService> logger)
                         Butona tıklayamazsanız bu bağlantıyı tarayıcınıza yapıştırın:<br>
                         <a href="{verifyUrl}" style="color:#1D9E75;word-break:break-all;">{verifyUrl}</a>
                       </p>
+
+                      <hr style="border:none;border-top:1px solid #f1f5f9;margin:24px 0;">
+
+                      <!-- İşletme profili daveti: kayıt formunu kısa tutup bu adımı
+                           doğrulamadan sonraya bıraktık. -->
+                      <p style="margin:0;text-align:center;">
+                        <a href="{profilUrl}"
+                           style="display:inline-block;background:#fff;border:1px solid #9fe1cb;
+                                  color:#085041;font-weight:600;font-size:13px;padding:9px 18px;
+                                  border-radius:8px;text-decoration:none;">
+                          🏢 İşletme bilgilerimi ekle →
+                        </a>
+                      </p>
+
                       <hr style="border:none;border-top:1px solid #f1f5f9;margin:24px 0;">
                       <p style="margin:0;font-size:12px;color:#cbd5e1;text-align:center;">
                         Bu e-postayı siz talep etmediyseniz görmezden gelebilirsiniz.
@@ -373,6 +407,40 @@ public class EmailService(IConfiguration config, ILogger<EmailService> logger)
     }
 
     // ── Ortak SMTP gönderici ─────────────────────────────────────────────────
+    // ── Kurumsal talep bildirimi ──────────────────────────────────────────────
+    /// <summary>
+    /// Kurumsal talep formundan gelen kaydı yetkiliye iletir.
+    /// Ziyaretçinin girdiği metin HTML'e gömüldüğü için tüm alanlar
+    /// HtmlEncode'dan geçirilir (e-posta istemcisinde script çalışmaz ama
+    /// bozuk markup gövdeyi okunmaz hale getirebilir).
+    /// </summary>
+    public async Task SendKurumsalTalepAsync(
+        string adSoyad, string? sirket, string eposta, string? telefon, string ihtiyac)
+    {
+        var alici = config["Smtp:ContactRecipient"] ?? "merhaba@kolaykobi.com";
+        string E(string? v) => System.Net.WebUtility.HtmlEncode(v ?? "—");
+
+        var html = $"""
+            <div style="font-family:system-ui,-apple-system,sans-serif;max-width:600px;margin:0 auto;padding:24px;">
+              {LogoHtml}
+              <h2 style="color:#1C1B19;font-size:18px;">Yeni kurumsal talep</h2>
+              <table style="width:100%;border-collapse:collapse;font-size:14px;color:#3A3935;">
+                <tr><td style="padding:6px 0;width:130px;"><strong>Ad Soyad</strong></td><td>{E(adSoyad)}</td></tr>
+                <tr><td style="padding:6px 0;"><strong>Şirket</strong></td><td>{E(sirket)}</td></tr>
+                <tr><td style="padding:6px 0;"><strong>E-posta</strong></td><td>{E(eposta)}</td></tr>
+                <tr><td style="padding:6px 0;"><strong>Telefon</strong></td><td>{E(telefon)}</td></tr>
+              </table>
+              <p style="margin-top:16px;font-size:14px;color:#3A3935;"><strong>İhtiyaçları:</strong></p>
+              <p style="white-space:pre-wrap;background:#F7F6F2;border:1px solid #E2E0D8;border-radius:8px;padding:12px;font-size:14px;color:#3A3935;">{E(ihtiyac)}</p>
+              <p style="font-size:12px;color:#9A9792;margin-top:16px;">
+                Bu bildirim app.kolaykobi.com/kurumsal-talep formundan gönderildi.
+              </p>
+            </div>
+            """;
+
+        await SendAsync(alici, "KolayKOBİ", $"Kurumsal talep — {adSoyad}", html);
+    }
+
     private async Task SendAsync(string toEmail, string toName, string subject, string htmlBody)
     {
         var s = Settings;

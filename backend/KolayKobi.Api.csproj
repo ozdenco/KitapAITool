@@ -18,6 +18,8 @@
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.2" />
     <PackageReference Include="BCrypt.Net-Next" Version="4.0.3" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.7.3" />
+    <!-- GBK (kod sayfası 936) — mojibake onarımı için, bkz. MojibakeOnarici -->
+    <PackageReference Include="System.Text.Encoding.CodePages" Version="9.0.0" />
   </ItemGroup>
 
 </Project>
