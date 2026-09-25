@@ -160,7 +160,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const data = $input.first().json;\nconst apiBody = {\n  model: 'MiniMax-M3',\n  max_completion_tokens: 12000,\n  messages: [{ role: 'user', content: data.prompt || '' }]\n};\nreturn [{ json: { ...data, apiBody } }];"
+        "jsCode": "const data = $input.first().json;\nconst apiBody = {\n  model: 'MiniMax-M3',\n  // 25 Eyl 2026: 12000 -> 20000. Belge siniri 6.000'den 30.000 karaktere\n  // cikarildi; girdi buyudukce model daha cok kart uretiyor. Cikti butcesi\n  // yetmezse 23 Eyl'deki hata tekrarlar: butun butce <think> icinde harcanir,\n  // hic JSON uretilmez ve kullanicinin kredisi bosa gider.\n  max_completion_tokens: 20000,\n  messages: [{ role: 'user', content: data.prompt || '' }]\n};\nreturn [{ json: { ...data, apiBody } }];"
       },
       "id": "build-body-node",
       "name": "Build Request Body",

@@ -33,7 +33,7 @@ const TOOL_ENGINE_MAP: Record<string, {
   'whatsapp-satis':     { engine: 'minimax', unitsPerRun: 11, unitLabel: 'token/çalıştırma', note: '7 itirazda 10 token · itiraz başına ~1 token (temel 3) · en fazla 10 itiraz → ~13 token · +1 marka kuralları' },
   'reklam-butce':       { engine: 'minimax', unitsPerRun: 3,  unitLabel: 'token/çalıştırma', note: '2 kanal seçiminde 2 token · kanal sayısıyla orantılı · +1 marka kuralları' },
   'musteri-geri-donus': { engine: 'minimax', unitsPerRun: 5,  unitLabel: 'token/çalıştırma', note: '23 Eyl 2026 canlı ölçüm: 5 token (uygulamadan, marka kuralları dahil) · önceki değer 4 idi' },
-  'chatbot-senaryo':    { engine: 'minimax', unitsPerRun: 8,  unitLabel: 'token/çalıştırma', note: '24 Eyl 2026 canlı ölçüm: belge yüklenip 26 kart üretilince 8 token · belgesiz 5 SSS ile 3 token · maliyet KART SAYISIYLA artıyor, en kötü hâl yazıldı' },
+  'chatbot-senaryo':    { engine: 'minimax', unitsPerRun: 8,  unitLabel: 'token/çalıştırma', note: '24 Eyl ölçümü: 26 kartlık belgeyle 8 token · belgesiz 5 SSS ile 3 token. 25 Eyl: belge sınırı 6.000 → 30.000 karakter çıkarıldı, uzun belgede maliyet ARTAR — yeni ölçüm bekliyor' },
   'ai-gorunurluk':      { engine: 'minimax', unitsPerRun: 4,  unitLabel: 'token/çalıştırma', note: '3 token · n8n 19,2 sn · ekranda 23 sn · +1 marka kuralları' },
   'viral-video':        { engine: 'minimax', unitsPerRun: 2,  unitLabel: 'token/çalıştırma', note: '2 token · ekranda 42 sn' },
 }

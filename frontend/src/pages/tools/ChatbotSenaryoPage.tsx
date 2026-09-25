@@ -12,7 +12,7 @@ import { ToolShell } from '@/components/ui/ToolShell'
 import { useElapsedSeconds } from '@/hooks/useElapsedSeconds'
 import { MiniChatbotTest } from '@/components/tools/MiniChatbotTest'
 import { SiteyeEkleKarti } from '@/components/tools/SiteyeEkleKarti'
-import { DosyaHatasi, KABUL_EDILEN_TIPLER } from '@/lib/fileTextConstants'
+import { DosyaHatasi, KABUL_EDILEN_TIPLER, MAKS_METIN_KARAKTER } from '@/lib/fileTextConstants'
 import { useProfilOnDolgu } from '@/hooks/useIsletmeProfili'
 import { markaKurallari } from '@/lib/markaKurallari'
 import { SEKTORLER } from '@/lib/sektorler'
@@ -205,6 +205,8 @@ export function ChatbotSenaryoPage() {
   const [fileError, setFileError]   = useState<string | null>(null)
   const [fileParsing, setFileParsing] = useState(false)
   const [fileTruncated, setFileTruncated] = useState(false)
+  /** Belgeden çıkarılan ham karakter sayısı — kullanıcı ne kadarının kullanıldığını görsün */
+  const [fileKarakter, setFileKarakter] = useState<number | null>(null)
 
   // İşletme profilinden ön dolgu — boş alanlar doldurulur, kullanıcının
   // yazdığına dokunulmaz (bkz. useProfilOnDolgu).
@@ -225,10 +227,11 @@ export function ChatbotSenaryoPage() {
       // pdfjs-dist (~250KB) yalnızca kullanıcı gerçekten dosya seçtiğinde
       // indirilsin diye burada dinamik import ediliyor — bkz. fileTextConstants.ts
       const { extractFileText } = await dinamikYukle(() => import('@/lib/extractFileText'))
-      const { metin, kirpildiMi } = await extractFileText(file)
+      const { metin, kirpildiMi, hamKarakterSayisi } = await extractFileText(file)
       setFileName(file.name)
       setFileText(metin)
       setFileTruncated(kirpildiMi)
+      setFileKarakter(hamKarakterSayisi)
       belgeyiYaz({ ad: file.name, metin })   // sonraki ziyarette hatırlansın
     } catch (error) {
       setFileName(null)
@@ -244,6 +247,7 @@ export function ChatbotSenaryoPage() {
     setFileText(undefined)
     setFileError(null)
     setFileTruncated(false)
+    setFileKarakter(null)
     belgeyiYaz(null)
     if (fileInputRef.current) fileInputRef.current.value = ''
   }
@@ -384,9 +388,26 @@ export function ChatbotSenaryoPage() {
                     </div>
                   )}
 
+                  {/*
+                    Kullanıcı belgesinin ne kadarının kullanıldığını GÖRMELİ.
+                    Önce yalnızca kısaltma uyarısı vardı; "ne kadarı kesildi"
+                    bilinmediği için kullanıcı belgeyi küçültmeye ya da
+                    sıkıştırmaya çalışıyordu (25 Eyl 2026). Sayı vermek bu
+                    yanlış yola sapmayı önlüyor: sınır sayfa/boyut değil,
+                    METİN UZUNLUĞU.
+                  */}
+                  {fileKarakter !== null && !fileTruncated && (
+                    <p className="text-xs text-[#6B6963] mt-1.5">
+                      Belgeden {fileKarakter.toLocaleString('tr-TR')} karakter okundu; tamamı kullanılacak.
+                    </p>
+                  )}
                   {fileTruncated && (
                     <p className="text-xs text-amber-600 mt-1.5">
-                      ⚠️ Belge uzun olduğu için bir kısmı kısaltıldı; en önemli bölümleri belgenin başında tutun.
+                      ⚠️ Belge {fileKarakter?.toLocaleString('tr-TR')} karakter; ilk{' '}
+                      {MAKS_METIN_KARAKTER.toLocaleString('tr-TR')} karakteri kullanılacak.
+                      Kalanı için belgeyi ikiye bölüp aracı iki kez çalıştırabilirsiniz.
+                      (Yazı boyutunu küçültmek ya da PDF&apos;i sıkıştırmak bir şey değiştirmez —
+                      sınır metin uzunluğuna bakar.)
                     </p>
                   )}
                   {fileError && (
