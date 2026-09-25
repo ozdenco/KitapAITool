@@ -13,6 +13,7 @@ import { ozelGunTalimatlari } from '@/lib/ozelGunler'
 import { MARKA_TONU_SECENEKLERI } from '@/lib/markaTonlari'
 import { SEKTORLER } from '@/lib/sektorler'
 import { AramaliSecici } from '@/components/ui/AramaliSecici'
+import { CiktiKimligi } from '@/components/ui/CiktiKimligi'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -181,6 +182,7 @@ export function IcerikTakvimiPage() {
   const [ozelGunler, setOzelGunler] = useState('')
   const [startDate, setStartDate] = useState('')
   const [result, setResult] = useState<TakvimiResult | null>(null)
+  const [resultId, setResultId] = useState<string | null>(null)
   const [elapsedSec, setElapsedSec] = useState(0)
 
   // İşletme profilinden ön dolgu — boş alanlar doldurulur, kullanıcının
@@ -256,6 +258,8 @@ export function IcerikTakvimiPage() {
         }
       )
       const data = res.data
+      // Kayıt ID'si (Geçmiş Çıktılar'daki satır) — yanıt gövdesinde değil, başlıkta gelir
+      setResultId((res.headers?.['x-result-id'] as string | undefined) ?? null)
 
       // Async job: job_id + pending → polling başlat
       if (data?.job_id && (data?.status === 'pending' || data?.status === 'running')) {
@@ -454,6 +458,7 @@ export function IcerikTakvimiPage() {
 
           {result && (
             <div className="flex flex-col gap-4">
+              {resultId && <CiktiKimligi id={resultId} />}
               {result.ozet && (
                 <div className="bg-white rounded-2xl border border-[#E2E0D8] shadow-sm p-5">
                   <h3 className="text-sm font-semibold text-[#1C1B19] mb-2">📊 Strateji Özeti</h3>

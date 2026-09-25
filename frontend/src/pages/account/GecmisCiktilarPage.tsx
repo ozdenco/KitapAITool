@@ -8,6 +8,7 @@ import { CiktiBasligi } from '@/components/ui/CiktiBasligi'
 import { HataSiniri } from '@/components/ui/HataSiniri'
 import { CiktiGovdesi } from '@/components/ui/CiktiGovdesi'
 import { FormBilgileriKarti } from '@/components/ui/FormBilgileriKarti'
+import { CiktiKimligi } from '@/components/ui/CiktiKimligi'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -169,6 +170,9 @@ function ResultDetailPanel({ result: summary, onClose }: { result: ResultSummary
       {/* Detail content — .gecmis-print-target: targeted @media print */}
       <div ref={ciktiRef} className="p-5 gecmis-print-target">
         <CiktiBasligi aracAdi={meta.name} tarih={formatDate(data.createdAt)} />
+        <div className="mb-4">
+          <CiktiKimligi id={data.id} />
+        </div>
         {showRaw ? (
           <pre className="text-[11px] text-[#3A3935] bg-white border border-[#E2E0D8] rounded-xl p-4 overflow-x-auto leading-relaxed max-h-[500px] overflow-y-auto">
             {/*
