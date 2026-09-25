@@ -57,11 +57,52 @@ const PLATFORM_EMOJIS: Record<string, string> = {
 
 // ─── Prompt builder ────────────────────────────────────────────────────────────
 
+/**
+ * Takvimin paylaşım tarihlerini KODDA üretir.
+ *
+ * Neden: başlangıç tarihi boş bırakıldığında prompt "bugün" diyordu, ama
+ * modelin bugünün tarihinden haberi yok — tutunacağı tek şey şemadaki örnek
+ * tarih kalıyordu ("1. Hafta (23 Haziran 2026)"). Tarihi burada hesaplayıp
+ * hazır vermek bu belirsizliği tamamen kaldırıyor.
+ *
+ * DİKKAT — hafta etiketi AYIN KAÇINCI HAFTASI olarak yazılır, sıralı
+ * 1..5 olarak değil. Kullanıcılar kampanyaları "ayın ilk haftası %20
+ * indirim", "ayın 14'ü" gibi AY'a göre tanımlıyor; sıralı numara verilirse
+ * model "1. Hafta"yı ayın ilk haftası sanıp kampanyayı yanlış tarihe
+ * yerleştirir. 25 Eyl 2026'da gerçek bir çıktıda doğrulandı: model
+ * kendiliğinden ay-haftası mantığı kullanmıştı (7 Temmuz → 1. hafta,
+ * 14 Temmuz → 2. hafta) ve bu kampanya tanımıyla uyumluydu.
+ */
+const HAFTA_GUNLERI = ['Pazar', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi'] as const
+
+const GONDERI_SAYISI = 5
+
+function paylasimTarihleri(gunAdi: string, baslangic: string): string[] {
+  const hedefGun = HAFTA_GUNLERI.indexOf(gunAdi as (typeof HAFTA_GUNLERI)[number])
+  if (hedefGun < 0) return []
+
+  // Geçersiz/boş tarihte bugüne düş — alan zorunlu değil
+  const secilen = baslangic ? new Date(baslangic) : new Date()
+  const ilkGun = Number.isNaN(secilen.getTime()) ? new Date() : secilen
+
+  const fark = (hedefGun - ilkGun.getDay() + 7) % 7
+  const bicim = new Intl.DateTimeFormat('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' })
+
+  return Array.from({ length: GONDERI_SAYISI }, (_, i) => {
+    const t = new Date(ilkGun)
+    t.setDate(ilkGun.getDate() + fark + i * 7)
+    const ayinHaftasi = Math.ceil(t.getDate() / 7)
+    return `${ayinHaftasi}. Hafta (${bicim.format(t)})`
+  })
+}
+
 function buildPrompt(f: {
   bizName: string; sector: string; audience: string
   platform: string; gunler: string; ton: string
   lang: string; ozelGunler: string; startDate: string
 }): string {
+  const tarihler = paylasimTarihleri(f.gunler, f.startDate)
+
   return `Sen sosyal medya içerik stratejisti ve metin yazarısın.
 
 İşletme: ${f.bizName || 'belirtilmemiş'}
@@ -72,14 +113,18 @@ Paylaşım günü: ${f.gunler}
 Marka tonu: ${f.ton || 'Profesyonel ve güvenilir'}
 İçerik dili: ${f.lang}
 Özel günler / kampanyalar: ${f.ozelGunler || 'yok'}
-Başlangıç tarihi: ${f.startDate || 'bugün'}
+GÖREV: ${f.platform}'da ${f.gunler} günleri paylaşılmak üzere ${tarihler.length} gönderi yaz
+(haftada bir gönderi).
+Varsa özel günleri (${f.ozelGunler || 'yok'}) denk gelen haftaya yansıt.
 
-GÖREV: ${f.platform}'da her ${f.gunler} için 30 günlük içerik takvimi (4-5 gönderi).
-Varsa özel günleri (${f.ozelGunler || 'yok'}) ilgili haftaya yansıt.
+TARİHLER HESAPLANDI — aşağıdaki listeyi AYNEN kullan, kendin tarih üretme.
+Baştaki numara AYIN KAÇINCI HAFTASI olduğunu gösterir; kampanyaları buna
+göre yerleştir (ör. "ayın ilk haftası" = 1. Hafta etiketli gönderi):
+${tarihler.map((t) => `- ${t}`).join('\n')}
 
 KRİTİK KISITLAMALAR:
 - "icerik" alanı her gönderi için en fazla 120 kelime olsun
-- Tarih hesaplamalarını dahili yap, JSON'a yalnızca sonucu yaz
+- "tarih" alanına yukarıdaki listeden sırayla yaz; başka tarih YAZMA
 - Gereksiz açıklama ekleme, doğrudan JSON döndür
 
 SADECE geçerli JSON döndür, başka hiçbir şey yazma:
@@ -87,7 +132,7 @@ SADECE geçerli JSON döndür, başka hiçbir şey yazma:
   "icerik_takvimi": [
     {
       "gun": "<haftanın günü, ör: Pazartesi>",
-      "tarih": "<ör: 1. Hafta (23 Haziran 2026)>",
+      "tarih": "<yukarıdaki TARİHLER listesinden sıradaki>",
       "platform": "${f.platform}",
       "icerik_turu": "<Gönderi / Carousel / Video / Hikaye>",
       "konu": "<1 cümle>",
@@ -97,7 +142,7 @@ SADECE geçerli JSON döndür, başka hiçbir şey yazma:
       "en_iyi_saat": "<ör: 09:00-10:00>"
     }
   ],
-  "ozet": "<30 günlük strateji özeti, 1 cümle>",
+  "ozet": "<bir aylık içerik stratejisinin özeti, 1 cümle — '30 günlük' deme>",
   "ipuclari": ["<ipucu 1>", "<ipucu 2>", "<ipucu 3>"],
   "ctaText": "<motivasyon cümlesi>"
 }
